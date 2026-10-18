@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Senhora e Senhores</title>
+  <link rel="stylesheet" href="estilo.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+</head>
+<body>
+  <div id="palco">
+    <div id="app">
+      <main id="mesa">
+        <section class="zona zona-op">
+          <div class="info" id="info-1"></div>
+          <div class="mao" id="mao-1"></div>
+          <div class="pilhas" id="pilhas-1"></div>
+        </section>
+        <section class="fileira" id="campo-1"></section>
+        <div id="acoes" hidden></div>
+        <section id="faixa">
+          <div id="fase"></div>
+          <div id="instrucao"></div>
+          <div id="chips"></div>
+          <div id="botoes"></div>
+        </section>
+        <section class="fileira" id="campo-0"></section>
+        <section class="zona zona-eu">
+          <div class="info" id="info-0"></div>
+          <div class="mao" id="mao-0"></div>
+          <div class="pilhas" id="pilhas-0"></div>
+        </section>
+      </main>
+      <svg id="setas" width="1470" height="940"></svg>
+      <div id="anuncio" hidden></div>
+      <aside id="painel">
+        <div class="barra-partida">
+          <button class="btn" data-acao="reiniciar" title="Começar de novo com as mesmas opções">⟲ Reiniciar</button>
+          <button class="btn" data-acao="desistir" title="Encerrar esta partida agora">⚑ Desistir</button>
+          <button class="btn" data-acao="menu" title="Voltar ao menu">☰ Menu</button>
+        </div>
+        <h2>Registro</h2>
+        <div id="log"></div>
+      </aside>
+    </div>
+  </div>
+  <div id="modal" hidden></div>
+  <div id="dica" hidden></div>
+
+  <script src="js/motor.js"></script>
+  <script src="js/bot.js"></script>
+  <script src="js/cartas.js"></script>
+  <script src="js/dados3d.js"></script>
+  <script src="js/decks.js"></script>
+  <script src="js/regras.js"></script>
+  <script src="js/interface.js"></script>
+</body>
+</html>
