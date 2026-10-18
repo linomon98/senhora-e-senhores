@@ -1089,7 +1089,7 @@ window.SS = window.SS || {};
   function capturarDuelo(at) {
     const d = 1 - jogo.vez;
     return {
-      n: at.n, dados: at.dados, defensor: d, pvAntes: jogo.jogadores[d].pv,
+      n: at.n, dados: at.dados, bonusAtaque: at.bonusAtaque || 0, defensor: d, pvAntes: jogo.jogadores[d].pv,
       atacante: fotoUnidade(at.atacante),
       bloqueadores: at.bloqueadores.map(fotoUnidade).filter(Boolean),
       alvoAs: at.alvo !== 'jogador' ? fotoUnidade(at.alvo) : null,
@@ -1141,7 +1141,7 @@ window.SS = window.SS || {};
     } else if (s.alvoAs) {
       defesa = `<div class="anuncio-grupo"><div class="anuncio-rotulo">◎ alvo</div>${cartaFotoHTML(s.alvoAs, ef(s.alvoAs), 'alvo')}</div>`;
     } else defesa = jogadorFotoHTML(s.defensor, s.pvAntes, pvDepois, 'Ataque direto');
-    return `<div class="anuncio-topo">${s.n}º ataque de ${total}${s.dados > 1 ? ` · ${s.dados} dados (vale o maior)` : ''}</div>
+    return `<div class="anuncio-topo">${s.n}º ataque de ${total}${s.dados > 1 ? ` · ${s.dados} dados (vale o maior)` : ''}${s.bonusAtaque ? ` · Golpe certeiro: +${s.bonusAtaque} de ataque` : ''}</div>
       <div class="duelo">${atacante}<div class="duelo-seta">⚔</div>${defesa}</div>`;
   }
 

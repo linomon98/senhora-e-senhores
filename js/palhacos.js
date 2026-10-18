@@ -7,7 +7,7 @@ window.SS = window.SS || {};
   const LISTA = [
     {
       id: 'lancalotte', nome: 'Lançalotte', titulo: 'o duelista', naipe: 'espadas', cor: 'azul',
-      passiva: { nome: 'Golpe certeiro', texto: 'O 1º ataque de cada turno ganha +1 dado (vale o maior), sem gastar Ouros.' },
+      passiva: { nome: 'Golpe certeiro', texto: 'O 1º ataque de cada turno ganha +1 dado (vale o maior) e +1 de ataque.' },
       poder: { nome: 'Desafio!', texto: 'Escolha um Senhor(a) inimigo ativo: neste turno ele(a) é obrigado(a) a bloquear o seu primeiro ataque (se puder).' },
       plano: 'Ataca cedo e forte: Valetes entram atacando, Rainhas fecham o jogo, Naipados de Espadas ganham +1.',
       deck: {
@@ -35,7 +35,7 @@ window.SS = window.SS || {};
     },
     {
       id: 'paumol', nome: 'Paumol', titulo: 'o muro', naipe: 'paus', cor: 'verde',
-      passiva: { nome: 'Casca grossa', texto: 'Todo dano que os seus Senhores recebem ao defender é reduzido em 1.' },
+      passiva: { nome: 'Casca grossa', texto: 'Seus Senhores com carta de Paus (na figura ou no número) recebem 1 de dano a menos ao defender. Começa com 18 PV.' },
       poder: { nome: 'Vigília', texto: 'Escolha 1 Senhor(a) seu: ele(a) não vira para baixo no fim deste turno (ataca e ainda pode bloquear).' },
       plano: 'Ninguém passa: Naipados de Paus aguentam 3 hits e Ases de Paus deixam a fileira mais resistente.',
       deck: {
@@ -51,7 +51,7 @@ window.SS = window.SS || {};
       id: 'ourinhos', nome: 'Ourinhos', titulo: 'o banqueiro', naipe: 'ouros', cor: 'dourado',
       passiva: { nome: 'Juros compostos', texto: 'Compra 2 cartas por turno (escolhe o baralho de cada uma).' },
       poder: null,
-      custo: { nome: 'Endividado', texto: 'Começa com 17 PV e tem limite de mão de 6 cartas.' },
+      custo: { nome: 'Endividado', texto: 'Começa com 15 PV e tem limite de mão de 6 cartas.' },
       plano: 'Muitas cartas e muitos ataques: Valete Naipado de Ouros entra e ataca 2 vezes no mesmo turno.',
       deck: {
         'J-ouros': 2, 'Q-ouros': 2, 'K-ouros': 1, 'J-copas': 1, 'J-paus': 1, 'J-espadas': 1,

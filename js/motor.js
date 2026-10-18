@@ -21,11 +21,14 @@ window.SS = window.SS || {};
   const DANO_BARALHO_VAZIO = 2;
 
   // Palhaços: o "herói" de cada jogador. Os textos e decks ficam em palhacos.js.
+  // dadosPrimeiro/ataquePrimeiro: bônus do 1º ataque do turno (Lançalotte);
+  // reducaoDefesa: dano a menos em quem defende; soPaus: só Senhores com carta de Paus (Paumol).
+  // Valores calibrados com o simulador (todos os Palhaços entre 46% e 55% de vitórias).
   const PALHACOS = {
-    lancalotte: { naipe: 'espadas', pv: 20, limiteMao: 7, compras: 1, poder: 'desafio' },
+    lancalotte: { naipe: 'espadas', pv: 20, limiteMao: 7, compras: 1, poder: 'desafio', dadosPrimeiro: 1, ataquePrimeiro: 1 },
     infartitte: { naipe: 'copas', pv: 24, limiteMao: 7, compras: 1, poder: 'transfusao' },
-    paumol: { naipe: 'paus', pv: 20, limiteMao: 7, compras: 1, poder: 'vigilia' },
-    ourinhos: { naipe: 'ouros', pv: 17, limiteMao: 6, compras: 2, poder: null },
+    paumol: { naipe: 'paus', pv: 18, limiteMao: 7, compras: 1, poder: 'vigilia', reducaoDefesa: 1, soPaus: true },
+    ourinhos: { naipe: 'ouros', pv: 15, limiteMao: 6, compras: 2, poder: null },
   };
   const CUSTO_TRANSFUSAO = 2; // PV pagos pela Transfusão do Infartitte
   const palhacoDe = j => (j && PALHACOS[j.palhaco]) || null;
@@ -646,9 +649,12 @@ window.SS = window.SS || {};
     lista.forEach((d, k) => {
       const extras = d.ouros || [];
       for (const o of extras) gastarOuros(e, p, o);
-      // Lançalotte (Golpe certeiro): o 1º ataque do turno ganha +1 dado.
-      const golpeCerteiro = k === 0 && temPalhaco(j, 'lancalotte') ? 1 : 0;
-      ataques.push({ n: k + 1, atacante: d.atacante, alvo: d.alvo, dados: 1 + extras.length + golpeCerteiro, bloqueadores: [], resultado: null });
+      // Lançalotte (Golpe certeiro): o 1º ataque do turno ganha dado (e ataque) extra.
+      const golpe = k === 0 && temPalhaco(j, 'lancalotte') ? PALHACOS.lancalotte : null;
+      ataques.push({
+        n: k + 1, atacante: d.atacante, alvo: d.alvo, dados: 1 + extras.length + (golpe ? golpe.dadosPrimeiro : 0),
+        bonusAtaque: golpe ? golpe.ataquePrimeiro : 0, bloqueadores: [], resultado: null,
+      });
     });
     // Quem atacou só vira para baixo (desativa) no fim do turno.
     for (const uid of Object.keys(contagem)) {
@@ -722,7 +728,7 @@ window.SS = window.SS || {};
       return fim();
     }
     const u = locA.u;
-    const base = ataqueBase(e, p, locA.i);
+    const base = ataqueBase(e, p, locA.i) + (at.bonusAtaque || 0);
     const bonus = maior === 6 ? u.bonus.reduce((s, v) => s + Math.floor(v / 2), 0) : u.bonus.length;
     const total = base + bonus;
     const dano = maior >= DADO_ATAQUE_TOTAL ? total : Math.floor(total / 2);
@@ -744,14 +750,21 @@ window.SS = window.SS || {};
     const bloq = defensores.map(uid => localizar(e, uid)).filter(Boolean);
     const atkBloq = bloq.map(b => ataque(e, b.p, b.i));
     const somaBloq = atkBloq.reduce((s, v) => s + v, 0);
-    // Paumol (Casca grossa): quem defende do lado dele recebe 1 de dano a menos.
-    const danoDefesa = temPalhaco(D, 'paumol') ? Math.max(0, dano - 1) : dano;
-    if (danoDefesa < dano && bloq.length) registrar(e, `Casca grossa: o dano em quem defende cai para ${danoDefesa}.`);
+    // Paumol (Casca grossa): quem defende do lado dele recebe dano a menos
+    // (com soPaus, só os Senhores que têm carta de Paus, na figura ou no número).
+    const pm = PALHACOS.paumol;
+    const danoPara = b => {
+      if (!temPalhaco(D, 'paumol')) return dano;
+      if (pm.soPaus && b.u.figura.naipe !== 'paus' && b.u.numero.naipe !== 'paus') return dano;
+      return Math.max(0, dano - pm.reducaoDefesa);
+    };
     let todosMorreram = true;
     bloq.forEach((b, k) => {
       const uid = b.u.uid;
       const loc = localizar(e, uid);
       if (!loc) return;
+      const danoDefesa = danoPara(b);
+      if (danoDefesa < dano) registrar(e, `Casca grossa: o dano em ${nomeUnidade(loc.u)} cai para ${danoDefesa}.`);
       if (danoDefesa * 2 < atkBloq[k]) registrar(e, `${nomeUnidade(loc.u)} ignorou o golpe (dano menor que metade do seu ataque).`);
       else if (danoDefesa > atkBloq[k]) morrer(e, loc.p, loc.i, 'golpe fatal');
       else aplicarHit(e, loc.p, loc.i);
