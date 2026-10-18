@@ -11,8 +11,8 @@ window.SS = window.SS || {};
   const NOME_NAIPE = { copas: 'Copas', ouros: 'Ouros', paus: 'Paus', espadas: 'Espadas' };
   const PODER_FIGURA = {
     J: 'Valete — Ímpeto: ataca no mesmo turno em que entra. Só equipa números de 2 a 5.',
-    Q: 'Rainha — Atropelar: se matar quem bloqueou, o dano que sobra (dano − ataque do bloqueador) vai para o PV do oponente. Para entrar: 2 ações e o sacrifício de 1 Senhor(a) seu que já estava em campo antes deste turno.',
-    K: 'Rei — Guardião: pode bloquear até 2 atacantes por turno. Só equipa números de 2 a 7.',
+    Q: 'Rainha — Atropelar: se matar quem bloqueou, o dano que sobra (dano − ataque do bloqueador) vai para o PV do oponente. Para entrar: 1 ação e o sacrifício de 2 Senhores seus que já estavam em campo antes deste turno.',
+    K: 'Rei — Ordem real: ao atacar, pode escolher como alvo um Senhor(a) inimigo. Esse ataque não pode ser bloqueado por outro: o alvo se defende sozinho. Só equipa números de 2 a 7.',
   };
   const PODER_NAIPADO = {
     paus: 'Aguenta 3 hits (4 se estiver ao lado de um Ás de Paus).',
@@ -39,16 +39,17 @@ window.SS = window.SS || {};
   };
   const ANGULO = { vertical: 0, diagonal: 45, horizontal: 90 };
   // Parâmetros que o jogador escolhe clicando na mesa, em ordem, para cada tipo de ação.
-  const PASSOS = { sumonar: ['sacrificio', 'slot'], invocarAs: ['slot'], espadas: ['alvo'], paus: ['alvo'], reviver: ['escolha'], curar: [], comprar: [] };
+  // "sacrificios" é um passo de 2 cliques (a Rainha sacrifica 2 Senhores).
+  const PASSOS = { sumonar: ['sacrificios', 'slot'], invocarAs: ['slot'], espadas: ['alvo'], paus: ['alvo'], reviver: ['escolha'], curar: [], comprar: [], poder: ['alvo'] };
+  const P = SS.Palhacos;
 
-  const NOME_COR = { vermelho: 'Vermelho', azul: 'Azul' };
-
-  const cfg = { cor: 'vermelho', nivel: 'medio', modo: 'bot', deck: 'padrao' };
+  const cfg = { palhaco: 'lancalotte', rival: 'aleatorio', nivel: 'medio', modo: 'bot', deck: 'palhaco' };
   let jogo = null, ui = null, partida = 0, escala = 1;
   let posturaAnterior = {};
   const DURACAO_ANIM = 700;
-  let cores = ['vermelho', 'azul']; // cor de cada jogador (0 = você, embaixo)
-  const corDe = p => cores[p];
+  let palhacos = ['lancalotte', 'paumol']; // Palhaço de cada jogador (0 = você, embaixo)
+  const palhacoDe = p => P.get(palhacos[p]);
+  const corDe = p => palhacoDe(p).cor;
 
   const novoUi = () => ({
     sel: [], pend: null, ataques: [], atacanteSel: null, bloqueios: {}, bloqSel: null,
@@ -76,7 +77,10 @@ window.SS = window.SS || {};
 
   function candidatosPendentes() {
     const pd = ui.pend;
-    return pd.cands.filter(a => Object.keys(pd.esc).every(k => a[k] === pd.esc[k]));
+    return pd.cands.filter(a => Object.keys(pd.esc).every(k => {
+      if (k === 'sacrificios') return pd.esc.sacrificios.every(uid => uid === a.sacrificio || uid === a.sacrificio2);
+      return a[k] === pd.esc[k];
+    }));
   }
 
   const passoAtual = () => (ui.pend ? ui.pend.passos[ui.pend.k] : null);
@@ -88,7 +92,17 @@ window.SS = window.SS || {};
     const tipo = chave.split('/')[0];
     const cands = candidatosSelecao().filter(a => chaveAcao(a) === chave);
     if (!cands.length) return;
-    ui.pend = { tipo, cands, passos: PASSOS[tipo].filter(ps => cands.some(a => a[ps] != null)), k: 0, esc: {} };
+    const tem = (a, ps) => (ps === 'sacrificios' ? a.sacrificio != null : a[ps] != null);
+    ui.pend = { tipo, cands, passos: PASSOS[tipo].filter(ps => cands.some(a => tem(a, ps))), k: 0, esc: {} };
+    avancarPendente();
+  }
+
+  // Poder do Palhaço: escolhe o alvo clicando na mesa.
+  function iniciarPoder() {
+    const cands = M.acoesLegais(jogo).filter(a => a.tipo === 'poder');
+    if (!cands.length) return;
+    ui.sel = [];
+    ui.pend = { tipo: 'poder', cands, passos: ['alvo'], k: 0, esc: {} };
     avancarPendente();
   }
 
@@ -107,8 +121,14 @@ window.SS = window.SS || {};
   }
 
   function escolherParametro(v) {
-    const pd = ui.pend;
-    pd.esc[pd.passos[pd.k]] = v;
+    const pd = ui.pend, passo = pd.passos[pd.k];
+    if (passo === 'sacrificios') {
+      const lista = pd.esc.sacrificios || (pd.esc.sacrificios = []);
+      const k = lista.indexOf(v);
+      if (k >= 0) lista.splice(k, 1); // clicar de novo desmarca
+      else lista.push(v);
+      if (lista.length < M.SACRIFICIOS_RAINHA) return render();
+    } else pd.esc[passo] = v;
     pd.k++;
     avancarPendente();
   }
@@ -116,7 +136,7 @@ window.SS = window.SS || {};
   function rotuloTipo(tipo, a) {
     const j = jogo.jogadores[jogo.vez];
     switch (tipo) {
-      case 'sumonar': return a.sacrificio != null ? `♛ Sumonar Rainha (sacrifício · ${M.CUSTO_RAINHA} ações)` : '⚔ Sumonar';
+      case 'sumonar': return a.sacrificio != null ? `♛ Sumonar Rainha (${M.SACRIFICIOS_RAINHA} sacrifícios)` : '⚔ Sumonar';
       case 'invocarAs': return '✦ Invocar Ás';
       case 'curar': return `♥ Curar ${M.curaDe(j.mao.find(c => c.id === a.carta))} PV`;
       case 'espadas': return '♠ +1 de ataque';
@@ -133,10 +153,8 @@ window.SS = window.SS || {};
     const fig = cartas.find(M.ehFigura), num = cartas.find(M.ehNumero), as = cartas.find(M.ehAs);
     if (jogo.acoes <= 0) return 'Suas ações deste turno acabaram.';
     if (fig && num && M.valor(num) > M.LIMITE_FIGURA[fig.rank]) return `${M.nomeCarta(fig)} só pode ser equipado(a) com cartas de 2 a ${M.LIMITE_FIGURA[fig.rank]}.`;
-    if (fig && num && fig.rank === 'Q') {
-      if (jogo.acoes < M.CUSTO_RAINHA) return `A Rainha custa ${M.CUSTO_RAINHA} ações e você só tem ${jogo.acoes}.`;
-      return 'A Rainha precisa sacrificar um Senhor(a) seu que já estava em campo antes deste turno.';
-    }
+    if (fig && num && fig.rank === 'Q') return `A Rainha precisa sacrificar ${M.SACRIFICIOS_RAINHA} Senhores seus que já estavam em campo antes deste turno.`;
+    if (cartas.length === 1 && fig && fig.rank === 'Q' && !candidatosParceiros().size) return `A Rainha precisa de ${M.SACRIFICIOS_RAINHA} Senhores seus em campo desde o turno anterior para sacrificar.`;
     if (fig && num && !j.campo.includes(null)) return 'Sua fileira está cheia.';
     if (as && num && as.naipe !== num.naipe) return 'Para invocar o Ás, sacrifique uma carta numérica do mesmo naipe.';
     if (cartas.length === 1 && fig) return 'Selecione também uma carta numérica (2 a 10) para sumonar.';
@@ -145,11 +163,36 @@ window.SS = window.SS || {};
   }
 
   function textoPasso() {
-    const passo = passoAtual();
-    if (passo === 'slot') return 'Clique num espaço livre da sua fileira.';
-    if (passo === 'sacrificio') return 'Clique no Senhor(a) que será sacrificado(a) para a Rainha.';
-    if (passo === 'alvo') return ui.pend.tipo === 'espadas' ? 'Clique no Senhor(a) que recebe +1 de ataque neste turno.' : 'Clique no Senhor(a) ferido(a) que entra em berserk.';
+    const passo = passoAtual(), tipo = ui.pend.tipo;
+    if (passo === 'slot') {
+      return tipo === 'invocarAs'
+        ? 'Clique num espaço livre, ou numa carta para colocar o Ás no lugar dela (as cartas são empurradas para o lado).'
+        : 'Clique num espaço livre da sua fileira.';
+    }
+    if (passo === 'sacrificios') {
+      const n = (ui.pend.esc.sacrificios || []).length;
+      return `Clique nos ${M.SACRIFICIOS_RAINHA} Senhores que serão sacrificados para a Rainha (${n}/${M.SACRIFICIOS_RAINHA}).`;
+    }
+    if (passo === 'alvo') {
+      if (tipo === 'espadas') return 'Clique no Senhor(a) que recebe +1 de ataque neste turno.';
+      if (tipo === 'paus') return 'Clique no Senhor(a) ferido(a) que entra em berserk.';
+      const poder = palhacoDe(jogo.vez).poder;
+      return `${poder.nome} — ${poder.texto} Clique no alvo.`;
+    }
     return '';
+  }
+
+  // Com 1 figura ou 1 Ás selecionado: quais cartas da mão combinam com ele (para pulsar).
+  function candidatosParceiros() {
+    const r = new Set();
+    if (!jogo || jogo.fase !== 'principal' || ui.sel.length !== 1 || ui.pend) return r;
+    const id = ui.sel[0], c = jogo.jogadores[jogo.vez].mao.find(x => x.id === id);
+    if (!c || !(M.ehFigura(c) || M.ehAs(c))) return r;
+    for (const a of M.acoesLegais(jogo)) {
+      if (a.tipo === 'sumonar' && a.figura === id) r.add(a.numero);
+      if (a.tipo === 'invocarAs' && a.as === id) r.add(a.custo);
+    }
+    return r;
   }
 
   // ---------- Ataque e bloqueio do jogador ----------
@@ -208,14 +251,15 @@ window.SS = window.SS || {};
     return u ? { p, i, u } : null;
   }
 
-  // Para onde a seta de ataque foi solta: no retrato do oponente ou num Ás dele.
-  function alvoDeAtaqueEm(el) {
+  // Para onde a seta de ataque foi solta: no Palhaço do oponente, num Ás dele
+  // ou (só para o Rei) num Senhor(a) dele.
+  function alvoDeAtaqueEm(el, atacante) {
     if (!el) return null;
     const d = 1 - jogo.vez;
     const retrato = el.closest('[data-alvo]');
     if (retrato && retrato.dataset.alvo === 'jogador:' + d) return 'jogador';
     const loc = unidadeEm(el);
-    if (loc && loc.p === d && loc.u.tipo === 'as') return loc.u.uid;
+    if (loc && loc.p === d && M.alvosPossiveis(jogo, atacante).includes(loc.u.uid)) return loc.u.uid;
     return null;
   }
 
@@ -226,7 +270,7 @@ window.SS = window.SS || {};
     if (chip) return Number(chip.dataset.ataque);
     const loc = unidadeEm(el);
     if (!loc || loc.p !== jogo.vez) return null;
-    const ats = jogo.combate.ataques.filter(a => a.atacante === loc.u.uid);
+    const ats = jogo.combate.ataques.filter(a => a.atacante === loc.u.uid && !M.ataqueDirecionado(jogo, a));
     const at = ats.find(a => !(ui.bloqueios[a.n] || []).includes(ui.bloqSel)) || ats[0];
     return at ? at.n : null;
   }
@@ -241,14 +285,18 @@ window.SS = window.SS || {};
       const passo = passoAtual();
       for (const a of candidatosPendentes()) {
         if (passo === 'slot') s.add(`slot:${p}:${a.slot}`);
-        else if (passo === 'sacrificio' || passo === 'alvo') s.add('uid:' + a[passo]);
+        else if (passo === 'alvo') s.add('uid:' + a.alvo);
+        else if (passo === 'sacrificios') {
+          s.add('uid:' + a.sacrificio);
+          s.add('uid:' + a.sacrificio2);
+        }
       }
     } else if (humanoAtaca()) {
       if (ui.atacanteSel == null) for (const uid of atacantesRestantes()) s.add('uid:' + uid);
-      else for (const alvo of M.alvosPossiveis(jogo)) s.add(alvo === 'jogador' ? 'jogador:' + d : 'uid:' + alvo);
+      else for (const alvo of M.alvosPossiveis(jogo, ui.atacanteSel)) s.add(alvo === 'jogador' ? 'jogador:' + d : 'uid:' + alvo);
     } else if (humanoBloqueia()) {
       if (ui.bloqSel == null) for (const uid of bloqueadoresComCapacidade()) s.add('uid:' + uid);
-      else for (const at of jogo.combate.ataques) s.add('uid:' + at.atacante);
+      else for (const at of jogo.combate.ataques) if (!M.ataqueDirecionado(jogo, at)) s.add('uid:' + at.atacante);
     }
     return s;
   }
@@ -297,6 +345,7 @@ window.SS = window.SS || {};
       ui.mira = { uid: loc.u.uid, x: ev.clientX, y: ev.clientY, moveu: false };
       ui.atacanteSel = loc.u.uid;
     } else if (humanoBloqueia() && loc.p === 1 - jogo.vez && loc.u.tipo === 'senhor') {
+      if (loc.u.uid === jogo.desafio) return; // desafiado pelo Lançalotte: o bloqueio é obrigatório
       if (bloqueadoresComCapacidade().includes(loc.u.uid) || ui.bloqSel === loc.u.uid) {
         ui.mira = { uid: loc.u.uid, x: ev.clientX, y: ev.clientY, jaSelecionado: ui.bloqSel === loc.u.uid };
         ui.bloqSel = loc.u.uid;
@@ -322,8 +371,8 @@ window.SS = window.SS || {};
       const uid = ui.atacanteSel;
       ui.atacanteSel = null;
       if (moveu) {
-        // Arrastou: o alvo é onde soltou (um Ás inimigo ou o retrato do oponente).
-        const alvo = alvoDeAtaqueEm(el);
+        // Arrastou: o alvo é onde soltou (o Palhaço do oponente, um Ás, ou um Senhor se for o Rei).
+        const alvo = alvoDeAtaqueEm(el, uid);
         if (alvo != null) {
           removerAtaquesDe(uid);
           return adicionarAtaque(uid, alvo);
@@ -418,9 +467,23 @@ window.SS = window.SS || {};
         return;
       }
       case 'limpar-bloqueios':
-        ui.bloqueios = {}; ui.bloqSel = null;
+        ui.bloqueios = bloqueiosIniciais();
+        ui.bloqSel = null;
         return render();
+      case 'poder':
+        return iniciarPoder();
     }
+  }
+
+  // O Senhor(a) desafiado pelo Lançalotte já começa bloqueando o primeiro ataque possível.
+  function bloqueiosIniciais() {
+    const b = {};
+    const l = jogo.desafio != null ? M.localizar(jogo, jogo.desafio) : null;
+    if (l && l.p === 1 - jogo.vez && l.u.ativo) {
+      const at = jogo.combate.ataques.find(a => !M.ataqueDirecionado(jogo, a));
+      if (at) b[at.n] = [jogo.desafio];
+    }
+    return b;
   }
 
   function clicarEspaco(p, i) {
@@ -428,7 +491,7 @@ window.SS = window.SS || {};
     if (!ui.pend) return;
     const passo = passoAtual();
     if (passo === 'slot' && alvos.has(`slot:${p}:${i}`)) return escolherParametro(i);
-    if ((passo === 'sacrificio' || passo === 'alvo') && u && alvos.has('uid:' + u.uid)) return escolherParametro(u.uid);
+    if ((passo === 'sacrificios' || passo === 'alvo') && u && alvos.has('uid:' + u.uid)) return escolherParametro(u.uid);
   }
 
   // ---------- Setas ----------
@@ -449,7 +512,7 @@ window.SS = window.SS || {};
     return loc ? document.querySelector(`[data-slot="${loc.p}:${loc.i}"]`) : null;
   }
 
-  const elRetrato = p => document.querySelector(`#info-${p} .retrato`);
+  const elRetrato = p => document.querySelector(`#info-${p} .heroi`);
 
   function caminhoSeta(a, b, encurtar) {
     const dx = b.x - a.x, dy = b.y - a.y, dist = Math.hypot(dx, dy) || 1;
@@ -555,7 +618,9 @@ window.SS = window.SS || {};
     ];
     if (nai) linhas.push(`<b>Naipado de ${NOME_NAIPE[nai]}</b>: ${PODER_NAIPADO[nai]}`);
     if (vizinhos.includes('copas')) linhas.push('Ás de Copas vizinho: se causar dano ao PV do oponente, o dono cura 1 PV.');
-    if (u.atacou) linhas.push('Já atacou neste turno: vira para baixo no fim do turno.');
+    if (u.vigilia) linhas.push('<b>Vigília</b> (Paumol): não vira para baixo no fim deste turno.');
+    if (jogo.desafio === u.uid) linhas.push('<b>Desafiado</b> (Lançalotte): terá de bloquear o primeiro ataque.');
+    if (u.atacou && !u.vigilia) linhas.push('Já atacou neste turno: vira para baixo no fim do turno.');
     if (!u.ativo) linhas.push('<b>Desativado</b> (virado): atacou e não pode bloquear até o próximo turno do dono.');
     else if (jogo.vez === p && M.podeAtacar(jogo, p, i)) linhas.push(`Pronto para atacar${u.ataques > 1 ? ` (${u.ataques} vezes)` : ''}.`);
     else if (jogo.vez === p && u.entrou === jogo.turno && u.figura.rank !== 'J') linhas.push('Entrou neste turno: só ataca no próximo.');
@@ -579,14 +644,21 @@ window.SS = window.SS || {};
     const loc = unidadeEm(el);
     if (loc) return dicaUnidade(loc.p, loc.i, loc.u);
     if (el.closest('[data-token]')) return { titulo: 'Ouros extra', sub: 'Ás de Ouros', linhas: ['Vale 1 carta de Ouros neste turno: selecione junto com outras cartas para comprar, reviver ou dar +1 dado num ataque.'] };
+    const btnPoder = el.closest('[data-poder]');
+    if (btnPoder) {
+      const pal = palhacoDe(Number(btnPoder.dataset.poder));
+      if (!pal.poder) return { titulo: pal.passiva.nome, sub: `Passiva de ${pal.nome}`, linhas: [pal.passiva.texto, `<b>${pal.custo.nome}:</b> ${pal.custo.texto}`, 'Este Palhaço não tem poder ativo.'] };
+      return { titulo: pal.poder.nome, sub: `Poder de ${pal.nome} · 1 ação · 1 vez por turno`, linhas: [pal.poder.texto] };
+    }
     const ret = el.closest('[data-alvo]');
     if (ret) {
-      const p = Number(ret.dataset.alvo.split(':')[1]), j = jogo.jogadores[p], teto = M.tetoCura(j);
-      return {
-        titulo: j.nome, sub: `${j.pv} PV`,
-        linhas: [`Mão: ${j.mao.length} cartas · Letras: ${j.letras.length} · Números: ${j.numeros.length} · Cemitério: ${j.cemiterio.length}.`,
-          isFinite(teto) ? `Ferida de Copas: só pode curar até ${teto} PV enquanto o Naipado de Copas inimigo viver.` : `Começou com ${M.PV_INICIAL} PV. Sem feridas: Copas pode curar sem limite.`],
-      };
+      const p = Number(ret.dataset.alvo.split(':')[1]), j = jogo.jogadores[p], teto = M.tetoCura(j), pal = palhacoDe(p);
+      const linhas = [`<b>Passiva — ${pal.passiva.nome}:</b> ${pal.passiva.texto}`];
+      if (pal.poder) linhas.push(`<b>Poder — ${pal.poder.nome}</b> (1 ação, 1 vez por turno): ${pal.poder.texto}`);
+      if (pal.custo) linhas.push(`<b>${pal.custo.nome}:</b> ${pal.custo.texto}`);
+      linhas.push(`<b>${j.pv} PV</b> · mão: ${j.mao.length} · Letras: ${j.letras.length} · Números: ${j.numeros.length} · cemitério: ${j.cemiterio.length}.`);
+      if (isFinite(teto)) linhas.push(`Ferida de Copas: só pode curar até ${teto} PV enquanto o Naipado de Copas inimigo viver.`);
+      return { titulo: `Palhaço ${pal.nome}`, sub: `${pal.titulo} · ${NOME_NAIPE[pal.naipe]}`, linhas };
     }
     const pilha = el.closest('[data-pilha]');
     if (pilha) {
@@ -684,6 +756,15 @@ window.SS = window.SS || {};
     }, atraso + dur + 30);
   }
 
+  // A mão fica ao lado do Palhaço: com muitas cartas, elas se sobrepõem mais para caber.
+  function ajustarSobreposicao(mao) {
+    const cartas = mao.children;
+    if (!cartas.length) return;
+    const largura = cartas[0].offsetWidth || 86, disponivel = mao.clientWidth || 400, n = cartas.length;
+    const sobra = n > 1 ? Math.min(-8, (disponivel - largura) / (n - 1) - largura) : 0;
+    for (let k = 0; k < n; k++) cartas[k].style.marginLeft = k ? `${sobra}px` : '0';
+  }
+
   function renderVazio() {
     for (const p of [0, 1]) {
       $('#info-' + p).innerHTML = '';
@@ -696,26 +777,61 @@ window.SS = window.SS || {};
     esconderAnuncio();
   }
 
+  // Chapéu de bobo da corte (arte provisória do Palhaço).
+  function chapeu(cor) {
+    const tons = { vermelho: ['#e0303b', '#8f0f18'], azul: ['#3d6fd6', '#1b3a85'], verde: ['#2fa45f', '#14522d'], dourado: ['#e6b630', '#8a6208'] }[cor];
+    return `<svg viewBox="0 0 100 82" class="chapeu">
+      <path d="M14 66 Q22 34 6 14 Q30 26 40 46 Z" fill="${tons[0]}"/>
+      <path d="M40 46 Q44 20 50 6 Q56 20 60 46 Z" fill="${tons[1]}"/>
+      <path d="M60 46 Q70 26 94 14 Q78 34 86 66 Z" fill="${tons[0]}"/>
+      <path d="M14 66 Q50 40 86 66 L86 74 Q50 52 14 74 Z" fill="${tons[1]}"/>
+      <rect x="12" y="66" width="76" height="10" rx="4" fill="#f4e7c3" stroke="#00000055"/>
+      <circle cx="6" cy="14" r="6" fill="#ffd54a" stroke="#7a5806"/><circle cx="50" cy="6" r="6" fill="#ffd54a" stroke="#7a5806"/>
+      <circle cx="94" cy="14" r="6" fill="#ffd54a" stroke="#7a5806"/></svg>`;
+  }
+
   function renderJogador(p, alvos) {
-    const j = jogo.jogadores[p], cor = corDe(p), teto = M.tetoCura(j);
+    const j = jogo.jogadores[p], cor = corDe(p), teto = M.tetoCura(j), pal = palhacoDe(p);
     const quem = controle(p) === 'humano' ? 'você' : `bot · ${NOME_NIVEL[cfg.nivel]}`;
     const podeJogar = controle(p) === 'humano' && jogo.vez === p && jogo.fase === 'principal' && !ui.ocupado;
     let tokens = '';
     for (let k = 0; k < j.tokens; k++) {
       tokens += `<button class="token${ui.sel.includes('TOKEN#' + k) ? ' selecionada' : ''}" data-token="${k}"${podeJogar ? '' : ' disabled'}>♦ extra</button>`;
     }
+    // Botão do poder (em forma de carta, ao lado do Palhaço).
+    let poder;
+    if (pal.poder) {
+      const usado = jogo.vez === p && jogo.poderUsado;
+      const pode = podeJogar && !ui.pend && M.acoesLegais(jogo).some(a => a.tipo === 'poder');
+      poder = `<button class="poder-btn cor-${cor}${pode ? ' pronto' : ''}${usado ? ' usado' : ''}${ui.pend && ui.pend.tipo === 'poder' && jogo.vez === p ? ' ativo' : ''}"
+        data-poder="${p}"${pode ? ' data-acao="poder"' : ' disabled'}>
+        <span class="poder-icone">${SIMB[pal.naipe]}</span><b>${pal.poder.nome}</b><small>${usado ? 'usado' : '1 ação'}</small></button>`;
+    } else {
+      poder = `<div class="poder-btn cor-${cor} passivo" data-poder="${p}"><span class="poder-icone">${SIMB[pal.naipe]}</span><b>${pal.passiva.nome}</b><small>passiva</small></div>`;
+    }
     $('#info-' + p).innerHTML = `
-      <div class="retrato cor-${cor}${alvos.has('jogador:' + p) ? ' clicavel' : ''}${jogo.vez === p ? ' da-vez' : ''}" data-alvo="jogador:${p}">
-        <div class="nome">${escapar(j.nome)} <small>${quem}</small></div>
-        <div class="pv"><span class="coracao">♥</span>${j.pv}</div>
-        <div class="teto">${isFinite(teto) ? `ferida: cura até ${teto}` : 'pontos de vida'}</div>
+      <div class="heroi cor-${cor}${alvos.has('jogador:' + p) ? ' clicavel' : ''}${jogo.vez === p ? ' da-vez' : ''}" data-alvo="jogador:${p}">
+        <div class="heroi-arte">${chapeu(cor)}<span class="heroi-naipe">${SIMB[pal.naipe]}</span></div>
+        <div class="heroi-nome">${escapar(pal.nome)}</div>
+        <div class="heroi-quem">${quem}</div>
+        <div class="heroi-pv" title="Pontos de vida"><span>${j.pv}</span></div>
+        ${isFinite(teto) ? `<div class="heroi-ferida" title="Ferida de Copas">cura até ${teto}</div>` : ''}
       </div>
-      <div class="tokens">${tokens}</div>`;
+      <div class="lado-heroi">${poder}<div class="tokens">${tokens}</div></div>`;
     const visivel = p === 0 || cfg.modo === 'bots';
     const oculta = id => (voando.has(id) ? ' style="visibility:hidden"' : '');
+    // Com 1 figura ou 1 Ás selecionado: o que combina pulsa, o resto escurece.
+    const selUnica = podeJogar && !ui.pend && ui.sel.length === 1 ? j.mao.find(c => c.id === ui.sel[0]) : null;
+    const filtrar = !!selUnica && (M.ehFigura(selUnica) || M.ehAs(selUnica));
+    const parceiros = filtrar ? candidatosParceiros() : new Set();
+    const estilo = c => {
+      if (!filtrar || c.id === selUnica.id) return '';
+      return parceiros.has(c.id) ? ' combina' : ' apagada';
+    };
     $('#mao-' + p).innerHTML = j.mao.map(c => (visivel
-      ? `<div class="carta${ui.sel.includes(c.id) ? ' selecionada' : ''}${podeJogar ? ' jogavel' : ''}"${podeJogar ? ` data-mao="${c.id}"` : ` data-carta="${c.id}"`} data-voo="${c.id}"${oculta(c.id)}>${C.frente(c)}</div>`
+      ? `<div class="carta${ui.sel.includes(c.id) ? ' selecionada' : ''}${podeJogar ? ' jogavel' : ''}${estilo(c)}"${podeJogar ? ` data-mao="${c.id}"` : ` data-carta="${c.id}"`} data-voo="${c.id}"${oculta(c.id)}>${C.frente(c)}</div>`
       : `<div class="carta dorso ${cor}" data-voo="${c.id}"${oculta(c.id)}></div>`)).join('');
+    ajustarSobreposicao($('#mao-' + p));
     const topo = j.cemiterio[j.cemiterio.length - 1];
     $('#pilhas-' + p).innerHTML = `
       ${M.BARALHOS.map(b => {
@@ -731,7 +847,8 @@ window.SS = window.SS || {};
     for (let i = 0; i < M.ESPACOS; i++) {
       const u = j.campo[i];
       const clicavel = alvos.has(`slot:${p}:${i}`) || (u && alvos.has('uid:' + u.uid));
-      const sel = u && (ui.atacanteSel === u.uid || ui.bloqSel === u.uid);
+      const sacrificando = ui.pend && ui.pend.esc.sacrificios && u && ui.pend.esc.sacrificios.includes(u.uid);
+      const sel = u && (ui.atacanteSel === u.uid || ui.bloqSel === u.uid || sacrificando);
       h += `<div class="espaco${clicavel ? ' clicavel' : ''}${sel ? ' selecionado' : ''}" data-slot="${p}:${i}">${u ? htmlUnidade(p, i, u) : `<span class="num-espaco">${i + 1}</span>`}</div>`;
     }
     const fileira = $('#campo-' + p);
@@ -830,7 +947,7 @@ window.SS = window.SS || {};
       .map(uid => { const l = M.localizar(jogo, uid); return l ? M.nomeUnidade(l.u) : '✖'; });
     const res = at.resultado ? ` · dado ${at.resultado.rolagens.join(',')} → ${at.resultado.dano} de dano` : '';
     return `<button class="chip${clicavel ? ' clicavel' : ''}${ui.foco === at.n ? ' foco' : ''}" data-ataque="${at.n}">
-      <b>${at.n}º</b> ${nome} ⚔${atk} → ${nomeAlvo(at)}${at.dados > 1 ? ` · ${at.dados} dados` : ''}${bl.length ? ` · ⛨ ${bl.join(' + ')}` : ''}${res}</button>`;
+      <b>${at.n}º</b> ${nome} ⚔${atk} → ${nomeAlvo(at)}${M.ataqueDirecionado(jogo, at) ? ' · <i>direto, sem bloqueio</i>' : ''}${at.dados > 1 ? ` · ${at.dados} dados` : ''}${bl.length ? ` · ⛨ ${bl.join(' + ')}` : ''}${res}</button>`;
   }
 
   function chipDeclaracao(a, k) {
@@ -889,9 +1006,12 @@ window.SS = window.SS || {};
       fase += ' · Ataque';
       if (humanoNaVez) {
         const temAs = M.alvosPossiveis(jogo).length > 1;
+        const temRei = atacantesRestantes().some(uid => M.localizar(jogo, uid).u.figura.rank === 'K');
+        const extra = [temAs ? 'para atacar um Ás, arraste até ele' : '', temRei ? 'o Rei pode ser arrastado até um Senhor(a) inimigo (esse ataque não pode ser bloqueado)' : '']
+          .filter(Boolean).join('; ');
         if (!M.atacantesAptos(jogo).length) texto = jogo.turno === 1 ? 'Quem começa não ataca no primeiro turno.' : 'Nenhum Senhor(a) apto(a) a atacar.';
         else texto = atacantesRestantes().length
-          ? `Clique nos Senhores brilhando para atacar o oponente (clique de novo para desfazer)${temAs ? '. Para atacar um Ás, arraste até ele' : ''}. A ordem abaixo é a ordem dos ataques (◀ ▶ muda).`
+          ? `Clique nos Senhores brilhando para atacar o oponente (clique de novo para desfazer)${extra ? '. Dica: ' + extra : ''}. A ordem abaixo é a ordem dos ataques (◀ ▶ muda).`
           : 'Ataques declarados. Ajuste a ordem e confirme.';
         chips = ui.ataques.map(chipDeclaracao).join('');
         if (ui.ataques.length) botoes += btn('confirmar-ataques', `Confirmar ${ui.ataques.length} ataque${ui.ataques.length > 1 ? 's' : ''}`, 'principal');
@@ -900,18 +1020,20 @@ window.SS = window.SS || {};
     } else if (jogo.fase === 'bloqueio') {
       fase += ' · Bloqueio';
       const humanoDefende = controle(d) === 'humano' && !ui.ocupado;
-      chips = jogo.combate.ataques.map(at => chipAtaque(at, humanoDefende && ui.bloqSel != null)).join('');
+      chips = jogo.combate.ataques.map(at => chipAtaque(at, humanoDefende && ui.bloqSel != null && !M.ataqueDirecionado(jogo, at))).join('');
       if (humanoDefende) {
-        texto = ui.bloqSel != null
+        const desafiado = jogo.desafio != null && M.localizar(jogo, jogo.desafio);
+        texto = (ui.bloqSel != null
           ? 'Arraste a seta até o atacante que ele(a) vai bloquear e solte. Esc cancela.'
-          : 'Arraste de um Senhor(a) seu ativo até um atacante para bloquear. Ataque sem bloqueio vai direto no seu PV.';
+          : 'Arraste de um Senhor(a) seu ativo até um atacante para bloquear. Ataque sem bloqueio vai direto no seu PV.')
+          + (desafiado ? ` <b>Desafio!</b> ${M.nomeUnidade(desafiado.u)} é obrigado(a) a bloquear o primeiro ataque.` : '');
         botoes = btn('confirmar-bloqueios', 'Confirmar bloqueios', 'principal') + btn('limpar-bloqueios', 'Limpar');
       } else texto = `${escapar(jogo.jogadores[d].nome)} está decidindo os bloqueios…`;
     } else if (jogo.fase === 'resolucao' || jogo.fase === 'fimCombate') {
       fase += ' · Combate';
       if (jogo.combate) chips = jogo.combate.ataques.map(at => chipAtaque(at, false)).join('');
     } else if (jogo.fase === 'descarte') {
-      texto = 'Limite de 7 cartas na mão: descarte o excesso.';
+      texto = `Limite de ${M.limiteMao(j)} cartas na mão: descarte o excesso.`;
     }
     renderAcoes();
     $('#fase').innerHTML = fase;
@@ -1069,6 +1191,21 @@ window.SS = window.SS || {};
     a.innerHTML = '';
   }
 
+  function anuncioInicio(primeiro, dados) {
+    const lado = p => {
+      const pal = palhacoDe(p);
+      return `<div class="inicio-lado${p === primeiro ? ' comeca' : ''}">
+        <div class="heroi mini cor-${pal.cor}"><div class="heroi-arte">${chapeu(pal.cor)}<span class="heroi-naipe">${SIMB[pal.naipe]}</span></div><div class="heroi-nome">${pal.nome}</div></div>
+        <span>${controle(p) === 'humano' ? 'você' : 'oponente'}</span>
+        ${dados ? `<b class="dado-inicio">🎲 ${dados[p]}</b>` : ''}
+        ${p === primeiro ? '<em>começa</em>' : ''}</div>`;
+    };
+    const motivo = dados
+      ? 'Os dois Palhaços são da mesma cor: cada um rolou um dado e começa quem tirou mais.'
+      : 'Palhaço preto (♠ ♣) começa contra Palhaço vermelho (♥ ♦).';
+    return `<div class="anuncio-topo">Quem começa?</div><div class="duelo">${lado(0)}<div class="duelo-seta">×</div>${lado(1)}</div><p class="nota">${motivo}</p>`;
+  }
+
   function anuncioDeclaracao(ataques, nome) {
     const itens = ataques.map(at => {
       const l = M.localizar(jogo, at.atacante);
@@ -1141,7 +1278,7 @@ window.SS = window.SS || {};
 
   function escolherDescarte() {
     return new Promise(resolver => {
-      const j = jogo.jogadores[jogo.vez], n = j.mao.length - M.LIMITE_MAO, esc = [];
+      const j = jogo.jogadores[jogo.vez], n = j.mao.length - M.limiteMao(j), esc = [];
       const tela = () => modal(`<h2>Limite de mão: descarte ${n} carta${n > 1 ? 's' : ''}</h2>
           ${gradeCartas(j.mao, esc, true)}
           <div class="acoes-menu"><button class="btn principal" data-m="ok"${esc.length === n ? '' : ' disabled'}>Descartar (${esc.length}/${n})</button></div>`,
@@ -1203,20 +1340,38 @@ window.SS = window.SS || {};
     viradoAnterior = {};
     maoVista = [null, null];
     cemVisto = [new Set(), new Set()];
-    // Você fica sempre embaixo. O Vermelho é a Senhora e sempre começa.
-    const minhaCor = modo === 'bots' ? 'vermelho' : cfg.cor;
-    cores = [minhaCor, minhaCor === 'vermelho' ? 'azul' : 'vermelho'];
-    const primeiro = cores.indexOf('vermelho');
-    const nomes = cores.map(c => NOME_COR[c]);
-    // Você joga com o deck escolhido no menu; o bot usa sempre o deck padrão.
-    const decks = [
-      M.cartasDoDeck(modo === 'bots' ? M.contagemPadrao() : SS.Decks.contagemPara(cfg.deck), 0),
-      M.cartasDoDeck(M.contagemPadrao(), 1),
-    ];
-    jogo = M.criarJogo({ nomes, primeiro, decks });
+    // Palhaços: você fica sempre embaixo; o bot pega outro Palhaço (o escolhido ou um sorteado).
+    const ids = P.LISTA.map(x => x.id);
+    const sortear = lista => lista[Math.floor(Math.random() * lista.length)];
+    const meu = modo === 'bots' ? sortear(ids) : cfg.palhaco;
+    const outros = ids.filter(x => x !== meu);
+    const rival = modo !== 'bots' && outros.includes(cfg.rival) ? cfg.rival : sortear(outros);
+    palhacos = [meu, rival];
+    // Quem começa: Palhaço preto (♠ ♣) contra vermelho (♥ ♦) começa o preto.
+    // Dois da mesma cor: cada um rola um dado e começa quem tirar mais.
+    const pretos = palhacos.map(P.ehPreto);
+    let primeiro, dadosInicio = null;
+    if (pretos[0] !== pretos[1]) primeiro = pretos[0] ? 0 : 1;
+    else {
+      do dadosInicio = [1 + Math.floor(Math.random() * 6), 1 + Math.floor(Math.random() * 6)];
+      while (dadosInicio[0] === dadosInicio[1]);
+      primeiro = dadosInicio[0] > dadosInicio[1] ? 0 : 1;
+    }
+    const nomes = palhacos.map(x => P.get(x).nome);
+    const contagemMinha = modo === 'bots' || cfg.deck === 'palhaco' ? P.get(meu).deck
+      : cfg.deck === 'padrao' ? M.contagemPadrao() : SS.Decks.contagemPara(cfg.deck);
+    const decks = [M.cartasDoDeck(contagemMinha, 0), M.cartasDoDeck(P.get(rival).deck, 1)];
+    jogo = M.criarJogo({ nomes, primeiro, decks, palhacos });
     ui = novoUi();
-    M.registrar(jogo, `${nomes[primeiro]} (a Senhora) começa.`);
+    M.registrar(jogo, `${nomes[0]} × ${nomes[1]}.`);
+    M.registrar(jogo, dadosInicio
+      ? `Os dois Palhaços são da mesma cor: ${nomes[0]} rolou ${dadosInicio[0]} e ${nomes[1]} rolou ${dadosInicio[1]}. ${nomes[primeiro]} começa.`
+      : `${nomes[primeiro]} tem Palhaço preto e começa.`);
     render();
+    mostrarAnuncio(anuncioInicio(primeiro, dadosInicio) + botaoContinuar());
+    await esperarContinuar(2600);
+    if (id !== partida) return;
+    esconderAnuncio();
     for (const p of [1, 0]) {
       if (controle(p) !== 'bot') continue;
       M.escolherFiguras(jogo, p, Bot.escolherFiguras(jogo, p, cfg.nivel));
@@ -1292,9 +1447,12 @@ window.SS = window.SS || {};
       } else if (!M.bloqueadoresAptos(jogo).length) {
         M.registrar(jogo, `${jogo.jogadores[d].nome} não tem Senhores ativos para bloquear.`);
         M.definirBloqueios(jogo, {});
+      } else if (jogo.combate.ataques.every(at => M.ataqueDirecionado(jogo, at))) {
+        M.registrar(jogo, 'Ataques do Rei contra Senhores não podem ser bloqueados.');
+        M.definirBloqueios(jogo, {});
       } else {
         ui.ocupado = false;
-        ui.bloqueios = {};
+        ui.bloqueios = bloqueiosIniciais();
         ui.bloqSel = null;
         render();
         await new Promise(r => { ui.aoConfirmarBloqueio = r; });
@@ -1427,15 +1585,24 @@ window.SS = window.SS || {};
     const grupo = (nome, opcoes, desativado) => `<div class="grupo" data-grupo="${nome}">${opcoes.map(([v, r]) =>
       `<button data-v="${v}" class="${cfg[nome] === v ? 'ativo' : ''}"${desativado ? ' disabled' : ''}>${r}</button>`).join('')}</div>`;
     const tela = () => {
-      const decks = SS.Decks.opcoes();
-      if (!decks.some(d => d.id === cfg.deck)) cfg.deck = 'padrao';
+      const decks = [{ id: 'palhaco', nome: 'Deck do Palhaço' }].concat(SS.Decks.opcoes());
+      if (!decks.some(d => d.id === cfg.deck)) cfg.deck = 'palhaco';
+      if (cfg.rival === cfg.palhaco) cfg.rival = 'aleatorio';
+      const cartaPalhaco = pal => `<button class="escolha-palhaco cor-${pal.cor}${cfg.palhaco === pal.id ? ' ativo' : ''}" data-palhaco="${pal.id}">
+          <div class="heroi mini cor-${pal.cor}"><div class="heroi-arte">${chapeu(pal.cor)}<span class="heroi-naipe">${SIMB[pal.naipe]}</span></div></div>
+          <b>${pal.nome}</b><small>${pal.titulo} · ${NOME_NAIPE[pal.naipe]}</small>
+          <span class="ep-linha"><i>Passiva:</i> ${pal.passiva.texto}</span>
+          ${pal.poder ? `<span class="ep-linha"><i>Poder:</i> ${pal.poder.texto}</span>` : `<span class="ep-linha"><i>${pal.custo.nome}:</i> ${pal.custo.texto}</span>`}
+        </button>`;
+      const rivais = [['aleatorio', 'Aleatório']].concat(P.LISTA.filter(x => x.id !== cfg.palhaco).map(x => [x.id, `${SIMB[x.naipe]} ${x.nome}`]));
       modal(`<h1 class="titulo">Senhora <span>e</span> Senhores</h1>
         <p class="sub">Protótipo · Regras v2</p>
-        <div class="opcao"><label>Sua cor</label>${grupo('cor', [['vermelho', '♥ Vermelho · Senhora'], ['azul', '♠ Azul · Senhor']])}
-          <p class="nota">O Vermelho é a Senhora e sempre começa a partida.</p></div>
+        <div class="opcao"><label>Escolha seu Palhaço</label><div class="grade-palhacos">${P.LISTA.map(cartaPalhaco).join('')}</div>
+          <p class="nota">Palhaço preto (♠ ♣) começa contra vermelho (♥ ♦). Dois da mesma cor: ganha quem tirar o dado maior.</p></div>
+        <div class="opcao"><label>Palhaço do bot</label>${grupo('rival', rivais)}</div>
         <div class="opcao"><label>Dificuldade do bot</label>${grupo('nivel', [['facil', 'Fácil'], ['medio', 'Médio'], ['dificil', 'Difícil']])}</div>
         <div class="opcao"><label>Seu deck</label>${grupo('deck', decks.map(d => [d.id, escapar(d.nome)]))}
-          ${decks.length === 1 ? '<p class="nota">Monte seus decks em "Montar decks" para escolher aqui.</p>' : ''}</div>
+          <p class="nota">${cfg.deck === 'palhaco' ? `Deck temático de ${P.get(cfg.palhaco).nome}: ${P.get(cfg.palhaco).plano}` : 'Monte seus decks em "Montar decks" para escolher aqui.'}</p></div>
         <div class="acoes-menu">
           <button class="btn principal" data-m="jogar">Jogar contra o bot</button>
           <button class="btn" data-m="assistir">Assistir bot × bot</button>
@@ -1446,6 +1613,11 @@ window.SS = window.SS || {};
           <button class="btn" data-m="simular">Simular partidas</button>
         </div>`,
       ev => {
+        const pc = ev.target.closest('[data-palhaco]');
+        if (pc) {
+          cfg.palhaco = pc.dataset.palhaco;
+          return tela();
+        }
         const g = ev.target.closest('[data-grupo] [data-v]');
         if (g && !g.disabled) {
           cfg[g.parentElement.dataset.grupo] = g.dataset.v;
@@ -1467,6 +1639,18 @@ window.SS = window.SS || {};
     tela();
   }
 
+  // Quem começa entre dois Palhaços: o preto começa; mesma cor, maior dado (sem empate).
+  function quemComeca(par) {
+    const pretos = par.map(P.ehPreto);
+    if (pretos[0] !== pretos[1]) return pretos[0] ? 0 : 1;
+    let a, b;
+    do {
+      a = Math.random();
+      b = Math.random();
+    } while (Math.floor(a * 6) === Math.floor(b * 6));
+    return Math.floor(a * 6) > Math.floor(b * 6) ? 0 : 1;
+  }
+
   // ---------- Simulação em massa (teste de equilíbrio) ----------
 
   function simulacao(voltar) {
@@ -1479,10 +1663,16 @@ window.SS = window.SS || {};
       const r = s.r;
       if (!r) return '';
       const total = r.vit[0] + r.vit[1];
+      const linhasPalhaco = P.LISTA.map(pal => {
+        const x = r.palhacos[pal.id];
+        return `<tr><td>${SIMB[pal.naipe]} ${pal.nome}</td><td>${x.vit}/${x.jogos} (${pct(x.vit, x.jogos)})</td></tr>`;
+      }).join('');
       return `<table class="tabela">
         <tr><td>Partidas</td><td>${s.feitos}</td></tr>
         <tr><td>Vitórias do Bot A (${NOME_NIVEL[s.a]})</td><td>${r.vit[0]} (${pct(r.vit[0], total)})</td></tr>
         <tr><td>Vitórias do Bot B (${NOME_NIVEL[s.b]})</td><td>${r.vit[1]} (${pct(r.vit[1], total)})</td></tr>
+        <tr><td colspan="2"><b>Vitórias por Palhaço</b> (cada um com o seu deck)</td></tr>
+        ${linhasPalhaco}
         <tr><td>Quem começou venceu</td><td>${pct(r.primeiroVenceu, total)}</td></tr>
         <tr><td>Média de turnos</td><td>${total ? (r.turnos / total).toFixed(1) : '–'}</td></tr>
         <tr><td>Sem vencedor (limite de 200 turnos)</td><td>${r.empates}</td></tr>
@@ -1490,7 +1680,7 @@ window.SS = window.SS || {};
       </table>`;
     };
     const tela = () => modal(`<h2>Simular partidas (bot × bot)</h2>
-        <p class="nota">Roda partidas completas sem animação para testar o equilíbrio das regras.<br>Quem começa alterna a cada partida. O nível Difícil é bem mais lento.</p>
+        <p class="nota">Roda partidas completas sem animação para testar o equilíbrio das regras.<br>Os Palhaços se enfrentam em rodízio, cada um com o seu deck, e quem começa segue a regra do jogo. O nível Difícil é bem mais lento.</p>
         <div class="opcao"><label>Partidas</label>${grupo('n', [[50, '50'], [100, '100'], [200, '200'], [500, '500']])}</div>
         <div class="opcao"><label>Bot A</label>${grupo('a', niveis)}</div>
         <div class="opcao"><label>Bot B</label>${grupo('b', niveis)}</div>
@@ -1514,19 +1704,29 @@ window.SS = window.SS || {};
     const rodar = () => {
       s.rodando = true;
       s.feitos = 0;
-      s.r = { vit: [0, 0], primeiroVenceu: 0, turnos: 0, empates: 0, erros: 0 };
+      s.r = { vit: [0, 0], primeiroVenceu: 0, turnos: 0, empates: 0, erros: 0, palhacos: Object.fromEntries(P.LISTA.map(x => [x.id, { vit: 0, jogos: 0 }])) };
+      // Todos os confrontos entre Palhaços diferentes, em rodízio (os dois lados de cada um).
+      const confrontos = [];
+      for (const a of P.LISTA) for (const b of P.LISTA) if (a.id !== b.id) confrontos.push([a.id, b.id]);
       const id = ++s.id;
       const lote = () => {
         if (id !== s.id) return;
         const fim = performance.now() + 120;
         while (s.feitos < s.n && performance.now() < fim) {
           try {
-            const r = Bot.partidaAutomatica([s.a, s.b], s.feitos % 2);
+            const par = confrontos[s.feitos % confrontos.length];
+            const r = Bot.partidaAutomatica([s.a, s.b], quemComeca(par), 200, {
+              palhacos: par, decks: par.map((x, k) => M.cartasDoDeck(P.get(x).deck, k)),
+            });
             if (r.vencedor == null) s.r.empates++;
             else {
               s.r.vit[r.vencedor]++;
               s.r.turnos += r.turnos;
               if (r.vencedor === r.primeiro) s.r.primeiroVenceu++;
+              for (let k = 0; k < 2; k++) {
+                s.r.palhacos[par[k]].jogos++;
+                if (r.vencedor === k) s.r.palhacos[par[k]].vit++;
+              }
             }
           } catch (err) {
             console.error(err);

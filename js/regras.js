@@ -11,7 +11,7 @@ window.SS = window.SS || {};
       id: 'visao', titulo: 'Visão geral',
       html: () => `
         <h3>Objetivo</h3>
-        <p>Reduzir os Pontos de Vida (PV) do oponente a <b>0</b>. Cada jogador começa com <b>${M.PV_INICIAL} PV</b>, e não existe máximo: a cura de Copas pode passar disso.</p>
+        <p>Reduzir os Pontos de Vida (PV) do oponente a <b>0</b>. Cada jogador começa com <b>${M.PV_INICIAL} PV</b> (alguns Palhaços mudam isso), e não existe máximo: a cura de Copas pode passar disso.</p>
         <h3>Componentes</h3>
         <ul>
           <li><b>Baralho de Letras</b> (${R.letras} cartas): Valetes, Rainhas e Reis. São as <b>figuras</b>.</li>
@@ -30,7 +30,7 @@ window.SS = window.SS || {};
         <ul>
           <li>Cada jogador escolhe <b>3 figuras</b> do baralho de Letras para a mão e compra <b>4 cartas</b> do baralho de Números.</li>
           <li><b>Mulligan</b> (uma vez): devolve as 4 cartas numéricas, embaralha e compra 3. As figuras escolhidas ficam.</li>
-          <li><b>Quem começa:</b> o Vermelho (a Senhora) sempre começa. No primeiro turno, quem começa <b>não compra e não ataca</b>.</li>
+          <li><b>Quem começa:</b> Palhaço preto (♠ Lançalotte, ♣ Paumol) começa contra Palhaço vermelho (♥ Infartitte, ♦ Ourinhos). Se os dois forem da mesma cor, cada um rola um dado e começa quem tirar mais. No primeiro turno, quem começa <b>não compra e não ataca</b>.</li>
         </ul>
         <h3>Ordem do turno</h3>
         <ol>
@@ -49,8 +49,8 @@ window.SS = window.SS || {};
         <table class="tabela-regras">
           <tr><th>Figura</th><th>Equipa</th><th>Custo</th><th>Habilidade</th></tr>
           <tr><td><b>Valete</b></td><td>2 a 5</td><td>1 ação</td><td><b>Ímpeto:</b> ataca no mesmo turno em que entra.</td></tr>
-          <tr><td><b>Rainha</b></td><td>2 a 10</td><td>${M.CUSTO_RAINHA} ações + sacrifício de 1 Senhor(a) seu que já estava em campo antes deste turno</td><td><b>Atropelar:</b> se matar quem bloqueou, o dano que sobra vai para o PV.</td></tr>
-          <tr><td><b>Rei</b></td><td>2 a 7</td><td>1 ação</td><td><b>Guardião:</b> bloqueia até 2 atacantes por turno.</td></tr>
+          <tr><td><b>Rainha</b></td><td>2 a 10</td><td>${M.CUSTO_RAINHA} ação + sacrifício de ${M.SACRIFICIOS_RAINHA} Senhores seus que já estavam em campo antes deste turno</td><td><b>Atropelar:</b> se matar quem bloqueou, o dano que sobra vai para o PV.</td></tr>
+          <tr><td><b>Rei</b></td><td>2 a 7</td><td>1 ação</td><td><b>Ordem real:</b> ao atacar, pode escolher como alvo um Senhor(a) inimigo. Ninguém pode bloquear esse ataque no lugar do alvo.</td></tr>
         </table>
         <h3>Vida e posição da carta</h3>
         <p>Um Senhor(a) comum aguenta <b>2 hits</b>. A posição da carta mostra quanto falta:</p>
@@ -86,7 +86,7 @@ window.SS = window.SS || {};
       html: () => `
         <ul>
           <li>Cada Senhor(a) apto(a) ataca <b>1 vez por turno</b> (o Naipado de Ouros, 2). Só ataca quem entrou em turno anterior, exceto o Valete.</li>
-          <li>O alvo é o <b>jogador</b> oponente ou um <b>Ás</b> dele.</li>
+          <li>O alvo é o <b>jogador</b> oponente ou um <b>Ás</b> dele. O <b>Rei</b> também pode mirar um <b>Senhor(a)</b> inimigo: esse ataque não pode ser bloqueado por outro, e o alvo se defende sozinho, com as regras de bloqueio e contra-ataque (mesmo se estiver virado).</li>
           <li>Você escolhe a <b>ordem</b> dos ataques; eles são resolvidos um por vez.</li>
         </ul>
         <h3>Rolagem</h3>
@@ -108,8 +108,9 @@ window.SS = window.SS || {};
       html: () => `
         <h3>Bloqueio</h3>
         <ul>
-          <li>Cada Senhor(a) <b>ativo(a)</b> bloqueia 1 atacante (o Rei, 2). Ases não bloqueiam.</li>
+          <li>Cada Senhor(a) <b>ativo(a)</b> bloqueia 1 atacante. Ases não bloqueiam.</li>
           <li>Dois ou mais Senhores podem bloquear <b>o mesmo atacante</b>: cada um recebe o dano inteiro.</li>
+          <li>O ataque do Rei contra um Senhor(a) <b>não pode ser bloqueado</b>: o alvo se defende sozinho.</li>
         </ul>
         <h3>O golpe contra quem bloqueia</h3>
         <p>Compare o <b>dano</b> com o <b>ataque do bloqueador</b>. Para um bloqueador com ataque 6:</p>
@@ -144,6 +145,7 @@ window.SS = window.SS || {};
         <ul>
           <li><b>Invocação (1 ação):</b> sacrifique 1 carta numérica do mesmo naipe do Ás.</li>
           <li>O Ás ocupa 1 espaço e afeta os <b>vizinhos</b> (esquerda e direita).</li>
+          <li><b>Empurrar:</b> o Ás pode entrar no lugar de uma carta da sua fileira, empurrando as cartas para o lado do espaço vazio mais próximo (precisa haver um espaço vazio). Assim dá para colocá-lo entre dois Senhores.</li>
           <li>Não ataca, não bloqueia e morre com <b>1 golpe</b>. Um Senhor(a) do dono pode bloquear para protegê-lo.</li>
         </ul>
         <table class="tabela-regras">
@@ -153,6 +155,18 @@ window.SS = window.SS || {};
           <tr><td>♦ Ouros</td><td>Vale 1 Ouros extra por turno.</td></tr>
           <tr><td>♥ Copas</td><td><b>Vampiro:</b> vizinho que causar dano ao PV do oponente cura 1 PV seu.</td></tr>
         </table>`,
+    },
+    {
+      id: 'palhacos', titulo: 'Palhaços',
+      html: () => `
+        <p>Cada jogador escolhe um <b>Palhaço</b>, que é o seu "herói": ele fica no centro da mesa, mostra o seu PV e é o alvo dos ataques diretos. Cada um tem uma <b>passiva</b> (vale a partida toda) e um <b>poder</b> (1 ação, 1 vez por turno, botão ao lado do Palhaço).</p>
+        <table class="tabela-regras">
+          <tr><th>Palhaço</th><th>Passiva</th><th>Poder</th></tr>
+          ${SS.Palhacos.LISTA.map(p => `<tr><td><b>${M.SIMBOLO[p.naipe]} ${p.nome}</b><br><small>${p.titulo}</small></td><td><b>${p.passiva.nome}:</b> ${p.passiva.texto}</td>
+            <td>${p.poder ? `<b>${p.poder.nome}:</b> ${p.poder.texto}` : `<b>${p.custo.nome}:</b> ${p.custo.texto}`}</td></tr>`).join('')}
+        </table>
+        <p><b>Quem começa:</b> Palhaço preto (♠ ♣) começa contra vermelho (♥ ♦). Se os dois forem da mesma cor, cada um rola um dado e começa quem tirar mais.</p>
+        <p class="nota">Cada Palhaço tem um deck temático do seu naipe, que pode ser trocado por um deck montado por você.</p>`,
     },
     {
       id: 'deck', titulo: 'Montagem de deck',

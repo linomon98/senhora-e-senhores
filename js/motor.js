@@ -14,10 +14,23 @@ window.SS = window.SS || {};
   const PV_INICIAL = 20; // não há máximo: Copas pode curar acima disso
   const ESPACOS = 8;
   const ACOES_POR_TURNO = 3;
-  const CUSTO_RAINHA = 2; // ações passivas para sumonar uma Rainha
+  const CUSTO_RAINHA = 1; // ações passivas para sumonar uma Rainha
+  const SACRIFICIOS_RAINHA = 2; // Senhores sacrificados para a Rainha entrar
   const DADO_ATAQUE_TOTAL = 4; // dado a partir do qual o ataque sai cheio (abaixo disso, metade)
   const LIMITE_MAO = 7;
   const DANO_BARALHO_VAZIO = 2;
+
+  // Palhaços: o "herói" de cada jogador. Os textos e decks ficam em palhacos.js.
+  const PALHACOS = {
+    lancalotte: { naipe: 'espadas', pv: 20, limiteMao: 7, compras: 1, poder: 'desafio' },
+    infartitte: { naipe: 'copas', pv: 24, limiteMao: 7, compras: 1, poder: 'transfusao' },
+    paumol: { naipe: 'paus', pv: 20, limiteMao: 7, compras: 1, poder: 'vigilia' },
+    ourinhos: { naipe: 'ouros', pv: 17, limiteMao: 6, compras: 2, poder: null },
+  };
+  const CUSTO_TRANSFUSAO = 2; // PV pagos pela Transfusão do Infartitte
+  const palhacoDe = j => (j && PALHACOS[j.palhaco]) || null;
+  const temPalhaco = (j, id) => !!j && j.palhaco === id;
+  const limiteMao = j => (palhacoDe(j) ? palhacoDe(j).limiteMao : LIMITE_MAO);
 
   let rng = Math.random;
 
@@ -61,9 +74,11 @@ window.SS = window.SS || {};
     return {
       jogadores: [0, 1].map(i => {
         const cartas = o.decks && o.decks[i] ? o.decks[i].slice() : baralhoPadrao(i);
+        const palhaco = o.palhacos && PALHACOS[o.palhacos[i]] ? o.palhacos[i] : null;
         return {
           nome: nomes[i],
-          pv: PV_INICIAL,
+          palhaco,
+          pv: palhaco ? PALHACOS[palhaco].pv : PV_INICIAL,
           letras: embaralhar(cartas.filter(ehFigura)),
           numeros: embaralhar(cartas.filter(c => !ehFigura(c))),
           mao: [],
@@ -79,6 +94,9 @@ window.SS = window.SS || {};
       turno: 0,
       fase: 'abertura',
       acoes: 0,
+      compras: 0, // compras que faltam na fase de compra deste turno
+      poderUsado: false, // poder do Palhaço já usado neste turno
+      desafio: null, // uid do Senhor inimigo desafiado pelo Lançalotte neste turno
       combate: null,
       vencedor: null,
       proximoUid: 1,
@@ -302,18 +320,22 @@ window.SS = window.SS || {};
     e.fase = 'principal';
     e.acoes = ACOES_POR_TURNO;
     e.combate = null;
+    e.poderUsado = false;
+    e.desafio = null;
     j.tokens = 0;
     for (const u of j.campo) {
       if (!u) continue;
       if (u.tipo === 'senhor') {
         u.ativo = true;
         u.atacou = false;
+        u.vigilia = false;
         u.ataques = naipado(u) === 'ouros' ? 2 : 1;
       } else if (u.naipe === 'ouros') j.tokens++;
     }
     registrar(e, `— Turno ${e.turno}: ${j.nome} —`);
+    e.compras = palhacoDe(j) ? palhacoDe(j).compras : 1; // o Ourinhos compra 2
     if (e.turno === 1) registrar(e, `${j.nome} começa: não compra nem ataca neste turno.`);
-    else if (!j.letras.length && !j.numeros.length) comprar(e, p, 1, 'numeros'); // sem cartas: perde PV
+    else if (!j.letras.length && !j.numeros.length) comprar(e, p, e.compras, 'numeros'); // sem cartas: perde PV
     else e.fase = 'compra'; // o jogador escolhe de qual baralho comprar
   }
 
@@ -323,7 +345,13 @@ window.SS = window.SS || {};
     if (!BARALHOS.includes(origem) || !j[origem].length) throw new Error('Baralho vazio ou inválido');
     comprar(e, e.vez, 1, origem);
     registrar(e, `${j.nome} comprou do baralho de ${NOME_BARALHO[origem]}.`);
-    e.fase = 'principal';
+    e.compras--;
+    if (e.vencedor != null) return;
+    if (e.compras <= 0) e.fase = 'principal';
+    else if (!j.letras.length && !j.numeros.length) {
+      comprar(e, e.vez, e.compras, 'numeros');
+      if (e.vencedor == null) e.fase = 'principal';
+    }
   }
 
   function ourosDisponiveis(e, p) {
@@ -362,17 +390,36 @@ window.SS = window.SS || {};
       for (const n of numeros) {
         if (valor(n) > LIMITE_FIGURA[f.rank]) continue;
         if (f.rank === 'Q') {
+          // A Rainha sacrifica 2 Senhores seus que já estavam em campo antes deste turno.
           if (e.acoes < CUSTO_RAINHA) continue;
-          for (const s of senhores) {
-            if (j.campo[s].entrou >= e.turno) continue; // não pode sacrificar quem entrou neste turno
-            for (const slot of vazios.concat([s])) r.push({ tipo: 'sumonar', figura: f.id, numero: n.id, sacrificio: j.campo[s].uid, slot });
+          const aptos = senhores.filter(s => j.campo[s].entrou < e.turno);
+          for (let x = 0; x < aptos.length; x++) {
+            for (let y = x + 1; y < aptos.length; y++) {
+              const sa = aptos[x], sb = aptos[y];
+              for (const slot of vazios.concat([sa, sb])) {
+                r.push({ tipo: 'sumonar', figura: f.id, numero: n.id, sacrificio: j.campo[sa].uid, sacrificio2: j.campo[sb].uid, slot });
+              }
+            }
           }
         } else for (const slot of vazios) r.push({ tipo: 'sumonar', figura: f.id, numero: n.id, sacrificio: null, slot });
       }
     }
+    // O Ás pode entrar num espaço ocupado: empurra as cartas para o lado (se houver espaço vazio).
+    const espacosAs = vazios.length ? [...Array(ESPACOS).keys()] : [];
     for (const a of ases) {
       for (const c of numeros) {
-        if (c.naipe === a.naipe) for (const slot of vazios) r.push({ tipo: 'invocarAs', as: a.id, custo: c.id, slot });
+        if (c.naipe === a.naipe) for (const slot of espacosAs) r.push({ tipo: 'invocarAs', as: a.id, custo: c.id, slot });
+      }
+    }
+    // Poder do Palhaço (1 ação, 1 vez por turno).
+    const pal = palhacoDe(j);
+    if (pal && pal.poder && !e.poderUsado) {
+      if (pal.poder === 'desafio') {
+        for (const u of e.jogadores[1 - p].campo) if (u && u.tipo === 'senhor' && u.ativo) r.push({ tipo: 'poder', alvo: u.uid });
+      } else if (pal.poder === 'transfusao') {
+        if (j.pv > CUSTO_TRANSFUSAO) for (const s of senhores) if (j.campo[s].hits > 0 && !j.campo[s].berserk) r.push({ tipo: 'poder', alvo: j.campo[s].uid });
+      } else if (pal.poder === 'vigilia') {
+        for (const s of senhores) if (!j.campo[s].vigilia) r.push({ tipo: 'poder', alvo: j.campo[s].uid });
       }
     }
     const teto = tetoCura(j);
@@ -417,16 +464,19 @@ window.SS = window.SS || {};
         const f0 = j.mao.find(c => c.id === a.figura), n0 = j.mao.find(c => c.id === a.numero);
         if (!f0 || !n0 || !ehFigura(f0) || !ehNumero(n0) || valor(n0) > LIMITE_FIGURA[f0.rank]) throw new Error('Sumonar inválido');
         if (f0.rank === 'Q') {
-          if (a.sacrificio == null) throw new Error('A Rainha exige sacrifício');
-          if (e.acoes < CUSTO_RAINHA) throw new Error(`A Rainha custa ${CUSTO_RAINHA} ações`);
+          if (a.sacrificio == null || a.sacrificio2 == null || a.sacrificio === a.sacrificio2) throw new Error(`A Rainha exige ${SACRIFICIOS_RAINHA} sacrifícios`);
+          if (e.acoes < CUSTO_RAINHA) throw new Error(`A Rainha custa ${CUSTO_RAINHA} ação`);
           custo = CUSTO_RAINHA;
-        }
-        if (a.sacrificio != null) {
-          const s = localizar(e, a.sacrificio);
-          if (!s || s.p !== p || s.u.tipo !== 'senhor') throw new Error('Sacrifício inválido');
-          if (s.u.entrou >= e.turno) throw new Error('Não pode sacrificar quem entrou neste turno');
-          registrar(e, `${j.nome} sacrifica ${nomeUnidade(s.u)} para a Rainha.`);
-          morrer(e, s.p, s.i, 'sacrifício');
+          const sacs = [a.sacrificio, a.sacrificio2].map(uid => localizar(e, uid));
+          for (const s of sacs) {
+            if (!s || s.p !== p || s.u.tipo !== 'senhor') throw new Error('Sacrifício inválido');
+            if (s.u.entrou >= e.turno) throw new Error('Não pode sacrificar quem entrou neste turno');
+          }
+          registrar(e, `${j.nome} sacrifica ${sacs.map(s => nomeUnidade(s.u)).join(' e ')} para a Rainha.`);
+          for (const uid of [a.sacrificio, a.sacrificio2]) {
+            const s = localizar(e, uid);
+            if (s) morrer(e, s.p, s.i, 'sacrifício');
+          }
         }
         if (j.campo[a.slot]) throw new Error('Espaço ocupado');
         const f = tirarDaMao(j, a.figura), n = tirarDaMao(j, a.numero);
@@ -440,13 +490,36 @@ window.SS = window.SS || {};
         break;
       }
       case 'invocarAs': {
-        if (j.campo[a.slot]) throw new Error('Espaço ocupado');
+        if (!j.campo.includes(null)) throw new Error('Fileira cheia');
         const as = tirarDaMao(j, a.as), custo = tirarDaMao(j, a.custo);
         if (!ehAs(as) || !ehNumero(custo) || custo.naipe !== as.naipe) throw new Error('Invocação de Ás inválida');
         j.cemiterio.push(custo);
-        j.campo[a.slot] = { uid: e.proximoUid++, tipo: 'as', carta: as, naipe: as.naipe };
+        const empurrou = inserirNoCampo(j, a.slot, { uid: e.proximoUid++, tipo: 'as', carta: as, naipe: as.naipe });
         if (as.naipe === 'ouros') j.tokens++;
-        registrar(e, `${j.nome} invocou o ${nomeCarta(as)} sacrificando ${nomeCarta(custo)}.`);
+        registrar(e, `${j.nome} invocou o ${nomeCarta(as)} sacrificando ${nomeCarta(custo)}${empurrou ? ' e empurrou as cartas para o lado' : ''}.`);
+        verificarMortes(e); // os vizinhos mudaram: a resistência de alguém pode ter mudado
+        break;
+      }
+      case 'poder': {
+        const pal = palhacoDe(j);
+        if (!pal || !pal.poder || e.poderUsado) throw new Error('Poder indisponível');
+        const alvo = localizar(e, a.alvo);
+        if (!alvo || alvo.u.tipo !== 'senhor') throw new Error('Alvo inválido');
+        if (pal.poder === 'desafio') {
+          if (alvo.p === p || !alvo.u.ativo) throw new Error('Desafie um Senhor(a) inimigo ativo');
+          e.desafio = alvo.u.uid;
+          registrar(e, `${j.nome} usa Desafio!: ${nomeUnidade(alvo.u)} terá de bloquear o primeiro ataque.`);
+        } else if (pal.poder === 'transfusao') {
+          if (alvo.p !== p || alvo.u.hits <= 0 || alvo.u.berserk || j.pv <= CUSTO_TRANSFUSAO) throw new Error('Transfusão inválida');
+          j.pv -= CUSTO_TRANSFUSAO;
+          alvo.u.hits--;
+          registrar(e, `${j.nome} usa Transfusão: paga ${CUSTO_TRANSFUSAO} PV e tira 1 hit de ${nomeUnidade(alvo.u)}.`);
+        } else if (pal.poder === 'vigilia') {
+          if (alvo.p !== p) throw new Error('Escolha um Senhor(a) seu');
+          alvo.u.vigilia = true;
+          registrar(e, `${j.nome} usa Vigília: ${nomeUnidade(alvo.u)} não vira para baixo no fim do turno.`);
+        }
+        e.poderUsado = true;
         break;
       }
       case 'curar': {
@@ -495,6 +568,27 @@ window.SS = window.SS || {};
     e.acoes -= custo;
   }
 
+  // Coloca a unidade no espaço i. Se estiver ocupado, empurra as cartas na direção
+  // do espaço vazio mais próximo (empate: para a direita). Devolve true se empurrou.
+  function inserirNoCampo(j, i, unidade) {
+    const campo = j.campo;
+    if (!campo[i]) {
+      campo[i] = unidade;
+      return false;
+    }
+    let dir = -1, esq = -1;
+    for (let k = i + 1; k < ESPACOS; k++) if (!campo[k]) { dir = k; break; }
+    for (let k = i - 1; k >= 0; k--) if (!campo[k]) { esq = k; break; }
+    if (dir < 0 && esq < 0) throw new Error('Fileira cheia');
+    if (dir >= 0 && (esq < 0 || dir - i <= i - esq)) {
+      for (let k = dir; k > i; k--) campo[k] = campo[k - 1];
+    } else {
+      for (let k = esq; k < i; k++) campo[k] = campo[k + 1];
+    }
+    campo[i] = unidade;
+    return true;
+  }
+
   // ---------- Combate ----------
 
   function atacantesAptos(e) {
@@ -503,13 +597,26 @@ window.SS = window.SS || {};
     return r;
   }
 
-  function alvosPossiveis(e) {
+  // Alvos de um atacante: o jogador e os Ases inimigos. O Rei também pode mirar um Senhor(a) inimigo.
+  function alvosPossiveis(e, atacante) {
     const r = ['jogador'];
-    for (const u of e.jogadores[1 - e.vez].campo) if (u && u.tipo === 'as') r.push(u.uid);
+    const loc = atacante != null ? localizar(e, atacante) : null;
+    const rei = !!loc && loc.u.tipo === 'senhor' && loc.u.figura.rank === 'K';
+    for (const u of e.jogadores[1 - e.vez].campo) {
+      if (!u) continue;
+      if (u.tipo === 'as' || rei) r.push(u.uid);
+    }
     return r;
   }
 
-  const capacidadeBloqueio = u => (u.figura.rank === 'K' ? 2 : 1);
+  // Ataque do Rei contra um Senhor(a): ninguém pode bloquear no lugar do alvo.
+  function ataqueDirecionado(e, at) {
+    if (at.alvo === 'jogador') return false;
+    const l = localizar(e, at.alvo);
+    return !!l && l.u.tipo === 'senhor';
+  }
+
+  const capacidadeBloqueio = () => 1;
 
   function bloqueadoresAptos(e) {
     const r = [];
@@ -523,13 +630,12 @@ window.SS = window.SS || {};
     const p = e.vez, j = e.jogadores[p];
     const contagem = {};
     const ourosLivres = ourosDisponiveis(e, p);
-    const alvos = alvosPossiveis(e);
     for (const d of lista) {
       const loc = localizar(e, d.atacante);
       if (!loc || loc.p !== p || !podeAtacar(e, p, loc.i)) throw new Error('Atacante inválido');
       contagem[d.atacante] = (contagem[d.atacante] || 0) + 1;
       if (contagem[d.atacante] > loc.u.ataques) throw new Error('Ataques demais para este Senhor(a)');
-      if (!alvos.includes(d.alvo)) throw new Error('Alvo inválido');
+      if (!alvosPossiveis(e, d.atacante).includes(d.alvo)) throw new Error('Alvo inválido');
       for (const o of d.ouros || []) {
         const k = ourosLivres.indexOf(o);
         if (k < 0) throw new Error('Ouros indisponível');
@@ -540,7 +646,9 @@ window.SS = window.SS || {};
     lista.forEach((d, k) => {
       const extras = d.ouros || [];
       for (const o of extras) gastarOuros(e, p, o);
-      ataques.push({ n: k + 1, atacante: d.atacante, alvo: d.alvo, dados: 1 + extras.length, bloqueadores: [], resultado: null });
+      // Lançalotte (Golpe certeiro): o 1º ataque do turno ganha +1 dado.
+      const golpeCerteiro = k === 0 && temPalhaco(j, 'lancalotte') ? 1 : 0;
+      ataques.push({ n: k + 1, atacante: d.atacante, alvo: d.alvo, dados: 1 + extras.length + golpeCerteiro, bloqueadores: [], resultado: null });
     });
     // Quem atacou só vira para baixo (desativa) no fim do turno.
     for (const uid of Object.keys(contagem)) {
@@ -567,8 +675,19 @@ window.SS = window.SS || {};
   function definirBloqueios(e, mapa) {
     if (e.fase !== 'bloqueio') throw new Error('Fora da fase de bloqueio');
     const d = 1 - e.vez, uso = {};
+    mapa = Object.assign({}, mapa);
+    // Desafio! do Lançalotte: o Senhor(a) desafiado(a) bloqueia o primeiro ataque que dá para bloquear.
+    const desafiado = e.desafio != null ? localizar(e, e.desafio) : null;
+    if (desafiado && desafiado.p === d && desafiado.u.ativo) {
+      const primeiro = e.combate.ataques.find(at => !ataqueDirecionado(e, at));
+      if (primeiro) {
+        for (const n in mapa) mapa[n] = (mapa[n] || []).filter(uid => uid !== e.desafio);
+        mapa[primeiro.n] = [e.desafio].concat(mapa[primeiro.n] || []);
+        registrar(e, `Desafio!: ${nomeUnidade(desafiado.u)} é obrigado(a) a bloquear o ataque ${primeiro.n}.`);
+      }
+    }
     for (const at of e.combate.ataques) {
-      const lista = (mapa && mapa[at.n]) || [];
+      const lista = ataqueDirecionado(e, at) ? [] : (mapa[at.n] || []);
       for (const uid of lista) {
         const loc = localizar(e, uid);
         if (!loc || loc.p !== d || loc.u.tipo !== 'senhor' || !loc.u.ativo) throw new Error('Bloqueador inválido');
@@ -611,26 +730,30 @@ window.SS = window.SS || {};
     res.dano = dano;
     registrar(e, `Ataque ${at.n}: ${nomeUnidade(u)} rolou ${rolagens.join(', ')} → ${maior >= DADO_ATAQUE_TOTAL ? 'ataque total' : 'meio ataque'}${maior === 6 && u.bonus.length ? ' com crítico de Espadas' : ''}: ${dano} de dano.`);
 
-    if (!at.bloqueadores.length) {
+    // Ataque do Rei contra um Senhor(a): o alvo se defende sozinho, como se bloqueasse.
+    const alvoDireto = at.alvo !== 'jogador' ? localizar(e, at.alvo) : null;
+    const direcionado = !!alvoDireto && alvoDireto.u.tipo === 'senhor';
+    const defensores = direcionado ? [at.alvo] : at.bloqueadores;
+    if (!defensores.length) {
       if (at.alvo === 'jogador') danoAoJogador(e, p, locA, dano);
-      else {
-        const alvo = localizar(e, at.alvo);
-        if (alvo) morrer(e, alvo.p, alvo.i, 'atacado');
-        else registrar(e, 'O Ás alvo já não está em campo.');
-      }
+      else if (alvoDireto) morrer(e, alvoDireto.p, alvoDireto.i, 'atacado');
+      else registrar(e, 'O alvo já não está em campo.');
       return fim();
     }
 
-    const bloq = at.bloqueadores.map(uid => localizar(e, uid)).filter(Boolean);
+    const bloq = defensores.map(uid => localizar(e, uid)).filter(Boolean);
     const atkBloq = bloq.map(b => ataque(e, b.p, b.i));
     const somaBloq = atkBloq.reduce((s, v) => s + v, 0);
+    // Paumol (Casca grossa): quem defende do lado dele recebe 1 de dano a menos.
+    const danoDefesa = temPalhaco(D, 'paumol') ? Math.max(0, dano - 1) : dano;
+    if (danoDefesa < dano && bloq.length) registrar(e, `Casca grossa: o dano em quem defende cai para ${danoDefesa}.`);
     let todosMorreram = true;
     bloq.forEach((b, k) => {
       const uid = b.u.uid;
       const loc = localizar(e, uid);
       if (!loc) return;
-      if (dano * 2 < atkBloq[k]) registrar(e, `${nomeUnidade(loc.u)} ignorou o golpe (dano menor que metade do seu ataque).`);
-      else if (dano > atkBloq[k]) morrer(e, loc.p, loc.i, 'golpe fatal');
+      if (danoDefesa * 2 < atkBloq[k]) registrar(e, `${nomeUnidade(loc.u)} ignorou o golpe (dano menor que metade do seu ataque).`);
+      else if (danoDefesa > atkBloq[k]) morrer(e, loc.p, loc.i, 'golpe fatal');
       else aplicarHit(e, loc.p, loc.i);
       if (localizar(e, uid)) todosMorreram = false;
     });
@@ -662,9 +785,11 @@ window.SS = window.SS || {};
       if (!u || u.tipo !== 'senhor') continue;
       u.bonus = [];
       if (u.atacou) {
-        u.ativo = false; // vira para baixo: não bloqueia no turno do oponente
+        if (!u.vigilia) u.ativo = false; // vira para baixo: não bloqueia no turno do oponente
+        else registrar(e, `Vigília: ${nomeUnidade(u)} continua de pé.`);
         u.atacou = false;
       }
+      u.vigilia = false;
     }
     for (let q = 0; q < 2; q++) {
       for (let i = 0; i < ESPACOS; i++) {
@@ -679,7 +804,7 @@ window.SS = window.SS || {};
     }
     verificarMortes(e);
     if (e.vencedor != null) return;
-    if (j.mao.length > LIMITE_MAO) {
+    if (j.mao.length > limiteMao(j)) {
       e.fase = 'descarte';
       return;
     }
@@ -689,7 +814,7 @@ window.SS = window.SS || {};
   function descartar(e, ids) {
     if (e.fase !== 'descarte') throw new Error('Fora da fase de descarte');
     const j = e.jogadores[e.vez];
-    if (j.mao.length - ids.length !== LIMITE_MAO) throw new Error(`Descarte até ficar com ${LIMITE_MAO} cartas`);
+    if (j.mao.length - ids.length !== limiteMao(j)) throw new Error(`Descarte até ficar com ${limiteMao(j)} cartas`);
     for (const id of ids) j.cemiterio.push(tirarDaMao(j, id));
     registrar(e, `${j.nome} descartou ${ids.length} carta(s) pelo limite de mão.`);
     passarVez(e);
@@ -782,6 +907,7 @@ window.SS = window.SS || {};
 
   SS.Motor = {
     desistir, REGRAS_DECK, RANKS, contagemPadrao, resumoDeck, validarDeck, cartasDoDeck,
+    PALHACOS, CUSTO_TRANSFUSAO, SACRIFICIOS_RAINHA, palhacoDe, limiteMao, ataqueDirecionado,
     NAIPES, SIMBOLO, LIMITE_FIGURA, PV_INICIAL, ESPACOS, ACOES_POR_TURNO, CUSTO_RAINHA, DADO_ATAQUE_TOTAL, LIMITE_MAO,
     definirRng: f => { rng = f; },
     ehFigura, ehAs, ehNumero, valor, nomeCarta, nomeUnidade, curaDe, naipado,

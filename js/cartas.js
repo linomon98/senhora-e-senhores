@@ -77,9 +77,15 @@ window.SS = window.SS || {};
   }
 
   // Dorso clássico: treliça de losangos com rosetas, borda branca e medalhão central.
+  const CORES_DORSO = {
+    vermelho: ['#b5161f', '#7d0d14'],
+    azul: ['#1f4aa8', '#13306f'],
+    verde: ['#1e7a43', '#0f4a28'],
+    dourado: ['#b8860b', '#7a5806'],
+  };
+
   function dorso(cor) {
-    const base = cor === 'azul' ? '#1f4aa8' : '#b5161f';
-    const escuro = cor === 'azul' ? '#13306f' : '#7d0d14';
+    const [base, escuro] = CORES_DORSO[cor] || CORES_DORSO.vermelho;
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 280" preserveAspectRatio="none">
 <defs><pattern id="g" width="16" height="16" patternUnits="userSpaceOnUse" patternTransform="rotate(45 100 140)">
 <rect width="16" height="16" fill="${base}"/>
@@ -110,8 +116,7 @@ window.SS = window.SS || {};
 
   function aplicarTexturas() {
     const raiz = document.documentElement.style;
-    raiz.setProperty('--dorso-vermelho', comoUrl(dorso('vermelho')));
-    raiz.setProperty('--dorso-azul', comoUrl(dorso('azul')));
+    for (const cor of Object.keys(CORES_DORSO)) raiz.setProperty('--dorso-' + cor, comoUrl(dorso(cor)));
     raiz.setProperty('--carpete', texturaCarpete());
   }
 

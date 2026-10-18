@@ -81,17 +81,22 @@ window.SS = window.SS || {};
     let v = 1 + atk * 1.1 + Math.max(0, res - hits) * 1.8;
     if (M.naipado(u)) v += 1.5;
     if (u.figura.rank === 'K' || u.figura.rank === 'Q') v += 1;
-    if (e.vez === p && (!u.ativo || u.atacou)) v -= 1.2; // não vai poder bloquear no turno do oponente
+    if (!u.berserk && res > 1 && hits === res - 1) v -= 1.5; // por um fio: o próximo hit mata
+    if (e.vez === p && (!u.ativo || (u.atacou && !u.vigilia))) v -= 1.2; // não vai poder bloquear no turno do oponente
+    if (e.vez === p && u.vigilia && !u.atacou) v += 0.6; // pode atacar sem perder o bloqueio
     if (M.podeAtacar(e, p, i)) v += u.bonus.length * 0.9;
     return v;
   }
 
   const perigo = pv => (pv <= 6 ? (7 - pv) * 2.5 : 0);
+  // PV alto vale um pouco menos por ponto: a partir de 14 PV, cada ponto vale metade.
+  const valorPV = pv => (pv <= 14 ? pv * 3 : 42 + (pv - 14) * 1.5);
 
   function avaliar(e, p) {
     if (e.vencedor != null) return e.vencedor === p ? 10000 : -10000;
     const eu = e.jogadores[p], op = e.jogadores[1 - p];
-    let s = (eu.pv - op.pv) * 3 - perigo(eu.pv) + perigo(op.pv);
+    let s = valorPV(eu.pv) - valorPV(op.pv) - perigo(eu.pv) + perigo(op.pv);
+    if (e.vez === p && e.desafio != null) s += 1.2; // Desafio! do Lançalotte armado para o ataque
     for (let i = 0; i < M.ESPACOS; i++) {
       if (eu.campo[i]) s += valorUnidade(e, p, i);
       if (op.campo[i]) s -= valorUnidade(e, 1 - p, i);
@@ -180,7 +185,9 @@ window.SS = window.SS || {};
     M.declararAtaques(c, [{ atacante: uid, alvo, ouros }]);
     const n = c.combate.ataques[0].n;
     let pior = Infinity;
-    for (const op of opcoesBloqueio(c, cfg.pares, {})) {
+    // Ataque do Rei contra um Senhor(a) não pode ser bloqueado.
+    const opcoes = M.ataqueDirecionado(c, c.combate.ataques[0]) ? [[]] : opcoesBloqueio(c, cfg.pares, {});
+    for (const op of opcoes) {
       const v = valorEsperado(c, { [n]: op }, p);
       if (v < pior) pior = v;
     }
@@ -207,7 +214,10 @@ window.SS = window.SS || {};
       const u = M.localizar(e, uid).u;
       for (let t = 0; t < u.ataques; t++) {
         let melhor = null, mv = base + cfg.limiar;
-        for (const alvo of cfg.alvosAs ? M.alvosPossiveis(e) : ['jogador']) {
+        // O Rei sempre considera mirar um Senhor(a); Ases só no Difícil.
+        const todos = M.alvosPossiveis(e, uid);
+        const alvos = cfg.alvosAs ? todos : todos.filter(a => a === 'jogador' || (u.figura.rank === 'K' && M.localizar(e, a).u.tipo === 'senhor'));
+        for (const alvo of alvos) {
           const maxDados = cfg.ourosDados ? Math.min(2, ourosLivres.length) : 0;
           for (let k = 0; k <= maxDados; k++) {
             const ouros = ourosLivres.slice(0, k);
@@ -229,7 +239,7 @@ window.SS = window.SS || {};
   function bloquear(e, d, nivel) {
     const mapa = {}, usados = {};
     const marcar = op => op.forEach(uid => { usados[uid] = (usados[uid] || 0) + 1; });
-    const ataques = e.combate.ataques;
+    const ataques = e.combate.ataques.filter(at => !M.ataqueDirecionado(e, at)); // ataque do Rei a um Senhor não se bloqueia
     if (nivel === 'facil') {
       for (const at of ataques) {
         if (Math.random() < 0.5) continue;
@@ -285,14 +295,16 @@ window.SS = window.SS || {};
 
   function descartar(e, p) {
     const mao = e.jogadores[p].mao;
-    const n = mao.length - M.LIMITE_MAO;
+    const n = mao.length - M.limiteMao(e.jogadores[p]);
     return mao.slice().sort((a, b) => valorCarta(a) - valorCarta(b)).slice(0, n).map(c => c.id);
   }
 
   // ---------- Partida completa sem interface (para testar o equilíbrio) ----------
 
-  function partidaAutomatica(niveis, primeiro, limiteTurnos) {
-    const e = M.criarJogo({ nomes: ['Bot A', 'Bot B'], primeiro });
+  // opcoes: { palhacos: [id, id], decks: [cartas, cartas] } (opcional)
+  function partidaAutomatica(niveis, primeiro, limiteTurnos, opcoes) {
+    const o = opcoes || {};
+    const e = M.criarJogo({ nomes: ['Bot A', 'Bot B'], primeiro, palhacos: o.palhacos, decks: o.decks });
     for (const p of [0, 1]) {
       M.escolherFiguras(e, p, escolherFiguras(e, p, niveis[p]));
       if (querMulligan(e, p, niveis[p])) M.mulligan(e, p);
@@ -301,7 +313,8 @@ window.SS = window.SS || {};
     const limite = limiteTurnos || 200;
     while (e.vencedor == null && e.turno < limite) {
       const p = e.vez;
-      if (e.fase === 'compra') M.comprarDoTurno(e, escolherBaralho(e, p, niveis[p]));
+      while (e.fase === 'compra') M.comprarDoTurno(e, escolherBaralho(e, p, niveis[p])); // o Ourinhos compra 2
+      if (e.vencedor != null) break;
       for (let g = 0; g < 12 && e.fase === 'principal'; g++) M.aplicarAcao(e, proximaAcao(e, p, niveis[p]));
       if (e.vencedor != null) break;
       if (e.fase === 'principal') M.aplicarAcao(e, { tipo: 'atacar' });

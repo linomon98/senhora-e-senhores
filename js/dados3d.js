@@ -5,7 +5,12 @@ window.SS = window.SS || {};
 (function (SS) {
   'use strict';
 
-  const CORES = { vermelho: { corpo: '#b3121c', pip: '#ffffff' }, azul: { corpo: '#1f49a6', pip: '#ffffff' } };
+  const CORES = {
+    vermelho: { corpo: '#b3121c', pip: '#ffffff' },
+    azul: { corpo: '#1f49a6', pip: '#ffffff' },
+    verde: { corpo: '#1b7a40', pip: '#ffffff' },
+    dourado: { corpo: '#c9971c', pip: '#2a1a05' },
+  };
   // Ordem dos materiais do BoxGeometry: +x, -x, +y, -y, +z, -z (faces opostas somam 7).
   const VALORES_FACE = [1, 6, 2, 5, 3, 4];
   const NORMAIS = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
