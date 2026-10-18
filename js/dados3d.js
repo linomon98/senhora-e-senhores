@@ -172,10 +172,13 @@ window.SS = window.SS || {};
     const dt = Math.min(0.25, (t - ultimo) / 1000);
     ultimo = t;
     if (estado && estado.fase === 'segurando') {
-      // Dados flutuando no centro, esperando o jogador pegar.
+      // Dados girando rápido, em eixos que mudam o tempo todo: não dá para "mirar" uma face.
       dados.forEach((d, k) => {
-        d.malha.rotation.x += dt * (0.9 + k * 0.2);
-        d.malha.rotation.y += dt * 1.3;
+        if (!d.giro || Math.random() < dt * 2.5) d.giro = { x: 9 + Math.random() * 9, y: 9 + Math.random() * 9, z: 6 + Math.random() * 8 };
+        const g = estado.arrastando ? 1.5 : 1;
+        d.malha.rotation.x += dt * d.giro.x * g;
+        d.malha.rotation.y += dt * d.giro.y * g;
+        d.malha.rotation.z += dt * d.giro.z * g;
         if (!estado.arrastando) d.malha.position.y = ALTURA_MAO + Math.sin(t / 300 + k) * 0.4;
       });
       renderer.render(cena, camera);
@@ -341,12 +344,12 @@ window.SS = window.SS || {};
           vz = (b.z - a.z) / dtl;
         }
         let v = Math.hypot(vx, vz);
-        if (v < 10) {
-          // Só soltou (ou clicou): o dado ganha um empurrão para não cair parado.
-          const ang = Math.random() * Math.PI * 2;
-          vx = Math.cos(ang) * 16;
-          vz = Math.sin(ang) * 16;
-          v = 16;
+        if (v < 22) {
+          // Toquinho ou só soltou: vira um arremesso de verdade, numa direção sorteada.
+          const ang = v < 4 ? Math.random() * Math.PI * 2 : Math.atan2(vz, vx) + (Math.random() - 0.5) * 1.2;
+          v = 22 + Math.random() * 10;
+          vx = Math.cos(ang) * v;
+          vz = Math.sin(ang) * v;
         }
         if (v > 55) {
           vx *= 55 / v;
@@ -355,9 +358,11 @@ window.SS = window.SS || {};
         for (const d of dados) {
           const pos = d.malha.position;
           d.corpo = novoCorpo(pos.x, pos.y, pos.z);
-          d.corpo.quaternion.set(d.malha.quaternion.x, d.malha.quaternion.y, d.malha.quaternion.z, d.malha.quaternion.w);
-          d.corpo.velocity.set(vx * (0.9 + Math.random() * 0.2), 2, vz * (0.9 + Math.random() * 0.2));
-          d.corpo.angularVelocity.set((Math.random() - 0.5) * 30, (Math.random() - 0.5) * 30, (Math.random() - 0.5) * 30);
+          // Orientação sorteada na hora de soltar: a face de cima não dá para prever pelo giro.
+          d.corpo.quaternion.setFromEuler(Math.random() * 6.28, Math.random() * 6.28, Math.random() * 6.28);
+          d.corpo.velocity.set(vx * (0.85 + Math.random() * 0.3), 3 + Math.random() * 3, vz * (0.85 + Math.random() * 0.3));
+          const giro = 40 + Math.random() * 20;
+          d.corpo.angularVelocity.set((Math.random() - 0.5) * giro, (Math.random() - 0.5) * giro, (Math.random() - 0.5) * giro);
           mundo.addBody(d.corpo);
         }
         estado = { fase: 'rolando', tempo: 0, quieto: 0, resolver };

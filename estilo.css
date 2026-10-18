@@ -467,6 +467,8 @@ html, body {
 .celula:hover { opacity: 1; }
 .mini-carta { width: 52px; height: 73px; margin: 0 auto 3px; border-radius: 5px; overflow: hidden; box-shadow: 0 2px 4px rgba(0, 0, 0, .4); }
 .mini-carta .svg-carta { width: 100%; height: 100%; display: block; }
+.celula-naipe { font-size: 11px; font-weight: 700; margin-bottom: 3px; color: #e8e8e8; white-space: nowrap; }
+.celula-naipe.vermelho { color: #ff8a8a; }
 .celula-controles { display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
 .celula-controles button {
   font: inherit; width: 18px; height: 18px; line-height: 14px; padding: 0; border-radius: 5px; cursor: pointer;
@@ -485,6 +487,17 @@ html, body {
 .por-que p { margin: 4px 0 8px; opacity: .85; }
 .acoes-menu.secundario { margin-top: 10px; }
 .acoes-menu.secundario .btn { font-size: 13px; }
+
+/* Telas menores: as regras descem para baixo das cartas, e as cartas não quebram linha. */
+@media (max-width: 1280px) {
+  .editor-corpo { grid-template-columns: 1fr; }
+  .editor-regras { position: static; }
+}
+@media (max-width: 820px) {
+  .deck-layout { grid-template-columns: 1fr; }
+  .slots { position: static; flex-direction: row; flex-wrap: wrap; }
+}
+.linha-cartas { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; }
 
 .texto-regras { font-size: 15px; line-height: 1.6; max-width: 900px; user-select: text; }
 .texto-regras h2 { margin: 0 0 10px; font-family: Georgia, serif; font-size: 26px; color: var(--ouro); }

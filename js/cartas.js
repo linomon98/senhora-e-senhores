@@ -40,7 +40,7 @@ window.SS = window.SS || {};
 
   function canto(c) {
     const dez = c.rank === '10';
-    return `<text x="22" y="42" font-size="${dez ? 29 : 34}"${dez ? ' letter-spacing="-3"' : ''} text-anchor="middle" fill="${COR[c.naipe]}" font-family="${FONTE}" font-weight="700">${c.rank}</text>${pip(c.naipe, 22, 62, 22, false)}`;
+    return `<text x="22" y="42" font-size="${dez ? 29 : 34}"${dez ? ' letter-spacing="-3"' : ''} text-anchor="middle" fill="${COR[c.naipe]}" font-family="${FONTE}" font-weight="700">${c.rank}</text>${pip(c.naipe, 22, 64, 26, false)}`;
   }
 
   const GLIFO = { J: '♞', Q: '♛', K: '♚' };
@@ -49,7 +49,7 @@ window.SS = window.SS || {};
   function figura(c) {
     const cor = COR[c.naipe];
     const metade = `<text x="100" y="104" font-size="66" text-anchor="middle" fill="${cor}" font-family="'Segoe UI Symbol','DejaVu Sans',serif">${GLIFO[c.rank]}</text>
-      ${pip(c.naipe, 64, 62, 24, false)}
+      ${pip(c.naipe, 64, 64, 32, false)}
       <text x="136" y="71" font-size="26" text-anchor="middle" fill="${cor}" font-family="${FONTE}" font-weight="700">${c.rank}</text>
       <text x="100" y="129" font-size="11" letter-spacing="2" text-anchor="middle" fill="${cor}" opacity=".8" font-family="${FONTE}">${NOME[c.rank]}</text>`;
     return `<rect x="34" y="34" width="132" height="212" rx="4" fill="#f1e4c3" stroke="${cor}" stroke-width="2.5"/>

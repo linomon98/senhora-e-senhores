@@ -90,8 +90,10 @@ window.SS = window.SS || {};
 
   function celula(rank, naipe, cont) {
     const chave = `${rank}-${naipe}`, n = cont[chave] || 0;
-    return `<div class="celula${n ? ' tem' : ''}" data-carta-deck="${chave}" title="Clique: +1 · Botão direito: −1">
+    const vermelho = naipe === 'copas' || naipe === 'ouros';
+    return `<div class="celula${n ? ' tem' : ''}" data-carta-deck="${chave}" title="${M.nomeCarta({ rank, naipe })} · clique: +1 · botão direito: −1">
       <div class="mini-carta">${C.frente({ rank, naipe })}</div>
+      <div class="celula-naipe${vermelho ? ' vermelho' : ''}">${SIMB[naipe]} ${NOME_NAIPE[naipe]}</div>
       <div class="celula-controles"><button data-menos="${chave}">−</button><b>${n}</b><button data-mais="${chave}">+</button></div></div>`;
   }
 

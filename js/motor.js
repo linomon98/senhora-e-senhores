@@ -15,6 +15,7 @@ window.SS = window.SS || {};
   const ESPACOS = 8;
   const ACOES_POR_TURNO = 3;
   const CUSTO_RAINHA = 2; // ações passivas para sumonar uma Rainha
+  const DADO_ATAQUE_TOTAL = 4; // dado a partir do qual o ataque sai cheio (abaixo disso, metade)
   const LIMITE_MAO = 7;
   const DANO_BARALHO_VAZIO = 2;
 
@@ -605,10 +606,10 @@ window.SS = window.SS || {};
     const base = ataqueBase(e, p, locA.i);
     const bonus = maior === 6 ? u.bonus.reduce((s, v) => s + Math.floor(v / 2), 0) : u.bonus.length;
     const total = base + bonus;
-    const dano = maior >= 5 ? total : Math.floor(total / 2);
+    const dano = maior >= DADO_ATAQUE_TOTAL ? total : Math.floor(total / 2);
     const numeroAtacante = base + u.bonus.length;
     res.dano = dano;
-    registrar(e, `Ataque ${at.n}: ${nomeUnidade(u)} rolou ${rolagens.join(', ')} → ${maior >= 5 ? 'ataque total' : 'meio ataque'}${maior === 6 && u.bonus.length ? ' com crítico de Espadas' : ''}: ${dano} de dano.`);
+    registrar(e, `Ataque ${at.n}: ${nomeUnidade(u)} rolou ${rolagens.join(', ')} → ${maior >= DADO_ATAQUE_TOTAL ? 'ataque total' : 'meio ataque'}${maior === 6 && u.bonus.length ? ' com crítico de Espadas' : ''}: ${dano} de dano.`);
 
     if (!at.bloqueadores.length) {
       if (at.alvo === 'jogador') danoAoJogador(e, p, locA, dano);
@@ -781,7 +782,7 @@ window.SS = window.SS || {};
 
   SS.Motor = {
     desistir, REGRAS_DECK, RANKS, contagemPadrao, resumoDeck, validarDeck, cartasDoDeck,
-    NAIPES, SIMBOLO, LIMITE_FIGURA, PV_INICIAL, ESPACOS, ACOES_POR_TURNO, CUSTO_RAINHA, LIMITE_MAO,
+    NAIPES, SIMBOLO, LIMITE_FIGURA, PV_INICIAL, ESPACOS, ACOES_POR_TURNO, CUSTO_RAINHA, DADO_ATAQUE_TOTAL, LIMITE_MAO,
     definirRng: f => { rng = f; },
     ehFigura, ehAs, ehNumero, valor, nomeCarta, nomeUnidade, curaDe, naipado,
     BARALHOS, NOME_BARALHO, baralhosDisponiveis, comprarDoTurno,

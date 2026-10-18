@@ -92,8 +92,8 @@ window.SS = window.SS || {};
         <h3>Rolagem</h3>
         <table class="tabela-regras">
           <tr><th>Dado</th><th>Dano</th></tr>
-          <tr><td>5 ou 6</td><td>Ataque cheio</td></tr>
-          <tr><td>1 a 4</td><td>Metade do ataque, arredondada para baixo</td></tr>
+          <tr><td>${M.DADO_ATAQUE_TOTAL} a 6</td><td>Ataque cheio</td></tr>
+          <tr><td>1 a ${M.DADO_ATAQUE_TOTAL - 1}</td><td>Metade do ataque, arredondada para baixo</td></tr>
         </table>
         <ul>
           <li><b>Ouros no ataque:</b> cada Ouros gasto dá +1 dado; vale o maior resultado.</li>
