@@ -1389,7 +1389,8 @@ window.SS = window.SS || {};
     if (id !== partida) return;
     if (jogo.vencedor != null) return fimDeJogo();
     render();
-    if (jogo.fase === 'compra') {
+    // Repete enquanto houver compras a fazer neste turno (nunca fica parado na fase de compra).
+    while (jogo.fase === 'compra') {
       const p = jogo.vez;
       if (controle(p) === 'bot') {
         await esperar(500);

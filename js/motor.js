@@ -28,7 +28,7 @@ window.SS = window.SS || {};
     lancalotte: { naipe: 'espadas', pv: 20, limiteMao: 7, compras: 1, poder: 'desafio', dadosPrimeiro: 1, ataquePrimeiro: 1 },
     infartitte: { naipe: 'copas', pv: 24, limiteMao: 7, compras: 1, poder: 'transfusao' },
     paumol: { naipe: 'paus', pv: 18, limiteMao: 7, compras: 1, poder: 'vigilia', reducaoDefesa: 1, soPaus: true },
-    ourinhos: { naipe: 'ouros', pv: 15, limiteMao: 6, compras: 2, poder: null },
+    ourinhos: { naipe: 'ouros', pv: 15, limiteMao: 6, compras: 1, compraDupla: true, poder: null }, // compra 1 Letra + 1 Número sozinho
   };
   const CUSTO_TRANSFUSAO = 2; // PV pagos pela Transfusão do Infartitte
   const palhacoDe = j => (j && PALHACOS[j.palhaco]) || null;
@@ -336,9 +336,15 @@ window.SS = window.SS || {};
       } else if (u.naipe === 'ouros') j.tokens++;
     }
     registrar(e, `— Turno ${e.turno}: ${j.nome} —`);
-    e.compras = palhacoDe(j) ? palhacoDe(j).compras : 1; // o Ourinhos compra 2
+    const pal = palhacoDe(j);
+    e.compras = pal ? pal.compras : 1;
     if (e.turno === 1) registrar(e, `${j.nome} começa: não compra nem ataca neste turno.`);
-    else if (!j.letras.length && !j.numeros.length) comprar(e, p, e.compras, 'numeros'); // sem cartas: perde PV
+    else if (pal && pal.compraDupla) {
+      // Ourinhos (Juros compostos): compra sozinho 1 Letra e 1 Número, sem escolher.
+      comprar(e, p, 1, 'letras');
+      if (e.vencedor == null) comprar(e, p, 1, 'numeros');
+      registrar(e, `Juros compostos: ${j.nome} comprou 1 Letra e 1 Número.`);
+    } else if (!j.letras.length && !j.numeros.length) comprar(e, p, e.compras, 'numeros'); // sem cartas: perde PV
     else e.fase = 'compra'; // o jogador escolhe de qual baralho comprar
   }
 

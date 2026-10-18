@@ -69,6 +69,8 @@ html, body {
 .carta.dorso { background-size: 100% 100%; }
 .carta.dorso.vermelho { background-image: var(--dorso-vermelho); }
 .carta.dorso.azul { background-image: var(--dorso-azul); }
+.carta.dorso.verde { background-image: var(--dorso-verde); }
+.carta.dorso.dourado { background-image: var(--dorso-dourado); }
 .carta.vazia { background: rgba(0, 0, 0, .18); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .12); }
 
 /* ---------- Unidades em campo ---------- */
@@ -260,6 +262,8 @@ html, body {
 .carta-voando .svg-carta { display: block; width: 100%; height: 100%; }
 .carta-voando.dorso.vermelho { background-image: var(--dorso-vermelho); }
 .carta-voando.dorso.azul { background-image: var(--dorso-azul); }
+.carta-voando.dorso.verde { background-image: var(--dorso-verde); }
+.carta-voando.dorso.dourado { background-image: var(--dorso-dourado); }
 
 /* ---------- Setas de ataque e bloqueio ---------- */
 #setas { position: absolute; left: 0; top: 0; z-index: 40; pointer-events: none; overflow: visible; }

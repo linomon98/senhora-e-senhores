@@ -49,7 +49,7 @@ window.SS = window.SS || {};
     },
     {
       id: 'ourinhos', nome: 'Ourinhos', titulo: 'o banqueiro', naipe: 'ouros', cor: 'dourado',
-      passiva: { nome: 'Juros compostos', texto: 'Compra 2 cartas por turno (escolhe o baralho de cada uma).' },
+      passiva: { nome: 'Juros compostos', texto: 'No começo do turno, compra sozinho 2 cartas: 1 Letra e 1 Número (não precisa escolher).' },
       poder: null,
       custo: { nome: 'Endividado', texto: 'Começa com 15 PV e tem limite de mão de 6 cartas.' },
       plano: 'Muitas cartas e muitos ataques: Valete Naipado de Ouros entra e ataca 2 vezes no mesmo turno.',

@@ -35,7 +35,7 @@ window.SS = window.SS || {};
         <h3>Ordem do turno</h3>
         <ol>
           <li><b>Reativação:</b> seus Senhores virados para baixo voltam a ficar ativos.</li>
-          <li><b>Compra:</b> compre 1 carta do baralho que escolher: Letras ou Números. Se os dois estiverem vazios, perca 2 PV.</li>
+          <li><b>Compra:</b> compre 1 carta do baralho que escolher: Letras ou Números. Se os dois estiverem vazios, perca 2 PV. O <b>Ourinhos</b> não escolhe: compra sozinho 1 Letra e 1 Número.</li>
           <li><b>${M.ACOES_POR_TURNO} ações passivas</b>, em qualquer ordem: sumonar, invocar Ás, usar o efeito de uma carta numérica.</li>
           <li><b>Ação ofensiva:</b> ataque com os Senhores aptos.</li>
           <li><b>Fim do turno:</b> quem atacou vira para baixo, os efeitos de "1 turno" acabam e, com mais de ${M.LIMITE_MAO} cartas na mão, você descarta o excesso.</li>
