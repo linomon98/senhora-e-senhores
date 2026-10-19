@@ -459,6 +459,27 @@ html, body {
 .heroi.mini .heroi-arte { width: 58px; height: 46px; }
 .heroi.mini .heroi-naipe { font-size: 20px; }
 .heroi.mini .heroi-nome { font-size: 11px; margin-top: 6px; }
+/* Com retrato: a arte ocupa a carta toda e o nome fica sobre uma faixa escura embaixo. */
+.heroi.com-retrato { padding: 0 0 6px; justify-content: flex-end; }
+.heroi-retrato {
+  position: absolute; inset: 0; border-radius: 15px; background-size: cover; background-position: center 18%;
+}
+.heroi-retrato::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit;
+  background: linear-gradient(transparent 45%, rgba(0, 0, 0, .55) 68%, rgba(0, 0, 0, .9));
+}
+.heroi.com-retrato .heroi-nome, .heroi.com-retrato .heroi-quem { position: relative; margin-top: 0; }
+.heroi-naipe.canto {
+  left: 6px; top: 4px; bottom: auto; transform: none; font-size: 18px; line-height: 1;
+  width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%;
+  background: rgba(0, 0, 0, .55); border: 1px solid rgba(244, 231, 195, .6);
+}
+.heroi.mini .heroi-naipe.canto { font-size: 13px; width: 18px; height: 18px; left: 4px; top: 3px; }
+.heroi.mini.com-retrato { padding-bottom: 4px; }
+.escolha-palhaco .heroi.mini.com-retrato { width: 128px; height: 128px; }
+.inicio-lado .heroi.mini.com-retrato { width: 140px; height: 140px; }
+.inicio-lado .heroi.mini .heroi-nome { font-size: 14px; }
+.heroi.com-retrato .heroi-pv, .heroi.com-retrato .heroi-ferida { z-index: 1; }
 .info { justify-content: center; gap: 16px; }
 .lado-heroi { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 

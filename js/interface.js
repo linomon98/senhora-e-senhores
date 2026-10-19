@@ -761,6 +761,12 @@ window.SS = window.SS || {};
       <circle cx="94" cy="14" r="6" fill="#ffd54a" stroke="#7a5806"/></svg>`;
   }
 
+  // Retrato do Palhaço (arte em arte/palhacos/); sem retrato, usa o chapéu desenhado.
+  function arteHeroi(pal) {
+    if (pal.retrato) return `<div class="heroi-retrato" style="background-image:url('${pal.retrato}')"></div><span class="heroi-naipe canto">${SIMB[pal.naipe]}</span>`;
+    return `<div class="heroi-arte">${chapeu(pal.cor)}<span class="heroi-naipe">${SIMB[pal.naipe]}</span></div>`;
+  }
+
   function renderJogador(p, alvos) {
     const j = jogo.jogadores[p], cor = corDe(p), teto = M.tetoCura(j), pal = palhacoDe(p);
     const quem = controle(p) === 'humano' ? t('ui.voce') : `bot · ${NOME_NIVEL[cfg.nivel]}`;
@@ -781,8 +787,8 @@ window.SS = window.SS || {};
       poder = `<div class="poder-btn cor-${cor} passivo" data-poder="${p}"><span class="poder-icone">${SIMB[pal.naipe]}</span><b>${pal.passiva.nome}</b><small>${t('ui.passiva')}</small></div>`;
     }
     $('#info-' + p).innerHTML = `
-      <div class="heroi cor-${cor}${alvos.has('jogador:' + p) ? ' clicavel' : ''}${jogo.vez === p ? ' da-vez' : ''}" data-alvo="jogador:${p}">
-        <div class="heroi-arte">${chapeu(cor)}<span class="heroi-naipe">${SIMB[pal.naipe]}</span></div>
+      <div class="heroi cor-${cor}${pal.retrato ? ' com-retrato' : ''}${alvos.has('jogador:' + p) ? ' clicavel' : ''}${jogo.vez === p ? ' da-vez' : ''}" data-alvo="jogador:${p}">
+        ${arteHeroi(pal)}
         <div class="heroi-nome">${escapar(pal.nome)}</div>
         <div class="heroi-quem">${quem}</div>
         <div class="heroi-pv" title="${t('ui.pontosVida')}"><span>${j.pv}</span></div>
@@ -1157,7 +1163,7 @@ window.SS = window.SS || {};
     const lado = p => {
       const pal = palhacoDe(p);
       return `<div class="inicio-lado${p === primeiro ? ' comeca' : ''}">
-        <div class="heroi mini cor-${pal.cor}"><div class="heroi-arte">${chapeu(pal.cor)}<span class="heroi-naipe">${SIMB[pal.naipe]}</span></div><div class="heroi-nome">${pal.nome}</div></div>
+        <div class="heroi mini cor-${pal.cor}${pal.retrato ? ' com-retrato' : ''}">${arteHeroi(pal)}<div class="heroi-nome">${pal.nome}</div></div>
         <span>${t(controle(p) === 'humano' ? 'ui.voce' : 'ui.oponente')}</span>
         ${dados ? `<b class="dado-inicio">🎲 ${dados[p]}</b>` : ''}
         ${p === primeiro ? `<em>${t('inicio.comeca')}</em>` : ''}</div>`;
@@ -1553,7 +1559,7 @@ window.SS = window.SS || {};
       if (!decks.some(d => d.id === cfg.deck)) cfg.deck = 'palhaco';
       if (cfg.rival === cfg.palhaco) cfg.rival = 'aleatorio';
       const cartaPalhaco = pal => `<button class="escolha-palhaco cor-${pal.cor}${cfg.palhaco === pal.id ? ' ativo' : ''}" data-palhaco="${pal.id}">
-          <div class="heroi mini cor-${pal.cor}"><div class="heroi-arte">${chapeu(pal.cor)}<span class="heroi-naipe">${SIMB[pal.naipe]}</span></div></div>
+          <div class="heroi mini cor-${pal.cor}${pal.retrato ? ' com-retrato' : ''}">${arteHeroi(pal)}</div>
           <b>${pal.nome}</b><small>${pal.titulo} · ${NOME_NAIPE[pal.naipe]}</small>
           <span class="ep-linha"><i>${t('menu.passiva')}</i> ${pal.passiva.texto}</span>
           ${pal.poder ? `<span class="ep-linha"><i>${t('menu.poder')}</i> ${pal.poder.texto}</span>` : `<span class="ep-linha"><i>${pal.custo.nome}:</i> ${pal.custo.texto}</span>`}
