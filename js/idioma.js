@@ -119,6 +119,7 @@ window.SS = window.SS || {};
   adicionar({
     'deck.erroLetras': ['O baralho de Letras pode ter no máximo {a} figuras (tem {b}).', 'The Faces deck can have at most {a} face cards (it has {b}).'],
     'deck.erroVazio': ['O deck está vazio.', 'The deck is empty.'],
+    'deck.erroFormato': ['O deck tem cartas que não existem.', 'The deck has cards that do not exist.'],
     'deck.erroCopias': ['{c}: no máximo {a} cópias (tem {b}).', '{c}: at most {a} copies (it has {b}).'],
     'deck.erroNumeros': ['O baralho de Números pode ter no máximo {a} cartas (tem {b}).', 'The Numbers deck can have at most {a} cards (it has {b}).'],
   });
@@ -490,6 +491,8 @@ window.SS = window.SS || {};
     'on.revanche': ['Revanche', 'Rematch'],
     'on.saiu': ['{j} saiu da partida.', '{j} left the match.'],
     'on.caiu': ['A conexão com {j} caiu.', 'The connection with {j} dropped.'],
+    'on.invalido': ['O outro jogador mandou uma jogada que não vale pelas regras (trapaça ou conexão com problema). A partida foi encerrada.', 'The other player sent a move that breaks the rules (cheating or a bad connection). The match was ended.'],
+    'on.avisoIp': ['<b>Privacidade:</b> a partida é direta entre os navegadores, então o outro jogador consegue ver o seu endereço IP (que indica mais ou menos a cidade e o provedor de internet). Jogue com quem você conhece.', "<b>Privacy:</b> the match runs directly between browsers, so the other player can see your IP address (which roughly shows your city and internet provider). Play with people you know."],
   });
 
   function t(chave, p) {

@@ -1639,7 +1639,8 @@ window.SS = window.SS || {};
     modalEspera();
     const dele = await SS.Rede.esperar(['figuras']);
     if (id !== partida) return false;
-    for (const p of [0, 1]) M.escolherFiguras(jogo, p, p === eu ? minhas : dele.ids);
+    if (!Array.isArray(dele.ids)) { jogadaInvalida(dele.ids); return false; }
+    if (!aplicarRemoto(() => { for (const p of [0, 1]) M.escolherFiguras(jogo, p, p === eu ? minhas : dele.ids); })) return false;
     render();
     const mull = await decidirMulliganModal();
     if (id !== partida) return false;
@@ -1648,7 +1649,7 @@ window.SS = window.SS || {};
     const dele2 = await SS.Rede.esperar(['mulligan']);
     if (id !== partida) return false;
     for (const p of [0, 1]) {
-      if (p === eu ? mull : dele2.sim) M.mulligan(jogo, p);
+      if (p === eu ? mull : dele2.sim === true) M.mulligan(jogo, p);
       else M.confirmarAbertura(jogo, p);
     }
     fecharModal();
@@ -1796,7 +1797,11 @@ window.SS = window.SS || {};
     }
     if (controle(p) === 'remoto') {
       const msg = await SS.Rede.esperar(['dados']);
-      if (id !== partida) return msg.v;
+      if (id !== partida) return [1];
+      if (!dadosValidos(msg.v, n)) {
+        jogadaInvalida(msg.v);
+        return [1];
+      }
       return SS.Dados.mostrar(msg.v, corDe(p), deCima);
     }
     return SS.Dados.rolar(n, corDe(p), deCima);
@@ -1851,7 +1856,8 @@ window.SS = window.SS || {};
         // Online: o amigo escolhe o baralho na tela dele.
         const m = await SS.Rede.esperar(['compra']);
         if (id !== partida) return;
-        M.comprarDoTurno(jogo, m.b);
+        if (!M.BARALHOS.includes(m.b)) return jogadaInvalida(m.b);
+        if (!aplicarRemoto(() => M.comprarDoTurno(jogo, m.b))) return;
       } else {
         // Os dois baralhos pulsam na mesa; o jogador clica no que quer comprar.
         const origem = await new Promise(r => { ui.aoComprar = r; render(); });
@@ -1899,6 +1905,40 @@ window.SS = window.SS || {};
     } else await esperar(400);
   }
 
+  // ---------- Online: tudo o que chega do amigo é conferido antes de entrar no jogo ----------
+  // Uma jogada que não bate com as regras (trapaça ou mensagem quebrada) encerra a partida.
+  // (campos vazios ficam de fora: na rede, um campo undefined simplesmente some)
+  const chaveJogada = a => JSON.stringify(Object.keys(a).filter(k => a[k] !== undefined).sort().map(k => [k, a[k]]));
+
+  function jogadaInvalida(err) {
+    if (err) console.warn('Jogada inválida recebida:', err);
+    amigoSaiu('on.invalido');
+    // Corta a conexão: nada mais desse jogador entra nesta tela.
+    SS.Rede.enviar({ t: 'tchau' });
+    SS.Rede.sair();
+  }
+
+  // Aplica uma jogada do amigo; se o motor recusar, encerra a partida. Devolve true se deu certo.
+  function aplicarRemoto(fn) {
+    try {
+      fn();
+      return true;
+    } catch (err) {
+      jogadaInvalida(err);
+      return false;
+    }
+  }
+
+  // A jogada do amigo precisa ser exatamente uma das jogadas permitidas agora.
+  function acaoLegalRemota(a) {
+    if (!a || typeof a !== 'object' || Array.isArray(a)) return false;
+    const k = chaveJogada(a);
+    return M.acoesLegais(jogo).some(x => chaveJogada(x) === k);
+  }
+
+  // Dados que o amigo jogou: a quantidade certa, cada um de 1 a 6.
+  const dadosValidos = (v, n) => Array.isArray(v) && v.length === n && v.every(x => Number.isInteger(x) && x >= 1 && x <= 6);
+
   // Vez do amigo (online): aplica as jogadas que chegam pela rede, na ordem em que ele fez.
   async function turnoRemoto(id) {
     ui.ocupado = true;
@@ -1907,13 +1947,14 @@ window.SS = window.SS || {};
       const m = await SS.Rede.esperar(['acao', 'declarar']);
       if (id !== partida) return;
       if (m.t === 'acao') {
-        M.aplicarAcao(jogo, m.a);
+        if (!acaoLegalRemota(m.a)) return jogadaInvalida(m.a);
+        if (!aplicarRemoto(() => M.aplicarAcao(jogo, m.a))) return;
         render();
         if (jogo.vencedor != null) return fimDeJogo();
         continue;
       }
       if (jogo.fase === 'principal') M.aplicarAcao(jogo, { tipo: 'atacar' });
-      M.declararAtaques(jogo, m.lista);
+      if (!Array.isArray(m.lista) || !aplicarRemoto(() => M.declararAtaques(jogo, m.lista))) return;
       await mostrarDeclaracao(m.lista);
       if (id !== partida) return;
       return fluxoCombate(id);
@@ -1939,7 +1980,9 @@ window.SS = window.SS || {};
       } else if (controle(d) === 'remoto') {
         const m = await SS.Rede.esperar(['bloqueios']);
         if (id !== partida) return;
-        M.definirBloqueios(jogo, m.mapa);
+        const mapa = m.mapa && typeof m.mapa === 'object' && !Array.isArray(m.mapa) ? m.mapa : null;
+        if (!mapa || !Object.values(mapa).every(Array.isArray)) return jogadaInvalida(m.mapa);
+        if (!aplicarRemoto(() => M.definirBloqueios(jogo, mapa))) return;
       } else {
         ui.ocupado = false;
         ui.bloqueios = bloqueiosIniciais();
@@ -1990,7 +2033,8 @@ window.SS = window.SS || {};
       else if (controle(jogo.vez) === 'remoto') {
         const m = await SS.Rede.esperar(['descarte']);
         if (id !== partida) return;
-        M.descartar(jogo, m.ids);
+        if (!Array.isArray(m.ids) || new Set(m.ids).size !== m.ids.length) return jogadaInvalida(m.ids);
+        if (!aplicarRemoto(() => M.descartar(jogo, m.ids))) return;
       } else {
         ui.ocupado = false;
         render();
@@ -2078,6 +2122,7 @@ window.SS = window.SS || {};
     const disp = SS.Rede.disponivel();
     modal(`<h2>${t('on.titulo')}</h2>
       <p class="nota">${t('on.nota', { p: P.get(cfg.palhaco).nome })}</p>
+      <p class="nota aviso-ip">🔒 ${t('on.avisoIp')}</p>
       ${disp ? '' : `<p class="nota erro">${t('on.semRede')}</p>`}
       <div class="online-opcoes">
         <div class="online-caixa"><h3>${t('on.criarTitulo')}</h3><p class="nota">${t('on.criarNota')}</p>
@@ -2190,6 +2235,16 @@ window.SS = window.SS || {};
   });
   SS.Rede.ao('inicio', m => {
     if (papel !== 'convidado') return;
+    // A configuração vem do anfitrião: confere Palhaços, decks e semente antes de começar.
+    const ok = Array.isArray(m.palhacos) && m.palhacos.length === 2 && m.palhacos.every(x => typeof x === 'string' && P.get(x))
+      && Array.isArray(m.decks) && m.decks.length === 2 && m.decks.every(d => !M.validarDeck(d).length)
+      && Number.isInteger(m.semente) && m.semente >= 0;
+    if (!ok) {
+      SS.Rede.sair();
+      papel = null;
+      return modal(`<h2>${t('on.invalido', { j: '' })}</h2><div class="acoes-menu"><button class="btn principal" data-m="menu">${t('fim.menu')}</button></div>`,
+        ev => { if (ev.target.closest('[data-m="menu"]')) menu(); });
+    }
     iniciarPartida('online', { eu: 1, semente: m.semente, palhacos: m.palhacos, decks: m.decks });
   });
   SS.Rede.ao('desistir', () => {
@@ -2240,7 +2295,8 @@ window.SS = window.SS || {};
         <h1 class="titulo">${t('menu.titulo')}</h1>
         <p class="sub">${t('menu.sub')}</p>
         ${convite ? `<div class="convite"><span>🌐 ${t('on.convite', { c: escapar(convite) })}</span>
-          <button class="btn principal" data-m="entrar-convite">${t('on.entrarConvite', { c: escapar(convite) })}</button></div>` : ''}
+          <button class="btn principal" data-m="entrar-convite">${t('on.entrarConvite', { c: escapar(convite) })}</button>
+          <p class="nota aviso-ip">🔒 ${t('on.avisoIp')}</p></div>` : ''}
         <div class="opcao"><label>${t('menu.escolhaPalhaco')}</label><div class="grade-palhacos">${P.LISTA.map(cartaPalhaco).join('')}</div>
           <p class="nota">${t('menu.notaInicio')}</p></div>
         <div class="opcao"><label>${t('menu.palhacoBot')}</label>${grupo('rival', rivais)}</div>

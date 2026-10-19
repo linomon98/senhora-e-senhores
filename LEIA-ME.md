@@ -13,6 +13,13 @@ No menu:
 - **Simular partidas**: roda centenas de partidas sem animação e mostra as estatísticas (quem vence, se começar é vantagem, duração média). Serve para testar o equilíbrio das regras.
 - **Idioma**: English (padrão) ou Português, no canto do menu. A escolha fica salva neste navegador.
 
+## Segurança no online
+- **Tudo o que chega do outro jogador é conferido:** o deck só pode ter cartas que existem, e cada jogada, bloqueio, descarte, compra e dado precisa ser uma jogada válida pelas regras naquele momento. Se não for (trapaça ou mensagem quebrada), a partida é encerrada e a conexão é cortada.
+- **Política de Segurança de Conteúdo (CSP)** no `index.html`: só rodam scripts deste site e das bibliotecas (cdnjs e jsdelivr), e a rede só fala com o servidor do PeerJS. Se uma biblioteca nova for adicionada, inclua o endereço dela na CSP.
+- **Limite de mensagens:** mensagens grandes demais ou em excesso cortam a conexão.
+- **Privacidade:** a partida é direta entre os navegadores, então cada jogador pode ver o endereço IP do outro. A tela do online avisa isso.
+- **Limite conhecido:** quem souber usar o console do navegador consegue ver a mão do oponente (as duas telas rodam a mesma partida).
+
 ## Arquivos
 | Arquivo | O que faz |
 |---|---|

@@ -941,7 +941,18 @@ window.SS = window.SS || {};
   }
 
   // Lista os problemas do deck (vazia = deck válido).
+  // Um deck só pode ter cartas que existem (Ás a 10, Valete, Rainha, Rei, nos 4 naipes) com contagens inteiras.
+  // Importante no online: o deck do outro jogador chega pela rede e não pode trazer nada além disso.
+  function deckBemFormado(cont) {
+    if (!cont || typeof cont !== 'object' || Array.isArray(cont)) return false;
+    return Object.keys(cont).every(chave => {
+      const partes = chave.split('-'), n = cont[chave];
+      return partes.length === 2 && RANKS.includes(partes[0]) && NAIPES.includes(partes[1]) && Number.isInteger(n) && n >= 0 && n <= 99;
+    });
+  }
+
   function validarDeck(cont) {
+    if (!deckBemFormado(cont)) return [t('deck.erroFormato')];
     const R = REGRAS_DECK, r = resumoDeck(cont), erros = [];
     if (r.letras + r.numeros === 0) erros.push(t('deck.erroVazio'));
     if (r.letras > R.letras) erros.push(t('deck.erroLetras', { a: R.letras, b: r.letras }));

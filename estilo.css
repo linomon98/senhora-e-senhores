@@ -865,3 +865,4 @@ button.cb-item { cursor: default; }
 .pronto-info .nota { margin: 4px 0 0; max-width: 760px; }
 .copiar-para { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 14px; padding: 10px 12px; border-radius: 12px; background: rgba(233, 196, 106, .1); border: 1px solid rgba(233, 196, 106, .45); }
 .copiar-para span { font-weight: 700; margin-right: 4px; }
+.nota.aviso-ip { opacity: .95; padding: 8px 12px; border-radius: 10px; background: rgba(0, 0, 0, .3); border: 1px solid rgba(255, 255, 255, .18); text-align: left; }

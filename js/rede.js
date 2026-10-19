@@ -20,8 +20,19 @@ window.SS = window.SS || {};
     if (ouvintes[tipo]) ouvintes[tipo](dados);
   }
 
+  // Proteção: mensagens grandes demais ou em excesso cortam a conexão (ninguém joga tão rápido).
+  const MAX_TAMANHO = 20000, MAX_FILA = 300;
+
   function receber(m) {
-    if (!m || typeof m.t !== 'string') return;
+    if (!m || typeof m !== 'object' || typeof m.t !== 'string') return;
+    let tamanho = 0;
+    try { tamanho = JSON.stringify(m).length; } catch (err) { tamanho = Infinity; }
+    if (tamanho > MAX_TAMANHO || fila.length >= MAX_FILA) {
+      const c = conn;
+      conn = null;
+      if (c) try { c.close(); } catch (err) { /* já fechada */ }
+      return emitir('caiu');
+    }
     if (IMEDIATAS.includes(m.t)) return emitir(m.t, m);
     fila.push(m);
     entregar();
