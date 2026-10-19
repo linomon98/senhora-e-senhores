@@ -653,10 +653,16 @@ window.SS = window.SS || {};
 
   const elRetrato = p => document.querySelector(`#info-${p} .heroi`);
 
-  function caminhoSeta(a, b, encurtar) {
-    const dx = b.x - a.x, dy = b.y - a.y, dist = Math.hypot(dx, dy) || 1;
-    const curva = Math.min(80, dist * 0.18);
-    const c = { x: (a.x + b.x) / 2 - (dy / dist) * curva, y: (a.y + b.y) / 2 + (dx / dist) * curva };
+  // inicio: quanto a seta "sai" de dentro da carta de origem (começa na borda, não no meio da cara).
+  function caminhoSeta(a0, b, encurtar, inicio) {
+    const dx0 = b.x - a0.x, dy0 = b.y - a0.y, dist0 = Math.hypot(dx0, dy0) || 1;
+    const curva = Math.min(80, dist0 * 0.18);
+    const c = { x: (a0.x + b.x) / 2 - (dy0 / dist0) * curva, y: (a0.y + b.y) / 2 + (dx0 / dist0) * curva };
+    let a = a0;
+    if (inicio) {
+      const sx = c.x - a0.x, sy = c.y - a0.y, sl = Math.hypot(sx, sy) || 1, k = Math.min(inicio, sl * 0.4);
+      a = { x: a0.x + (sx / sl) * k, y: a0.y + (sy / sl) * k };
+    }
     let fim = b;
     if (encurtar) {
       const tx = b.x - c.x, ty = b.y - c.y, tl = Math.hypot(tx, ty) || 1;
@@ -697,10 +703,10 @@ window.SS = window.SS || {};
         <marker id="ponta-mira-ataque" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#ffd166"/></marker>
         <marker id="ponta-mira-bloqueio" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#9fd0ff"/></marker>
       </defs>` + setas.map(s => {
-      const { d, meio } = caminhoSeta(s.de, s.para, s.viva ? 0 : 34);
+      const { d, meio } = caminhoSeta(s.de, s.para, s.viva ? 0 : 46, 58);
       const cls = `seta ${s.cor}${s.tenue ? ' tenue' : ''}${s.foco ? ' foco' : ''}${s.viva ? ' viva' : ''}`;
       const rot = s.rotulo != null ? `<g class="rotulo-seta"><circle cx="${meio.x}" cy="${meio.y}" r="15"/><text x="${meio.x}" y="${meio.y}">${s.rotulo}</text></g>` : '';
-      return `<g class="${cls}"><path class="sombra" d="${d}"/><path class="linha" d="${d}" marker-end="url(#ponta-${s.cor})"/>${rot}</g>`;
+      return `<g class="${cls}"><path class="brilho" d="${d}"/><path class="sombra" d="${d}"/><path class="linha" d="${d}" marker-end="url(#ponta-${s.cor})"/>${rot}</g>`;
     }).join('');
   }
 
@@ -945,7 +951,14 @@ window.SS = window.SS || {};
     if (!cartas.length) return;
     const largura = cartas[0].offsetWidth || 86, disponivel = mao.clientWidth || 400, n = cartas.length;
     const sobra = n > 1 ? Math.min(-8, (disponivel - largura) / (n - 1) - largura) : 0;
-    for (let k = 0; k < n; k++) cartas[k].style.marginLeft = k ? `${sobra}px` : '0';
+    // Leque: as cartas giram para fora e as das pontas descem um pouco (um arco suave).
+    const meio = (n - 1) / 2, giroMax = Math.min(12, 3 + n * 1.3), descida = Math.min(16, 4 + n * 1.6);
+    for (let k = 0; k < n; k++) {
+      const d = meio ? (k - meio) / meio : 0;
+      cartas[k].style.marginLeft = k ? `${sobra}px` : '0';
+      cartas[k].style.setProperty('--giro', (d * giroMax).toFixed(1) + 'deg');
+      cartas[k].style.setProperty('--desce', (d * d * descida).toFixed(1) + 'px');
+    }
   }
 
   function renderVazio() {

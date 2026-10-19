@@ -333,11 +333,9 @@ window.SS = window.SS || {};
     // Com bandeja pequena, o aviso fica logo abaixo dela; senão, no alto da área (ou da tela).
     const area = arena && arena.isConnected ? arena.getBoundingClientRect() : null;
     const r = area && area.width < 400 ? area : null;
+    // Dado solto pela mesa: o aviso já aparece no painel e na faixa, então o balão some.
     if (!r && area) {
-      el.classList.remove('na-bandeja');
-      el.style.left = area.left + area.width / 2 + 'px';
-      el.style.top = area.top + area.height * 0.2 + 'px';
-      el.style.maxWidth = el.style.fontSize = '';
+      el.hidden = true;
       return;
     }
     el.classList.toggle('na-bandeja', !!r);
