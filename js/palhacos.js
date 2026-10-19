@@ -8,15 +8,15 @@ window.SS = window.SS || {};
   // Calibrados com o simulador (558 partidas: todos os Palhaços entre 45% e 54% de vitórias).
   const LISTA = [
     {
-      // Duelista: Reis e Rainhas de Espadas Naipados com números altos (+1 de ataque), que furam
-      // até bloqueio em grupo; poucos Valetes para pressionar cedo. Espadas altas dão o bônus de +1 no turno.
+      // Duelista: Valetes de Espadas (entram atacando) com Espadas de 2 a 5 (Naipados, +1 de ataque),
+      // Reis de Espadas para mirar Senhores, Ases de Espadas (+1 aos vizinhos) e Espadas altas para o bônus de +1.
       id: 'lancalotte', nome: 'Lançalotte', naipe: 'espadas', cor: 'azul',
       deck: {
-        'K-espadas': 5, 'Q-espadas': 3, 'J-espadas': 3, 'K-ouros': 1,
-        '2-espadas': 2, '3-espadas': 2, '4-espadas': 3, '5-espadas': 4, '6-espadas': 5, '7-espadas': 5,
-        '8-espadas': 3, '9-espadas': 3, '10-espadas': 3, 'A-espadas': 2,
-        '3-ouros': 2, '4-ouros': 2,
-        '6-copas': 2, '8-copas': 1,
+        'J-espadas': 4, 'J-copas': 1, 'J-ouros': 1, 'Q-espadas': 2, 'K-espadas': 3, 'K-ouros': 1,
+        '2-espadas': 4, '3-espadas': 4, '4-espadas': 4, '5-espadas': 4, '8-espadas': 2, '9-espadas': 2, '10-espadas': 2, 'A-espadas': 2,
+        '2-ouros': 2, '3-ouros': 2, '4-ouros': 2,
+        '5-copas': 2, '6-copas': 1, '7-copas': 2, '9-copas': 1,
+        '6-paus': 2, '7-paus': 2,
       },
     },
     {
@@ -62,13 +62,13 @@ window.SS = window.SS || {};
     lancalotte: {
       pt: {
         titulo: 'o duelista',
-        passiva: { nome: 'Golpe certeiro', texto: 'O 1º ataque de cada turno ganha +1 dado (vale o maior) e +1 de ataque. Começa com 22 PV.' },
+        passiva: { nome: 'Golpe certeiro', texto: 'O 1º ataque de cada turno ganha +1 dado (vale o maior) e +1 de ataque. Começa com 19 PV.' },
         poder: { nome: 'Desafio!', texto: 'Escolha um Senhor(a) inimigo ativo: neste turno ele(a) é obrigado(a) a bloquear o seu primeiro ataque (se puder).' },
         plano: 'Ataca cedo e forte: Valetes entram atacando, Rainhas fecham o jogo, Naipados de Espadas ganham +1.',
       },
       en: {
         titulo: 'the duelist',
-        passiva: { nome: 'True Strike', texto: 'The 1st attack each turn gets +1 die (the highest counts) and +1 attack. Starts with 22 HP.' },
+        passiva: { nome: 'True Strike', texto: 'The 1st attack each turn gets +1 die (the highest counts) and +1 attack. Starts with 19 HP.' },
         poder: { nome: 'Challenge!', texto: 'Choose a ready enemy Gentleman: this turn it must block your first attack (if it can).' },
         plano: 'Attacks early and hard: Jacks come in swinging, Queens close the game, Suited Spades get +1.',
       },
@@ -76,13 +76,13 @@ window.SS = window.SS || {};
     infartitte: {
       pt: {
         titulo: 'o coração teimoso',
-        passiva: { nome: 'Coração forte', texto: 'Suas cartas de Copas curam +1 PV (o que paga a Transfusão). Começa com 20 PV.' },
+        passiva: { nome: 'Coração forte', texto: 'Suas cartas de Copas curam +1 PV (o que paga a Transfusão). Começa com 24 PV.' },
         poder: { nome: 'Transfusão', texto: 'Pague 2 PV para tirar 1 hit de um Senhor(a) seu, ou 4 PV para dar 1 hit num Senhor(a) inimigo.' },
         plano: 'Aguenta e drena: Reis seguram a linha, Copas cura, Naipados de Copas aplicam ferida.',
       },
       en: {
         titulo: 'the stubborn heart',
-        passiva: { nome: 'Strong Heart', texto: 'Your Hearts cards heal +1 HP (which pays for Transfusion). Starts with 20 HP.' },
+        passiva: { nome: 'Strong Heart', texto: 'Your Hearts cards heal +1 HP (which pays for Transfusion). Starts with 24 HP.' },
         poder: { nome: 'Transfusion', texto: 'Pay 2 HP to remove 1 hit from one of your Gentlemen, or 4 HP to deal 1 hit to an enemy Gentleman.' },
         plano: 'Endures and drains: Kings hold the line, Hearts heal, Suited Hearts inflict wounds.',
       },
@@ -90,13 +90,13 @@ window.SS = window.SS || {};
     paumol: {
       pt: {
         titulo: 'o muro',
-        passiva: { nome: 'Casca grossa', texto: 'Seus Senhores com carta de Paus (na figura ou no número) recebem 1 de dano a menos ao defender. Começa com 22 PV.' },
+        passiva: { nome: 'Casca grossa', texto: 'Seus Senhores recebem 2 de dano a menos ao defender. Começa com 22 PV.' },
         poder: { nome: 'Vigília', texto: 'Escolha 1 Senhor(a) seu: ele(a) não vira para baixo no fim deste turno (ataca e ainda pode bloquear).' },
         plano: 'Ninguém passa: Naipados de Paus aguentam 3 hits e Ases de Paus deixam a fileira mais resistente.',
       },
       en: {
         titulo: 'the wall',
-        passiva: { nome: 'Thick Bark', texto: 'Your Gentlemen with a Clubs card (face or number) take 1 less damage when defending. Starts with 22 HP.' },
+        passiva: { nome: 'Thick Bark', texto: 'Your Gentlemen take 2 less damage when defending. Starts with 22 HP.' },
         poder: { nome: 'Vigil', texto: "Choose 1 of your Gentlemen: it doesn't flip face down at the end of this turn (it attacks and can still block)." },
         plano: 'None shall pass: Suited Clubs survive 3 hits and Aces of Clubs make the row sturdier.',
       },
@@ -104,14 +104,14 @@ window.SS = window.SS || {};
     ourinhos: {
       pt: {
         titulo: 'o banqueiro',
-        passiva: { nome: 'Cofre cheio', texto: 'Limite de mão de 8 cartas (em vez de 7). Começa com 17 PV.' },
-        poder: { nome: 'Cobrança', texto: 'Rouba 1 carta sorteada da mão do oponente.' },
+        passiva: { nome: 'Juros compostos', texto: 'No começo do turno, compra sozinho 2 cartas: 1 Letra e 1 Número (os outros compram só 1). Limite de mão de 6 cartas. Começa com 12 PV.' },
+        poder: { nome: 'Cobrança', texto: 'Pague 2 PV para roubar 1 carta sorteada da mão do oponente.' },
         plano: 'Rouba e acumula: tira as cartas do oponente e usa Valetes Naipados de Ouros, que atacam 2 vezes no mesmo turno.',
       },
       en: {
         titulo: 'the banker',
-        passiva: { nome: 'Full Vault', texto: 'Hand limit of 8 cards (instead of 7). Starts with 17 HP.' },
-        poder: { nome: 'Debt Collection', texto: "Steals 1 random card from the opponent's hand." },
+        passiva: { nome: 'Compound Interest', texto: 'At the start of the turn, automatically draws 2 cards: 1 Face and 1 Number (the others draw only 1). Hand limit of 6 cards. Starts with 12 HP.' },
+        poder: { nome: 'Debt Collection', texto: "Pay 2 HP to steal 1 random card from the opponent's hand." },
         plano: "Steals and hoards: takes the opponent's cards and uses Suited Jacks of Diamonds, which attack twice in the same turn.",
       },
     },

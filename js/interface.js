@@ -188,6 +188,8 @@ window.SS = window.SS || {};
     const cartas = ui.sel.filter(id => !id.startsWith('TOKEN')).map(id => j.mao.find(c => c.id === id)).filter(Boolean);
     const fig = cartas.find(M.ehFigura), num = cartas.find(M.ehNumero), as = cartas.find(M.ehAs);
     if (jogo.acoes <= 0) return t('dica.semAcoes');
+    if (fig && jogo.sumonados >= M.SENHORES_POR_TURNO) return t('dica.umSenhor');
+    if (as && jogo.asesTurno >= M.ASES_POR_TURNO) return t('dica.umAs');
     if (fig && num && M.valor(num) > M.LIMITE_FIGURA[fig.rank]) return t('dica.limiteFigura', { c: M.nomeCarta(fig), n: M.LIMITE_FIGURA[fig.rank] });
     if (fig && num && fig.rank === 'Q') return t('dica.rainhaSacrificio', { n: M.SACRIFICIOS_RAINHA });
     if (cartas.length === 1 && fig && fig.rank === 'Q' && !candidatosParceiros().size) return t('dica.rainhaSemSenhores', { n: M.SACRIFICIOS_RAINHA });
@@ -1845,10 +1847,16 @@ window.SS = window.SS || {};
         await esperar(500);
         if (id !== partida) return;
         M.comprarDoTurno(jogo, Bot.escolherBaralho(jogo, p, cfg.nivel));
+      } else if (controle(p) === 'remoto') {
+        // Online: o amigo escolhe o baralho na tela dele.
+        const m = await SS.Rede.esperar(['compra']);
+        if (id !== partida) return;
+        M.comprarDoTurno(jogo, m.b);
       } else {
         // Os dois baralhos pulsam na mesa; o jogador clica no que quer comprar.
         const origem = await new Promise(r => { ui.aoComprar = r; render(); });
         if (id !== partida) return;
+        if (cfg.modo === 'online') SS.Rede.enviar({ t: 'compra', b: origem });
         M.comprarDoTurno(jogo, origem);
       }
       if (jogo.vencedor != null) return fimDeJogo();

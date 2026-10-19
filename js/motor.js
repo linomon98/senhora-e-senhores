@@ -25,16 +25,18 @@ window.SS = window.SS || {};
   // dadosPrimeiro/ataquePrimeiro: bônus do 1º ataque do turno (Lançalotte);
   // reducaoDefesa: dano a menos em quem defende; soPaus: só Senhores com carta de Paus (Paumol).
   // Valores calibrados com o simulador.
-  // Todos compram sozinhos 1 Letra + 1 Número no começo do turno (COMPRA_AUTOMATICA).
+  // Compra do turno: 1 carta do baralho que o jogador escolher; o Ourinhos (compraDupla) compra sozinho 1 Letra + 1 Número.
   const PALHACOS = {
-    lancalotte: { naipe: 'espadas', pv: 22, limiteMao: 7, poder: 'desafio', dadosPrimeiro: 1, ataquePrimeiro: 1 },
-    infartitte: { naipe: 'copas', pv: 20, limiteMao: 7, poder: 'transfusao', curaExtra: 1 },
-    paumol: { naipe: 'paus', pv: 22, limiteMao: 7, poder: 'vigilia', reducaoDefesa: 1, soPaus: true },
-    ourinhos: { naipe: 'ouros', pv: 17, limiteMao: 8, poder: 'roubo' }, // rouba 1 carta da mão do oponente
+    lancalotte: { naipe: 'espadas', pv: 19, limiteMao: 7, poder: 'desafio', dadosPrimeiro: 1, ataquePrimeiro: 1 },
+    infartitte: { naipe: 'copas', pv: 24, limiteMao: 7, poder: 'transfusao', curaExtra: 1 },
+    paumol: { naipe: 'paus', pv: 22, limiteMao: 7, poder: 'vigilia', reducaoDefesa: 2, soPaus: false },
+    ourinhos: { naipe: 'ouros', pv: 12, limiteMao: 6, poder: 'roubo', compraDupla: true }, // rouba 1 carta da mão do oponente
   };
-  const COMPRA_AUTOMATICA = true;
+  const SENHORES_POR_TURNO = 1; // Senhores que dá para sumonar por turno (a Rainha conta)
+  const ASES_POR_TURNO = 1; // Ases (totens) que dá para invocar por turno
   const CUSTO_TRANSFUSAO = 2; // PV pagos pela Transfusão do Infartitte para tirar 1 hit de um aliado
   const CUSTO_SANGRIA = 4; // PV pagos pela Transfusão para dar 1 hit num Senhor(a) inimigo
+  const CUSTO_COBRANCA = 2; // PV pagos pelo Ourinhos para roubar 1 carta (Cobrança)
   const palhacoDe = j => (j && PALHACOS[j.palhaco]) || null;
   const temPalhaco = (j, id) => !!j && j.palhaco === id;
   const limiteMao = j => (palhacoDe(j) ? palhacoDe(j).limiteMao : LIMITE_MAO);
@@ -109,6 +111,8 @@ window.SS = window.SS || {};
       acoes: 0,
       compras: 0, // compras que faltam na fase de compra deste turno
       poderUsado: false, // poder do Palhaço já usado neste turno
+      sumonados: 0, // Senhores sumonados neste turno
+      asesTurno: 0, // Ases invocados neste turno
       desafio: null, // uid do Senhor inimigo desafiado pelo Lançalotte neste turno
       combate: null,
       vencedor: null,
@@ -334,6 +338,8 @@ window.SS = window.SS || {};
     e.acoes = ACOES_POR_TURNO;
     e.combate = null;
     e.poderUsado = false;
+    e.sumonados = 0;
+    e.asesTurno = 0;
     e.desafio = null;
     j.tokens = 0;
     for (const u of j.campo) {
@@ -348,11 +354,11 @@ window.SS = window.SS || {};
     registrar(e, t('log.turno', { n: e.turno, j: j.nome }));
     e.compras = 1;
     if (e.turno === 1) registrar(e, t('log.primeiroTurno', { j: j.nome }));
-    else if (COMPRA_AUTOMATICA) {
-      // Compra do turno: 1 Letra e 1 Número, sem escolher (baralho vazio: vem do outro; os dois vazios: perde PV).
+    else if (palhacoDe(j) && palhacoDe(j).compraDupla) {
+      // Ourinhos (Juros compostos): compra sozinho 1 Letra e 1 Número, sem escolher (baralho vazio: vem do outro).
       comprar(e, p, 1, 'letras');
       if (e.vencedor == null) comprar(e, p, 1, 'numeros');
-      registrar(e, t('log.compraDupla', { j: j.nome }));
+      registrar(e, t('log.juros', { j: j.nome }));
     } else if (!j.letras.length && !j.numeros.length) comprar(e, p, e.compras, 'numeros'); // sem cartas: perde PV
     else e.fase = 'compra'; // o jogador escolhe de qual baralho comprar
   }
@@ -404,7 +410,9 @@ window.SS = window.SS || {};
       else if (u.tipo === 'senhor') senhores.push(i);
     });
 
-    for (const f of figuras) {
+    // Só 1 Senhor(a) por turno (a Rainha conta) e só 1 Ás.
+    const podeSumonar = e.sumonados < SENHORES_POR_TURNO, podeAs = e.asesTurno < ASES_POR_TURNO;
+    for (const f of podeSumonar ? figuras : []) {
       for (const n of numeros) {
         if (valor(n) > LIMITE_FIGURA[f.rank]) continue;
         if (f.rank === 'Q') {
@@ -424,7 +432,7 @@ window.SS = window.SS || {};
     }
     // O Ás pode entrar num espaço ocupado: empurra as cartas para o lado (se houver espaço vazio).
     const espacosAs = vazios.length ? [...Array(ESPACOS).keys()] : [];
-    for (const a of ases) {
+    for (const a of podeAs ? ases : []) {
       for (const c of numeros) {
         if (c.naipe === a.naipe) for (const slot of espacosAs) r.push({ tipo: 'invocarAs', as: a.id, custo: c.id, slot });
       }
@@ -441,7 +449,7 @@ window.SS = window.SS || {};
       } else if (pal.poder === 'vigilia') {
         for (const s of senhores) if (!j.campo[s].vigilia) r.push({ tipo: 'poder', alvo: j.campo[s].uid });
       } else if (pal.poder === 'roubo') {
-        if (e.jogadores[1 - p].mao.length) r.push({ tipo: 'poder' }); // a carta é sorteada: não há alvo
+        if (e.jogadores[1 - p].mao.length && j.pv > CUSTO_COBRANCA) r.push({ tipo: 'poder' }); // a carta é sorteada: não há alvo
       }
     }
     const teto = tetoCura(j);
@@ -485,6 +493,8 @@ window.SS = window.SS || {};
       case 'sumonar': {
         const f0 = j.mao.find(c => c.id === a.figura), n0 = j.mao.find(c => c.id === a.numero);
         if (!f0 || !n0 || !ehFigura(f0) || !ehNumero(n0) || valor(n0) > LIMITE_FIGURA[f0.rank]) throw new Error('Sumonar inválido');
+        if (e.sumonados >= SENHORES_POR_TURNO) throw new Error('Só 1 Senhor(a) por turno');
+        e.sumonados++;
         if (f0.rank === 'Q') {
           if (a.sacrificio == null || a.sacrificio2 == null || a.sacrificio === a.sacrificio2) throw new Error(`A Rainha exige ${SACRIFICIOS_RAINHA} sacrifícios`);
           if (e.acoes < CUSTO_RAINHA) throw new Error(`A Rainha custa ${CUSTO_RAINHA} ação`);
@@ -513,6 +523,8 @@ window.SS = window.SS || {};
       }
       case 'invocarAs': {
         if (!j.campo.includes(null)) throw new Error('Fileira cheia');
+        if (e.asesTurno >= ASES_POR_TURNO) throw new Error('Só 1 Ás por turno');
+        e.asesTurno++;
         const as = tirarDaMao(j, a.as), custo = tirarDaMao(j, a.custo);
         if (!ehAs(as) || !ehNumero(custo) || custo.naipe !== as.naipe) throw new Error('Invocação de Ás inválida');
         j.cemiterio.push(custo);
@@ -529,9 +541,11 @@ window.SS = window.SS || {};
           // Ourinhos (Cobrança): pega 1 carta sorteada da mão do oponente.
           const op = e.jogadores[1 - p];
           if (!op.mao.length) throw new Error('O oponente está sem cartas na mão');
+          if (j.pv <= CUSTO_COBRANCA) throw new Error('PV insuficiente');
+          j.pv -= CUSTO_COBRANCA;
           const c = op.mao.splice(Math.floor(rng() * op.mao.length), 1)[0];
           j.mao.push(c);
-          registrar(e, t('log.roubo', { j: j.nome, o: op.nome, c: nomeCarta(c) }));
+          registrar(e, t('log.roubo', { j: j.nome, o: op.nome, c: nomeCarta(c), n: CUSTO_COBRANCA }));
           e.poderUsado = true;
           break;
         }
@@ -953,7 +967,7 @@ window.SS = window.SS || {};
 
   SS.Motor = {
     desistir, REGRAS_DECK, RANKS, contagemPadrao, resumoDeck, validarDeck, cartasDoDeck,
-    PALHACOS, CUSTO_TRANSFUSAO, CUSTO_SANGRIA, SACRIFICIOS_RAINHA, palhacoDe, limiteMao, ataqueDirecionado,
+    PALHACOS, CUSTO_TRANSFUSAO, CUSTO_SANGRIA, SACRIFICIOS_RAINHA, SENHORES_POR_TURNO, ASES_POR_TURNO, palhacoDe, limiteMao, ataqueDirecionado,
     NAIPES, SIMBOLO, LIMITE_FIGURA, PV_INICIAL, ESPACOS, ACOES_POR_TURNO, CUSTO_RAINHA, DADO_ATAQUE_TOTAL, LIMITE_MAO,
     definirRng: f => { rng = f; },
     ehFigura, ehAs, ehNumero, valor, nomeCarta, nomeNaipe, nomeUnidade, curaDe, curaPara, naipado,

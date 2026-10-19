@@ -35,8 +35,8 @@ window.SS = window.SS || {};
         <h3>Ordem do turno</h3>
         <ol>
           <li><b>Reativação:</b> seus Senhores virados para baixo voltam a ficar ativos.</li>
-          <li><b>Compra:</b> compre sozinho <b>1 Letra e 1 Número</b> (não precisa escolher). Se um baralho estiver vazio, a carta vem do outro; se os dois estiverem vazios, perca 2 PV por carta.</li>
-          <li><b>${M.ACOES_POR_TURNO} ações passivas</b>, em qualquer ordem: sumonar, invocar Ás, usar o efeito de uma carta numérica.</li>
+          <li><b>Compra:</b> compre <b>1 carta</b> do baralho que escolher: Letras ou Números. Se os dois estiverem vazios, perca 2 PV. O <b>Ourinhos</b> não escolhe: compra sozinho 1 Letra e 1 Número.</li>
+          <li><b>${M.ACOES_POR_TURNO} ações passivas</b>, em qualquer ordem: sumonar, invocar Ás, usar o efeito de uma carta numérica. No máximo <b>${M.SENHORES_POR_TURNO} Senhor(a)</b> sumonado(a) e <b>${M.ASES_POR_TURNO} Ás</b> invocado por turno.</li>
           <li><b>Ação ofensiva:</b> ataque com os Senhores aptos.</li>
           <li><b>Fim do turno:</b> quem atacou vira para baixo, os efeitos de "1 turno" acabam e, com mais de ${M.LIMITE_MAO} cartas na mão, você descarta o excesso.</li>
         </ol>`,
@@ -219,8 +219,8 @@ window.SS = window.SS || {};
         <h3>Turn order</h3>
         <ol>
           <li><b>Ready:</b> your face-down Gentlemen become ready again.</li>
-          <li><b>Draw:</b> automatically draw <b>1 Face and 1 Number</b> (no need to choose). If one deck is empty, the card comes from the other; if both are empty, lose 2 HP per card.</li>
-          <li><b>${M.ACOES_POR_TURNO} passive actions</b>, in any order: summon, invoke an Ace, use a number card's effect.</li>
+          <li><b>Draw:</b> draw <b>1 card</b> from the deck of your choice: Faces or Numbers. If both are empty, lose 2 HP. <b>Ourinhos</b> does not choose: it automatically draws 1 Face and 1 Number.</li>
+          <li><b>${M.ACOES_POR_TURNO} passive actions</b>, in any order: summon, invoke an Ace, use a number card's effect. At most <b>${M.SENHORES_POR_TURNO} Gentleman</b> summoned and <b>${M.ASES_POR_TURNO} Ace</b> invoked per turn.</li>
           <li><b>Offensive action:</b> attack with your ready Gentlemen.</li>
           <li><b>End of turn:</b> attackers flip face down, "1 turn" effects end and, with more than ${M.LIMITE_MAO} cards in hand, you discard the extra.</li>
         </ol>`,
