@@ -49,7 +49,29 @@ window.SS = window.SS || {};
     // e de onde a carta voa até o campo.
     arrasto: null, destino: null, vooDe: null, mostrarFila: false, duelo: false,
   });
-  const controle = p => (cfg.modo === 'bots' || p === 1 ? 'bot' : 'humano');
+  // eu: o jogador desta tela (0 contra o bot; no online, 0 para quem criou a sala e 1 para o amigo).
+  let eu = 0, revanche = { minha: false, dele: false };
+  // Quem joga cada lado: 'humano' (esta tela), 'bot' ou 'remoto' (o amigo, pela rede).
+  const controle = p => {
+    if (cfg.modo === 'bots') return 'bot';
+    if (cfg.modo === 'online') return p === eu ? 'humano' : 'remoto';
+    return p === 0 ? 'humano' : 'bot';
+  };
+
+  // Cada tela mostra o próprio jogador embaixo: troca os ids das áreas de cima e de baixo
+  // (#info-N, #mao-N, #pilhas-N, #campo-N) conforme o jogador desta tela.
+  function definirLados(local) {
+    const cima = 1 - local;
+    for (const [zona, p] of [['.zona-op', cima], ['.zona-eu', local]]) {
+      const z = $(zona);
+      z.querySelector('.info').id = 'info-' + p;
+      z.querySelector('.mao').id = 'mao-' + p;
+      z.querySelector('.pilhas').id = 'pilhas-' + p;
+    }
+    const fileiras = document.querySelectorAll('.fileira');
+    fileiras[0].id = 'campo-' + cima;
+    fileiras[1].id = 'campo-' + local;
+  }
   const escapar = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 
   // ---------- Seleção e ações da fase principal ----------
@@ -113,10 +135,16 @@ window.SS = window.SS || {};
     aplicarDoJogador(acao);
   }
 
+  // Jogada feita nesta tela (no online, vai também para a tela do amigo).
+  function enviarJogada(m) {
+    if (cfg.modo === 'online') SS.Rede.enviar(m);
+  }
+
   function aplicarDoJogador(acao) {
     ui.sel = [];
     ui.pend = null;
     ui.destino = null;
+    enviarJogada({ t: 'acao', a: acao });
     M.aplicarAcao(jogo, acao);
     render();
     ui.vooDe = null;
@@ -572,6 +600,7 @@ window.SS = window.SS || {};
         return iniciarPendente(arg);
       case 'ir-ataque':
         ui.sel = []; ui.pend = null; ui.ataques = [];
+        enviarJogada({ t: 'acao', a: { tipo: 'atacar' } });
         M.aplicarAcao(jogo, { tipo: 'atacar' });
         return render();
       case 'mais-dado': {
@@ -595,12 +624,14 @@ window.SS = window.SS || {};
       case 'sem-ataque': {
         const lista = nome === 'sem-ataque' ? [] : ui.ataques;
         ui.ataques = []; ui.atacanteSel = null;
+        enviarJogada({ t: 'declarar', lista });
         M.declararAtaques(jogo, lista);
         return fluxoCombate(partida);
       }
       case 'confirmar-bloqueios': {
         const mapa = ui.bloqueios;
         ui.bloqueios = {}; ui.bloqSel = null;
+        enviarJogada({ t: 'bloqueios', mapa });
         M.definirBloqueios(jogo, mapa);
         const continuar = ui.aoConfirmarBloqueio;
         ui.aoConfirmarBloqueio = null;
@@ -877,7 +908,7 @@ window.SS = window.SS || {};
     if (!alvo0 || !fonte) return;
     voando.add(c.id);
     alvo0.style.visibility = 'hidden';
-    const visivel = p === 0 || cfg.modo === 'bots';
+    const visivel = p === eu || cfg.modo === 'bots';
     const de = fonte.getBoundingClientRect(), para = alvo0.getBoundingClientRect();
     const voo = document.createElement('div');
     voo.className = `carta-voando dorso ${corDe(p)}`;
@@ -1005,7 +1036,7 @@ window.SS = window.SS || {};
 
   function renderJogador(p, alvos) {
     const j = jogo.jogadores[p], cor = corDe(p), teto = M.tetoCura(j), pal = palhacoDe(p);
-    const quem = controle(p) === 'humano' ? t('ui.voce') : `bot · ${NOME_NIVEL[cfg.nivel]}`;
+    const quem = controle(p) === 'humano' ? t('ui.voce') : controle(p) === 'remoto' ? t('ui.amigo') : `bot · ${NOME_NIVEL[cfg.nivel]}`;
     const podeJogar = controle(p) === 'humano' && jogo.vez === p && jogo.fase === 'principal' && !ui.ocupado;
     let tokens = '';
     for (let k = 0; k < j.tokens; k++) {
@@ -1031,7 +1062,7 @@ window.SS = window.SS || {};
         ${isFinite(teto) ? `<div class="heroi-ferida" title="${t('ui.feridaCopas')}">${t('ui.curaAte', { n: teto })}</div>` : ''}
       </div>
       <div class="lado-heroi">${poder}<div class="tokens">${tokens}</div></div>`;
-    const visivel = p === 0 || cfg.modo === 'bots';
+    const visivel = p === eu || cfg.modo === 'bots';
     const oculta = id => (voando.has(id) ? ' style="visibility:hidden"' : '');
     // Com 1 figura ou 1 Ás selecionado: o que combina pulsa, o resto escurece.
     const selUnica = podeJogar && !ui.pend && ui.sel.length === 1 ? j.mao.find(c => c.id === ui.sel[0]) : null;
@@ -1542,10 +1573,13 @@ window.SS = window.SS || {};
     return c ? c.dataset.mCarta : null;
   };
 
-  function aberturaHumana() {
+  // Abertura do jogador desta tela, em duas etapas: escolher as figuras (devolve os ids) e,
+  // depois de ver a mão, decidir o mulligan (devolve true/false). No online, as etapas dos dois
+  // jogadores são aplicadas na mesma ordem nas duas telas, para o sorteio dar igual.
+  function escolherFigurasModal() {
     return new Promise(resolver => {
-      const figs = M.figurasNoBaralho(jogo, 0), qtd = Math.min(3, figs.length), esc = [];
-      const tela1 = () => modal(`<h2>${t('ab.escolha', { n: qtd })}</h2>
+      const figs = M.figurasNoBaralho(jogo, eu), qtd = Math.min(3, figs.length), esc = [];
+      const tela = () => modal(`<h2>${t('ab.escolha', { n: qtd })}</h2>
           <p class="nota">${t('ab.nota')}</p>
           ${gradeCartas(figs, esc, true)}
           <div class="acoes-menu"><button class="btn principal" data-m="ok"${esc.length === qtd ? '' : ' disabled'}>${t('btn.confirmar')} (${esc.length}/${qtd})</button></div>`,
@@ -1555,28 +1589,63 @@ window.SS = window.SS || {};
             const k = esc.indexOf(id);
             if (k >= 0) esc.splice(k, 1);
             else if (esc.length < qtd) esc.push(id);
-            return tela1();
+            return tela();
           }
-          if (ev.target.closest('[data-m="ok"]') && esc.length === qtd) {
-            M.escolherFiguras(jogo, 0, esc);
-            render();
-            tela2();
-          }
+          if (ev.target.closest('[data-m="ok"]') && esc.length === qtd) resolver(esc.slice());
         });
-      const tela2 = () => modal(`<h2>${t('ab.suaMao')}</h2>
-          ${gradeCartas(jogo.jogadores[0].mao, null, false)}
+      tela();
+    });
+  }
+
+  function decidirMulliganModal() {
+    return new Promise(resolver => {
+      modal(`<h2>${t('ab.suaMao')}</h2>
+          ${gradeCartas(jogo.jogadores[eu].mao, null, false)}
           <p class="nota">${t('ab.mulliganNota')}</p>
           <div class="acoes-menu"><button class="btn principal" data-m="manter">${t('ab.manter')}</button><button class="btn" data-m="mulligan">Mulligan</button></div>`,
-        ev => {
-          const b = ev.target.closest('[data-m]');
-          if (!b) return;
-          if (b.dataset.m === 'manter') M.confirmarAbertura(jogo, 0);
-          else M.mulligan(jogo, 0);
-          fecharModal();
-          resolver();
-        });
-      tela1();
+      ev => {
+        const b = ev.target.closest('[data-m]');
+        if (b) resolver(b.dataset.m === 'mulligan');
+      });
     });
+  }
+
+  async function aberturaHumana() {
+    const ids = await escolherFigurasModal();
+    M.escolherFiguras(jogo, eu, ids);
+    render();
+    if (await decidirMulliganModal()) M.mulligan(jogo, eu);
+    else M.confirmarAbertura(jogo, eu);
+    fecharModal();
+  }
+
+  // Janela de espera enquanto o amigo decide algo (abertura, revanche...).
+  function modalEspera(chave) {
+    modal(`<h2>${t(chave || 'on.esperandoAmigo', { j: escapar(jogo ? jogo.jogadores[1 - eu].nome : '') })}</h2>
+      <div class="espera-pontos"><i></i><i></i><i></i></div>`);
+  }
+
+  async function aberturaOnline(id) {
+    const minhas = await escolherFigurasModal();
+    if (id !== partida) return false;
+    SS.Rede.enviar({ t: 'figuras', ids: minhas });
+    modalEspera();
+    const dele = await SS.Rede.esperar(['figuras']);
+    if (id !== partida) return false;
+    for (const p of [0, 1]) M.escolherFiguras(jogo, p, p === eu ? minhas : dele.ids);
+    render();
+    const mull = await decidirMulliganModal();
+    if (id !== partida) return false;
+    SS.Rede.enviar({ t: 'mulligan', sim: mull });
+    modalEspera();
+    const dele2 = await SS.Rede.esperar(['mulligan']);
+    if (id !== partida) return false;
+    for (const p of [0, 1]) {
+      if (p === eu ? mull : dele2.sim) M.mulligan(jogo, p);
+      else M.confirmarAbertura(jogo, p);
+    }
+    fecharModal();
+    return true;
   }
 
   function escolherDescarte() {
@@ -1632,7 +1701,8 @@ window.SS = window.SS || {};
 
   // ---------- Fluxo da partida ----------
 
-  async function iniciarPartida(modo) {
+  // online: { eu, semente, palhacos, decks } (partida com um amigo; ver rede.js).
+  async function iniciarPartida(modo, online) {
     cfg.modo = modo;
     partida++;
     const id = partida;
@@ -1644,19 +1714,30 @@ window.SS = window.SS || {};
     maoVista = [null, null];
     campoVisto = [null, null];
     cemVisto = [new Set(), new Set()];
-    // Palhaços: você fica sempre embaixo; o bot pega outro Palhaço (o escolhido ou um sorteado).
-    const ids = P.LISTA.map(x => x.id);
-    const sortear = lista => lista[Math.floor(Math.random() * lista.length)];
-    const meu = modo === 'bots' ? sortear(ids) : cfg.palhaco;
-    const outros = ids.filter(x => x !== meu);
-    const rival = modo !== 'bots' && outros.includes(cfg.rival) ? cfg.rival : sortear(outros);
-    palhacos = [meu, rival];
-    // Quem começa: sempre no dado. Cada jogador joga o seu (você arremessa; o bot rola) e
-    // começa quem tirar mais; empate, joga de novo.
+    // No online, cada tela mostra o próprio jogador embaixo; o sorteio do motor usa a mesma semente nas duas.
+    eu = online ? online.eu : 0;
+    definirLados(eu);
+    $('[data-acao="reiniciar"]').hidden = modo === 'online';
+    M.definirRng(online ? SS.Rede.gerador(online.semente) : Math.random);
+    revanche = { minha: false, dele: false };
+    let contagens;
+    if (online) {
+      palhacos = online.palhacos.slice();
+      contagens = online.decks;
+    } else {
+      // Contra o bot, você fica embaixo; o bot pega outro Palhaço (o escolhido ou um sorteado).
+      const ids = P.LISTA.map(x => x.id);
+      const sortear = lista => lista[Math.floor(Math.random() * lista.length)];
+      const meu = modo === 'bots' ? sortear(ids) : cfg.palhaco;
+      const outros = ids.filter(x => x !== meu);
+      const rival = modo !== 'bots' && outros.includes(cfg.rival) ? cfg.rival : sortear(outros);
+      palhacos = [meu, rival];
+      contagens = [modo === 'bots' ? P.get(meu).deck : contagemEscolhida(), P.get(rival).deck];
+    }
     const nomes = palhacos.map(x => P.get(x).nome);
-    const contagemMinha = modo === 'bots' || cfg.deck === 'palhaco' ? P.get(meu).deck
-      : cfg.deck === 'padrao' ? M.contagemPadrao() : SS.Decks.contagemPara(cfg.deck);
-    const decks = [M.cartasDoDeck(contagemMinha, 0), M.cartasDoDeck(P.get(rival).deck, 1)];
+    if (nomes[0] === nomes[1]) nomes[1] += ' 2'; // dois amigos com o mesmo Palhaço
+    const decks = contagens.map((c, k) => M.cartasDoDeck(c, k));
+    // Quem começa: sempre no dado. Cada jogador joga o seu e começa quem tirar mais; empate, joga de novo.
     // Mesa provisória só para mostrar os Palhaços durante o sorteio.
     jogo = M.criarJogo({ nomes, primeiro: 0, decks, palhacos });
     ui = novoUi();
@@ -1674,17 +1755,44 @@ window.SS = window.SS || {};
     await esperarContinuar(2600);
     if (id !== partida) return;
     esconderAnuncio();
-    for (const p of [1, 0]) {
-      if (controle(p) !== 'bot') continue;
-      M.escolherFiguras(jogo, p, Bot.escolherFiguras(jogo, p, cfg.nivel));
-      if (Bot.querMulligan(jogo, p, cfg.nivel)) M.mulligan(jogo, p);
-      else M.confirmarAbertura(jogo, p);
-    }
-    if (controle(0) === 'humano') {
-      await aberturaHumana();
-      if (id !== partida) return;
+    if (modo === 'online') {
+      if (!(await aberturaOnline(id))) return;
+    } else {
+      for (const p of [1, 0]) {
+        if (controle(p) !== 'bot') continue;
+        M.escolherFiguras(jogo, p, Bot.escolherFiguras(jogo, p, cfg.nivel));
+        if (Bot.querMulligan(jogo, p, cfg.nivel)) M.mulligan(jogo, p);
+        else M.confirmarAbertura(jogo, p);
+      }
+      if (controle(0) === 'humano') {
+        await aberturaHumana();
+        if (id !== partida) return;
+      }
     }
     proximoTurno(id);
+  }
+
+  // Deck escolhido no menu para o seu Palhaço.
+  function contagemEscolhida() {
+    if (cfg.deck === 'palhaco') return P.get(cfg.palhaco).deck;
+    return cfg.deck === 'padrao' ? M.contagemPadrao() : SS.Decks.contagemPara(cfg.deck);
+  }
+
+  // Joga um dado na vez do jogador p: você arremessa (e no online manda o resultado),
+  // o amigo manda o resultado dele pela rede, o bot rola sozinho.
+  async function dadoDe(p, n, id) {
+    const deCima = p !== eu;
+    if (controle(p) === 'humano') {
+      const r = await SS.Dados.jogar(n, corDe(p));
+      if (cfg.modo === 'online') SS.Rede.enviar({ t: 'dados', v: r });
+      return r;
+    }
+    if (controle(p) === 'remoto') {
+      const msg = await SS.Rede.esperar(['dados']);
+      if (id !== partida) return msg.v;
+      return SS.Dados.mostrar(msg.v, corDe(p), deCima);
+    }
+    return SS.Dados.rolar(n, corDe(p), deCima);
   }
 
   // Desempate de quem começa: os dois jogam um dado na mesa, repetindo enquanto empatar.
@@ -1701,7 +1809,7 @@ window.SS = window.SS || {};
           + (controle(p) === 'humano' ? t('sorteio.suaVez') : t('sorteio.vezDe', { j: escapar(nomes[p]) }));
         render();
         SS.Dados.definirArena($('#mesa'));
-        const rol = controle(p) === 'humano' ? await SS.Dados.jogar(1, corDe(p)) : await SS.Dados.rolar(1, corDe(p), p === 1);
+        const rol = await dadoDe(p, 1, id);
         if (id !== partida) return null;
         r[p] = rol[0];
         await esperar(900);
@@ -1742,6 +1850,7 @@ window.SS = window.SS || {};
       render();
     }
     if (controle(jogo.vez) === 'bot') turnoBot(id);
+    else if (controle(jogo.vez) === 'remoto') turnoRemoto(id);
   }
 
   async function turnoBot(id) {
@@ -1761,17 +1870,41 @@ window.SS = window.SS || {};
     if (jogo.fase === 'principal') M.aplicarAcao(jogo, { tipo: 'atacar' });
     const lista = Bot.declararAtaques(jogo, p, cfg.nivel);
     M.declararAtaques(jogo, lista);
+    await mostrarDeclaracao(lista);
+    if (id !== partida) return;
+    fluxoCombate(id);
+  }
+
+  // A ordem dos ataques do oponente aparece no painel da direita (e as setas na mesa).
+  async function mostrarDeclaracao(lista) {
     render();
     if (lista.length) {
-      // A ordem dos ataques do bot aparece no painel da direita (e as setas na mesa).
       ui.mostrarFila = true;
       render();
       await esperarContinuar(2200);
       ui.mostrarFila = false;
-      if (id !== partida) return;
     } else await esperar(400);
-    if (id !== partida) return;
-    fluxoCombate(id);
+  }
+
+  // Vez do amigo (online): aplica as jogadas que chegam pela rede, na ordem em que ele fez.
+  async function turnoRemoto(id) {
+    ui.ocupado = true;
+    render();
+    for (;;) {
+      const m = await SS.Rede.esperar(['acao', 'declarar']);
+      if (id !== partida) return;
+      if (m.t === 'acao') {
+        M.aplicarAcao(jogo, m.a);
+        render();
+        if (jogo.vencedor != null) return fimDeJogo();
+        continue;
+      }
+      if (jogo.fase === 'principal') M.aplicarAcao(jogo, { tipo: 'atacar' });
+      M.declararAtaques(jogo, m.lista);
+      await mostrarDeclaracao(m.lista);
+      if (id !== partida) return;
+      return fluxoCombate(id);
+    }
   }
 
   async function fluxoCombate(id) {
@@ -1790,6 +1923,10 @@ window.SS = window.SS || {};
         // Só o próprio alvo do Rei estaria livre: não há quem mandar para ajudar.
         M.registrar(jogo, t('log.ninguemAjuda', { j: jogo.jogadores[d].nome }));
         M.definirBloqueios(jogo, {});
+      } else if (controle(d) === 'remoto') {
+        const m = await SS.Rede.esperar(['bloqueios']);
+        if (id !== partida) return;
+        M.definirBloqueios(jogo, m.mapa);
       } else {
         ui.ocupado = false;
         ui.bloqueios = bloqueiosIniciais();
@@ -1813,10 +1950,8 @@ window.SS = window.SS || {};
       // O duelo aparece no painel da direita (dentro do tabuleiro); os dados rolam soltos pela mesa.
       if (temDuelo) mostrarDuelo(foto, total, null);
       SS.Dados.definirArena($('#mesa'));
-      // Quando é você atacando, você mesmo joga o dado (pegar e soltar na mesa).
-      const rolagens = controle(jogo.vez) === 'humano'
-        ? await SS.Dados.jogar(at.dados, corDe(jogo.vez))
-        : await SS.Dados.rolar(at.dados, corDe(jogo.vez), jogo.vez === 1);
+      // Quem ataca joga o dado: você arremessa, o amigo manda o resultado, o bot rola.
+      const rolagens = await dadoDe(jogo.vez, at.dados, id);
       if (id !== partida) return;
       await esperar(600); // tempo para ver a face do dado
       if (id !== partida) return;
@@ -1839,11 +1974,16 @@ window.SS = window.SS || {};
     M.encerrarTurno(jogo);
     if (jogo.fase === 'descarte') {
       if (controle(jogo.vez) === 'bot') M.descartar(jogo, Bot.descartar(jogo, jogo.vez));
-      else {
+      else if (controle(jogo.vez) === 'remoto') {
+        const m = await SS.Rede.esperar(['descarte']);
+        if (id !== partida) return;
+        M.descartar(jogo, m.ids);
+      } else {
         ui.ocupado = false;
         render();
         const ids = await escolherDescarte();
         if (id !== partida) return;
+        if (cfg.modo === 'online') SS.Rede.enviar({ t: 'descarte', ids });
         M.descartar(jogo, ids);
       }
     }
@@ -1856,17 +1996,19 @@ window.SS = window.SS || {};
     esconderAnuncio();
     render();
     const v = jogo.vencedor;
-    const venceu = cfg.modo === 'bot' ? v === 0 : null;
+    const venceu = cfg.modo === 'bots' ? null : v === eu;
     const titulo = cfg.modo === 'bots' ? t('faixa.venceu', { j: escapar(jogo.jogadores[v].nome) }) : t(venceu ? 'fim.vitoria' : 'fim.derrota');
+    const online = cfg.modo === 'online';
     modal(`<h2 class="titulo-fim${venceu === false ? ' derrota' : ''}">${titulo}</h2>
       <p>${t('fim.turno', { n: jogo.turno })}</p>
-      <div class="acoes-menu"><button class="btn principal" data-m="denovo">${t('fim.denovo')}</button><button class="btn" data-m="ver">${t('fim.ver')}</button><button class="btn" data-m="menu">${t('fim.menu')}</button></div>`,
+      ${online && revanche.dele ? `<p class="nota destaque">${t('on.amigoQuerRevanche', { j: escapar(jogo.jogadores[1 - eu].nome) })}</p>` : ''}
+      <div class="acoes-menu"><button class="btn principal" data-m="denovo">${t(online ? 'on.revanche' : 'fim.denovo')}</button><button class="btn" data-m="ver">${t('fim.ver')}</button><button class="btn" data-m="menu">${t('fim.menu')}</button></div>`,
     ev => {
       const b = ev.target.closest('[data-m]');
       if (!b) return;
-      if (b.dataset.m === 'denovo') iniciarPartida(cfg.modo);
-      else if (b.dataset.m === 'ver') fecharModal();
-      else menu();
+      if (b.dataset.m === 'denovo') return online ? pedirRevanche() : iniciarPartida(cfg.modo);
+      if (b.dataset.m === 'ver') return fecharModal();
+      menu();
     });
   }
 
@@ -1884,7 +2026,8 @@ window.SS = window.SS || {};
       if (assistindo) return menu();
       partida++; // interrompe o turno em andamento
       SS.Dados.cancelar();
-      M.desistir(jogo, 0);
+      if (cfg.modo === 'online') SS.Rede.enviar({ t: 'desistir' });
+      M.desistir(jogo, eu);
       fimDeJogo();
     });
   }
@@ -1912,7 +2055,155 @@ window.SS = window.SS || {};
       });
   }
 
+  // ---------- Online: jogar com um amigo (rede.js) ----------
+
+  // papel: 'anfitriao' (criou a sala, é o jogador 0) ou 'convidado' (entrou pelo link, jogador 1).
+  let papel = null, sala = null, amigoFora = false;
+  const espera = () => '<div class="espera-pontos"><i></i><i></i><i></i></div>';
+
+  function telaOnline(voltar, aviso) {
+    const disp = SS.Rede.disponivel();
+    modal(`<h2>${t('on.titulo')}</h2>
+      <p class="nota">${t('on.nota', { p: P.get(cfg.palhaco).nome })}</p>
+      ${disp ? '' : `<p class="nota erro">${t('on.semRede')}</p>`}
+      <div class="online-opcoes">
+        <div class="online-caixa"><h3>${t('on.criarTitulo')}</h3><p class="nota">${t('on.criarNota')}</p>
+          <button class="btn principal" data-m="criar"${disp ? '' : ' disabled'}>${t('on.criar')}</button></div>
+        <div class="online-caixa"><h3>${t('on.entrarTitulo')}</h3><p class="nota">${t('on.entrarNota')}</p>
+          <div class="link-sala"><input class="campo-codigo" maxlength="8" placeholder="${t('on.codigo')}" autocomplete="off">
+          <button class="btn" data-m="entrar"${disp ? '' : ' disabled'}>${t('on.entrar')}</button></div></div>
+      </div>
+      ${aviso ? `<p class="nota ${aviso.erro ? 'erro' : ''}">${escapar(aviso.msg)}</p>` : ''}
+      <div class="acoes-menu"><button class="btn" data-m="voltar">${t('btn.voltar')}</button></div>`,
+    ev => {
+      const b = ev.target.closest('[data-m]');
+      if (!b) return;
+      if (b.dataset.m === 'criar') return criarSalaOnline(voltar);
+      if (b.dataset.m === 'entrar') return entrarNaSala($('#modal .campo-codigo').value, voltar);
+      if (b.dataset.m === 'voltar') { SS.Rede.sair(); voltar(); }
+    });
+  }
+
+  async function criarSalaOnline(voltar) {
+    modal(`<h2>${t('on.criando')}</h2>${espera()}`);
+    let cod;
+    try {
+      cod = await SS.Rede.criarSala();
+    } catch (err) {
+      return telaOnline(voltar, { erro: true, msg: t('on.erroRede', { m: err.type || err.message }) });
+    }
+    papel = 'anfitriao';
+    amigoFora = false;
+    sala = { palhaco: cfg.palhaco, deck: contagemEscolhida(), convidado: null };
+    const link = SS.Rede.link(cod);
+    modal(`<h2>${t('on.salaCriada')}</h2>
+      <p class="nota">${t('on.mandeLink')}</p>
+      <div class="link-sala"><input readonly value="${escapar(link)}"><button class="btn principal" data-m="copiar">${t('on.copiar')}</button></div>
+      <p class="nota">${t('on.ouCodigo')} <b class="codigo-sala">${cod}</b></p>
+      <p class="nota">${t('on.esperando')}</p>${espera()}
+      <div class="acoes-menu"><button class="btn" data-m="cancelar">${t('btn.cancelar')}</button></div>`,
+    ev => {
+      const b = ev.target.closest('[data-m]');
+      if (!b) return;
+      if (b.dataset.m === 'copiar') {
+        const feito = () => { b.textContent = t('on.copiado'); };
+        if (navigator.clipboard) navigator.clipboard.writeText(link).then(feito, () => $('#modal .link-sala input').select());
+        else $('#modal .link-sala input').select();
+        return;
+      }
+      if (b.dataset.m === 'cancelar') { SS.Rede.sair(); papel = null; telaOnline(voltar); }
+    });
+  }
+
+  async function entrarNaSala(codigo, voltar) {
+    codigo = String(codigo || '').trim().toUpperCase();
+    if (!codigo) return telaOnline(voltar, { erro: true, msg: t('on.erroSala') });
+    modal(`<h2>${t('on.conectando', { c: escapar(codigo) })}</h2>${espera()}`);
+    try {
+      await SS.Rede.entrar(codigo);
+    } catch (err) {
+      const msg = err.type === 'peer-unavailable' || err.message === 'tempo' ? t('on.erroSala') : t('on.erroRede', { m: err.type || err.message });
+      return telaOnline(voltar, { erro: true, msg });
+    }
+    papel = 'convidado';
+    amigoFora = false;
+    if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+    modal(`<h2>${t('on.conectado')}</h2>${espera()}`);
+    // O anfitrião recebe o seu Palhaço e deck e começa a partida para os dois.
+    SS.Rede.enviar({ t: 'ola', palhaco: cfg.palhaco, deck: contagemEscolhida() });
+  }
+
+  // Anfitrião: sorteia a semente e manda a configuração para o amigo; os dois começam juntos.
+  function comecarOnline() {
+    const config = {
+      semente: Math.floor(Math.random() * 4294967296) >>> 0,
+      palhacos: [sala.palhaco, sala.convidado.palhaco],
+      decks: [sala.deck, sala.convidado.deck],
+    };
+    SS.Rede.enviar(Object.assign({ t: 'inicio' }, config));
+    iniciarPartida('online', Object.assign({ eu: 0 }, config));
+  }
+
+  function pedirRevanche() {
+    revanche.minha = true;
+    SS.Rede.enviar({ t: 'revanche' });
+    if (revanche.dele && papel === 'anfitriao') return comecarOnline();
+    modalEspera(revanche.dele ? 'on.comecando' : 'on.esperandoRevanche');
+  }
+
+  // O amigo saiu, desistiu ou a conexão caiu.
+  function amigoSaiu(chave) {
+    if (cfg.modo !== 'online' || amigoFora) return;
+    amigoFora = true;
+    partida++;
+    SS.Dados.cancelar();
+    ui.ocupado = false;
+    modal(`<h2>${t(chave, { j: escapar(jogo ? jogo.jogadores[1 - eu].nome : '') })}</h2>
+      <div class="acoes-menu"><button class="btn principal" data-m="menu">${t('fim.menu')}</button><button class="btn" data-m="ver">${t('fim.ver')}</button></div>`,
+    ev => {
+      const b = ev.target.closest('[data-m]');
+      if (!b) return;
+      if (b.dataset.m === 'ver') return fecharModal();
+      menu();
+    });
+  }
+
+  SS.Rede.ao('ola', m => {
+    if (papel !== 'anfitriao' || !sala) return;
+    const palhaco = P.get(m.palhaco) ? m.palhaco : 'lancalotte';
+    const deck = m.deck && !M.validarDeck(m.deck).length ? m.deck : P.get(palhaco).deck;
+    sala.convidado = { palhaco, deck };
+    comecarOnline();
+  });
+  SS.Rede.ao('inicio', m => {
+    if (papel !== 'convidado') return;
+    iniciarPartida('online', { eu: 1, semente: m.semente, palhacos: m.palhacos, decks: m.decks });
+  });
+  SS.Rede.ao('desistir', () => {
+    if (cfg.modo !== 'online' || !jogo || jogo.vencedor != null) return;
+    partida++;
+    SS.Dados.cancelar();
+    M.desistir(jogo, 1 - eu);
+    fimDeJogo();
+  });
+  SS.Rede.ao('revanche', () => {
+    revanche.dele = true;
+    if (revanche.minha && papel === 'anfitriao') return comecarOnline();
+    if (!revanche.minha && jogo && jogo.vencedor != null && cfg.modo === 'online' && !$('#modal').hidden) fimDeJogo();
+  });
+  SS.Rede.ao('tchau', () => amigoSaiu('on.saiu'));
+  SS.Rede.ao('caiu', () => amigoSaiu('on.caiu'));
+
   function menu() {
+    if (cfg.modo === 'online') {
+      SS.Rede.enviar({ t: 'tchau' });
+      SS.Rede.sair();
+      cfg.modo = 'bot';
+    }
+    papel = null;
+    eu = 0;
+    definirLados(0);
+    M.definirRng(Math.random);
     partida++;
     SS.Dados.cancelar();
     jogo = null;
@@ -1931,9 +2222,12 @@ window.SS = window.SS || {};
           ${pal.poder ? `<span class="ep-linha"><i>${t('menu.poder')}</i> ${pal.poder.texto}</span>` : `<span class="ep-linha"><i>${pal.custo.nome}:</i> ${pal.custo.texto}</span>`}
         </button>`;
       const rivais = [['aleatorio', t('menu.aleatorio')]].concat(P.LISTA.filter(x => x.id !== cfg.palhaco).map(x => [x.id, `${SIMB[x.naipe]} ${x.nome}`]));
+      const convite = SS.Rede.codigoDoLink();
       modal(`<div class="opcao idioma">${grupo('idioma', [['en', 'English'], ['pt', 'Português']], false, SS.Idioma.atual())}</div>
         <h1 class="titulo">${t('menu.titulo')}</h1>
         <p class="sub">${t('menu.sub')}</p>
+        ${convite ? `<div class="convite"><span>🌐 ${t('on.convite', { c: escapar(convite) })}</span>
+          <button class="btn principal" data-m="entrar-convite">${t('on.entrarConvite', { c: escapar(convite) })}</button></div>` : ''}
         <div class="opcao"><label>${t('menu.escolhaPalhaco')}</label><div class="grade-palhacos">${P.LISTA.map(cartaPalhaco).join('')}</div>
           <p class="nota">${t('menu.notaInicio')}</p></div>
         <div class="opcao"><label>${t('menu.palhacoBot')}</label>${grupo('rival', rivais)}</div>
@@ -1942,6 +2236,7 @@ window.SS = window.SS || {};
           <p class="nota">${cfg.deck === 'palhaco' ? t('menu.deckTematico', { p: P.get(cfg.palhaco).nome, plano: P.get(cfg.palhaco).plano }) : t('menu.monteDecks')}</p></div>
         <div class="acoes-menu">
           <button class="btn principal" data-m="jogar">${t('menu.jogar')}</button>
+          <button class="btn principal" data-m="online">🌐 ${t('menu.online')}</button>
           <button class="btn" data-m="assistir">${t('menu.assistir')}</button>
         </div>
         <div class="acoes-menu secundario">
@@ -1966,6 +2261,8 @@ window.SS = window.SS || {};
         const b = ev.target.closest('[data-m]');
         if (!b) return;
         if (b.dataset.m === 'jogar') iniciarPartida('bot');
+        else if (b.dataset.m === 'online') telaOnline(tela);
+        else if (b.dataset.m === 'entrar-convite') entrarNaSala(convite, tela);
         else if (b.dataset.m === 'assistir') iniciarPartida('bots');
         else if (b.dataset.m === 'decks') {
           fecharModal();

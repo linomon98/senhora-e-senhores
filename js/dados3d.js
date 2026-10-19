@@ -460,6 +460,83 @@ window.SS = window.SS || {};
     });
   }
 
+  // Dado de um jogador remoto: o resultado já veio pela rede, então o dado rola (sem física,
+  // numa trajetória animada) e cai mostrando exatamente aqueles valores.
+  function rolarPara(valores, cor, deCima) {
+    limpar();
+    montarParedes();
+    const mats = materiais(cor);
+    mats.forEach(m => { m.opacity = 1; });
+    const L = limites, dur = 1300, inicio = performance.now();
+    const cima = new THREE.Vector3(0, 1, 0);
+    const voos = valores.map((v, k) => {
+      const malha = new THREE.Mesh(new THREE.BoxGeometry(TAM, TAM, TAM), mats);
+      malha.castShadow = true;
+      cena.add(malha);
+      dados.push({ corpo: null, malha });
+      // Orientação final: a face com o valor sorteado virada para cima, girada ao acaso em torno do eixo vertical.
+      const n = NORMAIS[VALORES_FACE.indexOf(v)];
+      const final = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(n[0], n[1], n[2]), cima);
+      final.premultiply(new THREE.Quaternion().setFromAxisAngle(cima, Math.random() * Math.PI * 2));
+      const larg = L.maxX - L.minX, prof = L.maxZ - L.minZ;
+      const de = new THREE.Vector3(L.maxX - TAM - k * 1.2, 7 + k, deCima ? L.minZ + TAM + k * 1.5 : L.maxZ - TAM - k * 1.5);
+      const para = new THREE.Vector3(L.minX + larg * (0.35 + Math.random() * 0.3) + k * TAM * 1.4, TAM / 2, L.minZ + prof * (0.35 + Math.random() * 0.3));
+      const eixo = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
+      return { malha, final, de, para, eixo, voltas: 5 + Math.random() * 3 };
+    });
+    return new Promise(resolver => {
+      let feito = false;
+      // Aba em segundo plano não anima: o relógio de segurança termina o dado mesmo assim.
+      const seguro = setTimeout(() => passo(inicio + dur), dur + 400);
+      const passo = agora => {
+        if (feito) return;
+        const k = Math.min(1, (agora - inicio) / dur), e = 1 - Math.pow(1 - k, 3);
+        for (const d of voos) {
+          d.malha.position.lerpVectors(d.de, d.para, e);
+          // Dois quiques que vão diminuindo até parar.
+          d.malha.position.y = TAM / 2 + Math.abs(Math.cos(e * Math.PI * 2.5)) * (1 - e) * 6;
+          const giro = new THREE.Quaternion().setFromAxisAngle(d.eixo, (1 - e) * d.voltas * Math.PI);
+          d.malha.quaternion.copy(d.final).multiply(giro);
+        }
+        renderer.render(cena, camera);
+        if (k < 1) return requestAnimationFrame(passo);
+        feito = true;
+        clearTimeout(seguro);
+        // Parado: entra no mesmo fluxo de "mostrar e apagar" dos outros dados.
+        estado = { fase: 'mostrando', inicio: performance.now() };
+        if (!animando) {
+          animando = true;
+          ultimo = performance.now();
+          requestAnimationFrame(quadro);
+        }
+        resolver(valores.slice());
+      };
+      requestAnimationFrame(passo);
+    });
+  }
+
+  // Sem 3D: mostra os números sorteando e para nos valores recebidos.
+  function rolarPara2D(valores, cor) {
+    const caixa = document.createElement('div');
+    caixa.className = 'dados2d ' + cor;
+    caixa.innerHTML = valores.map(() => '<span>?</span>').join('');
+    document.body.appendChild(caixa);
+    const faces = [...caixa.children];
+    return new Promise(resolver => {
+      const fim = performance.now() + 900;
+      const tique = () => {
+        const parar = performance.now() >= fim;
+        faces.forEach((f, k) => { f.textContent = '⚀⚁⚂⚃⚄⚅'[(parar ? valores[k] : 1 + Math.floor(Math.random() * 6)) - 1]; });
+        if (!parar) setTimeout(tique, 70);
+        else {
+          resolver(valores.slice());
+          setTimeout(() => caixa.remove(), 1500);
+        }
+      };
+      tique();
+    });
+  }
+
   // deCima: o dado sai do lado de cima da mesa (jogador de cima).
   function rolar(n, cor, deCima) {
     return iniciar() ? rolar3D(n, cor, !!deCima) : rolar2D(n, cor);
@@ -474,6 +551,8 @@ window.SS = window.SS || {};
   SS.Dados = {
     iniciar, rolar, sumir, cancelar, temFisica: () => pronto,
     definirArena: el => { arena = el || null; },
+    // Mostra um dado jogado por outra pessoa (multiplayer), terminando nos valores dados.
+    mostrar: (valores, cor, deCima) => (iniciar() ? rolarPara(valores, cor, !!deCima) : rolarPara2D(valores, cor)),
     // O jogador pega o dado no centro da tela e arremessa na mesa.
     jogar: (n, cor) => (iniciar() ? rolarArrastando(n, cor) : rolar2D(n, cor)),
     depurar: () => ({ limites, estado: estado && estado.fase, dados: dados.map(d => ({ p: d.corpo.position.toString(), v: d.corpo.velocity.norm().toFixed(2), sono: d.corpo.sleepState })) }),

@@ -443,6 +443,42 @@ window.SS = window.SS || {};
     'cb.rolando': ['Rolando…', 'Rolling…'],
   });
 
+  // ---------- Online (jogar com um amigo) ----------
+  adicionar({
+    'menu.online': ['Jogar com um amigo', 'Play with a friend'],
+    'ui.amigo': ['amigo', 'friend'],
+    'on.titulo': ['Jogar com um amigo', 'Play with a friend'],
+    'on.nota': ['Você joga com {p} e o deck escolhidos no menu. A partida é direto entre os navegadores, sem cadastro.', 'You play with {p} and the deck chosen in the menu. The match runs directly between the browsers, no sign-up.'],
+    'on.semRede': ['A parte online não carregou (sem internet ou bloqueada). Recarregue a página.', "The online part didn't load (no internet or blocked). Reload the page."],
+    'on.criarTitulo': ['Criar sala', 'Create a room'],
+    'on.criarNota': ['Gera um link para mandar ao seu amigo.', 'Makes a link to send to your friend.'],
+    'on.criar': ['Criar sala', 'Create room'],
+    'on.entrarTitulo': ['Entrar numa sala', 'Join a room'],
+    'on.entrarNota': ['Recebeu um código? Digite aqui.', 'Got a code? Type it here.'],
+    'on.codigo': ['Código', 'Code'],
+    'on.entrar': ['Entrar', 'Join'],
+    'on.criando': ['Criando a sala…', 'Creating the room…'],
+    'on.salaCriada': ['Sala criada!', 'Room created!'],
+    'on.mandeLink': ['Mande este link para o seu amigo (WhatsApp, Discord…):', 'Send this link to your friend (WhatsApp, Discord…):'],
+    'on.copiar': ['Copiar link', 'Copy link'],
+    'on.copiado': ['Copiado!', 'Copied!'],
+    'on.ouCodigo': ['Ou passe o código:', 'Or share the code:'],
+    'on.esperando': ['Esperando o amigo entrar…', 'Waiting for your friend to join…'],
+    'on.conectando': ['Entrando na sala {c}…', 'Joining room {c}…'],
+    'on.conectado': ['Conectado! Começando a partida…', 'Connected! Starting the match…'],
+    'on.erroSala': ['Não achei essa sala. Confira o código (a sala fecha se quem criou sair).', "Couldn't find that room. Check the code (the room closes if its creator leaves)."],
+    'on.erroRede': ['Não foi possível conectar ({m}). Tente de novo ou use outra rede.', "Couldn't connect ({m}). Try again or use another network."],
+    'on.convite': ['Você foi convidado para a sala {c}. Escolha seu Palhaço e deck abaixo e entre.', "You've been invited to room {c}. Choose your Jester and deck below, then join."],
+    'on.entrarConvite': ['Entrar na sala {c}', 'Join room {c}'],
+    'on.esperandoAmigo': ['Esperando {j}…', 'Waiting for {j}…'],
+    'on.esperandoRevanche': ['Esperando {j} aceitar a revanche…', 'Waiting for {j} to accept the rematch…'],
+    'on.comecando': ['Começando a revanche…', 'Starting the rematch…'],
+    'on.amigoQuerRevanche': ['{j} quer revanche!', '{j} wants a rematch!'],
+    'on.revanche': ['Revanche', 'Rematch'],
+    'on.saiu': ['{j} saiu da partida.', '{j} left the match.'],
+    'on.caiu': ['A conexão com {j} caiu.', 'The connection with {j} dropped.'],
+  });
+
   function t(chave, p) {
     let txt = D[atual][chave];
     if (txt === undefined) txt = D.pt[chave];

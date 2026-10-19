@@ -6,6 +6,7 @@ O dado 3D carrega duas bibliotecas da internet (Three.js e Cannon.js). Sem inter
 
 No menu:
 - **Jogar contra o bot**: Fácil, Médio ou Difícil.
+- **Jogar com um amigo** (online): um cria a sala e manda o link; o outro abre o link e entra. A partida roda direto entre os dois navegadores (WebRTC, pela biblioteca PeerJS), sem cadastro e sem servidor próprio. Em algumas redes (por exemplo, certas redes de celular ou de empresa) a conexão direta pode não funcionar.
 - **Assistir bot × bot**: os dois lados jogam sozinhos.
 - **Montar decks**: até 4 decks próprios, com auto-build do deck padrão. Ficam salvos neste navegador.
 - **Regras do jogo**: todas as regras, separadas por tema.
@@ -22,6 +23,7 @@ No menu:
 | `js/dados3d.js` | Dado 3D com física (arremessado com o mouse). |
 | `js/decks.js` | Montagem de decks: 4 espaços salvos no navegador e checagem das regras de limite. |
 | `js/regras.js` | Tela "Regras do jogo", dividida por temas. |
+| `js/rede.js` | Multiplayer: cria e entra em salas, manda as jogadas para o amigo. As duas telas rodam a mesma partida com a mesma semente de sorteio. |
 | `js/interface.js` | Tela, cliques e fluxo dos turnos. |
 | `estilo.css` | Visual da mesa. |
 
