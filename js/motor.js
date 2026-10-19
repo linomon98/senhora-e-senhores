@@ -623,7 +623,8 @@ window.SS = window.SS || {};
     return r;
   }
 
-  // Ataque do Rei contra um Senhor(a): ninguém pode bloquear no lugar do alvo.
+  // Ataque do Rei contra um Senhor(a): o alvo é obrigado a defender, e outros Senhores
+  // ativos do mesmo dono podem entrar junto para ajudar (como num bloqueio duplo).
   function ataqueDirecionado(e, at) {
     if (at.alvo === 'jogador') return false;
     const l = localizar(e, at.alvo);
@@ -696,7 +697,7 @@ window.SS = window.SS || {};
     // Desafio! do Lançalotte: o Senhor(a) desafiado(a) bloqueia o primeiro ataque que dá para bloquear.
     const desafiado = e.desafio != null ? localizar(e, e.desafio) : null;
     if (desafiado && desafiado.p === d && desafiado.u.ativo) {
-      const primeiro = e.combate.ataques.find(at => !ataqueDirecionado(e, at));
+      const primeiro = e.combate.ataques.find(at => !(ataqueDirecionado(e, at) && at.alvo === e.desafio));
       if (primeiro) {
         for (const n in mapa) mapa[n] = (mapa[n] || []).filter(uid => uid !== e.desafio);
         mapa[primeiro.n] = [e.desafio].concat(mapa[primeiro.n] || []);
@@ -704,7 +705,8 @@ window.SS = window.SS || {};
       }
     }
     for (const at of e.combate.ataques) {
-      const lista = ataqueDirecionado(e, at) ? [] : (mapa[at.n] || []);
+      // No ataque do Rei a um Senhor(a), o alvo já defende: a lista são só os ajudantes.
+      const lista = (mapa[at.n] || []).filter(uid => !(ataqueDirecionado(e, at) && uid === at.alvo));
       for (const uid of lista) {
         const loc = localizar(e, uid);
         if (!loc || loc.p !== d || loc.u.tipo !== 'senhor' || !loc.u.ativo) throw new Error('Bloqueador inválido');
@@ -747,10 +749,10 @@ window.SS = window.SS || {};
     res.dano = dano;
     registrar(e, t('log.rolou', { n: at.n, u: nomeUnidade(u), r: rolagens.join(', '), cheio: maior >= DADO_ATAQUE_TOTAL, crit: maior === 6 && u.bonus.length > 0, d: dano }));
 
-    // Ataque do Rei contra um Senhor(a): o alvo se defende sozinho, como se bloqueasse.
+    // Ataque do Rei contra um Senhor(a): o alvo defende como se bloqueasse, junto com quem veio ajudar.
     const alvoDireto = at.alvo !== 'jogador' ? localizar(e, at.alvo) : null;
     const direcionado = !!alvoDireto && alvoDireto.u.tipo === 'senhor';
-    const defensores = direcionado ? [at.alvo] : at.bloqueadores;
+    const defensores = direcionado ? [at.alvo].concat(at.bloqueadores.filter(uid => uid !== at.alvo)) : at.bloqueadores;
     if (!defensores.length) {
       if (at.alvo === 'jogador') danoAoJogador(e, p, locA, dano);
       else if (alvoDireto) morrer(e, alvoDireto.p, alvoDireto.i, 'atacado');

@@ -14,7 +14,10 @@ window.SS = window.SS || {};
   // Ordem dos materiais do BoxGeometry: +x, -x, +y, -y, +z, -z (faces opostas somam 7).
   const VALORES_FACE = [1, 6, 2, 5, 3, 4];
   const NORMAIS = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
-  const TAM = 2.1;
+  const TAM_MESA = 2.1, TAM_BANDEJA = 1.55;
+  let TAM = TAM_MESA;
+  // Bandeja: elemento da página onde os dados rolam (null = a tela toda).
+  let arena = null;
   const PIPS = {
     1: [[0.5, 0.5]],
     2: [[0.27, 0.27], [0.73, 0.73]],
@@ -25,7 +28,7 @@ window.SS = window.SS || {};
   };
 
   let pronto = false, falhou = false;
-  let renderer, cena, camera, mundo, matDado, matMesa, limites;
+  let renderer, cena, camera, mundo, matDado, matMesa, limites, limitesMao;
   let paredes = [], dados = [], estado = null, animando = false, ultimo = 0;
   const materiaisCache = {};
 
@@ -114,21 +117,39 @@ window.SS = window.SS || {};
     return pronto;
   }
 
-  function pontoNoChao(x, y) {
+  function pontoNoChao(x, y, altura) {
     camera.updateMatrixWorld();
     const rc = new THREE.Raycaster();
     rc.setFromCamera(new THREE.Vector2(x, y), camera);
     const p = new THREE.Vector3();
-    rc.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), p);
+    rc.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), -(altura || 0)), p);
     return p;
   }
 
-  // Paredes invisíveis nas bordas da tela, para os dados não saírem da mesa.
+  // Retângulo da bandeja (ou da tela) visto numa altura: no alto, a perspectiva desloca tudo um pouco.
+  function retanguloEm(altura) {
+    const n = cantosNdc();
+    const a = pontoNoChao(n.x0, n.y1, altura), b = pontoNoChao(n.x1, n.y1, altura), c = pontoNoChao(n.x0, n.y0, altura), d = pontoNoChao(n.x1, n.y0, altura);
+    return { minX: Math.max(a.x, c.x), maxX: Math.min(b.x, d.x), minZ: Math.max(a.z, b.z), maxZ: Math.min(c.z, d.z) };
+  }
+
+  function cantosNdc() {
+    const r = arena && arena.isConnected ? arena.getBoundingClientRect() : null;
+    if (!r || r.width <= 20) return { x0: -0.88, x1: 0.88, y0: -0.85, y1: 0.85 };
+    return { x0: (r.left / innerWidth) * 2 - 1, x1: (r.right / innerWidth) * 2 - 1, y1: 1 - (r.top / innerHeight) * 2, y0: 1 - (r.bottom / innerHeight) * 2 };
+  }
+
+  // Paredes invisíveis nas bordas da bandeja (ou da tela), para os dados não saírem dela.
   function montarParedes() {
     paredes.forEach(b => mundo.removeBody(b));
     paredes = [];
-    const a = pontoNoChao(-0.88, 0.85), b = pontoNoChao(0.88, 0.85), c = pontoNoChao(-0.88, -0.85), d = pontoNoChao(0.88, -0.85);
-    limites = { minX: Math.max(a.x, c.x), maxX: Math.min(b.x, d.x), minZ: Math.max(a.z, b.z), maxZ: Math.min(c.z, d.z) };
+    const r = arena && arena.isConnected ? arena.getBoundingClientRect() : null;
+    // Área pequena (bandeja): dados menores. A mesa inteira usa o tamanho normal.
+    TAM = r && r.width > 20 && r.width < 400 ? TAM_BANDEJA : TAM_MESA;
+    limites = retanguloEm(0);
+    // Onde os dados ficam enquanto você segura: dentro da bandeja no chão E vista do alto.
+    const alto = retanguloEm(ALTURA_MAO);
+    limitesMao = { minX: Math.max(limites.minX, alto.minX), maxX: Math.min(limites.maxX, alto.maxX), minZ: Math.max(limites.minZ, alto.minZ), maxZ: Math.min(limites.maxZ, alto.maxZ) };
     const Y = new CANNON.Vec3(0, 1, 0);
     const plano = (x, z, ang) => {
       const corpo = new CANNON.Body({ mass: 0, material: matMesa });
@@ -225,9 +246,13 @@ window.SS = window.SS || {};
 
   function rolar3D(n, cor, deCima) {
     limpar();
+    montarParedes();
     const mats = materiais(cor);
     mats.forEach(m => { m.opacity = 1; });
     const L = limites;
+    // Numa bandeja pequena, o arremesso é mais curto (f < 1).
+    const f = Math.min(1, (L.maxX - L.minX) / 30);
+    const dentroZ = z => Math.max(L.minZ + TAM, Math.min(L.maxZ - TAM, z));
     for (let k = 0; k < n; k++) {
       const corpo = new CANNON.Body({ mass: 1, material: matDado, shape: new CANNON.Box(new CANNON.Vec3(TAM / 2, TAM / 2, TAM / 2)) });
       corpo.sleepSpeedLimit = 0.2;
@@ -235,11 +260,11 @@ window.SS = window.SS || {};
       corpo.linearDamping = 0.2;
       corpo.angularDamping = 0.2;
       // Arremesso a partir do canto inferior direito (o seu lado da mesa) ou superior (oponente).
-      const z0 = deCima ? L.minZ + 3 + k * 2.6 : L.maxZ - 3 - k * 2.6;
-      corpo.position.set(L.maxX - 3 - k * 0.8, 5 + k * 2.4, z0);
+      const z0 = dentroZ(deCima ? L.minZ + 3 * f + k * 2.6 * f : L.maxZ - 3 * f - k * 2.6 * f);
+      corpo.position.set(L.maxX - TAM - k * 0.8 * f, 5 + k * 2.4, z0);
       corpo.quaternion.setFromEuler(Math.random() * 6.28, Math.random() * 6.28, Math.random() * 6.28);
-      const vz = (12 + Math.random() * 5) * (deCima ? 1 : -1);
-      corpo.velocity.set(-(22 + Math.random() * 6), 3 + Math.random() * 4, vz);
+      const vz = (12 + Math.random() * 5) * (deCima ? 1 : -1) * Math.max(0.45, f);
+      corpo.velocity.set(-(22 + Math.random() * 6) * Math.max(0.45, f), 3 + Math.random() * 4, vz);
       corpo.angularVelocity.set((Math.random() - 0.5) * 32, (Math.random() - 0.5) * 32, (Math.random() - 0.5) * 32);
       mundo.addBody(corpo);
       const malha = new THREE.Mesh(new THREE.BoxGeometry(TAM, TAM, TAM), mats);
@@ -275,6 +300,7 @@ window.SS = window.SS || {};
   // Abandona qualquer dado na mesa ou na mão (ex.: o jogador desistiu da partida).
   function cancelar() {
     if (removerEventos) removerEventos();
+    arena = null;
     if (pronto) {
       limpar();
       estado = null;
@@ -289,9 +315,9 @@ window.SS = window.SS || {};
     rc.setFromCamera(new THREE.Vector2((clientX / innerWidth) * 2 - 1, -(clientY / innerHeight) * 2 + 1), camera);
     const p = new THREE.Vector3();
     rc.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), -altura), p);
-    const m = 2;
-    p.x = Math.max(limites.minX + m, Math.min(limites.maxX - m, p.x));
-    p.z = Math.max(limites.minZ + m, Math.min(limites.maxZ - m, p.z));
+    const L = limitesMao || limites, m = Math.min(2, (L.maxX - L.minX) / 4, (L.maxZ - L.minZ) / 4);
+    p.x = Math.max(L.minX + m, Math.min(L.maxX - m, p.x));
+    p.z = Math.max(L.minZ + m, Math.min(L.maxZ - m, p.z));
     return p;
   }
 
@@ -304,19 +330,36 @@ window.SS = window.SS || {};
     }
     el.textContent = texto;
     el.hidden = !texto;
+    // Com bandeja pequena, o aviso fica logo abaixo dela; senão, no alto da área (ou da tela).
+    const area = arena && arena.isConnected ? arena.getBoundingClientRect() : null;
+    const r = area && area.width < 400 ? area : null;
+    if (!r && area) {
+      el.classList.remove('na-bandeja');
+      el.style.left = area.left + area.width / 2 + 'px';
+      el.style.top = area.top + area.height * 0.2 + 'px';
+      el.style.maxWidth = el.style.fontSize = '';
+      return;
+    }
+    el.classList.toggle('na-bandeja', !!r);
+    el.style.left = r ? r.left + r.width / 2 + 'px' : '';
+    el.style.top = r ? r.bottom + 6 + 'px' : '';
+    el.style.maxWidth = r ? r.width - 12 + 'px' : '';
+    el.style.fontSize = r ? Math.max(10, Math.round(r.height * 0.085)) + 'px' : '';
   }
 
   function rolarArrastando(n, cor) {
     limpar();
+    montarParedes();
     const mats = materiais(cor);
     mats.forEach(m => { m.opacity = 1; });
+    const L = limitesMao, cx = (L.minX + L.maxX) / 2, cz = (L.minZ + L.maxZ) / 2, passo = TAM * 1.3;
     for (let k = 0; k < n; k++) {
       const malha = new THREE.Mesh(new THREE.BoxGeometry(TAM, TAM, TAM), mats);
       malha.castShadow = true;
-      malha.position.set((k - (n - 1) / 2) * 2.8, ALTURA_MAO, 0);
+      malha.position.set(cx + (k - (n - 1) / 2) * passo, ALTURA_MAO, cz);
       malha.rotation.set(Math.random() * 6, Math.random() * 6, 0);
       cena.add(malha);
-      dados.push({ corpo: null, malha, deslocamento: (k - (n - 1) / 2) * 2.8 });
+      dados.push({ corpo: null, malha, deslocamento: (k - (n - 1) / 2) * passo });
     }
     const cv = renderer.domElement;
     cv.style.pointerEvents = 'auto';
@@ -349,16 +392,18 @@ window.SS = window.SS || {};
           vz = (b.z - a.z) / dtl;
         }
         let v = Math.hypot(vx, vz);
-        if (v < 22) {
+        // Na bandeja, as velocidades são menores (senão o dado só bate de parede em parede).
+        const f = Math.max(0.45, Math.min(1, (limites.maxX - limites.minX) / 30));
+        if (v < 22 * f) {
           // Toquinho ou só soltou: vira um arremesso de verdade, numa direção sorteada.
-          const ang = v < 4 ? Math.random() * Math.PI * 2 : Math.atan2(vz, vx) + (Math.random() - 0.5) * 1.2;
-          v = 22 + Math.random() * 10;
+          const ang = v < 4 * f ? Math.random() * Math.PI * 2 : Math.atan2(vz, vx) + (Math.random() - 0.5) * 1.2;
+          v = (22 + Math.random() * 10) * f;
           vx = Math.cos(ang) * v;
           vz = Math.sin(ang) * v;
         }
-        if (v > 55) {
-          vx *= 55 / v;
-          vz *= 55 / v;
+        if (v > 55 * f) {
+          vx *= (55 * f) / v;
+          vz *= (55 * f) / v;
         }
         for (const d of dados) {
           const pos = d.malha.position;
@@ -430,6 +475,7 @@ window.SS = window.SS || {};
 
   SS.Dados = {
     iniciar, rolar, sumir, cancelar, temFisica: () => pronto,
+    definirArena: el => { arena = el || null; },
     // O jogador pega o dado no centro da tela e arremessa na mesa.
     jogar: (n, cor) => (iniciar() ? rolarArrastando(n, cor) : rolar2D(n, cor)),
     depurar: () => ({ limites, estado: estado && estado.fase, dados: dados.map(d => ({ p: d.corpo.position.toString(), v: d.corpo.velocity.norm().toFixed(2), sono: d.corpo.sleepState })) }),

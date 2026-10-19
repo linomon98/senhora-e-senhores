@@ -22,7 +22,16 @@ window.SS = window.SS || {};
   const ANGULO = { vertical: 0, diagonal: 45, horizontal: 90 };
   // Parâmetros que o jogador escolhe clicando na mesa, em ordem, para cada tipo de ação.
   // "sacrificios" é um passo de 2 cliques (a Rainha sacrifica 2 Senhores).
-  const PASSOS = { sumonar: ['sacrificios', 'slot'], invocarAs: ['slot'], espadas: ['alvo'], paus: ['alvo'], reviver: ['escolha'], curar: [], comprar: [], poder: ['alvo'] };
+  // O espaço na fileira não é um passo: vale o lugar onde a carta foi solta (ou o centro, pelo botão).
+  const PASSOS = { sumonar: ['sacrificios'], invocarAs: [], espadas: ['alvo'], paus: ['alvo'], reviver: ['escolha'], curar: [], comprar: [], poder: ['alvo'] };
+  const CENTRO_FILEIRA = (M.ESPACOS - 1) / 2;
+
+  // Entre as opções que só mudam de espaço, fica a mais perto de onde a carta foi solta.
+  function maisPerto(cands, destino) {
+    const alvo = destino == null ? CENTRO_FILEIRA : destino;
+    const dist = a => (a.slot == null ? 0 : Math.abs(a.slot - alvo) + (a.slot > alvo ? 0.01 : 0));
+    return cands.slice().sort((a, b) => dist(a) - dist(b))[0];
+  }
   const P = SS.Palhacos;
 
   const cfg = { palhaco: 'lancalotte', rival: 'aleatorio', nivel: 'medio', modo: 'bot', deck: 'palhaco' };
@@ -36,6 +45,9 @@ window.SS = window.SS || {};
   const novoUi = () => ({
     sel: [], pend: null, ataques: [], atacanteSel: null, bloqueios: {}, bloqSel: null,
     ocupado: false, foco: null, aoConfirmarBloqueio: null, aoContinuar: null, mira: null, mouse: null,
+    // Arrastar da mão: carta sendo arrastada, espaço onde uma figura/Ás espera o número,
+    // e de onde a carta voa até o campo.
+    arrasto: null, destino: null, vooDe: null, mostrarFila: false, duelo: false,
   });
   const controle = p => (cfg.modo === 'bots' || p === 1 ? 'bot' : 'humano');
   const escapar = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
@@ -70,12 +82,13 @@ window.SS = window.SS || {};
   // Ações de compra têm um botão por baralho: a chave é "tipo/baralho".
   const chaveAcao = a => a.tipo + (a.baralho ? '/' + a.baralho : '');
 
-  function iniciarPendente(chave) {
+  function iniciarPendente(chave, destino) {
     const tipo = chave.split('/')[0];
     const cands = candidatosSelecao().filter(a => chaveAcao(a) === chave);
     if (!cands.length) return;
     const tem = (a, ps) => (ps === 'sacrificios' ? a.sacrificio != null : a[ps] != null);
-    ui.pend = { tipo, cands, passos: PASSOS[tipo].filter(ps => cands.some(a => tem(a, ps))), k: 0, esc: {} };
+    ui.destino = null;
+    ui.pend = { tipo, cands, passos: PASSOS[tipo].filter(ps => cands.some(a => tem(a, ps))), k: 0, esc: {}, destino };
     avancarPendente();
   }
 
@@ -94,11 +107,17 @@ window.SS = window.SS || {};
       if (pd.passos[pd.k] === 'escolha') return escolherDoCemiterio();
       return render();
     }
-    const acao = candidatosPendentes()[0];
+    const acao = maisPerto(candidatosPendentes(), pd.destino);
+    aplicarDoJogador(acao);
+  }
+
+  function aplicarDoJogador(acao) {
     ui.sel = [];
     ui.pend = null;
+    ui.destino = null;
     M.aplicarAcao(jogo, acao);
     render();
+    ui.vooDe = null;
     if (jogo.vencedor != null) fimDeJogo();
   }
 
@@ -241,6 +260,9 @@ window.SS = window.SS || {};
     return null;
   }
 
+  // O alvo do ataque do Rei já defende esse ataque: não entra nele como ajudante.
+  const alvoDoRei = (at, uid) => M.ataqueDirecionado(jogo, at) && at.alvo === uid;
+
   // Qual ataque a seta de bloqueio aponta: o chip do ataque ou a carta atacante.
   function ataqueEm(el) {
     if (!el) return null;
@@ -248,7 +270,7 @@ window.SS = window.SS || {};
     if (chip) return Number(chip.dataset.ataque);
     const loc = unidadeEm(el);
     if (!loc || loc.p !== jogo.vez) return null;
-    const ats = jogo.combate.ataques.filter(a => a.atacante === loc.u.uid && !M.ataqueDirecionado(jogo, a));
+    const ats = jogo.combate.ataques.filter(a => a.atacante === loc.u.uid && !alvoDoRei(a, ui.bloqSel));
     const at = ats.find(a => !(ui.bloqueios[a.n] || []).includes(ui.bloqSel)) || ats[0];
     return at ? at.n : null;
   }
@@ -274,7 +296,7 @@ window.SS = window.SS || {};
       else for (const alvo of M.alvosPossiveis(jogo, ui.atacanteSel)) s.add(alvo === 'jogador' ? 'jogador:' + d : 'uid:' + alvo);
     } else if (humanoBloqueia()) {
       if (ui.bloqSel == null) for (const uid of bloqueadoresComCapacidade()) s.add('uid:' + uid);
-      else for (const at of jogo.combate.ataques) if (!M.ataqueDirecionado(jogo, at)) s.add('uid:' + at.atacante);
+      else for (const at of jogo.combate.ataques) if (!alvoDoRei(at, ui.bloqSel)) s.add('uid:' + at.atacante);
     }
     return s;
   }
@@ -284,7 +306,7 @@ window.SS = window.SS || {};
       if (ui && ui.aoContinuar) ui.aoContinuar();
       return;
     }
-    if (ev.target.closest('#modal')) return;
+    if (ev.target.closest('#modal') || (ui && ui.ignorarClique)) return;
     const el = ev.target.closest('[data-acao],[data-mao],[data-token],[data-slot],[data-alvo],[data-ataque],[data-cemiterio],[data-pilha]');
     if (!el) return;
     const ds = el.dataset;
@@ -316,6 +338,11 @@ window.SS = window.SS || {};
 
   function aoPressionar(ev) {
     if (ev.button !== 0 || !jogo || ev.target.closest('#modal')) return;
+    const naMao = ev.target.closest('[data-mao]');
+    if (naMao && jogo.fase === 'principal' && controle(jogo.vez) === 'humano' && !ui.ocupado && !ui.pend) {
+      ev.preventDefault();
+      return iniciarArrasto(ev, naMao.dataset.mao);
+    }
     const loc = unidadeEm(ev.target);
     if (!loc) return;
     const declarado = ui.ataques.some(a => a.atacante === loc.u.uid);
@@ -339,6 +366,7 @@ window.SS = window.SS || {};
 
   function aoSoltar(ev) {
     if (!jogo || ev.button !== 0) return;
+    if (ui.arrasto) return soltarArrasto(ev);
     const mira = ui.mira;
     ui.mira = null;
     if (!humanoAtaca() && !humanoBloqueia()) return;
@@ -372,6 +400,7 @@ window.SS = window.SS || {};
   }
 
   function aoMover(ev) {
+    if (ui && ui.arrasto && jogo) return moverArrasto(ev);
     if (ui && ui.mira && !ui.mira.moveu && Math.hypot(ev.clientX - ui.mira.x, ev.clientY - ui.mira.y) > 8) ui.mira.moveu = true;
     if (jogo && ((ui.atacanteSel != null && ui.mira && ui.mira.moveu) || ui.bloqSel != null)) {
       ui.mouse = pontoNoApp(ev.clientX, ev.clientY);
@@ -386,7 +415,7 @@ window.SS = window.SS || {};
       return ui.aoContinuar();
     }
     if (ev.key !== 'Escape' || !jogo) return;
-    ui.sel = []; ui.pend = null; ui.atacanteSel = null; ui.bloqSel = null; ui.mira = null;
+    ui.sel = []; ui.pend = null; ui.atacanteSel = null; ui.bloqSel = null; ui.mira = null; ui.destino = null;
     render();
   }
 
@@ -396,14 +425,146 @@ window.SS = window.SS || {};
     const k = ui.sel.indexOf(id);
     if (k >= 0) ui.sel.splice(k, 1);
     else ui.sel.push(id);
+    if (!ui.sel.length) ui.destino = null;
+    // Uma figura (ou Ás) já está esperando no campo: o número clicado completa a jogada.
+    if (ui.destino != null && ui.sel.length === 2 && jogarNoDestino()) return;
     render();
+  }
+
+  // ---------- Arrastar cartas da mão para a mesa ----------
+
+  const cartaDaMao = id => jogo.jogadores[jogo.vez].mao.find(c => c.id === id);
+  const ehColocacao = a => a.tipo === 'sumonar' || a.tipo === 'invocarAs';
+
+  // Onde a carta arrastada está em cima: um Senhor(a)/Ás seu, o seu Palhaço ou um lugar na fileira.
+  function destinoEm(x, y) {
+    const p = jogo.vez, el = document.elementFromPoint(x, y);
+    if (!el) return null;
+    const loc = unidadeEm(el);
+    if (loc && loc.p === p) return { tipo: 'unidade', uid: loc.u.uid, i: loc.i };
+    const ret = el.closest('[data-alvo]');
+    if (ret && ret.dataset.alvo === 'jogador:' + p) return { tipo: 'heroi' };
+    const fileira = $('#campo-' + p), r = fileira.getBoundingClientRect();
+    const folga = 40 * escala;
+    if (x < r.left - folga || x > r.right + folga || y < r.top - folga || y > r.bottom + folga) return null;
+    let melhor = 0, dm = Infinity;
+    fileira.querySelectorAll('.espaco').forEach((e, i) => {
+      const q = e.getBoundingClientRect(), d = Math.abs(q.left + q.width / 2 - x);
+      if (d < dm) { dm = d; melhor = i; }
+    });
+    return { tipo: 'campo', i: melhor };
+  }
+
+  // O que acontece se a carta for solta ali: a ação direta (Espadas, Paus, Copas) ou a colocação no campo.
+  function efeitoDoDestino(id, dest) {
+    if (!dest) return null;
+    const legais = M.acoesLegais(jogo);
+    if (dest.tipo === 'unidade') {
+      const a = legais.find(x => (x.tipo === 'espadas' || x.tipo === 'paus') && x.carta === id && x.alvo === dest.uid);
+      if (a) return { acao: a };
+    }
+    if (dest.tipo === 'heroi') {
+      const a = legais.find(x => x.tipo === 'curar' && x.carta === id);
+      return a ? { acao: a } : null;
+    }
+    const i = dest.i;
+    if (i == null || !legais.some(a => ehColocacao(a) && chaveCartas(a).includes(id))) return null;
+    return { campo: i };
+  }
+
+  function iniciarArrasto(ev, id) {
+    ui.arrasto = { id, x0: ev.clientX, y0: ev.clientY, moveu: false, el: null, dest: null };
+  }
+
+  function moverArrasto(ev) {
+    const a = ui.arrasto;
+    if (!a.moveu) {
+      if (Math.hypot(ev.clientX - a.x0, ev.clientY - a.y0) < 8) return;
+      a.moveu = true;
+      const origem = document.querySelector(`#mao-${jogo.vez} [data-mao="${a.id}"]`);
+      const r = origem ? origem.getBoundingClientRect() : { width: 86 * escala, height: 120 * escala };
+      a.el = document.createElement('div');
+      a.el.className = 'carta-arrastada';
+      a.el.innerHTML = C.frente(cartaDaMao(a.id));
+      Object.assign(a.el.style, { width: r.width + 'px', height: r.height + 'px' });
+      document.body.appendChild(a.el);
+      if (origem) origem.classList.add('arrastando');
+      $('#dica').hidden = true;
+    }
+    const dx = ev.clientX - (a.ux != null ? a.ux : ev.clientX);
+    a.ux = ev.clientX;
+    a.giro = Math.max(-14, Math.min(14, (a.giro || 0) * 0.7 + dx * 0.9));
+    a.el.style.transform = `translate(${ev.clientX}px, ${ev.clientY}px) translate(-50%, -50%) rotate(${a.giro.toFixed(1)}deg) scale(1.08)`;
+    const dest = destinoEm(ev.clientX, ev.clientY);
+    const ef = efeitoDoDestino(a.id, dest);
+    a.dest = ef ? dest : null;
+    marcarDestino(ef ? dest : null, !!ef && !!ef.acao);
+  }
+
+  // Mostra onde a carta vai cair: um brilho no lugar da fileira (os espaços não aparecem) ou no alvo.
+  function marcarDestino(dest, ehAlvo) {
+    document.querySelectorAll('.destino, .destino-alvo').forEach(e => e.classList.remove('destino', 'destino-alvo'));
+    const fileira = $('#campo-' + jogo.vez);
+    fileira.classList.toggle('soltando', !!ui.arrasto && ui.arrasto.moveu);
+    if (!dest) return;
+    if (dest.tipo === 'heroi') return elRetrato(jogo.vez).classList.add('destino-alvo');
+    const e = fileira.querySelector(`[data-slot="${jogo.vez}:${dest.i}"]`);
+    if (e) e.classList.add(ehAlvo ? 'destino-alvo' : 'destino');
+  }
+
+  function soltarArrasto(ev) {
+    const a = ui.arrasto;
+    ui.arrasto = null;
+    if (!a.moveu) return false;
+    ui.ignorarClique = true;
+    setTimeout(() => { ui.ignorarClique = false; }, 0);
+    const voo = a.el.getBoundingClientRect();
+    a.el.remove();
+    marcarDestino(null);
+    $('#campo-' + jogo.vez).classList.remove('soltando');
+    const ef = efeitoDoDestino(a.id, destinoEm(ev.clientX, ev.clientY));
+    ui.vooDe = { x: voo.left + voo.width / 2, y: voo.top + voo.height / 2, w: voo.width };
+    if (!ef) {
+      ui.vooDe = null;
+      render();
+      return true;
+    }
+    if (ef.acao) {
+      aplicarDoJogador(ef.acao);
+      return true;
+    }
+    // Colocação: junta com o parceiro já selecionado (número, figura ou Ás), se houver.
+    const id = a.id;
+    const combos = M.acoesLegais(jogo).filter(x => ehColocacao(x) && chaveCartas(x).includes(id));
+    const parceiro = ui.sel.find(s => s !== id && combos.some(x => chaveCartas(x).includes(s)));
+    ui.sel = parceiro ? [id, parceiro] : [id];
+    ui.destino = ef.campo;
+    if (parceiro && jogarNoDestino()) return true;
+    // Figura ou Ás sozinho: fica esperando no lugar; o número que combina pulsa na mão.
+    const c = cartaDaMao(id);
+    if (!(M.ehFigura(c) || M.ehAs(c))) {
+      ui.sel = [];
+      ui.destino = null;
+      ui.vooDe = null;
+    }
+    render();
+    return true;
+  }
+
+  // Seleção com figura + número (ou Ás + número) e um lugar escolhido: coloca no campo.
+  function jogarNoDestino() {
+    const cands = candidatosSelecao().filter(ehColocacao);
+    if (!cands.length) return false;
+    const destino = ui.destino;
+    iniciarPendente(chaveAcao(cands[0]), destino);
+    return true;
   }
 
   function clicarBotao(acao) {
     const [nome, arg, arg2] = acao.split(':');
     switch (nome) {
       case 'cancelar':
-        ui.sel = []; ui.pend = null; ui.atacanteSel = null; ui.bloqSel = null;
+        ui.sel = []; ui.pend = null; ui.atacanteSel = null; ui.bloqSel = null; ui.destino = null;
         return render();
       case 'tipo':
         return iniciarPendente(arg);
@@ -458,7 +619,7 @@ window.SS = window.SS || {};
     const b = {};
     const l = jogo.desafio != null ? M.localizar(jogo, jogo.desafio) : null;
     if (l && l.p === 1 - jogo.vez && l.u.ativo) {
-      const at = jogo.combate.ataques.find(a => !M.ataqueDirecionado(jogo, a));
+      const at = jogo.combate.ataques.find(a => !alvoDoRei(a, jogo.desafio));
       if (at) b[at.n] = [jogo.desafio];
     }
     return b;
@@ -512,7 +673,9 @@ window.SS = window.SS || {};
       return;
     }
     const setas = [];
-    const ataques = ataquesVisiveis();
+    // Na resolução, só aparecem as setas do ataque em andamento (as outras poluíam a mesa).
+    const resolvendo = jogo.fase === 'resolucao' || jogo.fase === 'fimCombate';
+    const ataques = ataquesVisiveis().filter(at => !resolvendo || ui.foco == null || at.n === ui.foco);
     for (const at of ataques) {
       const de = centroDe(elUnidade(at.atacante));
       const para = centroDe(at.alvo === 'jogador' ? elRetrato(1 - jogo.vez) : elUnidade(at.alvo));
@@ -600,7 +763,7 @@ window.SS = window.SS || {};
   }
 
   function dicaPara(el) {
-    if (!el || el.closest('#modal .acoes-menu')) return null;
+    if (!el || !el.closest || el.closest('#modal .acoes-menu')) return null;
     const mCarta = el.closest('[data-m-carta],[data-carta]');
     if (mCarta) {
       const c = acharCarta(mCarta.dataset.mCarta || mCarta.dataset.carta);
@@ -676,12 +839,16 @@ window.SS = window.SS || {};
 
   // ---------- Cartas voando do baralho (ou do cemitério) para a mão ----------
 
-  let maoVista = [null, null], cemVisto = [new Set(), new Set()];
-  const voando = new Set();
+  let maoVista = [null, null], cemVisto = [new Set(), new Set()], campoVisto = [null, null];
+  const voando = new Set(), voandoCampo = new Set();
 
   function animarEntradas() {
     for (const p of [0, 1]) {
       const j = jogo.jogadores[p];
+      // Senhores e Ases que acabaram de entrar voam da mão (ou de onde foram soltos) até o campo.
+      const noCampo = j.campo.filter(Boolean);
+      if (campoVisto[p]) noCampo.filter(u => !campoVisto[p].has(u.uid)).forEach(u => voarParaCampo(p, u.uid));
+      campoVisto[p] = new Set(noCampo.map(u => u.uid));
       const atual = j.mao.map(c => c.id);
       if (maoVista[p]) {
         const novas = j.mao.filter(c => !maoVista[p].has(c.id));
@@ -727,6 +894,51 @@ window.SS = window.SS || {};
     }, atraso + dur + 30);
   }
 
+  // A carta sai de onde o jogador soltou (ou da mão de quem jogou), sobe um pouco e "pousa" no lugar.
+  function voarParaCampo(p, uid) {
+    const loc = M.localizar(jogo, uid);
+    const espaco = loc && document.querySelector(`[data-slot="${p}:${loc.i}"]`);
+    const unidade = espaco && espaco.querySelector('.unidade');
+    if (!unidade) return;
+    const app = $('#app'), ra = app.getBoundingClientRect(), r = espaco.getBoundingClientRect();
+    const w = r.width / escala, h = r.height / escala;
+    const x = (r.left - ra.left) / escala, y = (r.top - ra.top) / escala;
+    let de;
+    if (ui.vooDe && controle(p) === 'humano') {
+      const q = pontoNoApp(ui.vooDe.x, ui.vooDe.y);
+      de = { x: q.x, y: q.y, s: Math.max(0.5, (ui.vooDe.w / escala) / 90) };
+    } else {
+      const m = $('#mao-' + p).getBoundingClientRect();
+      const q = pontoNoApp(m.left + m.width * 0.75, m.top + m.height / 2);
+      de = { x: q.x, y: q.y, s: 0.55 };
+    }
+    voandoCampo.add(uid);
+    espaco.classList.add('voo-oculto');
+    const voo = document.createElement('div');
+    voo.className = 'unidade-voando';
+    voo.innerHTML = unidade.outerHTML;
+    Object.assign(voo.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
+    app.appendChild(voo);
+    const dx = de.x - (x + w / 2), dy = de.y - (y + h / 2);
+    const dur = 620;
+    voo.animate([
+      { transform: `translate(${dx}px, ${dy}px) scale(${de.s}) rotate(-8deg)`, filter: 'drop-shadow(0 10px 10px rgba(0,0,0,.5))' },
+      { transform: `translate(${dx * 0.35}px, ${dy * 0.35 - 46}px) scale(1.2) rotate(4deg)`, filter: 'drop-shadow(0 26px 18px rgba(0,0,0,.45))', offset: 0.6 },
+      { transform: 'translate(0, 0) scale(1.1) rotate(0deg)', filter: 'drop-shadow(0 4px 4px rgba(0,0,0,.5))', offset: 0.86 },
+      { transform: 'translate(0, 0) scale(1)', filter: 'drop-shadow(0 2px 3px rgba(0,0,0,.4))' },
+    ], { duration: dur, easing: 'cubic-bezier(.3, .7, .4, 1)', fill: 'both' });
+    setTimeout(() => {
+      voo.remove();
+      voandoCampo.delete(uid);
+      const l = M.localizar(jogo, uid);
+      const e = l && document.querySelector(`[data-slot="${l.p}:${l.i}"]`);
+      if (!e) return;
+      e.classList.remove('voo-oculto');
+      e.classList.add('pousou');
+      setTimeout(() => e.classList.remove('pousou'), 500);
+    }, dur);
+  }
+
   // A mão fica ao lado do Palhaço: com muitas cartas, elas se sobrepõem mais para caber.
   function ajustarSobreposicao(mao) {
     const cartas = mao.children;
@@ -741,10 +953,12 @@ window.SS = window.SS || {};
       $('#info-' + p).innerHTML = '';
       $('#mao-' + p).innerHTML = '';
       $('#pilhas-' + p).innerHTML = '';
-      $('#campo-' + p).innerHTML = Array.from({ length: M.ESPACOS }, (_, i) => `<div class="espaco"><span class="num-espaco">${i + 1}</span></div>`).join('');
+      $('#campo-' + p).innerHTML = Array.from({ length: M.ESPACOS }, () => '<div class="espaco"></div>').join('');
     }
     for (const id of ['#fase', '#instrucao', '#chips', '#botoes', '#log', '#setas']) $(id).innerHTML = '';
     $('#acoes').hidden = true;
+    $('#combate').hidden = true;
+    $('#combate').innerHTML = '';
     esconderAnuncio();
   }
 
@@ -820,13 +1034,25 @@ window.SS = window.SS || {};
 
   function renderCampo(p, alvos) {
     const j = jogo.jogadores[p];
+    // Figura ou Ás solto no campo esperando o número: aparece "fantasma" no lugar escolhido.
+    const preparo = ui.destino != null && jogo.vez === p && ui.sel.length === 1 ? j.mao.find(c => c.id === ui.sel[0]) : null;
+    const lugarPreparo = ui.pend && ui.pend.destino != null && jogo.vez === p ? ui.pend.destino : ui.destino;
     let h = '';
     for (let i = 0; i < M.ESPACOS; i++) {
       const u = j.campo[i];
       const clicavel = alvos.has(`slot:${p}:${i}`) || (u && alvos.has('uid:' + u.uid));
       const sacrificando = ui.pend && ui.pend.esc.sacrificios && u && ui.pend.esc.sacrificios.includes(u.uid);
       const sel = u && (ui.atacanteSel === u.uid || ui.bloqSel === u.uid || sacrificando);
-      h += `<div class="espaco${clicavel ? ' clicavel' : ''}${sel ? ' selecionado' : ''}" data-slot="${p}:${i}">${u ? htmlUnidade(p, i, u) : `<span class="num-espaco">${i + 1}</span>`}</div>`;
+      const cls = ['espaco'];
+      if (clicavel) cls.push('clicavel');
+      if (sel) cls.push('selecionado');
+      if (u && voandoCampo.has(u.uid)) cls.push('voo-oculto');
+      let dentro = u ? htmlUnidade(p, i, u) : '';
+      if (preparo && i === lugarPreparo) {
+        cls.push('preparo');
+        if (!u) dentro = `<div class="carta-preparo"><div class="carta">${C.frente(preparo)}</div></div>`;
+      }
+      h += `<div class="${cls.join(' ')}" data-slot="${p}:${i}">${dentro}</div>`;
     }
     const fileira = $('#campo-' + p);
     fileira.style.setProperty('--dorso', `var(--dorso-${corDe(p)})`);
@@ -850,7 +1076,8 @@ window.SS = window.SS || {};
     for (const at of ataquesVisiveis()) {
       if (at.atacante === u.uid) h += `<span class="tag tag-ataque">${t('tag.ataque', { n: at.n })}</span>`;
       const bl = jogo.fase === 'bloqueio' ? ui.bloqueios[at.n] || [] : at.bloqueadores;
-      if (bl.includes(u.uid)) h += `<span class="tag tag-bloq">${t('tag.bloqueia', { n: at.n })}</span>`;
+      if (bl.includes(u.uid)) h += `<span class="tag tag-bloq">${t(alvoDoRei(at, at.alvo) && at.alvo !== u.uid ? 'tag.ajuda' : 'tag.bloqueia', { n: at.n })}</span>`;
+      if (at.alvo === u.uid && M.ataqueDirecionado(jogo, at)) h += `<span class="tag tag-alvo">${t('tag.defende', { n: at.n })}</span>`;
     }
     return h ? `<div class="tags">${h}</div>` : '';
   }
@@ -922,33 +1149,71 @@ window.SS = window.SS || {};
     const atk = loc ? M.ataque(jogo, loc.p, loc.i) : '–';
     const bl = (jogo.fase === 'bloqueio' ? ui.bloqueios[at.n] || [] : at.bloqueadores)
       .map(uid => { const l = M.localizar(jogo, uid); return l ? M.nomeUnidade(l.u) : '✖'; });
-    const res = at.resultado ? t('chip.resultado', { r: at.resultado.rolagens.join(','), d: at.resultado.dano }) : '';
-    return `<button class="chip${clicavel ? ' clicavel' : ''}${ui.foco === at.n ? ' foco' : ''}" data-ataque="${at.n}">
-      <b>${t('chip.ordem', { n: at.n })}</b> ${nome} ⚔${atk} → ${nomeAlvo(at)}${M.ataqueDirecionado(jogo, at) ? ` · <i>${t('chip.direto')}</i>` : ''}${at.dados > 1 ? ` · ${t('chip.dados', { n: at.dados })}` : ''}${bl.length ? ` · ⛨ ${bl.join(' + ')}` : ''}${res}</button>`;
+    const extras = [];
+    if (M.ataqueDirecionado(jogo, at)) extras.push(t('chip.direto'));
+    if (at.dados > 1) extras.push(t('chip.dados', { n: at.dados }));
+    if (bl.length) extras.push(`⛨ ${bl.join(' + ')}`);
+    if (at.resultado) extras.push(t('chip.resultado', { r: at.resultado.rolagens.join(','), d: at.resultado.dano }).replace(/^ · /, ''));
+    return `<button class="cb-item${clicavel ? ' clicavel' : ''}${ui.foco === at.n ? ' foco' : ''}${at.resultado ? ' feito' : ''}" data-ataque="${at.n}">
+      <span class="cb-num">${at.n}</span>
+      <span class="cb-txt"><b>${nome} <em>⚔${atk}</em></b><span>→ ${nomeAlvo(at)}</span>${extras.length ? `<small>${extras.join(' · ')}</small>` : ''}</span></button>`;
   }
 
   function chipDeclaracao(a, k) {
     const loc = M.localizar(jogo, a.atacante);
     const temOuros = ourosLivres().length > 0;
     const n = ui.ataques.length;
-    return `<span class="chip ordem"><b>${t('chip.ordem', { n: k + 1 })}</b>
-      ${k > 0 ? `<button class="mini" data-acao="mover:${k}:-1" title="${t('chip.antes')}">◀</button>` : ''}
-      ${M.nomeUnidade(loc.u)} ⚔${M.ataque(jogo, loc.p, loc.i)} → ${nomeAlvo(a)}
-      ${k < n - 1 ? `<button class="mini" data-acao="mover:${k}:1" title="${t('chip.depois')}">▶</button>` : ''}
-      ${a.ouros.length ? `<span class="dados-extra">${t('chip.dados', { n: 1 + a.ouros.length })} <button class="mini" data-acao="menos-dado:${k}" title="${t('chip.devolverOuros')}">−</button></span>` : ''}
-      ${temOuros ? `<button class="mini" data-acao="mais-dado:${k}" title="${t('chip.gastarOuros')}">${t('chip.maisDado')}</button>` : ''}
-      <button class="mini" data-acao="remover-ataque:${k}" title="${t('chip.cancelar')}">✕</button></span>`;
+    return `<div class="cb-item">
+      <span class="cb-num">${k + 1}</span>
+      <span class="cb-txt"><b>${M.nomeUnidade(loc.u)} <em>⚔${M.ataque(jogo, loc.p, loc.i)}</em></b><span>→ ${nomeAlvo(a)}</span>
+        <span class="cb-ctrl">
+          ${k > 0 ? `<button class="mini" data-acao="mover:${k}:-1" title="${t('chip.antes')}">▲</button>` : ''}
+          ${k < n - 1 ? `<button class="mini" data-acao="mover:${k}:1" title="${t('chip.depois')}">▼</button>` : ''}
+          ${a.ouros.length ? `<span class="dados-extra">${t('chip.dados', { n: 1 + a.ouros.length })} <button class="mini" data-acao="menos-dado:${k}" title="${t('chip.devolverOuros')}">−</button></span>` : ''}
+          ${temOuros ? `<button class="mini" data-acao="mais-dado:${k}" title="${t('chip.gastarOuros')}">${t('chip.maisDado')}</button>` : ''}
+          <button class="mini" data-acao="remover-ataque:${k}" title="${t('chip.cancelar')}">✕</button>
+        </span></span></div>`;
   }
+
+  // Ícones dos botões grandes do centro (desenhados em SVG, sem imagens externas).
+  const ICONE = {
+    sumonar: '<rect x="4.5" y="7" width="13" height="19" rx="2" transform="rotate(-12 11 16.5)" fill="#fdf6e0" stroke="#3a2a10" stroke-width="1.4"/><rect x="13.5" y="5.5" width="13" height="19" rx="2" transform="rotate(9 20 15)" fill="#fff" stroke="#3a2a10" stroke-width="1.4"/><path d="M20.3 9.6l1.3 2.7 3 .4-2.2 2 .6 3-2.7-1.5-2.7 1.5.6-3-2.2-2 3-.4z" fill="#c99a34"/>',
+    rainha: '<path d="M4 23l2-12 6 5 4-9 4 9 6-5 2 12z" fill="#ffe08a" stroke="#5a3a08" stroke-width="1.4" stroke-linejoin="round"/><rect x="4" y="23.5" width="24" height="4" rx="1.2" fill="#e9b949" stroke="#5a3a08" stroke-width="1.2"/><circle cx="6" cy="10" r="1.8" fill="#fff"/><circle cx="16" cy="6" r="1.8" fill="#fff"/><circle cx="26" cy="10" r="1.8" fill="#fff"/>',
+    as: '<path d="M13 5h6l2.2 19H10.8z" fill="#e8f3ff" stroke="#123" stroke-width="1.4" stroke-linejoin="round"/><rect x="7.5" y="24" width="17" height="4" rx="1.2" fill="#9fc6e8" stroke="#123" stroke-width="1.2"/><path d="M16 10c1.8 2 3.4 3 3.4 4.8 0 1.4-1.2 2.2-2.4 1.8l.6 2h-3.2l.6-2c-1.2.4-2.4-.4-2.4-1.8 0-1.8 1.6-2.8 3.4-4.8z" fill="#123"/>',
+    curar: '<path d="M16 28C7 21.5 3 17 3 11.6 3 7.6 6 5 9.4 5c2.8 0 5 1.6 6.6 4 1.6-2.4 3.8-4 6.6-4C26 5 29 7.6 29 11.6 29 17 25 21.5 16 28z" fill="#ff5a64" stroke="#5e0a10" stroke-width="1.4"/><path d="M16 11v9M11.5 15.5h9" stroke="#fff" stroke-width="3" stroke-linecap="round"/>',
+    espadas: '<path d="M25.5 3.5l3 3-14 14-3-3z" fill="#e6eef8" stroke="#1a2230" stroke-width="1.3" stroke-linejoin="round"/><path d="M8.5 16.5l7 7M10 22l-5.5 5.5" stroke="#c99a34" stroke-width="3" stroke-linecap="round"/><text x="5" y="11.5" font-size="10" font-weight="900" fill="#fff" font-family="Segoe UI,sans-serif">+1</text>',
+    paus: '<path d="M16 2.5c1.6 5 7.5 7.4 7.5 15.2A7.5 7.5 0 0 1 8.5 17.7c0-3.8 1.9-6 3.8-7.8.1 2.8 1 4.6 2.8 4.8-.7-4.4.2-8.4.9-12.2z" fill="#ff8a2a" stroke="#5a1a00" stroke-width="1.3" stroke-linejoin="round"/><path d="M16 14.5c1 2.4 3.4 3.4 3.4 6.4a3.4 3.4 0 0 1-6.8 0c0-1.8.9-2.8 1.8-3.6.2 1.2.6 1.8 1.2 2-.3-1.8 0-3.4.4-4.8z" fill="#ffe08a"/>',
+    comprar: '<rect x="6" y="5" width="15" height="21" rx="2.2" fill="#fff" stroke="#3a2a10" stroke-width="1.4"/><path d="M13.5 10l3.4 5.5-3.4 5.5-3.4-5.5z" fill="#c41e2a"/><circle cx="23" cy="22" r="6" fill="#e9b949" stroke="#5a3a08" stroke-width="1.3"/><path d="M23 18.8v6.4M19.8 22h6.4" stroke="#2a1a05" stroke-width="2.2" stroke-linecap="round"/>',
+    reviver: '<path d="M8 28V13a8 8 0 0 1 16 0v15z" fill="#cfd3dc" stroke="#22252c" stroke-width="1.4"/><path d="M16 23v-9M12.2 17.6L16 13.8l3.8 3.8" stroke="#22252c" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/><rect x="5" y="27" width="22" height="2.5" rx="1" fill="#6b5a3a"/>',
+    atacar: '<path d="M4 4l3 0 15 15-3 3L4 7z" fill="#e6eef8" stroke="#1a2230" stroke-width="1.2"/><path d="M28 4l-3 0L10 19l3 3L28 7z" fill="#e6eef8" stroke="#1a2230" stroke-width="1.2"/><path d="M6 21l5 5M26 21l-5 5" stroke="#c99a34" stroke-width="3" stroke-linecap="round"/>',
+    escudo: '<path d="M16 3l11 4v8.5c0 6.8-4.8 11.3-11 13.5C9.8 26.8 5 22.3 5 15.5V7z" fill="#5aa7ff" stroke="#0f2557" stroke-width="1.5" stroke-linejoin="round"/><path d="M16 7v18.5M8.5 13h15" stroke="#e8f3ff" stroke-width="2" opacity=".8"/>',
+    poder: '<path d="M16 3l3.6 8 8.4.8-6.3 5.7 1.8 8.5L16 21.6 8.5 26l1.8-8.5L4 11.8l8.4-.8z" fill="#ffe08a" stroke="#5a3a08" stroke-width="1.4" stroke-linejoin="round"/>',
+  };
+  const iconeSvg = nome => `<svg viewBox="0 0 32 32" aria-hidden="true">${ICONE[nome] || ICONE.poder}</svg>`;
+
+  function iconeDaAcao(a) {
+    if (a.tipo === 'sumonar') return a.sacrificio != null ? 'rainha' : 'sumonar';
+    if (a.tipo === 'invocarAs') return 'as';
+    return a.tipo;
+  }
+
+  // Botão grande do centro: ícone num círculo colorido + texto.
+  // (o símbolo no começo do texto sai: o ícone já faz esse papel)
+  const btnGrande = (acao, rotulo, icone, extra) =>
+    `<button class="btn-grande ic-${icone} ${extra || ''}" data-acao="${acao}"><span class="btn-icone">${iconeSvg(icone)}</span><span class="btn-rot">${rotulo.replace(/^[^\p{L}\p{N}+]+/u, '')}</span></button>`;
 
   function renderFaixa() {
     const p = jogo.vez, j = jogo.jogadores[p], d = 1 - p;
     const btn = (acao, rotulo, extra) => `<button class="btn ${extra || ''}" data-acao="${acao}">${rotulo}</button>`;
-    let fase = t('faixa.turno', { n: jogo.turno, j: escapar(j.nome) }), texto = '', chips = '', botoes = '';
+    let fase = t('faixa.turno', { n: jogo.turno, j: escapar(j.nome) }), texto = '', botoes = '';
     const humanoNaVez = controle(p) === 'humano' && !ui.ocupado;
 
     if (jogo.vencedor != null) {
       fase = t('faixa.fim');
       texto = t('faixa.venceu', { j: escapar(jogo.jogadores[jogo.vencedor].nome) });
+    } else if (ui.sorteio) {
+      fase = t('sorteio.titulo');
+      texto = ui.sorteio;
     } else if (jogo.fase === 'abertura') {
       fase = t('faixa.abertura');
       texto = t('faixa.escolhendoMaos');
@@ -963,17 +1228,21 @@ window.SS = window.SS || {};
       else if (ui.pend) {
         texto = textoPasso();
         botoes = btn('cancelar', t('btn.cancelar'));
+      } else if (ui.destino != null && ui.sel.length === 1) {
+        // Figura ou Ás esperando no campo: falta o número.
+        texto = t('faixa.preparo');
+        botoes = btn('cancelar', t('btn.cancelar'));
       } else {
         if (ui.sel.length) {
           const cands = candidatosSelecao();
           const chaves = [...new Set(cands.map(chaveAcao))];
           botoes = chaves.map(k => {
             const a = cands.find(x => chaveAcao(x) === k);
-            return btn('tipo:' + k, rotuloTipo(a.tipo, a), 'acao');
+            return btnGrande('tipo:' + k, rotuloTipo(a.tipo, a), iconeDaAcao(a));
           }).join('') + btn('cancelar', t('btn.cancelarSelecao'));
           texto = chaves.length ? t('faixa.escolhaAcao') : dicaSelecao();
         } else texto = t(jogo.acoes > 0 ? 'faixa.comoJogar' : 'faixa.semAcoes');
-        botoes += btn('ir-ataque', t('btn.irAtaque'), 'principal');
+        botoes += btnGrande('ir-ataque', t('btn.irAtaque').replace(/^⚔\s*/, ''), 'atacar', 'perigo');
       }
     } else if (jogo.fase === 'ataque') {
       fase += ` · ${t('faixa.ataque')}`;
@@ -983,31 +1252,56 @@ window.SS = window.SS || {};
         const extra = [temAs ? t('faixa.dicaAs') : '', temRei ? t('faixa.dicaRei') : ''].filter(Boolean).join('; ');
         if (!M.atacantesAptos(jogo).length) texto = t(jogo.turno === 1 ? 'faixa.primeiroNaoAtaca' : 'faixa.ninguemApto');
         else texto = atacantesRestantes().length ? t('faixa.comoAtacar', { extra }) : t('faixa.ataquesDeclarados');
-        chips = ui.ataques.map(chipDeclaracao).join('');
-        if (ui.ataques.length) botoes += btn('confirmar-ataques', t('btn.confirmarAtaques', { n: ui.ataques.length }), 'principal');
+        if (ui.ataques.length) botoes += btnGrande('confirmar-ataques', t('btn.confirmarAtaques', { n: ui.ataques.length }), 'atacar', 'perigo');
         botoes += btn('sem-ataque', t(ui.ataques.length ? 'btn.encerrarSemAtacar' : 'btn.encerrarTurno'));
       } else texto = t('faixa.botDeclarando', { j: escapar(j.nome) });
     } else if (jogo.fase === 'bloqueio') {
       fase += ` · ${t('faixa.bloqueio')}`;
       const humanoDefende = controle(d) === 'humano' && !ui.ocupado;
-      chips = jogo.combate.ataques.map(at => chipAtaque(at, humanoDefende && ui.bloqSel != null && !M.ataqueDirecionado(jogo, at))).join('');
       if (humanoDefende) {
         const desafiado = jogo.desafio != null && M.localizar(jogo, jogo.desafio);
         texto = t(ui.bloqSel != null ? 'faixa.solteBloqueio' : 'faixa.comoBloquear')
           + (desafiado ? ' ' + t('faixa.desafio', { u: M.nomeUnidade(desafiado.u) }) : '');
-        botoes = btn('confirmar-bloqueios', t('btn.confirmarBloqueios'), 'principal') + btn('limpar-bloqueios', t('btn.limpar'));
+        botoes = btnGrande('confirmar-bloqueios', t('btn.confirmarBloqueios'), 'escudo', 'defesa') + btn('limpar-bloqueios', t('btn.limpar'));
       } else texto = t('faixa.botBloqueando', { j: escapar(jogo.jogadores[d].nome) });
     } else if (jogo.fase === 'resolucao' || jogo.fase === 'fimCombate') {
       fase += ` · ${t('faixa.combate')}`;
-      if (jogo.combate) chips = jogo.combate.ataques.map(at => chipAtaque(at, false)).join('');
+      texto = t('faixa.vejaPainel');
     } else if (jogo.fase === 'descarte') {
       texto = t('faixa.descarte', { n: M.limiteMao(j) });
     }
     renderAcoes();
+    renderCombate();
     $('#fase').innerHTML = fase;
     $('#instrucao').innerHTML = texto;
-    $('#chips').innerHTML = chips;
+    $('#chips').innerHTML = '';
     $('#botoes').innerHTML = botoes;
+  }
+
+  // Painel de combate (lado direito, no meio da altura): a lista de ataques na declaração e no
+  // bloqueio. Durante a resolução, o fluxo do combate mostra o duelo nele (ui.duelo).
+  function renderCombate() {
+    const el = $('#combate');
+    if (ui.duelo) return;
+    let titulo = '', itens = '';
+    if (jogo.fase === 'ataque' && controle(jogo.vez) === 'humano' && ui.ataques.length) {
+      titulo = t('cb.seusAtaques');
+      itens = ui.ataques.map(chipDeclaracao).join('');
+    } else if (jogo.combate && (jogo.fase === 'bloqueio' || jogo.fase === 'resolucao' || ui.mostrarFila)) {
+      const humanoDefende = controle(1 - jogo.vez) === 'humano' && !ui.ocupado;
+      titulo = ui.mostrarFila
+        ? t('anuncio.vaiAtacar', { j: escapar(jogo.jogadores[jogo.vez].nome), n: jogo.combate.ataques.length })
+        : t('cb.ataquesDe', { j: escapar(jogo.jogadores[jogo.vez].nome) });
+      itens = jogo.combate.ataques.map(at => chipAtaque(at, humanoDefende && ui.bloqSel != null && !alvoDoRei(at, ui.bloqSel))).join('');
+    }
+    if (!itens) {
+      el.hidden = true;
+      el.innerHTML = '';
+      return;
+    }
+    el.className = 'cor-' + corDe(jogo.vez);
+    el.innerHTML = `<div class="cb-topo">${titulo}</div><div class="cb-lista">${itens}</div>${ui.mostrarFila ? botaoContinuar() : ''}`;
+    el.hidden = false;
   }
 
   // Caixa com as ações passivas restantes, na cor de quem está jogando.
@@ -1061,6 +1355,7 @@ window.SS = window.SS || {};
       atacante: fotoUnidade(at.atacante),
       bloqueadores: at.bloqueadores.map(fotoUnidade).filter(Boolean),
       alvoAs: at.alvo !== 'jogador' ? fotoUnidade(at.alvo) : null,
+      direto: M.ataqueDirecionado(jogo, at), // Rei contra um Senhor(a): o alvo defende, junto com os ajudantes
     };
   }
 
@@ -1103,8 +1398,10 @@ window.SS = window.SS || {};
     const atacante = cartaFotoHTML(s.atacante, ef(s.atacante), 'atacante');
     const pvDepois = depois ? jogo.jogadores[s.defensor].pv : s.pvAntes;
     let defesa;
-    if (s.bloqueadores.length) {
-      defesa = `<div class="anuncio-grupo"><div class="anuncio-rotulo bloq">⛨ ${t('duelo.bloqueadoPor')}</div><div class="anuncio-linha">${s.bloqueadores.map(f => cartaFotoHTML(f, ef(f), 'bloqueador')).join('')}</div></div>`;
+    const defensores = s.direto && s.alvoAs ? [s.alvoAs].concat(s.bloqueadores) : s.bloqueadores;
+    if (defensores.length) {
+      const rotulo = s.direto ? t(defensores.length > 1 ? 'duelo.defendem' : 'duelo.defende') : t('duelo.bloqueadoPor');
+      defesa = `<div class="anuncio-grupo"><div class="anuncio-rotulo bloq">⛨ ${rotulo}</div><div class="anuncio-linha">${defensores.map(f => cartaFotoHTML(f, ef(f), 'bloqueador')).join('')}</div></div>`;
       if (pvDepois < s.pvAntes) defesa += `<div class="duelo-seta pequena">➜</div>${jogadorFotoHTML(s.defensor, s.pvAntes, pvDepois, t('duelo.atropelar'))}`;
     } else if (s.alvoAs) {
       defesa = `<div class="anuncio-grupo"><div class="anuncio-rotulo">◎ ${t('duelo.alvo')}</div>${cartaFotoHTML(s.alvoAs, ef(s.alvoAs), 'alvo')}</div>`;
@@ -1113,9 +1410,27 @@ window.SS = window.SS || {};
       <div class="duelo">${atacante}<div class="duelo-seta">⚔</div>${defesa}</div>`;
   }
 
+  // Duelo no painel de combate: quem ataca × quem defende e o resultado.
+  // linhas = null: antes do dado; com as linhas do registro: mostra o resultado (selos e PV animado).
+  function mostrarDuelo(foto, total, linhas) {
+    ui.duelo = true;
+    const el = $('#combate');
+    const depois = linhas != null;
+    let resultado = '';
+    if (depois) {
+      const l = linhas.slice(), destaque = l.shift() || '';
+      resultado = `<p class="principal">${escapar(destaque.replace(/^\S+ \d+: /, ''))}</p>${l.map(x => `<p>${escapar(x)}</p>`).join('')}`;
+    }
+    el.className = 'duelo-ativo cor-' + corDe(jogo.vez);
+    el.innerHTML = `${dueloHTML(foto, total, depois)}
+      <div class="cb-resultado">${depois ? resultado : `<p class="espera">${t(controle(jogo.vez) === 'humano' ? 'cb.joguePeca' : 'cb.rolando')}</p>`}</div>
+      <div class="cb-continuar">${depois ? botaoContinuar() : ''}</div>`;
+    el.hidden = false;
+  }
+
   // Conta o PV para baixo dentro do pop-up, depois do "tremor" de dano.
   function animarPV() {
-    const caixa = $('#anuncio [data-pv-de]');
+    const caixa = $('#combate [data-pv-de]') || $('#anuncio [data-pv-de]');
     if (!caixa) return;
     const de = Number(caixa.dataset.pvDe), para = Number(caixa.dataset.pvPara);
     if (para >= de) return;
@@ -1307,6 +1622,7 @@ window.SS = window.SS || {};
     posturaAnterior = {};
     viradoAnterior = {};
     maoVista = [null, null];
+    campoVisto = [null, null];
     cemVisto = [new Set(), new Set()];
     // Palhaços: você fica sempre embaixo; o bot pega outro Palhaço (o escolhido ou um sorteado).
     const ids = P.LISTA.map(x => x.id);
@@ -1318,19 +1634,23 @@ window.SS = window.SS || {};
     // Quem começa: Palhaço preto (♠ ♣) contra vermelho (♥ ♦) começa o preto.
     // Dois da mesma cor: cada um rola um dado e começa quem tirar mais.
     const pretos = palhacos.map(P.ehPreto);
-    let primeiro, dadosInicio = null;
-    if (pretos[0] !== pretos[1]) primeiro = pretos[0] ? 0 : 1;
-    else {
-      do dadosInicio = [1 + Math.floor(Math.random() * 6), 1 + Math.floor(Math.random() * 6)];
-      while (dadosInicio[0] === dadosInicio[1]);
-      primeiro = dadosInicio[0] > dadosInicio[1] ? 0 : 1;
-    }
+    let primeiro = pretos[0] !== pretos[1] ? (pretos[0] ? 0 : 1) : 0, dadosInicio = null;
     const nomes = palhacos.map(x => P.get(x).nome);
     const contagemMinha = modo === 'bots' || cfg.deck === 'palhaco' ? P.get(meu).deck
       : cfg.deck === 'padrao' ? M.contagemPadrao() : SS.Decks.contagemPara(cfg.deck);
     const decks = [M.cartasDoDeck(contagemMinha, 0), M.cartasDoDeck(P.get(rival).deck, 1)];
     jogo = M.criarJogo({ nomes, primeiro, decks, palhacos });
     ui = novoUi();
+    if (pretos[0] === pretos[1]) {
+      // Mesma cor: cada jogador joga o dado de verdade (você arremessa o seu; o bot rola o dele).
+      dadosInicio = await sorteioNoDado(id, nomes);
+      if (!dadosInicio) return;
+      primeiro = dadosInicio[0] > dadosInicio[1] ? 0 : 1;
+      jogo = M.criarJogo({ nomes, primeiro, decks, palhacos });
+      ui = novoUi();
+      maoVista = [null, null];
+      campoVisto = [null, null];
+    }
     M.registrar(jogo, `${nomes[0]} × ${nomes[1]}.`);
     M.registrar(jogo, dadosInicio
       ? t('log.inicioDados', { a: nomes[0], da: dadosInicio[0], b: nomes[1], db: dadosInicio[1], j: nomes[primeiro] })
@@ -1351,6 +1671,40 @@ window.SS = window.SS || {};
       if (id !== partida) return;
     }
     proximoTurno(id);
+  }
+
+  // Desempate de quem começa: os dois jogam um dado na mesa, repetindo enquanto empatar.
+  // Devolve [dado do jogador 0, dado do jogador 1], ou null se a partida foi abandonada no meio.
+  async function sorteioNoDado(id, nomes) {
+    ui.sorteio = t('sorteio.aviso');
+    render();
+    await esperar(1400);
+    for (;;) {
+      const r = [];
+      for (const p of [0, 1]) {
+        if (id !== partida) return null;
+        ui.sorteio = (r.length ? t('sorteio.tirou', { j: escapar(nomes[0]), n: r[0] }) + ' ' : '')
+          + (controle(p) === 'humano' ? t('sorteio.suaVez') : t('sorteio.vezDe', { j: escapar(nomes[p]) }));
+        render();
+        SS.Dados.definirArena($('#mesa'));
+        const rol = controle(p) === 'humano' ? await SS.Dados.jogar(1, corDe(p)) : await SS.Dados.rolar(1, corDe(p), p === 1);
+        if (id !== partida) return null;
+        r[p] = rol[0];
+        await esperar(900);
+        SS.Dados.sumir();
+      }
+      SS.Dados.definirArena(null);
+      ui.sorteio = t('sorteio.tirou', { j: escapar(nomes[0]), n: r[0] }) + ' ' + t('sorteio.tirou', { j: escapar(nomes[1]), n: r[1] });
+      if (r[0] !== r[1]) {
+        render();
+        await esperar(700);
+        ui.sorteio = null;
+        return r;
+      }
+      ui.sorteio += ' ' + t('sorteio.empate', { n: r[0] });
+      render();
+      await esperar(1500);
+    }
   }
 
   async function proximoTurno(id) {
@@ -1395,10 +1749,12 @@ window.SS = window.SS || {};
     M.declararAtaques(jogo, lista);
     render();
     if (lista.length) {
-      mostrarAnuncio(anuncioDeclaracao(jogo.combate.ataques, jogo.jogadores[p].nome));
+      // A ordem dos ataques do bot aparece no painel da direita (e as setas na mesa).
+      ui.mostrarFila = true;
+      render();
       await esperarContinuar(2200);
+      ui.mostrarFila = false;
       if (id !== partida) return;
-      esconderAnuncio();
     } else await esperar(400);
     if (id !== partida) return;
     fluxoCombate(id);
@@ -1416,8 +1772,9 @@ window.SS = window.SS || {};
       } else if (!M.bloqueadoresAptos(jogo).length) {
         M.registrar(jogo, t('log.semBloqueadores', { j: jogo.jogadores[d].nome }));
         M.definirBloqueios(jogo, {});
-      } else if (jogo.combate.ataques.every(at => M.ataqueDirecionado(jogo, at))) {
-        M.registrar(jogo, t('log.reiNaoBloqueia'));
+      } else if (!jogo.combate.ataques.some(at => M.bloqueadoresAptos(jogo).some(uid => !alvoDoRei(at, uid)))) {
+        // Só o próprio alvo do Rei estaria livre: não há quem mandar para ajudar.
+        M.registrar(jogo, t('log.ninguemAjuda', { j: jogo.jogadores[d].nome }));
         M.definirBloqueios(jogo, {});
       } else {
         ui.ocupado = false;
@@ -1438,36 +1795,31 @@ window.SS = window.SS || {};
       ui.foco = at.n;
       render();
       const foto = capturarDuelo(at);
-      const temPopup = !!foto.atacante;
-      if (temPopup) {
-        mostrarAnuncio(dueloHTML(foto, total, false));
-        await esperar(1300);
-        if (id !== partida) return;
-        $('#anuncio').classList.add('recuado');
-      }
+      const temDuelo = !!foto.atacante;
+      // O duelo aparece no painel da direita (dentro do tabuleiro); os dados rolam soltos pela mesa.
+      if (temDuelo) mostrarDuelo(foto, total, null);
+      SS.Dados.definirArena($('#mesa'));
       // Quando é você atacando, você mesmo joga o dado (pegar e soltar na mesa).
       const rolagens = controle(jogo.vez) === 'humano'
         ? await SS.Dados.jogar(at.dados, corDe(jogo.vez))
         : await SS.Dados.rolar(at.dados, corDe(jogo.vez), jogo.vez === 1);
       if (id !== partida) return;
-      await esperar(800); // tempo para ver a face do dado
+      await esperar(600); // tempo para ver a face do dado
       if (id !== partida) return;
-      SS.Dados.sumir();
       const antes = jogo.log.length;
       M.resolverProximo(jogo, rolagens);
       const linhas = jogo.log.slice(antes);
       render();
-      if (temPopup) {
-        const destaque = linhas.shift() || '';
-        mostrarAnuncio(`${dueloHTML(foto, total, true)}
-          <div class="anuncio-resultado"><p class="principal">${escapar(destaque.replace(/^\S+ \d+: /, ''))}</p>${linhas.map(l => `<p>${escapar(l)}</p>`).join('')}</div>
-          ${botaoContinuar()}`, 'resultado');
+      if (temDuelo) {
+        mostrarDuelo(foto, total, linhas);
         animarPV();
         await esperarContinuar();
       } else await esperar(1200);
       if (id !== partida) return;
-      esconderAnuncio();
+      SS.Dados.sumir();
     }
+    SS.Dados.definirArena(null);
+    ui.duelo = false;
     ui.foco = null;
     if (jogo.vencedor != null) return fimDeJogo();
     M.encerrarTurno(jogo);
@@ -1743,7 +2095,8 @@ window.SS = window.SS || {};
   SS.depurar = {
     estado: () => jogo, cfg, render, ui: () => ui,
     foto: at => capturarDuelo(at),
-    duelo: (foto, total, depois) => { mostrarAnuncio(dueloHTML(foto, total, depois) + (depois ? botaoContinuar() : '')); if (depois) animarPV(); },
-    fila: ataques => mostrarAnuncio(anuncioDeclaracao(ataques, jogo.jogadores[jogo.vez].nome)),
+    duelo: (foto, total, linhas) => { mostrarDuelo(foto, total, linhas || null); if (linhas) animarPV(); },
+    fila: ligar => { ui.mostrarFila = !!ligar; render(); },
+    combate: () => fluxoCombate(partida),
   };
 })(window.SS);

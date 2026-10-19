@@ -155,8 +155,9 @@ window.SS = window.SS || {};
     return l ? M.ataque(e, l.p, l.i) : 0;
   };
 
-  function opcoesBloqueio(e, pares, usados) {
-    const aptos = M.bloqueadoresAptos(e).filter(uid => (usados[uid] || 0) < M.capacidadeBloqueio(M.localizar(e, uid).u));
+  // excluir: o alvo do ataque do Rei, que já defende sozinho e não entra como ajudante.
+  function opcoesBloqueio(e, pares, usados, excluir) {
+    const aptos = M.bloqueadoresAptos(e).filter(uid => uid !== excluir && (usados[uid] || 0) < M.capacidadeBloqueio(M.localizar(e, uid).u));
     const ops = [[]];
     for (const b of aptos) ops.push([b]);
     if (pares) {
@@ -185,8 +186,8 @@ window.SS = window.SS || {};
     M.declararAtaques(c, [{ atacante: uid, alvo, ouros }]);
     const n = c.combate.ataques[0].n;
     let pior = Infinity;
-    // Ataque do Rei contra um Senhor(a) não pode ser bloqueado.
-    const opcoes = M.ataqueDirecionado(c, c.combate.ataques[0]) ? [[]] : opcoesBloqueio(c, cfg.pares, {});
+    const at0 = c.combate.ataques[0];
+    const opcoes = opcoesBloqueio(c, cfg.pares, {}, M.ataqueDirecionado(c, at0) ? at0.alvo : null);
     for (const op of opcoes) {
       const v = valorEsperado(c, { [n]: op }, p);
       if (v < pior) pior = v;
@@ -239,11 +240,13 @@ window.SS = window.SS || {};
   function bloquear(e, d, nivel) {
     const mapa = {}, usados = {};
     const marcar = op => op.forEach(uid => { usados[uid] = (usados[uid] || 0) + 1; });
-    const ataques = e.combate.ataques.filter(at => !M.ataqueDirecionado(e, at)); // ataque do Rei a um Senhor não se bloqueia
+    const ataques = e.combate.ataques;
+    // No ataque do Rei a um Senhor(a), o próprio alvo não entra como ajudante.
+    const excluir = at => (M.ataqueDirecionado(e, at) ? at.alvo : null);
     if (nivel === 'facil') {
       for (const at of ataques) {
         if (Math.random() < 0.5) continue;
-        const ops = opcoesBloqueio(e, false, usados).filter(o => o.length);
+        const ops = opcoesBloqueio(e, false, usados, excluir(at)).filter(o => o.length);
         if (!ops.length) continue;
         mapa[at.n] = sortear(ops);
         marcar(mapa[at.n]);
@@ -256,7 +259,7 @@ window.SS = window.SS || {};
       const c0 = clonar(e);
       c0.combate.ataques = c0.combate.ataques.filter(x => x.n === at.n);
       let melhor = [], mv = -Infinity;
-      for (const op of opcoesBloqueio(e, cfg.pares, usados)) {
+      for (const op of opcoesBloqueio(e, cfg.pares, usados, excluir(at))) {
         const v = valorEsperado(c0, { [at.n]: op }, d) + (Math.random() - 0.5) * cfg.ruido;
         if (v > mv) {
           mv = v;

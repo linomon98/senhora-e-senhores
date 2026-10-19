@@ -50,7 +50,7 @@ window.SS = window.SS || {};
           <tr><th>Figura</th><th>Equipa</th><th>Custo</th><th>Habilidade</th></tr>
           <tr><td><b>Valete</b></td><td>2 a 5</td><td>1 ação</td><td><b>Ímpeto:</b> ataca no mesmo turno em que entra.</td></tr>
           <tr><td><b>Rainha</b></td><td>2 a 10</td><td>${M.CUSTO_RAINHA} ação + sacrifício de ${M.SACRIFICIOS_RAINHA} Senhores seus que já estavam em campo antes deste turno</td><td><b>Atropelar:</b> se matar quem bloqueou, o dano que sobra vai para o PV.</td></tr>
-          <tr><td><b>Rei</b></td><td>2 a 7</td><td>1 ação</td><td><b>Ordem real:</b> ao atacar, pode escolher como alvo um Senhor(a) inimigo. Ninguém pode bloquear esse ataque no lugar do alvo.</td></tr>
+          <tr><td><b>Rei</b></td><td>2 a 7</td><td>1 ação</td><td><b>Ordem real:</b> ao atacar, pode escolher como alvo um Senhor(a) inimigo. O alvo é obrigado a defender, e outros Senhores ativos do dono podem entrar junto para ajudar.</td></tr>
         </table>
         <h3>Vida e posição da carta</h3>
         <p>Um Senhor(a) comum aguenta <b>2 hits</b>. A posição da carta mostra quanto falta:</p>
@@ -86,7 +86,7 @@ window.SS = window.SS || {};
       html: () => `
         <ul>
           <li>Cada Senhor(a) apto(a) ataca <b>1 vez por turno</b> (o Naipado de Ouros, 2). Só ataca quem entrou em turno anterior, exceto o Valete.</li>
-          <li>O alvo é o <b>jogador</b> oponente ou um <b>Ás</b> dele. O <b>Rei</b> também pode mirar um <b>Senhor(a)</b> inimigo: esse ataque não pode ser bloqueado por outro, e o alvo se defende sozinho, com as regras de bloqueio e contra-ataque (mesmo se estiver virado).</li>
+          <li>O alvo é o <b>jogador</b> oponente ou um <b>Ás</b> dele. O <b>Rei</b> também pode mirar um <b>Senhor(a)</b> inimigo: o alvo é obrigado a defender, com as regras de bloqueio e contra-ataque (mesmo se estiver virado), e outros Senhores ativos do dono podem entrar junto para ajudar.</li>
           <li>Você escolhe a <b>ordem</b> dos ataques; eles são resolvidos um por vez.</li>
         </ul>
         <h3>Rolagem</h3>
@@ -110,7 +110,7 @@ window.SS = window.SS || {};
         <ul>
           <li>Cada Senhor(a) <b>ativo(a)</b> bloqueia 1 atacante. Ases não bloqueiam.</li>
           <li>Dois ou mais Senhores podem bloquear <b>o mesmo atacante</b>: cada um recebe o dano inteiro.</li>
-          <li>O ataque do Rei contra um Senhor(a) <b>não pode ser bloqueado</b>: o alvo se defende sozinho.</li>
+          <li>No ataque do Rei contra um Senhor(a), o <b>alvo defende obrigatoriamente</b>, e outros Senhores ativos podem entrar para <b>ajudar</b> (cada um recebe o dano inteiro, e os ataques somam no contra-ataque).</li>
         </ul>
         <h3>O golpe contra quem bloqueia</h3>
         <p>Compare o <b>dano</b> com o <b>ataque do bloqueador</b>. Para um bloqueador com ataque 6:</p>
@@ -238,7 +238,7 @@ window.SS = window.SS || {};
           <tr><th>Face card</th><th>Equips</th><th>Cost</th><th>Ability</th></tr>
           <tr><td><b>Jack</b></td><td>2 to 5</td><td>1 action</td><td><b>Haste:</b> attacks the same turn it enters.</td></tr>
           <tr><td><b>Queen</b></td><td>2 to 10</td><td>${M.CUSTO_RAINHA} action + sacrifice ${M.SACRIFICIOS_RAINHA} of your Lords that were already on the field before this turn</td><td><b>Trample:</b> if it kills its blocker, the leftover damage goes to HP.</td></tr>
-          <tr><td><b>King</b></td><td>2 to 7</td><td>1 action</td><td><b>Royal Order:</b> when attacking, may target an enemy Lord. No one can block that attack in the target's place.</td></tr>
+          <tr><td><b>King</b></td><td>2 to 7</td><td>1 action</td><td><b>Royal Order:</b> when attacking, may target an enemy Lord. The target must defend, and its owner's other ready Lords can join to help.</td></tr>
         </table>
         <h3>Health and card position</h3>
         <p>A regular Lord survives <b>2 hits</b>. The card's position shows how much is left:</p>
@@ -274,7 +274,7 @@ window.SS = window.SS || {};
       html: () => `
         <ul>
           <li>Each ready Lord attacks <b>once per turn</b> (Suited Diamonds, twice). Only Lords that entered on an earlier turn can attack, except the Jack.</li>
-          <li>The target is the opposing <b>player</b> or one of their <b>Aces</b>. The <b>King</b> can also target an enemy <b>Lord</b>: that attack can't be blocked by another Lord, and the target defends alone, with the block and counterattack rules (even if face down).</li>
+          <li>The target is the opposing <b>player</b> or one of their <b>Aces</b>. The <b>King</b> can also target an enemy <b>Lord</b>: the target must defend, with the block and counterattack rules (even if face down), and its owner's other ready Lords can join to help.</li>
           <li>You choose the <b>order</b> of the attacks; they are resolved one at a time.</li>
         </ul>
         <h3>Roll</h3>
@@ -298,7 +298,7 @@ window.SS = window.SS || {};
         <ul>
           <li>Each <b>ready</b> Lord blocks 1 attacker. Aces don't block.</li>
           <li>Two or more Lords can block <b>the same attacker</b>: each one takes the full damage.</li>
-          <li>The King's attack against a Lord <b>can't be blocked</b>: the target defends alone.</li>
+          <li>When the King attacks a Lord, the <b>target must defend</b>, and other ready Lords can join to <b>help</b> (each takes the full damage, and their attacks add up for the counterattack).</li>
         </ul>
         <h3>The blow against the blocker</h3>
         <p>Compare the <b>damage</b> with the <b>blocker's attack</b>. For a blocker with attack 6:</p>
