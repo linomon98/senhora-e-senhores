@@ -174,7 +174,7 @@ window.SS = window.SS || {};
     switch (tipo) {
       case 'sumonar': return a.sacrificio != null ? t('acao.rainha', { n: M.SACRIFICIOS_RAINHA }) : t('acao.sumonar');
       case 'invocarAs': return t('acao.as');
-      case 'curar': return t('acao.curar', { n: M.curaDe(j.mao.find(c => c.id === a.carta)) });
+      case 'curar': return t('acao.curar', { n: M.curaPara(j, j.mao.find(c => c.id === a.carta)) });
       case 'espadas': return t('acao.espadas');
       case 'paus': return t('acao.paus');
       case 'comprar': return t(a.baralho === 'letras' ? 'acao.comprarLetra' : 'acao.comprarNumero');

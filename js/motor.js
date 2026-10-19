@@ -27,10 +27,10 @@ window.SS = window.SS || {};
   // Valores calibrados com o simulador.
   // Todos compram sozinhos 1 Letra + 1 Número no começo do turno (COMPRA_AUTOMATICA).
   const PALHACOS = {
-    lancalotte: { naipe: 'espadas', pv: 19, limiteMao: 7, poder: 'desafio', dadosPrimeiro: 1, ataquePrimeiro: 1 },
-    infartitte: { naipe: 'copas', pv: 26, limiteMao: 7, poder: 'transfusao' },
-    paumol: { naipe: 'paus', pv: 18, limiteMao: 7, poder: 'vigilia', reducaoDefesa: 1, soPaus: true },
-    ourinhos: { naipe: 'ouros', pv: 23, limiteMao: 9, poder: 'roubo' }, // rouba 1 carta da mão do oponente
+    lancalotte: { naipe: 'espadas', pv: 22, limiteMao: 7, poder: 'desafio', dadosPrimeiro: 1, ataquePrimeiro: 1 },
+    infartitte: { naipe: 'copas', pv: 20, limiteMao: 7, poder: 'transfusao', curaExtra: 1 },
+    paumol: { naipe: 'paus', pv: 22, limiteMao: 7, poder: 'vigilia', reducaoDefesa: 1, soPaus: true },
+    ourinhos: { naipe: 'ouros', pv: 17, limiteMao: 8, poder: 'roubo' }, // rouba 1 carta da mão do oponente
   };
   const COMPRA_AUTOMATICA = true;
   const CUSTO_TRANSFUSAO = 2; // PV pagos pela Transfusão do Infartitte para tirar 1 hit de um aliado
@@ -48,6 +48,8 @@ window.SS = window.SS || {};
   const nomeCarta = c => (['A', 'J', 'Q', 'K'].includes(c.rank) ? t('carta.' + c.rank) + ' ' : c.rank) + SIMBOLO[c.naipe];
   const nomeNaipe = n => t('naipe.' + n);
   const curaDe = c => (valor(c) <= 3 ? 1 : valor(c) <= 7 ? 2 : 3);
+  // Cura de uma carta de Copas para este jogador (Infartitte, Coração forte: +1).
+  const curaPara = (j, c) => curaDe(c) + (j && j.palhaco === 'infartitte' ? PALHACOS.infartitte.curaExtra : 0);
 
   function nomeUnidade(u) {
     if (u.tipo === 'as') return nomeCarta(u.carta);
@@ -560,7 +562,7 @@ window.SS = window.SS || {};
       }
       case 'curar': {
         const c = tirarDaMao(j, a.carta);
-        const qtd = curar(e, p, curaDe(c));
+        const qtd = curar(e, p, curaPara(j, c));
         j.cemiterio.push(c);
         registrar(e, t('log.curou', { j: j.nome, c: nomeCarta(c), n: qtd }));
         break;
@@ -788,18 +790,23 @@ window.SS = window.SS || {};
     // Paumol (Casca grossa): quem defende do lado dele recebe dano a menos
     // (com soPaus, só os Senhores que têm carta de Paus, na figura ou no número).
     const pm = PALHACOS.paumol;
-    const danoPara = b => {
-      if (!temPalhaco(D, 'paumol')) return dano;
-      if (pm.soPaus && b.u.figura.naipe !== 'paus' && b.u.numero.naipe !== 'paus') return dano;
-      return Math.max(0, dano - pm.reducaoDefesa);
+    // Bloqueio em grupo: o dano do golpe é dividido igualmente entre quem defende
+    // (a sobra vai para o primeiro, que no ataque do Rei é o próprio alvo).
+    const parte = k => Math.floor(dano / bloq.length) + (k < dano % bloq.length ? 1 : 0);
+    if (bloq.length > 1) registrar(e, t('log.dividido', { d: dano, partes: bloq.map((b, k) => parte(k)).join(' + ') }));
+    const danoPara = (b, k) => {
+      const d = parte(k);
+      if (!temPalhaco(D, 'paumol')) return d;
+      if (pm.soPaus && b.u.figura.naipe !== 'paus' && b.u.numero.naipe !== 'paus') return d;
+      return Math.max(0, d - pm.reducaoDefesa);
     };
     let todosMorreram = true;
     bloq.forEach((b, k) => {
       const uid = b.u.uid;
       const loc = localizar(e, uid);
       if (!loc) return;
-      const danoDefesa = danoPara(b);
-      if (danoDefesa < dano) registrar(e, t('log.casca', { u: nomeUnidade(loc.u), n: danoDefesa }));
+      const danoDefesa = danoPara(b, k);
+      if (danoDefesa < parte(k)) registrar(e, t('log.casca', { u: nomeUnidade(loc.u), n: danoDefesa }));
       if (danoDefesa * 2 < atkBloq[k]) registrar(e, t('log.ignorou', { u: nomeUnidade(loc.u) }));
       else if (danoDefesa > atkBloq[k]) morrer(e, loc.p, loc.i, 'fatal');
       else aplicarHit(e, loc.p, loc.i);
@@ -949,7 +956,7 @@ window.SS = window.SS || {};
     PALHACOS, CUSTO_TRANSFUSAO, CUSTO_SANGRIA, SACRIFICIOS_RAINHA, palhacoDe, limiteMao, ataqueDirecionado,
     NAIPES, SIMBOLO, LIMITE_FIGURA, PV_INICIAL, ESPACOS, ACOES_POR_TURNO, CUSTO_RAINHA, DADO_ATAQUE_TOTAL, LIMITE_MAO,
     definirRng: f => { rng = f; },
-    ehFigura, ehAs, ehNumero, valor, nomeCarta, nomeNaipe, nomeUnidade, curaDe, naipado,
+    ehFigura, ehAs, ehNumero, valor, nomeCarta, nomeNaipe, nomeUnidade, curaDe, curaPara, naipado,
     BARALHOS, NOME_BARALHO, baralhosDisponiveis, comprarDoTurno,
     criarJogo, registrar, figurasNoBaralho, escolherFiguras, mulligan, confirmarAbertura,
     localizar, tetoCura, ataque, ataqueBase, resistencia, postura, podeAtacar,
