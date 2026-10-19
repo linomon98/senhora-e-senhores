@@ -50,6 +50,13 @@ window.SS = window.SS || {};
     return typeof window.Peer === 'function';
   }
 
+  // Se o PeerJS não veio do cdnjs (rede ou extensão bloqueando), tenta um segundo endereço.
+  if (!disponivel()) {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';
+    document.head.appendChild(s);
+  }
+
   // Cria a sala e espera o amigo. Devolve o código; o evento 'conectou' avisa quando ele entrar.
   function criarSala() {
     sair();

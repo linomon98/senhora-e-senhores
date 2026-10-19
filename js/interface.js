@@ -4,6 +4,11 @@ window.SS = window.SS || {};
 (function (SS) {
   'use strict';
   const M = SS.Motor, Bot = SS.Bot, C = SS.Cartas;
+  // Se rede.js não carregou, o resto do jogo funciona e o online só avisa que está indisponível.
+  if (!SS.Rede) {
+    const nada = () => {};
+    SS.Rede = { disponivel: () => false, codigoDoLink: () => null, ao: nada, enviar: nada, sair: nada, limparFila: nada, conectado: () => false, gerador: () => Math.random, esperar: () => new Promise(nada) };
+  }
   const $ = s => document.querySelector(s);
   const esperar = ms => new Promise(r => setTimeout(r, ms));
   const SIMB = M.SIMBOLO;
