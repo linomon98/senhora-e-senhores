@@ -104,27 +104,12 @@ window.SS = window.SS || {};
 
   function painelRegras(cont) {
     const R = M.REGRAS_DECK, r = M.resumoDeck(cont);
-    const copiasFigOk = Object.keys(cont).every(k => !FIGURAS.includes(k.split('-')[0]) || cont[k] <= R.copiasFigura);
-    const copiasNumOk = Object.keys(cont).every(k => FIGURAS.includes(k.split('-')[0]) || cont[k] <= R.copiasNumero);
-    const porFigOk = FIGURAS.every(f => r.porFigura[f] <= R.porFigura[f]);
-    const figNaipeOk = NAIPES.every(n => r.figurasNaipe[n] <= R.figurasMesmoNaipe);
-    const numNaipeOk = NAIPES.every(n => r.numerosNaipe[n] <= R.numerosMesmoNaipe);
     return `<h3>${tr('dk.regrasLimite')}</h3>
       <ul class="regras-deck">
         ${linhaRegra(r.letras === R.letras, tr('dk.rLetras', { n: R.letras, v: r.letras }))}
         ${linhaRegra(r.numeros === R.numeros, tr('dk.rNumeros', { n: R.numeros, v: r.numeros }))}
-        ${linhaRegra(r.soma <= R.orcamento, tr('dk.rSoma', { n: R.orcamento, v: r.soma }))}
-        ${linhaRegra(porFigOk, tr('dk.rFiguras', { j: R.porFigura.J, q: R.porFigura.Q, k: R.porFigura.K, v: `${r.porFigura.J} · ${r.porFigura.Q} · ${r.porFigura.K}` }))}
-        ${linhaRegra(copiasFigOk, tr('dk.rCopiasFig', { n: R.copiasFigura }))}
-        ${linhaRegra(copiasNumOk, tr('dk.rCopiasNum', { n: R.copiasNumero }))}
-        ${linhaRegra(r.ases <= R.ases, tr('dk.rAses', { n: R.ases, v: r.ases }))}
-        ${linhaRegra(figNaipeOk, tr('dk.rFigNaipe', { n: R.figurasMesmoNaipe }))}
-        ${linhaRegra(numNaipeOk, tr('dk.rNumNaipe', { n: R.numerosMesmoNaipe }))}
       </ul>
-      <div class="por-que">
-        <h4>${tr('dk.porQue')}</h4>
-        ${tr('dk.porQueTexto')}
-      </div>`;
+      <p class="nota">${tr('dk.livre')}</p>`;
   }
 
   function desenhar() {
@@ -156,7 +141,7 @@ window.SS = window.SS || {};
           <div class="editor-cartas">
             <h3>${tr('dk.baralhoLetras')} <em>${r.letras}/${M.REGRAS_DECK.letras}</em></h3>
             <div class="grade-deck">${linhasFig}</div>
-            <h3>${tr('dk.baralhoNumeros')} <em>${r.numeros}/${M.REGRAS_DECK.numeros} · ${tr('dk.soma')} ${r.soma}/${M.REGRAS_DECK.orcamento}</em></h3>
+            <h3>${tr('dk.baralhoNumeros')} <em>${r.numeros}/${M.REGRAS_DECK.numeros}</em></h3>
             <div class="grade-deck">${linhasNum}</div>
           </div>
           <aside class="editor-regras">${painelRegras(s.cont)}</aside>

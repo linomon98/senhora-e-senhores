@@ -116,12 +116,6 @@ window.SS = window.SS || {};
   adicionar({
     'deck.erroLetras': ['O baralho de Letras precisa ter exatamente {a} figuras (tem {b}).', 'The Faces deck must have exactly {a} face cards (it has {b}).'],
     'deck.erroNumeros': ['O baralho de Números precisa ter exatamente {a} cartas (tem {b}).', 'The Numbers deck must have exactly {a} cards (it has {b}).'],
-    'deck.erroCopias': ['{c}: no máximo {a} cópias (tem {b}).', '{c}: at most {a} copies (it has {b}).'],
-    'deck.erroFigura': ['No máximo {a} {f} (tem {b}).', 'At most {a} {f} (it has {b}).'],
-    'deck.erroAses': ['No máximo {a} Ases (tem {b}).', 'At most {a} Aces (it has {b}).'],
-    'deck.erroSoma': ['A soma dos números passou do orçamento: {a} de {b}.', 'The numbers go over the power budget: {a} of {b}.'],
-    'deck.erroFigNaipe': ['No máximo {a} figuras de {n} (tem {b}).', 'At most {a} {n} face cards (it has {b}).'],
-    'deck.erroNumNaipe': ['No máximo {a} números de {n} (tem {b}).', 'At most {a} {n} number cards (it has {b}).'],
   });
 
   // ---------- Interface: poderes, efeitos e estados das cartas ----------
@@ -405,27 +399,10 @@ window.SS = window.SS || {};
     'dk.salvo': ['Salvo automaticamente', 'Saved automatically'],
     'dk.naoSalvo': ['Não foi possível salvar neste navegador', "Couldn't save in this browser"],
     'dk.celula': ['clique: +1 · botão direito: −1', 'click: +1 · right-click: −1'],
-    'dk.regrasLimite': ['Regras de limite', 'Deck limits'],
+    'dk.regrasLimite': ['Regras do deck', 'Deck rules'],
+    'dk.livre': ['Fora isso, é livre: quantas cópias quiser da mesma carta e qualquer mistura de naipes.', 'Everything else is free: as many copies of the same card as you like and any mix of suits.'],
     'dk.rLetras': ['Letras: exatamente <b>{n}</b> figuras <em>({v})</em>', 'Faces: exactly <b>{n}</b> face cards <em>({v})</em>'],
     'dk.rNumeros': ['Números: exatamente <b>{n}</b> cartas <em>({v})</em>', 'Numbers: exactly <b>{n}</b> cards <em>({v})</em>'],
-    'dk.rSoma': ['Orçamento de poder: a soma dos números (Ás = 1) vai até <b>{n}</b> <em>({v})</em>', 'Power budget: the sum of the numbers (Ace = 1) goes up to <b>{n}</b> <em>({v})</em>'],
-    'dk.rFiguras': ['No máximo <b>{j}</b> Valetes, <b>{q}</b> Rainhas e <b>{k}</b> Reis <em>({v})</em>', 'At most <b>{j}</b> Jacks, <b>{q}</b> Queens and <b>{k}</b> Kings <em>({v})</em>'],
-    'dk.rCopiasFig': ['Até <b>{n}</b> cópias da mesma figura e naipe', 'Up to <b>{n}</b> copies of the same face card and suit'],
-    'dk.rCopiasNum': ['Até <b>{n}</b> cópias do mesmo número e naipe', 'Up to <b>{n}</b> copies of the same number and suit'],
-    'dk.rAses': ['No máximo <b>{n}</b> Ases <em>({v})</em>', 'At most <b>{n}</b> Aces <em>({v})</em>'],
-    'dk.rFigNaipe': ['No máximo <b>{n}</b> figuras de um mesmo naipe', 'At most <b>{n}</b> face cards of the same suit'],
-    'dk.rNumNaipe': ['No máximo <b>{n}</b> números de um mesmo naipe', 'At most <b>{n}</b> numbers of the same suit'],
-    'dk.porQue': ['Por que esses limites?', 'Why these limits?'],
-    'dk.porQueTexto': [
-      `<p><b>Orçamento de poder:</b> sem ele, o melhor deck seria só de 9 e 10. Com 220 (a soma de um baralho comum), cada carta forte custa uma fraca.</p>
-        <p><b>Rainhas:</b> são as figuras mais fortes (equipam até 10 e atropelam), então têm limite menor.</p>
-        <p><b>Naipe:</b> deck de um naipe só faria quase todo Senhor virar Naipado. O limite deixa esse plano possível, mas não garantido.</p>
-        <p><b>Ases:</b> totens fortes demais em massa travariam a fileira.</p>`,
-      `<p><b>Power budget:</b> without it, the best deck would be all 9s and 10s. With 220 (the sum of a standard deck), every strong card costs a weak one.</p>
-        <p><b>Queens:</b> they are the strongest face cards (equip up to 10 and trample), so they have a lower limit.</p>
-        <p><b>Suit:</b> a single-suit deck would make almost every Gentleman Suited. The limit keeps that plan possible, but not guaranteed.</p>
-        <p><b>Aces:</b> too many strong totems would lock up the row.</p>`,
-    ],
     'dk.vazio': ['vazio', 'empty'],
     'dk.pronto': ['pronto para jogar', 'ready to play'],
     'dk.incompleto': ['incompleto', 'incomplete'],
@@ -442,7 +419,6 @@ window.SS = window.SS || {};
     'dk.prontoBtn': ['Pronto para jogar', 'Ready to play'],
     'dk.baralhoLetras': ['Baralho de Letras', 'Faces deck'],
     'dk.baralhoNumeros': ['Baralho de Números', 'Numbers deck'],
-    'dk.soma': ['soma', 'sum'],
     'dk.ajuda': ['Clique numa carta para adicionar, botão direito para tirar. O bot usa o deck do Palhaço dele.', "Click a card to add it, right-click to remove it. The bot uses its Jester's deck."],
     'barra.reiniciar': ['⟲ Reiniciar', '⟲ Restart'],
     'barra.reiniciarT': ['Começar de novo com as mesmas opções', 'Start over with the same options'],

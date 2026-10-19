@@ -174,11 +174,7 @@ window.SS = window.SS || {};
         <ul>
           <li>Baralho de Letras com exatamente <b>${R.letras}</b> figuras e baralho de Números com exatamente <b>${R.numeros}</b> cartas.</li>
           <li>Na montagem, você pode trocar o naipe de qualquer carta.</li>
-          <li><b>Orçamento de poder:</b> a soma dos números (Ás = 1) vai até <b>${R.orcamento}</b>, que é a soma de um baralho comum.</li>
-          <li>No máximo <b>${R.porFigura.J}</b> Valetes, <b>${R.porFigura.Q}</b> Rainhas e <b>${R.porFigura.K}</b> Reis.</li>
-          <li>Até <b>${R.copiasFigura}</b> cópias da mesma figura e naipe e até <b>${R.copiasNumero}</b> do mesmo número e naipe.</li>
-          <li>No máximo <b>${R.ases}</b> Ases.</li>
-          <li>No máximo <b>${R.figurasMesmoNaipe}</b> figuras e <b>${R.numerosMesmoNaipe}</b> números de um mesmo naipe.</li>
+          <li><b>Sem outros limites:</b> quantas cópias quiser da mesma carta (por exemplo, quatro Rainhas de Copas) e qualquer mistura de naipes.</li>
         </ul>
         <p class="nota">O deck padrão (um baralho comum) sempre cumpre todas as regras.</p>`,
     },
@@ -362,11 +358,7 @@ window.SS = window.SS || {};
         <ul>
           <li>A Faces deck with exactly <b>${R.letras}</b> face cards and a Numbers deck with exactly <b>${R.numeros}</b> cards.</li>
           <li>When building, you can change the suit of any card.</li>
-          <li><b>Power budget:</b> the sum of the numbers (Ace = 1) goes up to <b>${R.orcamento}</b>, the sum of a standard deck.</li>
-          <li>At most <b>${R.porFigura.J}</b> Jacks, <b>${R.porFigura.Q}</b> Queens and <b>${R.porFigura.K}</b> Kings.</li>
-          <li>Up to <b>${R.copiasFigura}</b> copies of the same face card and suit, and up to <b>${R.copiasNumero}</b> of the same number and suit.</li>
-          <li>At most <b>${R.ases}</b> Aces.</li>
-          <li>At most <b>${R.figurasMesmoNaipe}</b> face cards and <b>${R.numerosMesmoNaipe}</b> numbers of the same suit.</li>
+          <li><b>No other limits:</b> as many copies of the same card as you like (for example, four Queens of Hearts) and any mix of suits.</li>
         </ul>
         <p class="nota">The default deck (a standard deck of cards) always follows every rule.</p>`,
     },

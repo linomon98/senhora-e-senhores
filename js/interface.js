@@ -949,16 +949,19 @@ window.SS = window.SS || {};
   function ajustarSobreposicao(mao) {
     const cartas = mao.children;
     if (!cartas.length) return;
-    const largura = cartas[0].offsetWidth || 86, disponivel = mao.clientWidth || 400, n = cartas.length;
-    const sobra = n > 1 ? Math.min(-8, (disponivel - largura) / (n - 1) - largura) : 0;
+    const n = cartas.length;
     // Leque: as cartas giram para fora e as das pontas descem um pouco (um arco suave).
+    // O ângulo entra ANTES de medir a carta: medir antes fazia a carta nascer reta e
+    // animar até o leque a cada redesenho da mesa (o "pisca-pisca").
     const meio = (n - 1) / 2, giroMax = Math.min(12, 3 + n * 1.3), descida = Math.min(16, 4 + n * 1.6);
     for (let k = 0; k < n; k++) {
       const d = meio ? (k - meio) / meio : 0;
-      cartas[k].style.marginLeft = k ? `${sobra}px` : '0';
       cartas[k].style.setProperty('--giro', (d * giroMax).toFixed(1) + 'deg');
       cartas[k].style.setProperty('--desce', (d * d * descida).toFixed(1) + 'px');
     }
+    const largura = cartas[0].offsetWidth || 86, disponivel = mao.clientWidth || 400;
+    const sobra = n > 1 ? Math.min(-8, (disponivel - largura) / (n - 1) - largura) : 0;
+    for (let k = 0; k < n; k++) cartas[k].style.marginLeft = k ? `${sobra}px` : '0';
   }
 
   function renderVazio() {

@@ -862,16 +862,10 @@ window.SS = window.SS || {};
   // ---------- Montagem de deck ----------
   // Um deck é uma contagem { 'Q-copas': 1, '7-ouros': 2, ... }.
 
+  // A única regra: o tamanho exato de cada baralho. Cópias, naipes e valores são livres.
   const REGRAS_DECK = {
-    letras: 12, // tamanho exato do baralho de Letras
-    numeros: 40, // tamanho exato do baralho de Números
-    copiasFigura: 2, // cópias da mesma figura e naipe (ex.: Rainha de Copas)
-    copiasNumero: 4, // cópias do mesmo número e naipe (ex.: 7 de Ouros)
-    porFigura: { J: 5, Q: 4, K: 5 }, // máximo de cada figura, somando os naipes
-    ases: 4, // máximo de Ases
-    orcamento: 220, // soma máxima dos valores numéricos (Ás = 1); igual à de um baralho comum
-    figurasMesmoNaipe: 5, // máximo de figuras de um mesmo naipe
-    numerosMesmoNaipe: 16, // máximo de cartas numéricas de um mesmo naipe
+    letras: 12, // tamanho exato do baralho de Letras (figuras)
+    numeros: 40, // tamanho exato do baralho de Números (Ás a 10)
   };
 
   function contagemPadrao() {
@@ -906,18 +900,6 @@ window.SS = window.SS || {};
     const R = REGRAS_DECK, r = resumoDeck(cont), erros = [];
     if (r.letras !== R.letras) erros.push(t('deck.erroLetras', { a: R.letras, b: r.letras }));
     if (r.numeros !== R.numeros) erros.push(t('deck.erroNumeros', { a: R.numeros, b: r.numeros }));
-    for (const chave in cont) {
-      const n = cont[chave], [rank] = chave.split('-');
-      const max = rank === 'J' || rank === 'Q' || rank === 'K' ? R.copiasFigura : R.copiasNumero;
-      if (n > max) erros.push(t('deck.erroCopias', { c: nomeCarta({ rank, naipe: chave.split('-')[1] }), a: max, b: n }));
-    }
-    for (const f of ['J', 'Q', 'K']) if (r.porFigura[f] > R.porFigura[f]) erros.push(t('deck.erroFigura', { a: R.porFigura[f], f: t(`carta.${f}.pl`), b: r.porFigura[f] }));
-    if (r.ases > R.ases) erros.push(t('deck.erroAses', { a: R.ases, b: r.ases }));
-    if (r.soma > R.orcamento) erros.push(t('deck.erroSoma', { a: r.soma, b: R.orcamento }));
-    for (const naipe of NAIPES) {
-      if (r.figurasNaipe[naipe] > R.figurasMesmoNaipe) erros.push(t('deck.erroFigNaipe', { a: R.figurasMesmoNaipe, n: nomeNaipe(naipe), b: r.figurasNaipe[naipe] }));
-      if (r.numerosNaipe[naipe] > R.numerosMesmoNaipe) erros.push(t('deck.erroNumNaipe', { a: R.numerosMesmoNaipe, n: nomeNaipe(naipe), b: r.numerosNaipe[naipe] }));
-    }
     return erros;
   }
 

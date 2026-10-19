@@ -827,3 +827,7 @@ button.cb-item { cursor: default; }
 }
 /* O leque do oponente é espelhado: abre para o lado do campo dele. */
 .zona-op .mao .carta { width: 54px; height: 76px; transform-origin: 50% 0; transform: translateY(calc(var(--desce, 0px) * -1)) rotate(calc(var(--giro, 0deg) * -1)); }
+/* Ao passar o mouse a carta sobe; esta área invisível embaixo dela continua "segurando" o mouse,
+   para a carta não descer e subir sem parar quando o cursor está perto da borda de baixo. */
+.zona-eu .mao .carta.jogavel::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 34px; }
+.zona-eu .mao .carta { transition: transform .16s ease-out, box-shadow .15s, filter .15s; }
