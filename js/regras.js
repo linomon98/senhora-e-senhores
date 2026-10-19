@@ -172,11 +172,11 @@ window.SS = window.SS || {};
       id: 'deck', titulo: 'Montagem de deck',
       html: () => `
         <ul>
-          <li>Baralho de Letras com exatamente <b>${R.letras}</b> figuras e baralho de Números com exatamente <b>${R.numeros}</b> cartas.</li>
+          <li>Baralho de Letras com <b>no máximo ${R.letras}</b> figuras e baralho de Números com <b>no máximo ${R.numeros}</b> cartas. Não há mínimo: um deck menor deixa as melhores cartas mais frequentes, mas acaba antes (comprar de baralho vazio custa 2 PV por carta).</li>
           <li>Na montagem, você pode trocar o naipe de qualquer carta.</li>
-          <li><b>Sem outros limites:</b> quantas cópias quiser da mesma carta (por exemplo, quatro Rainhas de Copas) e qualquer mistura de naipes.</li>
+          <li>Até <b>${R.copias} cópias</b> da mesma carta (mesmo valor e naipe), e qualquer mistura de naipes.</li>
         </ul>
-        <p class="nota">O deck padrão (um baralho comum) sempre cumpre todas as regras.</p>`,
+        <p class="nota">Em "Montar decks" estão o deck padrão (um baralho comum) e os decks de cada Palhaço, prontos para servir de base.</p>`,
     },
     {
       id: 'fim', titulo: 'Fim de jogo e limites',
@@ -356,11 +356,11 @@ window.SS = window.SS || {};
       id: 'deck', titulo: 'Deck building',
       html: () => `
         <ul>
-          <li>A Faces deck with exactly <b>${R.letras}</b> face cards and a Numbers deck with exactly <b>${R.numeros}</b> cards.</li>
+          <li>A Faces deck with <b>at most ${R.letras}</b> face cards and a Numbers deck with <b>at most ${R.numeros}</b> cards. There is no minimum: a smaller deck makes your best cards show up more often, but runs out sooner (drawing from an empty deck costs 2 HP per card).</li>
           <li>When building, you can change the suit of any card.</li>
-          <li><b>No other limits:</b> as many copies of the same card as you like (for example, four Queens of Hearts) and any mix of suits.</li>
+          <li>Up to <b>${R.copias} copies</b> of the same card (same value and suit), and any mix of suits.</li>
         </ul>
-        <p class="nota">The default deck (a standard deck of cards) always follows every rule.</p>`,
+        <p class="nota">In "Build decks" you will find the default deck (a standard deck of cards) and each Jester's deck, ready to use as a base.</p>`,
     },
     {
       id: 'fim', titulo: 'Game end and limits',

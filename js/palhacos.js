@@ -4,10 +4,12 @@ window.SS = window.SS || {};
 (function (SS) {
   'use strict';
 
-  // Decks temáticos: 12 figuras (Letras) + 40 números, sem limite de cópias ou de naipe.
+  // Decks temáticos: até 12 figuras e 40 números, até 6 cópias da mesma carta.
+  // Calibrados com o simulador (558 partidas: todos os Palhaços entre 45% e 54% de vitórias).
   const LISTA = [
     {
-      // Duelista: muitos Valetes de Espadas (entram atacando, Naipados ganham +1) e números baixos de Espadas.
+      // Duelista: Valetes de Espadas (entram atacando) com Espadas de 2 a 5 (Naipados, +1 de ataque),
+      // Ases de Espadas (+1 aos vizinhos) e Espadas altas para o bônus de +1 no turno.
       id: 'lancalotte', nome: 'Lançalotte', naipe: 'espadas', cor: 'azul',
       deck: {
         'J-espadas': 4, 'J-copas': 1, 'J-ouros': 1, 'Q-espadas': 2, 'K-espadas': 3, 'K-ouros': 1,
@@ -18,7 +20,8 @@ window.SS = window.SS || {};
       },
     },
     {
-      // Coração teimoso: Reis de Copas Naipados (ferida), muita cura e Ases de Copas (vampiro).
+      // Coração teimoso: Reis de Copas Naipados (ferida) e muita cura de Copas, que paga a Transfusão
+      // (2 PV para tirar 1 hit de um aliado, 4 PV para dar 1 hit num inimigo). Ases de Copas: vampiro.
       id: 'infartitte', nome: 'Infartitte', naipe: 'copas', cor: 'vermelho',
       deck: {
         'K-copas': 5, 'Q-copas': 2, 'J-copas': 2, 'K-paus': 1, 'K-espadas': 1, 'J-espadas': 1,
@@ -29,18 +32,20 @@ window.SS = window.SS || {};
       },
     },
     {
-      // Muro: Reis e Valetes de Paus Naipados (3 hits), Ases de Paus e Berserk.
+      // Muro: 5 Reis de Paus e Valetes de Paus Naipados (aguentam 3 hits) e 5 Ases de Paus,
+      // que dão +1 de resistência aos vizinhos (um Naipado de Paus ao lado aguenta 4).
       id: 'paumol', nome: 'Paumol', naipe: 'paus', cor: 'verde',
       deck: {
-        'K-paus': 4, 'J-paus': 3, 'Q-paus': 2, 'K-copas': 1, 'K-espadas': 1, 'J-ouros': 1,
-        '2-paus': 2, '3-paus': 2, '4-paus': 3, '5-paus': 3, '6-paus': 3, '7-paus': 3, '8-paus': 2, '9-paus': 1, '10-paus': 1, 'A-paus': 4,
+        'K-paus': 5, 'J-paus': 3, 'Q-paus': 2, 'K-copas': 1, 'J-ouros': 1,
+        '2-paus': 2, '3-paus': 2, '4-paus': 3, '5-paus': 3, '6-paus': 3, '7-paus': 3, '8-paus': 2, '9-paus': 1, '10-paus': 1, 'A-paus': 5,
         '4-copas': 2, '6-copas': 2, '8-copas': 1,
-        '5-espadas': 2, '7-espadas': 2, '9-espadas': 1,
+        '5-espadas': 2, '7-espadas': 2,
         '2-ouros': 2, '3-ouros': 2, '5-ouros': 2,
       },
     },
     {
-      // Banqueiro ladrão: Valetes de Ouros Naipados (2 ataques por turno), Ouros para trocar cartas e dados extras.
+      // Banqueiro ladrão: Valetes de Ouros Naipados (atacam 2 vezes no mesmo turno), Ouros baixos
+      // para trocar cartas e ganhar dados extras, e a Cobrança para roubar as cartas do oponente.
       id: 'ourinhos', nome: 'Ourinhos', naipe: 'ouros', cor: 'dourado',
       deck: {
         'J-ouros': 4, 'Q-ouros': 2, 'K-ouros': 2, 'J-espadas': 1, 'J-copas': 1, 'K-paus': 1, 'Q-espadas': 1,
@@ -71,14 +76,14 @@ window.SS = window.SS || {};
     infartitte: {
       pt: {
         titulo: 'o coração teimoso',
-        passiva: { nome: 'Coração forte', texto: 'Começa com 27 PV (os outros começam com 18 a 20).' },
-        poder: { nome: 'Transfusão', texto: 'Pague 2 PV para tirar 1 hit de um Senhor(a) seu.' },
+        passiva: { nome: 'Coração forte', texto: 'Começa com 26 PV (os outros começam com 18 a 23).' },
+        poder: { nome: 'Transfusão', texto: 'Pague 2 PV para tirar 1 hit de um Senhor(a) seu, ou 4 PV para dar 1 hit num Senhor(a) inimigo.' },
         plano: 'Aguenta e drena: Reis seguram a linha, Copas cura, Naipados de Copas aplicam ferida.',
       },
       en: {
         titulo: 'the stubborn heart',
-        passiva: { nome: 'Strong Heart', texto: 'Starts with 27 HP (the others start with 18 to 20).' },
-        poder: { nome: 'Transfusion', texto: 'Pay 2 HP to remove 1 hit from one of your Gentlemen.' },
+        passiva: { nome: 'Strong Heart', texto: 'Starts with 26 HP (the others start with 18 to 23).' },
+        poder: { nome: 'Transfusion', texto: 'Pay 2 HP to remove 1 hit from one of your Gentlemen, or 4 HP to deal 1 hit to an enemy Gentleman.' },
         plano: 'Endures and drains: Kings hold the line, Hearts heal, Suited Hearts inflict wounds.',
       },
     },
@@ -99,13 +104,13 @@ window.SS = window.SS || {};
     ourinhos: {
       pt: {
         titulo: 'o banqueiro',
-        passiva: { nome: 'Cofre cheio', texto: 'Limite de mão de 9 cartas (em vez de 7). Começa com 20 PV.' },
+        passiva: { nome: 'Cofre cheio', texto: 'Limite de mão de 9 cartas (em vez de 7). Começa com 23 PV.' },
         poder: { nome: 'Cobrança', texto: 'Rouba 1 carta sorteada da mão do oponente.' },
         plano: 'Rouba e acumula: tira as cartas do oponente e usa Valetes Naipados de Ouros, que atacam 2 vezes no mesmo turno.',
       },
       en: {
         titulo: 'the banker',
-        passiva: { nome: 'Full Vault', texto: 'Hand limit of 9 cards (instead of 7). Starts with 20 HP.' },
+        passiva: { nome: 'Full Vault', texto: 'Hand limit of 9 cards (instead of 7). Starts with 23 HP.' },
         poder: { nome: 'Debt Collection', texto: "Steals 1 random card from the opponent's hand." },
         plano: "Steals and hoards: takes the opponent's cards and uses Suited Jacks of Diamonds, which attack twice in the same turn.",
       },

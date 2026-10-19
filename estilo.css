@@ -854,3 +854,14 @@ button.cb-item { cursor: default; }
 .espera-pontos i:nth-child(2) { animation-delay: .15s; }
 .espera-pontos i:nth-child(3) { animation-delay: .3s; }
 @keyframes ponto { 0%, 100% { opacity: .25; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-6px); } }
+
+/* ---------- Montar decks: decks prontos (só leitura) ---------- */
+.slots h4 { margin: 6px 2px 0; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ouro); }
+.slots h4:not(:first-child) { margin-top: 14px; }
+.slot.pronto small { opacity: .6; }
+.celula.leitura { cursor: default; }
+.celula-controles.leitura { justify-content: center; }
+.pronto-info h2 { margin: 0; font-family: Georgia, serif; font-size: 24px; }
+.pronto-info .nota { margin: 4px 0 0; max-width: 760px; }
+.copiar-para { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 14px; padding: 10px 12px; border-radius: 12px; background: rgba(233, 196, 106, .1); border: 1px solid rgba(233, 196, 106, .45); }
+.copiar-para span { font-weight: 700; margin-right: 4px; }

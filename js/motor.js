@@ -28,12 +28,13 @@ window.SS = window.SS || {};
   // Todos compram sozinhos 1 Letra + 1 Número no começo do turno (COMPRA_AUTOMATICA).
   const PALHACOS = {
     lancalotte: { naipe: 'espadas', pv: 19, limiteMao: 7, poder: 'desafio', dadosPrimeiro: 1, ataquePrimeiro: 1 },
-    infartitte: { naipe: 'copas', pv: 27, limiteMao: 7, poder: 'transfusao' },
+    infartitte: { naipe: 'copas', pv: 26, limiteMao: 7, poder: 'transfusao' },
     paumol: { naipe: 'paus', pv: 18, limiteMao: 7, poder: 'vigilia', reducaoDefesa: 1, soPaus: true },
-    ourinhos: { naipe: 'ouros', pv: 20, limiteMao: 9, poder: 'roubo' }, // rouba 1 carta da mão do oponente
+    ourinhos: { naipe: 'ouros', pv: 23, limiteMao: 9, poder: 'roubo' }, // rouba 1 carta da mão do oponente
   };
   const COMPRA_AUTOMATICA = true;
-  const CUSTO_TRANSFUSAO = 2; // PV pagos pela Transfusão do Infartitte
+  const CUSTO_TRANSFUSAO = 2; // PV pagos pela Transfusão do Infartitte para tirar 1 hit de um aliado
+  const CUSTO_SANGRIA = 4; // PV pagos pela Transfusão para dar 1 hit num Senhor(a) inimigo
   const palhacoDe = j => (j && PALHACOS[j.palhaco]) || null;
   const temPalhaco = (j, id) => !!j && j.palhaco === id;
   const limiteMao = j => (palhacoDe(j) ? palhacoDe(j).limiteMao : LIMITE_MAO);
@@ -433,6 +434,8 @@ window.SS = window.SS || {};
         for (const u of e.jogadores[1 - p].campo) if (u && u.tipo === 'senhor' && u.ativo) r.push({ tipo: 'poder', alvo: u.uid });
       } else if (pal.poder === 'transfusao') {
         if (j.pv > CUSTO_TRANSFUSAO) for (const s of senhores) if (j.campo[s].hits > 0 && !j.campo[s].berserk) r.push({ tipo: 'poder', alvo: j.campo[s].uid });
+        // Também ofensiva: paga mais PV para dar 1 hit num Senhor(a) inimigo.
+        if (j.pv > CUSTO_SANGRIA) for (const u of e.jogadores[1 - p].campo) if (u && u.tipo === 'senhor') r.push({ tipo: 'poder', alvo: u.uid });
       } else if (pal.poder === 'vigilia') {
         for (const s of senhores) if (!j.campo[s].vigilia) r.push({ tipo: 'poder', alvo: j.campo[s].uid });
       } else if (pal.poder === 'roubo') {
@@ -536,8 +539,14 @@ window.SS = window.SS || {};
           if (alvo.p === p || !alvo.u.ativo) throw new Error('Desafie um Senhor(a) inimigo ativo');
           e.desafio = alvo.u.uid;
           registrar(e, t('log.desafio', { j: j.nome, u: nomeUnidade(alvo.u) }));
+        } else if (pal.poder === 'transfusao' && alvo.p !== p) {
+          // Sangria: paga PV e dá 1 hit num Senhor(a) inimigo.
+          if (j.pv <= CUSTO_SANGRIA) throw new Error('PV insuficiente');
+          j.pv -= CUSTO_SANGRIA;
+          registrar(e, t('log.sangria', { j: j.nome, n: CUSTO_SANGRIA, u: nomeUnidade(alvo.u) }));
+          aplicarHit(e, alvo.p, alvo.i);
         } else if (pal.poder === 'transfusao') {
-          if (alvo.p !== p || alvo.u.hits <= 0 || alvo.u.berserk || j.pv <= CUSTO_TRANSFUSAO) throw new Error('Transfusão inválida');
+          if (alvo.u.hits <= 0 || alvo.u.berserk || j.pv <= CUSTO_TRANSFUSAO) throw new Error('Transfusão inválida');
           j.pv -= CUSTO_TRANSFUSAO;
           alvo.u.hits--;
           registrar(e, t('log.transfusao', { j: j.nome, n: CUSTO_TRANSFUSAO, u: nomeUnidade(alvo.u) }));
@@ -875,10 +884,12 @@ window.SS = window.SS || {};
   // ---------- Montagem de deck ----------
   // Um deck é uma contagem { 'Q-copas': 1, '7-ouros': 2, ... }.
 
-  // A única regra: o tamanho exato de cada baralho. Cópias, naipes e valores são livres.
+  // Regras de deck: só máximos (não há mínimo) e um limite de cópias da mesma carta.
+  // Naipes e valores são livres. Um deck menor tem menos cartas para comprar (baralho vazio custa PV).
   const REGRAS_DECK = {
-    letras: 12, // tamanho exato do baralho de Letras (figuras)
-    numeros: 40, // tamanho exato do baralho de Números (Ás a 10)
+    letras: 12, // máximo de figuras no baralho de Letras
+    numeros: 40, // máximo de cartas no baralho de Números (Ás a 10)
+    copias: 6, // máximo de cópias da mesma carta (mesmo valor e naipe)
   };
 
   function contagemPadrao() {
@@ -911,8 +922,15 @@ window.SS = window.SS || {};
   // Lista os problemas do deck (vazia = deck válido).
   function validarDeck(cont) {
     const R = REGRAS_DECK, r = resumoDeck(cont), erros = [];
-    if (r.letras !== R.letras) erros.push(t('deck.erroLetras', { a: R.letras, b: r.letras }));
-    if (r.numeros !== R.numeros) erros.push(t('deck.erroNumeros', { a: R.numeros, b: r.numeros }));
+    if (r.letras + r.numeros === 0) erros.push(t('deck.erroVazio'));
+    if (r.letras > R.letras) erros.push(t('deck.erroLetras', { a: R.letras, b: r.letras }));
+    if (r.numeros > R.numeros) erros.push(t('deck.erroNumeros', { a: R.numeros, b: r.numeros }));
+    for (const chave in cont) {
+      if (cont[chave] > R.copias) {
+        const [rank, naipe] = chave.split('-');
+        erros.push(t('deck.erroCopias', { c: nomeCarta({ rank, naipe }), a: R.copias, b: cont[chave] }));
+      }
+    }
     return erros;
   }
 
@@ -928,7 +946,7 @@ window.SS = window.SS || {};
 
   SS.Motor = {
     desistir, REGRAS_DECK, RANKS, contagemPadrao, resumoDeck, validarDeck, cartasDoDeck,
-    PALHACOS, CUSTO_TRANSFUSAO, SACRIFICIOS_RAINHA, palhacoDe, limiteMao, ataqueDirecionado,
+    PALHACOS, CUSTO_TRANSFUSAO, CUSTO_SANGRIA, SACRIFICIOS_RAINHA, palhacoDe, limiteMao, ataqueDirecionado,
     NAIPES, SIMBOLO, LIMITE_FIGURA, PV_INICIAL, ESPACOS, ACOES_POR_TURNO, CUSTO_RAINHA, DADO_ATAQUE_TOTAL, LIMITE_MAO,
     definirRng: f => { rng = f; },
     ehFigura, ehAs, ehNumero, valor, nomeCarta, nomeNaipe, nomeUnidade, curaDe, naipado,

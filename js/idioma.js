@@ -84,6 +84,7 @@ window.SS = window.SS || {};
     ],
     'log.desafio': ['{j} usa Desafio!: {u} terá de bloquear o primeiro ataque.', '{j} uses Challenge!: {u} must block the first attack.'],
     'log.transfusao': ['{j} usa Transfusão: paga {n} PV e tira 1 hit de {u}.', '{j} uses Transfusion: pays {n} HP and removes 1 hit from {u}.'],
+    'log.sangria': ['{j} usa Transfusão contra {u}: paga {n} PV e causa 1 hit.', '{j} uses Transfusion on {u}: pays {n} HP and deals 1 hit.'],
     'log.vigilia': ['{j} usa Vigília: {u} não vira para baixo no fim do turno.', "{j} uses Vigil: {u} won't flip face down at the end of the turn."],
     'log.curou': ['{j} usou {c} e curou {n} PV.', '{j} used {c} and healed {n} HP.'],
     'log.espadas': ['{j} usou {c}: {u} ganha +1 de ataque (crítico no 6: +{n}).', '{j} used {c}: {u} gets +1 attack (critical on a 6: +{n}).'],
@@ -115,8 +116,10 @@ window.SS = window.SS || {};
 
   // ---------- Montagem de deck (validação) ----------
   adicionar({
-    'deck.erroLetras': ['O baralho de Letras precisa ter exatamente {a} figuras (tem {b}).', 'The Faces deck must have exactly {a} face cards (it has {b}).'],
-    'deck.erroNumeros': ['O baralho de Números precisa ter exatamente {a} cartas (tem {b}).', 'The Numbers deck must have exactly {a} cards (it has {b}).'],
+    'deck.erroLetras': ['O baralho de Letras pode ter no máximo {a} figuras (tem {b}).', 'The Faces deck can have at most {a} face cards (it has {b}).'],
+    'deck.erroVazio': ['O deck está vazio.', 'The deck is empty.'],
+    'deck.erroCopias': ['{c}: no máximo {a} cópias (tem {b}).', '{c}: at most {a} copies (it has {b}).'],
+    'deck.erroNumeros': ['O baralho de Números pode ter no máximo {a} cartas (tem {b}).', 'The Numbers deck can have at most {a} cards (it has {b}).'],
   });
 
   // ---------- Interface: poderes, efeitos e estados das cartas ----------
@@ -399,15 +402,22 @@ window.SS = window.SS || {};
     'dk.naoSalvo': ['Não foi possível salvar neste navegador', "Couldn't save in this browser"],
     'dk.celula': ['clique: +1 · botão direito: −1', 'click: +1 · right-click: −1'],
     'dk.regrasLimite': ['Regras do deck', 'Deck rules'],
-    'dk.livre': ['Fora isso, é livre: quantas cópias quiser da mesma carta e qualquer mistura de naipes.', 'Everything else is free: as many copies of the same card as you like and any mix of suits.'],
-    'dk.rLetras': ['Letras: exatamente <b>{n}</b> figuras <em>({v})</em>', 'Faces: exactly <b>{n}</b> face cards <em>({v})</em>'],
-    'dk.rNumeros': ['Números: exatamente <b>{n}</b> cartas <em>({v})</em>', 'Numbers: exactly <b>{n}</b> cards <em>({v})</em>'],
+    'dk.livre': ['Não há mínimo: um deck menor deixa as cartas boas mais frequentes, mas acaba antes (comprar de baralho vazio custa 2 PV). Naipes livres.', 'There is no minimum: a smaller deck makes your best cards show up more often, but runs out sooner (drawing from an empty deck costs 2 HP). Suits are free.'],
+    'dk.rCopias': ['Até <b>{n}</b> cópias da mesma carta', 'Up to <b>{n}</b> copies of the same card'],
+    'dk.rLetras': ['Letras: até <b>{n}</b> figuras <em>({v})</em>', 'Faces: up to <b>{n}</b> face cards <em>({v})</em>'],
+    'dk.rNumeros': ['Números: até <b>{n}</b> cartas <em>({v})</em>', 'Numbers: up to <b>{n}</b> cards <em>({v})</em>'],
     'dk.vazio': ['vazio', 'empty'],
     'dk.pronto': ['pronto para jogar', 'ready to play'],
     'dk.incompleto': ['incompleto', 'incomplete'],
     'dk.espaco': ['Espaço {n}', 'Slot {n}'],
     'dk.espacoVazio': ['Espaço {n} vazio', 'Slot {n} is empty'],
-    'dk.comece': ['Comece pelo deck padrão (um baralho comum) e vá trocando as cartas, ou monte do zero.', 'Start from the default deck (a standard deck of cards) and swap cards, or build from scratch.'],
+    'dk.comece': ['Comece de um deck pronto e vá trocando as cartas, ou monte do zero.', 'Start from a ready-made deck and swap cards, or build from scratch.'],
+    'dk.padraoSub': ['Um baralho comum: uma de cada carta (12 figuras e 40 números).', 'A standard deck of cards: one of each (12 face cards and 40 numbers).'],
+    'dk.deckDe': ['Deck de {p}', "{p}'s deck"],
+    'dk.soLeitura': ['pronto · só para ver', 'ready-made · view only'],
+    'dk.usarBase': ['Usar como base, copiando para:', 'Use as a base, copying it to:'],
+    'dk.seusDecks': ['Seus decks', 'Your decks'],
+    'dk.decksProntos': ['Decks prontos', 'Ready-made decks'],
     'dk.autoPadrao': ['Auto-build: deck padrão', 'Auto-build: default deck'],
     'dk.zero': ['Começar do zero', 'Start from scratch'],
     'dk.nome': ['Nome do deck', 'Deck name'],
