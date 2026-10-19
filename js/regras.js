@@ -194,6 +194,196 @@ window.SS = window.SS || {};
     },
   ];
 
+  const TEMAS_EN = [
+    {
+      id: 'visao', titulo: 'Overview',
+      html: () => `
+        <h3>Goal</h3>
+        <p>Reduce your opponent's Hit Points (HP) to <b>0</b>. Each player starts with <b>${M.PV_INICIAL} HP</b> (some Jesters change this), and there is no maximum: Hearts healing can go above it.</p>
+        <h3>Components</h3>
+        <ul>
+          <li><b>Faces deck</b> (${R.letras} cards): Jacks, Queens and Kings. These are the <b>face cards</b>.</li>
+          <li><b>Numbers deck</b> (${R.numeros} cards): Ace to 10.</li>
+          <li><b>Field</b>: a row of <b>${M.ESPACOS} slots</b> for each player. A card placed there never changes slot.</li>
+          <li><b>Graveyard</b>: used, sacrificed and dead cards.</li>
+          <li>A 6-sided die.</li>
+        </ul>
+        <h3>The idea</h3>
+        <p>You combine <b>1 face card + 1 number</b> to create a <b>Lord</b>, the game's creature. The number is its attack. Number cards can also be played alone, like spells, for their suit effect. <b>Aces</b> become totems that strengthen their neighbors.</p>`,
+    },
+    {
+      id: 'turno', titulo: 'Setup and turn',
+      html: () => `
+        <h3>Setup</h3>
+        <ul>
+          <li>Each player chooses <b>3 face cards</b> from the Faces deck for their hand and draws <b>4 cards</b> from the Numbers deck.</li>
+          <li><b>Mulligan</b> (once): return the 4 number cards, shuffle and draw 3. The chosen face cards stay.</li>
+          <li><b>Who goes first:</b> a black Jester (♠ Lançalotte, ♣ Paumol) goes first against a red Jester (♥ Infartitte, ♦ Ourinhos). If both are the same color, each rolls a die and the higher roll goes first. On the first turn, the first player <b>doesn't draw and doesn't attack</b>.</li>
+        </ul>
+        <h3>Turn order</h3>
+        <ol>
+          <li><b>Ready:</b> your face-down Lords become ready again.</li>
+          <li><b>Draw:</b> draw 1 card from the deck of your choice: Faces or Numbers. If both are empty, lose 2 HP. <b>Ourinhos</b> doesn't choose: it automatically draws 1 Face and 1 Number.</li>
+          <li><b>${M.ACOES_POR_TURNO} passive actions</b>, in any order: summon, invoke an Ace, use a number card's effect.</li>
+          <li><b>Offensive action:</b> attack with your ready Lords.</li>
+          <li><b>End of turn:</b> attackers flip face down, "1 turn" effects end and, with more than ${M.LIMITE_MAO} cards in hand, you discard the extra.</li>
+        </ol>`,
+    },
+    {
+      id: 'senhores', titulo: 'Lords',
+      html: () => `
+        <h3>Summon (1 action)</h3>
+        <p>Put 1 face card + 1 number (2 to 10) into an empty slot. The <b>number is the attack</b>.</p>
+        <table class="tabela-regras">
+          <tr><th>Face card</th><th>Equips</th><th>Cost</th><th>Ability</th></tr>
+          <tr><td><b>Jack</b></td><td>2 to 5</td><td>1 action</td><td><b>Haste:</b> attacks the same turn it enters.</td></tr>
+          <tr><td><b>Queen</b></td><td>2 to 10</td><td>${M.CUSTO_RAINHA} action + sacrifice ${M.SACRIFICIOS_RAINHA} of your Lords that were already on the field before this turn</td><td><b>Trample:</b> if it kills its blocker, the leftover damage goes to HP.</td></tr>
+          <tr><td><b>King</b></td><td>2 to 7</td><td>1 action</td><td><b>Royal Order:</b> when attacking, may target an enemy Lord. No one can block that attack in the target's place.</td></tr>
+        </table>
+        <h3>Health and card position</h3>
+        <p>A regular Lord survives <b>2 hits</b>. The card's position shows how much is left:</p>
+        <ul>
+          <li><b>Upright:</b> healthy.</li>
+          <li><b>Diagonal:</b> wounded, but survives more than 1 hit (only with Suited Clubs or a neighboring Ace of Clubs).</li>
+          <li><b>Sideways:</b> the next hit kills.</li>
+          <li><b>Face down:</b> attacked and can't block until its owner's next turn.</li>
+        </ul>
+        <table class="tabela-regras">
+          <tr><th>Situation</th><th>Hits to die</th></tr>
+          <tr><td>Default</td><td>2</td></tr>
+          <tr><td>Next to an Ace of Clubs</td><td>3</td></tr>
+          <tr><td>Suited Clubs</td><td>3</td></tr>
+          <tr><td>Suited Clubs next to an Ace of Clubs</td><td>4</td></tr>
+        </table>`,
+    },
+    {
+      id: 'naipados', titulo: 'Suited Lords',
+      html: () => `
+        <p>When the face card and the number share the <b>same suit</b>, a <b>Suited Lord</b> is born, with an extra power:</p>
+        <table class="tabela-regras">
+          <tr><th>Suit</th><th>Power</th></tr>
+          <tr><td>♣ Clubs</td><td>Survives 3 hits (4 next to an Ace of Clubs).</td></tr>
+          <tr><td>♠ Spades</td><td>+1 permanent attack.</td></tr>
+          <tr><td>♥ Hearts</td><td><b>Wound:</b> after it deals damage to the opponent's HP, the opponent can't heal above the HP they were left with, while it lives.</td></tr>
+          <tr><td>♦ Diamonds</td><td>Attacks twice per turn (both attacks are declared together).</td></tr>
+        </table>
+        <p class="exemplo"><b>Example:</b> King of Hearts + 7 of Hearts becomes a Suited King of Hearts with attack 7.</p>`,
+    },
+    {
+      id: 'ataque', titulo: 'Attack',
+      html: () => `
+        <ul>
+          <li>Each ready Lord attacks <b>once per turn</b> (Suited Diamonds, twice). Only Lords that entered on an earlier turn can attack, except the Jack.</li>
+          <li>The target is the opposing <b>player</b> or one of their <b>Aces</b>. The <b>King</b> can also target an enemy <b>Lord</b>: that attack can't be blocked by another Lord, and the target defends alone, with the block and counterattack rules (even if face down).</li>
+          <li>You choose the <b>order</b> of the attacks; they are resolved one at a time.</li>
+        </ul>
+        <h3>Roll</h3>
+        <table class="tabela-regras">
+          <tr><th>Die</th><th>Damage</th></tr>
+          <tr><td>${M.DADO_ATAQUE_TOTAL} to 6</td><td>Full attack</td></tr>
+          <tr><td>1 to ${M.DADO_ATAQUE_TOTAL - 1}</td><td>Half the attack, rounded down</td></tr>
+        </table>
+        <ul>
+          <li><b>Diamonds on attack:</b> each Diamond spent gives +1 die; the highest result counts.</li>
+          <li><b>Spades:</b> +1 attack this turn; if the die shows 6, the bonus becomes half the Spades card's value (critical).</li>
+          <li><b>Unblocked:</b> the damage goes straight to HP. If the target was an Ace, it is destroyed.</li>
+        </ul>
+        <p class="exemplo"><b>Example:</b> a Queen with 8 attacks and no one blocks. Rolled 3 = half attack = <b>4 damage</b> to HP.</p>
+        <p>Attackers flip <b>face down at the end of the turn</b> and can't block on the opponent's next turn.</p>`,
+    },
+    {
+      id: 'defesa', titulo: 'Defense and counterattack',
+      html: () => `
+        <h3>Blocking</h3>
+        <ul>
+          <li>Each <b>ready</b> Lord blocks 1 attacker. Aces don't block.</li>
+          <li>Two or more Lords can block <b>the same attacker</b>: each one takes the full damage.</li>
+          <li>The King's attack against a Lord <b>can't be blocked</b>: the target defends alone.</li>
+        </ul>
+        <h3>The blow against the blocker</h3>
+        <p>Compare the <b>damage</b> with the <b>blocker's attack</b>. For a blocker with attack 6:</p>
+        <table class="tabela-regras">
+          <tr><th>Damage</th><th>Result</th></tr>
+          <tr><td>0 to 2 (less than half)</td><td>Blow <b>ignored</b></td></tr>
+          <tr><td>3 to 6</td><td>Takes <b>1 hit</b></td></tr>
+          <tr><td>7 or more (more than its attack)</td><td><b>Dies instantly</b></td></tr>
+        </table>
+        <h3>Counterattack (no die)</h3>
+        <p>If the <b>attacker's number is lower</b> than the blocker's (or the blockers' sum), the attacker takes <b>1 hit</b>. Permanent bonuses and Spades count.</p>
+        <p class="exemplo"><b>Example:</b> a Jack with 4 attacks, a King with 6 blocks. Even if the blow is ignored, 4 is less than 6, so the Jack takes 1 hit.</p>
+        <h3>Trample (Queen)</h3>
+        <p>If the Queen kills its blocker, HP takes <b>damage − blocker's attack</b>.</p>
+        <p class="exemplo"><b>Example:</b> a Queen with 10 rolls 5 (10 damage) against a King with 6: the King dies and <b>4</b> goes through to HP.</p>`,
+    },
+    {
+      id: 'efeitos', titulo: 'Suit effects',
+      html: () => `
+        <p>A number card played alone costs <b>1 action</b> and goes to the graveyard.</p>
+        <table class="tabela-regras">
+          <tr><th>Suit</th><th>Effect</th></tr>
+          <tr><td>♥ Hearts</td><td>Heals HP: 2–3 heals 1, 4–7 heals 2, 8–10 heals 3. Can go above ${M.PV_INICIAL}.</td></tr>
+          <tr><td>♦ Diamonds</td><td>Discard 1 to draw 1 card (from the deck of your choice) or 2 to recover 1 card from the graveyard. On attack, +1 die.</td></tr>
+          <tr><td>♠ Spades</td><td>+1 attack to a Lord until end of turn; on a 6, it becomes half the card's value.</td></tr>
+          <tr><td>♣ Clubs</td><td><b>Berserk:</b> a wounded Lord returns upright until the end of the opponent's next turn. If it takes 1 hit in that time, it dies when the effect ends; with 2 hits, it dies instantly.</td></tr>
+        </table>`,
+    },
+    {
+      id: 'ases', titulo: 'Aces (totems)',
+      html: () => `
+        <ul>
+          <li><b>Invocation (1 action):</b> sacrifice 1 number card of the same suit as the Ace.</li>
+          <li>The Ace takes 1 slot and affects its <b>neighbors</b> (left and right).</li>
+          <li><b>Push:</b> the Ace can enter in place of a card in your row, pushing cards toward the nearest empty slot (there must be an empty slot). This way you can place it between two Lords.</li>
+          <li>It doesn't attack, doesn't block and dies to <b>1 blow</b>. One of its owner's Lords can block to protect it.</li>
+        </ul>
+        <table class="tabela-regras">
+          <tr><th>Ace</th><th>Effect</th></tr>
+          <tr><td>♣ Clubs</td><td>Neighbors get +1 toughness (creates the diagonal state).</td></tr>
+          <tr><td>♠ Spades</td><td>Neighbors get +1 permanent attack.</td></tr>
+          <tr><td>♦ Diamonds</td><td>Counts as 1 extra Diamond per turn.</td></tr>
+          <tr><td>♥ Hearts</td><td><b>Vampire:</b> a neighbor that damages the opponent's HP heals you 1 HP.</td></tr>
+        </table>`,
+    },
+    {
+      id: 'palhacos', titulo: 'Jesters',
+      html: () => `
+        <p>Each player chooses a <b>Jester</b>, their "hero": it sits in the middle of the table, shows your HP and is the target of direct attacks. Each one has a <b>passive</b> (lasts the whole match) and a <b>power</b> (1 action, once per turn, button next to the Jester).</p>
+        <table class="tabela-regras">
+          <tr><th>Jester</th><th>Passive</th><th>Power</th></tr>
+          ${SS.Palhacos.LISTA.map(p => `<tr><td><b>${M.SIMBOLO[p.naipe]} ${p.nome}</b><br><small>${p.titulo}</small></td><td><b>${p.passiva.nome}:</b> ${p.passiva.texto}</td>
+            <td>${p.poder ? `<b>${p.poder.nome}:</b> ${p.poder.texto}` : `<b>${p.custo.nome}:</b> ${p.custo.texto}`}</td></tr>`).join('')}
+        </table>
+        <p><b>Who goes first:</b> a black Jester (♠ ♣) goes first against a red one (♥ ♦). If both are the same color, each rolls a die and the higher roll goes first.</p>
+        <p class="nota">Each Jester has a themed deck of its suit, which you can swap for a deck you build.</p>`,
+    },
+    {
+      id: 'deck', titulo: 'Deck building',
+      html: () => `
+        <ul>
+          <li>A Faces deck with exactly <b>${R.letras}</b> face cards and a Numbers deck with exactly <b>${R.numeros}</b> cards.</li>
+          <li>When building, you can change the suit of any card.</li>
+          <li><b>Power budget:</b> the sum of the numbers (Ace = 1) goes up to <b>${R.orcamento}</b>, the sum of a standard deck.</li>
+          <li>At most <b>${R.porFigura.J}</b> Jacks, <b>${R.porFigura.Q}</b> Queens and <b>${R.porFigura.K}</b> Kings.</li>
+          <li>Up to <b>${R.copiasFigura}</b> copies of the same face card and suit, and up to <b>${R.copiasNumero}</b> of the same number and suit.</li>
+          <li>At most <b>${R.ases}</b> Aces.</li>
+          <li>At most <b>${R.figurasMesmoNaipe}</b> face cards and <b>${R.numerosMesmoNaipe}</b> numbers of the same suit.</li>
+        </ul>
+        <p class="nota">The default deck (a standard deck of cards) always follows every rule.</p>`,
+    },
+    {
+      id: 'fim', titulo: 'Game end and limits',
+      html: () => `
+        <ul>
+          <li>Whoever reaches <b>0 HP</b> loses.</li>
+          <li><b>Empty decks:</b> if you have to draw and both are empty, lose 2 HP per draw.</li>
+          <li><b>Hand limit:</b> ${M.LIMITE_MAO} cards at end of turn; the extra goes to the graveyard.</li>
+          <li>You can <b>concede</b> at any time with the button at the top of the panel.</li>
+        </ul>`,
+    },
+  ];
+
+  const temas = () => (SS.Idioma && SS.Idioma.atual() === 'en' ? TEMAS_EN : TEMAS);
+
   let atual = 'visao', aoVoltar = null;
 
   function tela() {
@@ -209,11 +399,12 @@ window.SS = window.SS || {};
   }
 
   function desenhar() {
-    const tema = TEMAS.find(t => t.id === atual);
+    const lista = temas(), tr = SS.Idioma.t;
+    const tema = lista.find(t => t.id === atual);
     tela().innerHTML = `<div class="tela-caixa regras">
-      <div class="tela-cabecalho"><h1>Regras do jogo</h1><button class="btn principal" data-regra-cmd="voltar">Voltar ao menu</button></div>
+      <div class="tela-cabecalho"><h1>${tr('menu.regras')}</h1><button class="btn principal" data-regra-cmd="voltar">${tr('btn.voltarMenu')}</button></div>
       <div class="deck-layout">
-        <nav class="slots">${TEMAS.map(t => `<button class="slot${t.id === atual ? ' atual' : ''}" data-tema="${t.id}"><b>${t.titulo}</b></button>`).join('')}</nav>
+        <nav class="slots">${lista.map(t => `<button class="slot${t.id === atual ? ' atual' : ''}" data-tema="${t.id}"><b>${t.titulo}</b></button>`).join('')}</nav>
         <section class="editor texto-regras"><h2>${tema.titulo}</h2>${tema.html()}</section>
       </div></div>`;
   }

@@ -7,36 +7,18 @@ window.SS = window.SS || {};
   const $ = s => document.querySelector(s);
   const esperar = ms => new Promise(r => setTimeout(r, ms));
   const SIMB = M.SIMBOLO;
-  const NOME_NIVEL = { facil: 'Fácil', medio: 'Médio', dificil: 'Difícil' };
-  const NOME_NAIPE = { copas: 'Copas', ouros: 'Ouros', paus: 'Paus', espadas: 'Espadas' };
-  const PODER_FIGURA = {
-    J: 'Valete — Ímpeto: ataca no mesmo turno em que entra. Só equipa números de 2 a 5.',
-    Q: 'Rainha — Atropelar: se matar quem bloqueou, o dano que sobra (dano − ataque do bloqueador) vai para o PV do oponente. Para entrar: 1 ação e o sacrifício de 2 Senhores seus que já estavam em campo antes deste turno.',
-    K: 'Rei — Ordem real: ao atacar, pode escolher como alvo um Senhor(a) inimigo. Esse ataque não pode ser bloqueado por outro: o alvo se defende sozinho. Só equipa números de 2 a 7.',
-  };
-  const PODER_NAIPADO = {
-    paus: 'Aguenta 3 hits (4 se estiver ao lado de um Ás de Paus).',
-    espadas: '+1 de ataque fixo.',
-    copas: 'Ferida: depois que ele(a) causa dano no PV do oponente, o oponente não pode curar acima do PV que ficou, enquanto ele(a) viver.',
-    ouros: 'Ataca 2 vezes por turno.',
-  };
-  const PODER_AS = {
-    paus: 'Senhores vizinhos ganham +1 de resistência (passam a aguentar 3 hits).',
-    espadas: 'Senhores vizinhos ganham +1 de ataque fixo.',
-    ouros: 'Vale 1 carta de Ouros extra por turno (comprar, reviver ou dado extra).',
-    copas: 'Vampiro: quando um Senhor(a) vizinho causa dano ao PV do oponente, você cura 1 PV.',
-  };
-  const EFEITO_NUMERO = {
-    copas: c => `Usada sozinha (1 ação): cura ${M.curaDe(c)} PV (pode passar de ${M.PV_INICIAL}).`,
-    espadas: c => `Usada sozinha (1 ação): +1 de ataque a um Senhor(a) seu neste turno. Se o dado do ataque der 6, o bônus vira +${Math.floor(M.valor(c) / 2)} (crítico).`,
-    paus: () => 'Usada sozinha (1 ação): um Senhor(a) ferido(a) entra em berserk e volta à vertical até o fim do próximo turno do oponente. Se levar 1 hit nesse período, morre quando o efeito acabar.',
-    ouros: () => 'Usada sozinha (1 ação): descarte 1 Ouros para comprar 1 carta (do baralho que escolher), ou 2 Ouros para recuperar 1 carta do cemitério. No ataque, cada Ouros dá +1 dado (vale o maior).',
-  };
-  const NOME_POSTURA = {
-    vertical: 'saudável (vertical)',
-    diagonal: 'ferido(a), mas ainda aguenta mais de 1 hit (diagonal)',
-    horizontal: 'ferido(a): o próximo hit mata (horizontal)',
-  };
+  const t = (k, p) => SS.t(k, p);
+  // Tabelas de textos ligadas ao idioma atual: TABELA[x] devolve t(prefixo + x).
+  const tabela = prefixo => new Proxy({}, { get: (_, k) => t(prefixo + String(k)) });
+  const NOME_NIVEL = tabela('nivel.');
+  const NOME_NAIPE = tabela('naipe.');
+  const PODER_FIGURA = tabela('fig.');
+  const PODER_NAIPADO = tabela('naipado.');
+  const PODER_AS = tabela('as.');
+  const NOME_POSTURA = tabela('postura.');
+  const EFEITO_NUMERO = new Proxy({}, {
+    get: (_, naipe) => c => t('efeito.' + String(naipe), { cura: M.curaDe(c), pv: M.PV_INICIAL, crit: Math.floor(M.valor(c) / 2) }),
+  });
   const ANGULO = { vertical: 0, diagonal: 45, horizontal: 90 };
   // Parâmetros que o jogador escolhe clicando na mesa, em ordem, para cada tipo de ação.
   // "sacrificios" é um passo de 2 cliques (a Rainha sacrifica 2 Senhores).
@@ -136,13 +118,13 @@ window.SS = window.SS || {};
   function rotuloTipo(tipo, a) {
     const j = jogo.jogadores[jogo.vez];
     switch (tipo) {
-      case 'sumonar': return a.sacrificio != null ? `♛ Sumonar Rainha (${M.SACRIFICIOS_RAINHA} sacrifícios)` : '⚔ Sumonar';
-      case 'invocarAs': return '✦ Invocar Ás';
-      case 'curar': return `♥ Curar ${M.curaDe(j.mao.find(c => c.id === a.carta))} PV`;
-      case 'espadas': return '♠ +1 de ataque';
-      case 'paus': return '♣ Berserk';
-      case 'comprar': return `♦ Comprar ${a.baralho === 'letras' ? 'uma Letra' : 'um Número'}`;
-      case 'reviver': return '♦♦ Reviver do cemitério';
+      case 'sumonar': return a.sacrificio != null ? t('acao.rainha', { n: M.SACRIFICIOS_RAINHA }) : t('acao.sumonar');
+      case 'invocarAs': return t('acao.as');
+      case 'curar': return t('acao.curar', { n: M.curaDe(j.mao.find(c => c.id === a.carta)) });
+      case 'espadas': return t('acao.espadas');
+      case 'paus': return t('acao.paus');
+      case 'comprar': return t(a.baralho === 'letras' ? 'acao.comprarLetra' : 'acao.comprarNumero');
+      case 'reviver': return t('acao.reviver');
     }
     return tipo;
   }
@@ -151,33 +133,29 @@ window.SS = window.SS || {};
     const j = jogo.jogadores[jogo.vez];
     const cartas = ui.sel.filter(id => !id.startsWith('TOKEN')).map(id => j.mao.find(c => c.id === id)).filter(Boolean);
     const fig = cartas.find(M.ehFigura), num = cartas.find(M.ehNumero), as = cartas.find(M.ehAs);
-    if (jogo.acoes <= 0) return 'Suas ações deste turno acabaram.';
-    if (fig && num && M.valor(num) > M.LIMITE_FIGURA[fig.rank]) return `${M.nomeCarta(fig)} só pode ser equipado(a) com cartas de 2 a ${M.LIMITE_FIGURA[fig.rank]}.`;
-    if (fig && num && fig.rank === 'Q') return `A Rainha precisa sacrificar ${M.SACRIFICIOS_RAINHA} Senhores seus que já estavam em campo antes deste turno.`;
-    if (cartas.length === 1 && fig && fig.rank === 'Q' && !candidatosParceiros().size) return `A Rainha precisa de ${M.SACRIFICIOS_RAINHA} Senhores seus em campo desde o turno anterior para sacrificar.`;
-    if (fig && num && !j.campo.includes(null)) return 'Sua fileira está cheia.';
-    if (as && num && as.naipe !== num.naipe) return 'Para invocar o Ás, sacrifique uma carta numérica do mesmo naipe.';
-    if (cartas.length === 1 && fig) return 'Selecione também uma carta numérica (2 a 10) para sumonar.';
-    if (cartas.length === 1 && as) return 'Selecione também uma carta numérica do mesmo naipe para invocar o Ás.';
-    return 'Nenhuma ação com essa seleção.';
+    if (jogo.acoes <= 0) return t('dica.semAcoes');
+    if (fig && num && M.valor(num) > M.LIMITE_FIGURA[fig.rank]) return t('dica.limiteFigura', { c: M.nomeCarta(fig), n: M.LIMITE_FIGURA[fig.rank] });
+    if (fig && num && fig.rank === 'Q') return t('dica.rainhaSacrificio', { n: M.SACRIFICIOS_RAINHA });
+    if (cartas.length === 1 && fig && fig.rank === 'Q' && !candidatosParceiros().size) return t('dica.rainhaSemSenhores', { n: M.SACRIFICIOS_RAINHA });
+    if (fig && num && !j.campo.includes(null)) return t('dica.fileiraCheia');
+    if (as && num && as.naipe !== num.naipe) return t('dica.asMesmoNaipe');
+    if (cartas.length === 1 && fig) return t('dica.selecioneNumero');
+    if (cartas.length === 1 && as) return t('dica.selecioneNumeroAs');
+    return t('dica.nenhumaAcao');
   }
 
   function textoPasso() {
     const passo = passoAtual(), tipo = ui.pend.tipo;
-    if (passo === 'slot') {
-      return tipo === 'invocarAs'
-        ? 'Clique num espaço livre, ou numa carta para colocar o Ás no lugar dela (as cartas são empurradas para o lado).'
-        : 'Clique num espaço livre da sua fileira.';
-    }
+    if (passo === 'slot') return t(tipo === 'invocarAs' ? 'passo.slotAs' : 'passo.slot');
     if (passo === 'sacrificios') {
       const n = (ui.pend.esc.sacrificios || []).length;
-      return `Clique nos ${M.SACRIFICIOS_RAINHA} Senhores que serão sacrificados para a Rainha (${n}/${M.SACRIFICIOS_RAINHA}).`;
+      return t('passo.sacrificios', { total: M.SACRIFICIOS_RAINHA, n });
     }
     if (passo === 'alvo') {
-      if (tipo === 'espadas') return 'Clique no Senhor(a) que recebe +1 de ataque neste turno.';
-      if (tipo === 'paus') return 'Clique no Senhor(a) ferido(a) que entra em berserk.';
+      if (tipo === 'espadas') return t('passo.espadas');
+      if (tipo === 'paus') return t('passo.paus');
       const poder = palhacoDe(jogo.vez).poder;
-      return `${poder.nome} — ${poder.texto} Clique no alvo.`;
+      return t('passo.poder', { nome: poder.nome, texto: poder.texto });
     }
     return '';
   }
@@ -579,53 +557,46 @@ window.SS = window.SS || {};
     const nome = M.nomeCarta(c);
     if (M.ehFigura(c)) {
       return {
-        titulo: nome, sub: 'Figura',
-        linhas: ['Junte com 1 carta numérica para sumonar um Senhor(a). O número define o ataque.', PODER_FIGURA[c.rank],
-          `Com um número de ${NOME_NAIPE[c.naipe]}, vira Naipado(a) de ${NOME_NAIPE[c.naipe]}: ${PODER_NAIPADO[c.naipe]}`],
+        titulo: nome, sub: t('dc.figura'),
+        linhas: [t('dc.figuraComo'), PODER_FIGURA[c.rank], t('dc.figuraNaipado', { n: NOME_NAIPE[c.naipe], poder: PODER_NAIPADO[c.naipe] })],
       };
     }
     if (M.ehAs(c)) {
-      return {
-        titulo: nome, sub: 'Totem de suporte',
-        linhas: [PODER_AS[c.naipe], `Para invocar (1 ação): sacrifique 1 carta numérica de ${NOME_NAIPE[c.naipe]}.`, 'Ocupa um espaço da fileira, não ataca, não bloqueia e morre com 1 golpe.'],
-      };
+      return { titulo: nome, sub: t('dc.totem'), linhas: [PODER_AS[c.naipe], t('dc.asInvocar', { n: NOME_NAIPE[c.naipe] }), t('dc.asOcupa')] };
     }
-    return { titulo: nome, sub: `Carta numérica de ${NOME_NAIPE[c.naipe]}`, linhas: [`Equipada numa figura: ataque ${M.valor(c)}.`, EFEITO_NUMERO[c.naipe](c)] };
+    return { titulo: nome, sub: t('dc.numero', { n: NOME_NAIPE[c.naipe] }), linhas: [t('dc.numeroAtaque', { v: M.valor(c) }), EFEITO_NUMERO[c.naipe](c)] };
   }
 
   function dicaUnidade(p, i, u) {
     if (u.tipo === 'as') {
-      return {
-        titulo: M.nomeCarta(u.carta), sub: 'Totem de suporte',
-        linhas: [PODER_AS[u.naipe], 'Não ataca, não bloqueia e morre com 1 golpe.', 'Pode ser alvo de ataques; um Senhor(a) do dono pode bloquear para protegê-lo.'],
-      };
+      return { titulo: M.nomeCarta(u.carta), sub: t('dc.totem'), linhas: [PODER_AS[u.naipe], t('dc.asNaoAtaca'), t('dc.asAlvo')] };
     }
     const nai = M.naipado(u), atk = M.ataque(jogo, p, i), res = M.resistencia(jogo, p, i), post = M.postura(jogo, p, i);
     const vizinhos = [i - 1, i + 1].map(k => jogo.jogadores[p].campo[k]).filter(w => w && w.tipo === 'as').map(w => w.naipe);
-    const partes = [`número ${M.valor(u.numero)}`];
-    if (nai === 'espadas') partes.push('+1 Naipado de Espadas');
-    if (vizinhos.includes('espadas')) partes.push('+1 Ás de Espadas vizinho');
-    if (u.bonus.length) partes.push(`+${u.bonus.length} Espadas neste turno (no 6: +${u.bonus.reduce((s, v) => s + Math.floor(v / 2), 0)})`);
+    const partes = [t('du.numero', { v: M.valor(u.numero) })];
+    if (nai === 'espadas') partes.push(t('du.naipadoEspadas'));
+    if (vizinhos.includes('espadas')) partes.push(t('du.asEspadas'));
+    if (u.bonus.length) partes.push(t('du.bonusEspadas', { n: u.bonus.length, crit: u.bonus.reduce((s, v) => s + Math.floor(v / 2), 0) }));
     const fontesRes = [];
-    if (nai === 'paus') fontesRes.push('Naipado de Paus');
-    if (vizinhos.includes('paus')) fontesRes.push('Ás de Paus vizinho');
+    if (nai === 'paus') fontesRes.push(t('du.naipadoPaus'));
+    if (vizinhos.includes('paus')) fontesRes.push(t('du.asPaus'));
     const linhas = [
-      `<b>Ataque ${atk}</b>: ${partes.join(' · ')}.`,
+      t('du.ataque', { a: atk, partes: partes.join(' · ') }),
       u.berserk
-        ? `<b>Berserk</b>: está na vertical até o fim do turno do oponente. ${u.berserk.hits ? 'Já levou 1 hit: morre quando o efeito acabar.' : 'Se levar 1 hit nesse período, morre quando o efeito acabar.'}`
-        : `<b>Vida</b>: ${res - u.hits} de ${res} hits${fontesRes.length ? ` (${fontesRes.join(' + ')})` : ''}. Estado: ${NOME_POSTURA[post]}.`,
+        ? t('du.berserk', { levou: u.berserk.hits > 0 })
+        : t('du.vida', { v: res - u.hits, r: res, fontes: fontesRes.length ? ` (${fontesRes.join(' + ')})` : '', estado: NOME_POSTURA[post] }),
       PODER_FIGURA[u.figura.rank],
     ];
-    if (nai) linhas.push(`<b>Naipado de ${NOME_NAIPE[nai]}</b>: ${PODER_NAIPADO[nai]}`);
-    if (vizinhos.includes('copas')) linhas.push('Ás de Copas vizinho: se causar dano ao PV do oponente, o dono cura 1 PV.');
-    if (u.vigilia) linhas.push('<b>Vigília</b> (Paumol): não vira para baixo no fim deste turno.');
-    if (jogo.desafio === u.uid) linhas.push('<b>Desafiado</b> (Lançalotte): terá de bloquear o primeiro ataque.');
-    if (u.atacou && !u.vigilia) linhas.push('Já atacou neste turno: vira para baixo no fim do turno.');
-    if (!u.ativo) linhas.push('<b>Desativado</b> (virado): atacou e não pode bloquear até o próximo turno do dono.');
-    else if (jogo.vez === p && M.podeAtacar(jogo, p, i)) linhas.push(`Pronto para atacar${u.ataques > 1 ? ` (${u.ataques} vezes)` : ''}.`);
-    else if (jogo.vez === p && u.entrou === jogo.turno && u.figura.rank !== 'J') linhas.push('Entrou neste turno: só ataca no próximo.');
-    linhas.push('<span class="dica-regra">Ao bloquear: dano menor que metade do ataque dele é ignorado; dano maior que o ataque dele mata na hora.</span>');
-    return { titulo: M.nomeUnidade(u), sub: nai ? `Senhor(a) Naipado(a) de ${NOME_NAIPE[nai]}` : 'Senhor(a)', linhas };
+    if (nai) linhas.push(t('du.naipado', { n: NOME_NAIPE[nai], poder: PODER_NAIPADO[nai] }));
+    if (vizinhos.includes('copas')) linhas.push(t('du.asCopas'));
+    if (u.vigilia) linhas.push(t('du.vigilia'));
+    if (jogo.desafio === u.uid) linhas.push(t('du.desafiado'));
+    if (u.atacou && !u.vigilia) linhas.push(t('du.atacou'));
+    if (!u.ativo) linhas.push(t('du.desativado'));
+    else if (jogo.vez === p && M.podeAtacar(jogo, p, i)) linhas.push(t('du.pronto', { n: u.ataques }));
+    else if (jogo.vez === p && u.entrou === jogo.turno && u.figura.rank !== 'J') linhas.push(t('du.entrou'));
+    linhas.push(`<span class="dica-regra">${t('du.regraBloqueio')}</span>`);
+    return { titulo: M.nomeUnidade(u), sub: nai ? t('du.subNaipado', { n: NOME_NAIPE[nai] }) : t('du.sub'), linhas };
   }
 
   function dicaPara(el) {
@@ -643,31 +614,31 @@ window.SS = window.SS || {};
     }
     const loc = unidadeEm(el);
     if (loc) return dicaUnidade(loc.p, loc.i, loc.u);
-    if (el.closest('[data-token]')) return { titulo: 'Ouros extra', sub: 'Ás de Ouros', linhas: ['Vale 1 carta de Ouros neste turno: selecione junto com outras cartas para comprar, reviver ou dar +1 dado num ataque.'] };
+    if (el.closest('[data-token]')) return { titulo: t('dp.tokenTitulo'), sub: t('dp.tokenSub'), linhas: [t('dp.token')] };
     const btnPoder = el.closest('[data-poder]');
     if (btnPoder) {
       const pal = palhacoDe(Number(btnPoder.dataset.poder));
-      if (!pal.poder) return { titulo: pal.passiva.nome, sub: `Passiva de ${pal.nome}`, linhas: [pal.passiva.texto, `<b>${pal.custo.nome}:</b> ${pal.custo.texto}`, 'Este Palhaço não tem poder ativo.'] };
-      return { titulo: pal.poder.nome, sub: `Poder de ${pal.nome} · 1 ação · 1 vez por turno`, linhas: [pal.poder.texto] };
+      if (!pal.poder) return { titulo: pal.passiva.nome, sub: t('dp.passivaDe', { n: pal.nome }), linhas: [pal.passiva.texto, `<b>${pal.custo.nome}:</b> ${pal.custo.texto}`, t('dp.semPoder')] };
+      return { titulo: pal.poder.nome, sub: t('dp.poderDe', { n: pal.nome }), linhas: [pal.poder.texto] };
     }
     const ret = el.closest('[data-alvo]');
     if (ret) {
       const p = Number(ret.dataset.alvo.split(':')[1]), j = jogo.jogadores[p], teto = M.tetoCura(j), pal = palhacoDe(p);
-      const linhas = [`<b>Passiva — ${pal.passiva.nome}:</b> ${pal.passiva.texto}`];
-      if (pal.poder) linhas.push(`<b>Poder — ${pal.poder.nome}</b> (1 ação, 1 vez por turno): ${pal.poder.texto}`);
+      const linhas = [t('dp.passiva', { nome: pal.passiva.nome, texto: pal.passiva.texto })];
+      if (pal.poder) linhas.push(t('dp.poder', { nome: pal.poder.nome, texto: pal.poder.texto }));
       if (pal.custo) linhas.push(`<b>${pal.custo.nome}:</b> ${pal.custo.texto}`);
-      linhas.push(`<b>${j.pv} PV</b> · mão: ${j.mao.length} · Letras: ${j.letras.length} · Números: ${j.numeros.length} · cemitério: ${j.cemiterio.length}.`);
-      if (isFinite(teto)) linhas.push(`Ferida de Copas: só pode curar até ${teto} PV enquanto o Naipado de Copas inimigo viver.`);
-      return { titulo: `Palhaço ${pal.nome}`, sub: `${pal.titulo} · ${NOME_NAIPE[pal.naipe]}`, linhas };
+      linhas.push(t('dp.estado', { pv: j.pv, mao: j.mao.length, l: j.letras.length, n: j.numeros.length, c: j.cemiterio.length }));
+      if (isFinite(teto)) linhas.push(t('dp.ferida', { n: teto }));
+      return { titulo: t('dp.palhaco', { n: pal.nome }), sub: `${pal.titulo} · ${NOME_NAIPE[pal.naipe]}`, linhas };
     }
     const pilha = el.closest('[data-pilha]');
     if (pilha) {
       const [p, b] = pilha.dataset.pilha.split(':');
       const n = jogo.jogadores[Number(p)][b].length;
-      return { titulo: `Baralho de ${M.NOME_BARALHO[b]}`, linhas: [`${n} carta${n === 1 ? '' : 's'} restante${n === 1 ? '' : 's'}.`, b === 'letras' ? 'Só figuras: Valete, Rainha e Rei.' : 'Só números: Ás a 10.'] };
+      return { titulo: t('dp.baralho', { b: M.NOME_BARALHO[b] }), linhas: [t('dp.restantes', { n }), t(b === 'letras' ? 'dp.soFiguras' : 'dp.soNumeros')] };
     }
     const cem = el.closest('[data-cemiterio]');
-    if (cem) return { titulo: 'Cemitério', linhas: [`${jogo.jogadores[Number(cem.dataset.cemiterio)].cemiterio.length} cartas. Clique para ver todas.`] };
+    if (cem) return { titulo: t('ui.cemiterio'), linhas: [t('dp.cemiterio', { n: jogo.jogadores[Number(cem.dataset.cemiterio)].cemiterio.length })] };
     return null;
   }
 
@@ -792,7 +763,7 @@ window.SS = window.SS || {};
 
   function renderJogador(p, alvos) {
     const j = jogo.jogadores[p], cor = corDe(p), teto = M.tetoCura(j), pal = palhacoDe(p);
-    const quem = controle(p) === 'humano' ? 'você' : `bot · ${NOME_NIVEL[cfg.nivel]}`;
+    const quem = controle(p) === 'humano' ? t('ui.voce') : `bot · ${NOME_NIVEL[cfg.nivel]}`;
     const podeJogar = controle(p) === 'humano' && jogo.vez === p && jogo.fase === 'principal' && !ui.ocupado;
     let tokens = '';
     for (let k = 0; k < j.tokens; k++) {
@@ -805,17 +776,17 @@ window.SS = window.SS || {};
       const pode = podeJogar && !ui.pend && M.acoesLegais(jogo).some(a => a.tipo === 'poder');
       poder = `<button class="poder-btn cor-${cor}${pode ? ' pronto' : ''}${usado ? ' usado' : ''}${ui.pend && ui.pend.tipo === 'poder' && jogo.vez === p ? ' ativo' : ''}"
         data-poder="${p}"${pode ? ' data-acao="poder"' : ' disabled'}>
-        <span class="poder-icone">${SIMB[pal.naipe]}</span><b>${pal.poder.nome}</b><small>${usado ? 'usado' : '1 ação'}</small></button>`;
+        <span class="poder-icone">${SIMB[pal.naipe]}</span><b>${pal.poder.nome}</b><small>${t(usado ? 'ui.usado' : 'ui.umaAcao')}</small></button>`;
     } else {
-      poder = `<div class="poder-btn cor-${cor} passivo" data-poder="${p}"><span class="poder-icone">${SIMB[pal.naipe]}</span><b>${pal.passiva.nome}</b><small>passiva</small></div>`;
+      poder = `<div class="poder-btn cor-${cor} passivo" data-poder="${p}"><span class="poder-icone">${SIMB[pal.naipe]}</span><b>${pal.passiva.nome}</b><small>${t('ui.passiva')}</small></div>`;
     }
     $('#info-' + p).innerHTML = `
       <div class="heroi cor-${cor}${alvos.has('jogador:' + p) ? ' clicavel' : ''}${jogo.vez === p ? ' da-vez' : ''}" data-alvo="jogador:${p}">
         <div class="heroi-arte">${chapeu(cor)}<span class="heroi-naipe">${SIMB[pal.naipe]}</span></div>
         <div class="heroi-nome">${escapar(pal.nome)}</div>
         <div class="heroi-quem">${quem}</div>
-        <div class="heroi-pv" title="Pontos de vida"><span>${j.pv}</span></div>
-        ${isFinite(teto) ? `<div class="heroi-ferida" title="Ferida de Copas">cura até ${teto}</div>` : ''}
+        <div class="heroi-pv" title="${t('ui.pontosVida')}"><span>${j.pv}</span></div>
+        ${isFinite(teto) ? `<div class="heroi-ferida" title="${t('ui.feridaCopas')}">${t('ui.curaAte', { n: teto })}</div>` : ''}
       </div>
       <div class="lado-heroi">${poder}<div class="tokens">${tokens}</div></div>`;
     const visivel = p === 0 || cfg.modo === 'bots';
@@ -838,7 +809,7 @@ window.SS = window.SS || {};
         const pulsa = ui.aoComprar && jogo.vez === p && j[b].length ? ' pulsando' : '';
         return `<div class="pilha${pulsa}" data-pilha="${p}:${b}">${pulsa ? '<span class="seta-compra">▼</span>' : ''}<div class="carta${j[b].length ? ' dorso ' + cor : ' vazia'}"><span class="marca-pilha">${b === 'letras' ? 'J Q K' : 'A–10'}</span></div><span class="cont">${j[b].length}</span><label>${M.NOME_BARALHO[b]}</label></div>`;
       }).join('')}
-      <div class="pilha" data-cemiterio="${p}">${topo ? `<div class="carta">${C.frente(topo)}</div>` : '<div class="carta vazia"></div>'}<span class="cont">${j.cemiterio.length}</span><label>Cemitério</label></div>`;
+      <div class="pilha" data-cemiterio="${p}">${topo ? `<div class="carta">${C.frente(topo)}</div>` : '<div class="carta vazia"></div>'}<span class="cont">${j.cemiterio.length}</span><label>${t('ui.cemiterio')}</label></div>`;
   }
 
   function renderCampo(p, alvos) {
@@ -869,13 +840,13 @@ window.SS = window.SS || {};
   }
 
   function tagsUnidade(u) {
-    let t = '';
+    let h = '';
     for (const at of ataquesVisiveis()) {
-      if (at.atacante === u.uid) t += `<span class="tag tag-ataque">${at.n}º ataque</span>`;
+      if (at.atacante === u.uid) h += `<span class="tag tag-ataque">${t('tag.ataque', { n: at.n })}</span>`;
       const bl = jogo.fase === 'bloqueio' ? ui.bloqueios[at.n] || [] : at.bloqueadores;
-      if (bl.includes(u.uid)) t += `<span class="tag tag-bloq">bloqueia ${at.n}º</span>`;
+      if (bl.includes(u.uid)) h += `<span class="tag tag-bloq">${t('tag.bloqueia', { n: at.n })}</span>`;
     }
-    return t ? `<div class="tags">${t}</div>` : '';
+    return h ? `<div class="tags">${h}</div>` : '';
   }
 
   // Gira a carta com animação quando o estado (vertical/diagonal/horizontal) muda.
@@ -911,7 +882,7 @@ window.SS = window.SS || {};
     if (u.tipo === 'as') {
       return `<div class="unidade as${foco}">
         <div class="pilha-senhor"><div class="carta">${C.frente(u.carta)}</div></div>
-        <div class="selo-totem">Totem ${SIMB[u.naipe]}</div>${tagsUnidade(u)}</div>`;
+        <div class="selo-totem">${t('ui.totem')} ${SIMB[u.naipe]}</div>${tagsUnidade(u)}</div>`;
     }
     const atk = M.ataque(jogo, p, i), base = M.ataqueBase(jogo, p, i), res = M.resistencia(jogo, p, i), post = M.postura(jogo, p, i);
     const nai = M.naipado(u);
@@ -936,56 +907,56 @@ window.SS = window.SS || {};
   function nomeAlvo(at) {
     if (at.alvo === 'jogador') return escapar(jogo.jogadores[1 - jogo.vez].nome);
     const l = M.localizar(jogo, at.alvo);
-    return l ? M.nomeUnidade(l.u) : 'Ás';
+    return l ? M.nomeUnidade(l.u) : t('carta.A');
   }
 
   function chipAtaque(at, clicavel) {
     const loc = M.localizar(jogo, at.atacante);
-    const nome = loc ? M.nomeUnidade(loc.u) : '(fora de campo)';
+    const nome = loc ? M.nomeUnidade(loc.u) : t('chip.foraDeCampo');
     const atk = loc ? M.ataque(jogo, loc.p, loc.i) : '–';
     const bl = (jogo.fase === 'bloqueio' ? ui.bloqueios[at.n] || [] : at.bloqueadores)
       .map(uid => { const l = M.localizar(jogo, uid); return l ? M.nomeUnidade(l.u) : '✖'; });
-    const res = at.resultado ? ` · dado ${at.resultado.rolagens.join(',')} → ${at.resultado.dano} de dano` : '';
+    const res = at.resultado ? t('chip.resultado', { r: at.resultado.rolagens.join(','), d: at.resultado.dano }) : '';
     return `<button class="chip${clicavel ? ' clicavel' : ''}${ui.foco === at.n ? ' foco' : ''}" data-ataque="${at.n}">
-      <b>${at.n}º</b> ${nome} ⚔${atk} → ${nomeAlvo(at)}${M.ataqueDirecionado(jogo, at) ? ' · <i>direto, sem bloqueio</i>' : ''}${at.dados > 1 ? ` · ${at.dados} dados` : ''}${bl.length ? ` · ⛨ ${bl.join(' + ')}` : ''}${res}</button>`;
+      <b>${t('chip.ordem', { n: at.n })}</b> ${nome} ⚔${atk} → ${nomeAlvo(at)}${M.ataqueDirecionado(jogo, at) ? ` · <i>${t('chip.direto')}</i>` : ''}${at.dados > 1 ? ` · ${t('chip.dados', { n: at.dados })}` : ''}${bl.length ? ` · ⛨ ${bl.join(' + ')}` : ''}${res}</button>`;
   }
 
   function chipDeclaracao(a, k) {
     const loc = M.localizar(jogo, a.atacante);
     const temOuros = ourosLivres().length > 0;
     const n = ui.ataques.length;
-    return `<span class="chip ordem"><b>${k + 1}º</b>
-      ${k > 0 ? `<button class="mini" data-acao="mover:${k}:-1" title="Atacar antes">◀</button>` : ''}
+    return `<span class="chip ordem"><b>${t('chip.ordem', { n: k + 1 })}</b>
+      ${k > 0 ? `<button class="mini" data-acao="mover:${k}:-1" title="${t('chip.antes')}">◀</button>` : ''}
       ${M.nomeUnidade(loc.u)} ⚔${M.ataque(jogo, loc.p, loc.i)} → ${nomeAlvo(a)}
-      ${k < n - 1 ? `<button class="mini" data-acao="mover:${k}:1" title="Atacar depois">▶</button>` : ''}
-      ${a.ouros.length ? `<span class="dados-extra">${1 + a.ouros.length} dados <button class="mini" data-acao="menos-dado:${k}" title="Devolver o Ouros">−</button></span>` : ''}
-      ${temOuros ? `<button class="mini" data-acao="mais-dado:${k}" title="Gastar 1 Ouros: +1 dado (vale o maior)">+ dado</button>` : ''}
-      <button class="mini" data-acao="remover-ataque:${k}" title="Cancelar este ataque">✕</button></span>`;
+      ${k < n - 1 ? `<button class="mini" data-acao="mover:${k}:1" title="${t('chip.depois')}">▶</button>` : ''}
+      ${a.ouros.length ? `<span class="dados-extra">${t('chip.dados', { n: 1 + a.ouros.length })} <button class="mini" data-acao="menos-dado:${k}" title="${t('chip.devolverOuros')}">−</button></span>` : ''}
+      ${temOuros ? `<button class="mini" data-acao="mais-dado:${k}" title="${t('chip.gastarOuros')}">${t('chip.maisDado')}</button>` : ''}
+      <button class="mini" data-acao="remover-ataque:${k}" title="${t('chip.cancelar')}">✕</button></span>`;
   }
 
   function renderFaixa() {
     const p = jogo.vez, j = jogo.jogadores[p], d = 1 - p;
     const btn = (acao, rotulo, extra) => `<button class="btn ${extra || ''}" data-acao="${acao}">${rotulo}</button>`;
-    let fase = `Turno ${jogo.turno} · vez de ${escapar(j.nome)}`, texto = '', chips = '', botoes = '';
+    let fase = t('faixa.turno', { n: jogo.turno, j: escapar(j.nome) }), texto = '', chips = '', botoes = '';
     const humanoNaVez = controle(p) === 'humano' && !ui.ocupado;
 
     if (jogo.vencedor != null) {
-      fase = 'Fim de jogo';
-      texto = `${escapar(jogo.jogadores[jogo.vencedor].nome)} venceu!`;
+      fase = t('faixa.fim');
+      texto = t('faixa.venceu', { j: escapar(jogo.jogadores[jogo.vencedor].nome) });
     } else if (jogo.fase === 'abertura') {
-      fase = 'Abertura';
-      texto = 'Escolhendo as mãos iniciais…';
+      fase = t('faixa.abertura');
+      texto = t('faixa.escolhendoMaos');
     } else if (jogo.fase === 'compra') {
-      fase += ' · Compra';
+      fase += ` · ${t('faixa.compra')}`;
       if (humanoNaVez) {
         const figs = j.mao.filter(M.ehFigura).length, nums = j.mao.filter(M.ehNumero).length;
-        texto = `<b>Compre 1 carta:</b> clique num dos seus baralhos pulsando (embaixo, à direita). Letras traz figuras, Números traz Ás a 10. Na mão: ${figs} figura${figs === 1 ? '' : 's'} e ${nums} número${nums === 1 ? '' : 's'}.`;
-      } else texto = `${escapar(j.nome)} está escolhendo de qual baralho comprar…`;
+        texto = t('faixa.compreUma', { f: figs, n: nums });
+      } else texto = t('faixa.botComprando', { j: escapar(j.nome) });
     } else if (jogo.fase === 'principal') {
-      if (!humanoNaVez) texto = `${escapar(j.nome)} está jogando…`;
+      if (!humanoNaVez) texto = t('faixa.botJogando', { j: escapar(j.nome) });
       else if (ui.pend) {
         texto = textoPasso();
-        botoes = btn('cancelar', 'Cancelar');
+        botoes = btn('cancelar', t('btn.cancelar'));
       } else {
         if (ui.sel.length) {
           const cands = candidatosSelecao();
@@ -993,47 +964,38 @@ window.SS = window.SS || {};
           botoes = chaves.map(k => {
             const a = cands.find(x => chaveAcao(x) === k);
             return btn('tipo:' + k, rotuloTipo(a.tipo, a), 'acao');
-          }).join('') + btn('cancelar', 'Cancelar seleção');
-          texto = chaves.length ? 'Escolha o que fazer com a seleção.' : dicaSelecao();
-        } else {
-          texto = jogo.acoes > 0
-            ? 'Clique nas cartas da mão: 1 figura + 1 número para sumonar, ou 1 número para usar o efeito do naipe. Passe o mouse para ver o que cada carta faz.'
-            : 'Suas ações acabaram. Vá para o ataque.';
-        }
-        botoes += btn('ir-ataque', '⚔ Ir para o ataque', 'principal');
+          }).join('') + btn('cancelar', t('btn.cancelarSelecao'));
+          texto = chaves.length ? t('faixa.escolhaAcao') : dicaSelecao();
+        } else texto = t(jogo.acoes > 0 ? 'faixa.comoJogar' : 'faixa.semAcoes');
+        botoes += btn('ir-ataque', t('btn.irAtaque'), 'principal');
       }
     } else if (jogo.fase === 'ataque') {
-      fase += ' · Ataque';
+      fase += ` · ${t('faixa.ataque')}`;
       if (humanoNaVez) {
         const temAs = M.alvosPossiveis(jogo).length > 1;
         const temRei = atacantesRestantes().some(uid => M.localizar(jogo, uid).u.figura.rank === 'K');
-        const extra = [temAs ? 'para atacar um Ás, arraste até ele' : '', temRei ? 'o Rei pode ser arrastado até um Senhor(a) inimigo (esse ataque não pode ser bloqueado)' : '']
-          .filter(Boolean).join('; ');
-        if (!M.atacantesAptos(jogo).length) texto = jogo.turno === 1 ? 'Quem começa não ataca no primeiro turno.' : 'Nenhum Senhor(a) apto(a) a atacar.';
-        else texto = atacantesRestantes().length
-          ? `Clique nos Senhores brilhando para atacar o oponente (clique de novo para desfazer)${extra ? '. Dica: ' + extra : ''}. A ordem abaixo é a ordem dos ataques (◀ ▶ muda).`
-          : 'Ataques declarados. Ajuste a ordem e confirme.';
+        const extra = [temAs ? t('faixa.dicaAs') : '', temRei ? t('faixa.dicaRei') : ''].filter(Boolean).join('; ');
+        if (!M.atacantesAptos(jogo).length) texto = t(jogo.turno === 1 ? 'faixa.primeiroNaoAtaca' : 'faixa.ninguemApto');
+        else texto = atacantesRestantes().length ? t('faixa.comoAtacar', { extra }) : t('faixa.ataquesDeclarados');
         chips = ui.ataques.map(chipDeclaracao).join('');
-        if (ui.ataques.length) botoes += btn('confirmar-ataques', `Confirmar ${ui.ataques.length} ataque${ui.ataques.length > 1 ? 's' : ''}`, 'principal');
-        botoes += btn('sem-ataque', ui.ataques.length ? 'Encerrar sem atacar' : 'Encerrar turno');
-      } else texto = `${escapar(j.nome)} está declarando ataques…`;
+        if (ui.ataques.length) botoes += btn('confirmar-ataques', t('btn.confirmarAtaques', { n: ui.ataques.length }), 'principal');
+        botoes += btn('sem-ataque', t(ui.ataques.length ? 'btn.encerrarSemAtacar' : 'btn.encerrarTurno'));
+      } else texto = t('faixa.botDeclarando', { j: escapar(j.nome) });
     } else if (jogo.fase === 'bloqueio') {
-      fase += ' · Bloqueio';
+      fase += ` · ${t('faixa.bloqueio')}`;
       const humanoDefende = controle(d) === 'humano' && !ui.ocupado;
       chips = jogo.combate.ataques.map(at => chipAtaque(at, humanoDefende && ui.bloqSel != null && !M.ataqueDirecionado(jogo, at))).join('');
       if (humanoDefende) {
         const desafiado = jogo.desafio != null && M.localizar(jogo, jogo.desafio);
-        texto = (ui.bloqSel != null
-          ? 'Arraste a seta até o atacante que ele(a) vai bloquear e solte. Esc cancela.'
-          : 'Arraste de um Senhor(a) seu ativo até um atacante para bloquear. Ataque sem bloqueio vai direto no seu PV.')
-          + (desafiado ? ` <b>Desafio!</b> ${M.nomeUnidade(desafiado.u)} é obrigado(a) a bloquear o primeiro ataque.` : '');
-        botoes = btn('confirmar-bloqueios', 'Confirmar bloqueios', 'principal') + btn('limpar-bloqueios', 'Limpar');
-      } else texto = `${escapar(jogo.jogadores[d].nome)} está decidindo os bloqueios…`;
+        texto = t(ui.bloqSel != null ? 'faixa.solteBloqueio' : 'faixa.comoBloquear')
+          + (desafiado ? ' ' + t('faixa.desafio', { u: M.nomeUnidade(desafiado.u) }) : '');
+        botoes = btn('confirmar-bloqueios', t('btn.confirmarBloqueios'), 'principal') + btn('limpar-bloqueios', t('btn.limpar'));
+      } else texto = t('faixa.botBloqueando', { j: escapar(jogo.jogadores[d].nome) });
     } else if (jogo.fase === 'resolucao' || jogo.fase === 'fimCombate') {
-      fase += ' · Combate';
+      fase += ` · ${t('faixa.combate')}`;
       if (jogo.combate) chips = jogo.combate.ataques.map(at => chipAtaque(at, false)).join('');
     } else if (jogo.fase === 'descarte') {
-      texto = `Limite de ${M.limiteMao(j)} cartas na mão: descarte o excesso.`;
+      texto = t('faixa.descarte', { n: M.limiteMao(j) });
     }
     renderAcoes();
     $('#fase').innerHTML = fase;
@@ -1053,8 +1015,8 @@ window.SS = window.SS || {};
     const restantes = jogo.acoes;
     const pips = Array.from({ length: total }, (_, k) => `<i class="${k < restantes ? 'cheio' : ''}"></i>`).join('');
     caixa.className = 'cor-' + corDe(jogo.vez);
-    caixa.innerHTML = `<div class="acoes-rotulo">Ações passivas</div><div class="acoes-num"><b>${restantes}</b>/${total}</div><div class="acoes-pips">${pips}</div>
-      <div class="acoes-vez">vez de ${escapar(jogo.jogadores[jogo.vez].nome)}</div>`;
+    caixa.innerHTML = `<div class="acoes-rotulo">${t('ui.acoesPassivas')}</div><div class="acoes-num"><b>${restantes}</b>/${total}</div><div class="acoes-pips">${pips}</div>
+      <div class="acoes-vez">${t('ui.vezDe', { j: escapar(jogo.jogadores[jogo.vez].nome) })}</div>`;
     caixa.hidden = false;
   }
 
@@ -1103,14 +1065,14 @@ window.SS = window.SS || {};
     return l.u.hits > f.hits || bh > f.bhits ? 'hit' : 'ileso';
   }
 
-  const SELO_EFEITO = { morreu: '✖ morreu', hit: '+1 hit', ileso: 'sem dano' };
+  const SELO_EFEITO = tabela('selo.');
 
   function cartaFotoHTML(f, efeito, papel) {
     const u = f.u;
     const vivo = efeito && efeito !== 'morreu' ? M.localizar(jogo, f.uid) : null;
     const postura = vivo ? M.postura(jogo, vivo.p, vivo.i) : f.postura;
     const mostrarSelo = efeito && !(efeito === 'ileso' && papel === 'atacante');
-    const selo = mostrarSelo ? `<div class="efeito efeito-${efeito}">${SELO_EFEITO[efeito]}${efeito === 'hit' && papel === 'atacante' ? ' (contra-ataque)' : ''}</div>` : '';
+    const selo = mostrarSelo ? `<div class="efeito efeito-${efeito}">${SELO_EFEITO[efeito]}${efeito === 'hit' && papel === 'atacante' ? ' ' + t('selo.contra') : ''}</div>` : '';
     const morta = efeito === 'morreu' ? ' morta' : '';
     if (u.tipo === 'as') {
       return `<div class="anuncio-carta${morta}">${selo}<div class="pilha-grande as"><div class="carta">${C.frente(u.carta)}</div></div><span>${M.nomeCarta(u.carta)}</span></div>`;
@@ -1136,12 +1098,12 @@ window.SS = window.SS || {};
     const pvDepois = depois ? jogo.jogadores[s.defensor].pv : s.pvAntes;
     let defesa;
     if (s.bloqueadores.length) {
-      defesa = `<div class="anuncio-grupo"><div class="anuncio-rotulo bloq">⛨ bloqueado por</div><div class="anuncio-linha">${s.bloqueadores.map(f => cartaFotoHTML(f, ef(f), 'bloqueador')).join('')}</div></div>`;
-      if (pvDepois < s.pvAntes) defesa += `<div class="duelo-seta pequena">➜</div>${jogadorFotoHTML(s.defensor, s.pvAntes, pvDepois, 'Atropelar!')}`;
+      defesa = `<div class="anuncio-grupo"><div class="anuncio-rotulo bloq">⛨ ${t('duelo.bloqueadoPor')}</div><div class="anuncio-linha">${s.bloqueadores.map(f => cartaFotoHTML(f, ef(f), 'bloqueador')).join('')}</div></div>`;
+      if (pvDepois < s.pvAntes) defesa += `<div class="duelo-seta pequena">➜</div>${jogadorFotoHTML(s.defensor, s.pvAntes, pvDepois, t('duelo.atropelar'))}`;
     } else if (s.alvoAs) {
-      defesa = `<div class="anuncio-grupo"><div class="anuncio-rotulo">◎ alvo</div>${cartaFotoHTML(s.alvoAs, ef(s.alvoAs), 'alvo')}</div>`;
-    } else defesa = jogadorFotoHTML(s.defensor, s.pvAntes, pvDepois, 'Ataque direto');
-    return `<div class="anuncio-topo">${s.n}º ataque de ${total}${s.dados > 1 ? ` · ${s.dados} dados (vale o maior)` : ''}${s.bonusAtaque ? ` · Golpe certeiro: +${s.bonusAtaque} de ataque` : ''}</div>
+      defesa = `<div class="anuncio-grupo"><div class="anuncio-rotulo">◎ ${t('duelo.alvo')}</div>${cartaFotoHTML(s.alvoAs, ef(s.alvoAs), 'alvo')}</div>`;
+    } else defesa = jogadorFotoHTML(s.defensor, s.pvAntes, pvDepois, t('duelo.direto'));
+    return `<div class="anuncio-topo">${t('duelo.topo', { n: s.n, total })}${s.dados > 1 ? ` · ${t('duelo.dados', { n: s.dados })}` : ''}${s.bonusAtaque ? ` · ${t('duelo.golpe', { n: s.bonusAtaque })}` : ''}</div>
       <div class="duelo">${atacante}<div class="duelo-seta">⚔</div>${defesa}</div>`;
   }
 
@@ -1162,7 +1124,7 @@ window.SS = window.SS || {};
     requestAnimationFrame(passo);
   }
 
-  const botaoContinuar = () => '<div class="anuncio-acoes"><button class="btn principal" data-continuar>Continuar ▸</button><span>ou Enter</span></div>';
+  const botaoContinuar = () => `<div class="anuncio-acoes"><button class="btn principal" data-continuar>${t('btn.continuar')}</button><span>${t('ui.ouEnter')}</span></div>`;
 
   // Espera o jogador clicar em Continuar. Assistindo bot × bot, segue sozinho.
   function esperarContinuar(msAuto) {
@@ -1196,22 +1158,22 @@ window.SS = window.SS || {};
       const pal = palhacoDe(p);
       return `<div class="inicio-lado${p === primeiro ? ' comeca' : ''}">
         <div class="heroi mini cor-${pal.cor}"><div class="heroi-arte">${chapeu(pal.cor)}<span class="heroi-naipe">${SIMB[pal.naipe]}</span></div><div class="heroi-nome">${pal.nome}</div></div>
-        <span>${controle(p) === 'humano' ? 'você' : 'oponente'}</span>
+        <span>${t(controle(p) === 'humano' ? 'ui.voce' : 'ui.oponente')}</span>
         ${dados ? `<b class="dado-inicio">🎲 ${dados[p]}</b>` : ''}
-        ${p === primeiro ? '<em>começa</em>' : ''}</div>`;
+        ${p === primeiro ? `<em>${t('inicio.comeca')}</em>` : ''}</div>`;
     };
     const motivo = dados
-      ? 'Os dois Palhaços são da mesma cor: cada um rolou um dado e começa quem tirou mais.'
-      : 'Palhaço preto (♠ ♣) começa contra Palhaço vermelho (♥ ♦).';
-    return `<div class="anuncio-topo">Quem começa?</div><div class="duelo">${lado(0)}<div class="duelo-seta">×</div>${lado(1)}</div><p class="nota">${motivo}</p>`;
+      ? t('inicio.mesmaCor')
+      : t('inicio.preto');
+    return `<div class="anuncio-topo">${t('inicio.quem')}</div><div class="duelo">${lado(0)}<div class="duelo-seta">×</div>${lado(1)}</div><p class="nota">${motivo}</p>`;
   }
 
   function anuncioDeclaracao(ataques, nome) {
     const itens = ataques.map(at => {
       const l = M.localizar(jogo, at.atacante);
-      return `<div class="fila-item"><div class="fila-num">${at.n}º</div>${cartaUnidadeHTML(l.u, l.p, l.i)}<div class="fila-alvo">→ ${nomeAlvo(at)}</div></div>`;
+      return `<div class="fila-item"><div class="fila-num">${t('chip.ordem', { n: at.n })}</div>${cartaUnidadeHTML(l.u, l.p, l.i)}<div class="fila-alvo">→ ${nomeAlvo(at)}</div></div>`;
     }).join('');
-    return `<div class="anuncio-topo">${escapar(nome)} vai atacar ${ataques.length > 1 ? `com ${ataques.length} ataques, nesta ordem` : ''}</div><div class="fila">${itens}</div>${botaoContinuar()}`;
+    return `<div class="anuncio-topo">${t('anuncio.vaiAtacar', { j: escapar(nome), n: ataques.length })}</div><div class="fila">${itens}</div>${botaoContinuar()}`;
   }
 
   // ---------- Janelas ----------
@@ -1242,10 +1204,10 @@ window.SS = window.SS || {};
   function aberturaHumana() {
     return new Promise(resolver => {
       const figs = M.figurasNoBaralho(jogo, 0), qtd = Math.min(3, figs.length), esc = [];
-      const tela1 = () => modal(`<h2>Escolha ${qtd} figuras para a sua mão inicial</h2>
-          <p class="nota">Passe o mouse em cima de uma carta para ver o que ela faz. Depois você compra 4 cartas do baralho de Números.</p>
+      const tela1 = () => modal(`<h2>${t('ab.escolha', { n: qtd })}</h2>
+          <p class="nota">${t('ab.nota')}</p>
           ${gradeCartas(figs, esc, true)}
-          <div class="acoes-menu"><button class="btn principal" data-m="ok"${esc.length === qtd ? '' : ' disabled'}>Confirmar (${esc.length}/${qtd})</button></div>`,
+          <div class="acoes-menu"><button class="btn principal" data-m="ok"${esc.length === qtd ? '' : ' disabled'}>${t('btn.confirmar')} (${esc.length}/${qtd})</button></div>`,
         ev => {
           const id = cartaClicada(ev);
           if (id) {
@@ -1260,10 +1222,10 @@ window.SS = window.SS || {};
             tela2();
           }
         });
-      const tela2 = () => modal(`<h2>Sua mão inicial</h2>
+      const tela2 = () => modal(`<h2>${t('ab.suaMao')}</h2>
           ${gradeCartas(jogo.jogadores[0].mao, null, false)}
-          <p class="nota">Mulligan (uma vez): devolve as 4 cartas compradas, embaralha e compra 3. As figuras escolhidas ficam.</p>
-          <div class="acoes-menu"><button class="btn principal" data-m="manter">Manter mão</button><button class="btn" data-m="mulligan">Mulligan</button></div>`,
+          <p class="nota">${t('ab.mulliganNota')}</p>
+          <div class="acoes-menu"><button class="btn principal" data-m="manter">${t('ab.manter')}</button><button class="btn" data-m="mulligan">Mulligan</button></div>`,
         ev => {
           const b = ev.target.closest('[data-m]');
           if (!b) return;
@@ -1279,9 +1241,9 @@ window.SS = window.SS || {};
   function escolherDescarte() {
     return new Promise(resolver => {
       const j = jogo.jogadores[jogo.vez], n = j.mao.length - M.limiteMao(j), esc = [];
-      const tela = () => modal(`<h2>Limite de mão: descarte ${n} carta${n > 1 ? 's' : ''}</h2>
+      const tela = () => modal(`<h2>${t('desc.titulo', { n })}</h2>
           ${gradeCartas(j.mao, esc, true)}
-          <div class="acoes-menu"><button class="btn principal" data-m="ok"${esc.length === n ? '' : ' disabled'}>Descartar (${esc.length}/${n})</button></div>`,
+          <div class="acoes-menu"><button class="btn principal" data-m="ok"${esc.length === n ? '' : ' disabled'}>${t('desc.btn')} (${esc.length}/${n})</button></div>`,
         ev => {
           const id = cartaClicada(ev);
           if (id) {
@@ -1302,9 +1264,9 @@ window.SS = window.SS || {};
   function escolherDoCemiterio() {
     const j = jogo.jogadores[jogo.vez];
     const ids = new Set(candidatosPendentes().map(a => a.escolha));
-    modal(`<h2>Reviver: escolha uma carta do cemitério</h2>
+    modal(`<h2>${t('cem.reviver')}</h2>
       ${gradeCartas(j.cemiterio.filter(c => ids.has(c.id)), null, true)}
-      <div class="acoes-menu"><button class="btn" data-m="cancelar">Cancelar</button></div>`,
+      <div class="acoes-menu"><button class="btn" data-m="cancelar">${t('btn.cancelar')}</button></div>`,
     ev => {
       const id = cartaClicada(ev);
       if (id) {
@@ -1321,9 +1283,9 @@ window.SS = window.SS || {};
 
   function verCemiterio(p) {
     const j = jogo.jogadores[p];
-    modal(`<h2>Cemitério de ${escapar(j.nome)}</h2>
-      ${j.cemiterio.length ? gradeCartas(j.cemiterio.slice().reverse(), null, false) : '<p class="nota">Vazio.</p>'}
-      <div class="acoes-menu"><button class="btn" data-m="fechar">Fechar</button></div>`,
+    modal(`<h2>${t('cem.de', { j: escapar(j.nome) })}</h2>
+      ${j.cemiterio.length ? gradeCartas(j.cemiterio.slice().reverse(), null, false) : `<p class="nota">${t('cem.vazio')}</p>`}
+      <div class="acoes-menu"><button class="btn" data-m="fechar">${t('btn.fechar')}</button></div>`,
     ev => { if (ev.target.closest('[data-m="fechar"]')) fecharModal(); });
   }
 
@@ -1365,8 +1327,8 @@ window.SS = window.SS || {};
     ui = novoUi();
     M.registrar(jogo, `${nomes[0]} × ${nomes[1]}.`);
     M.registrar(jogo, dadosInicio
-      ? `Os dois Palhaços são da mesma cor: ${nomes[0]} rolou ${dadosInicio[0]} e ${nomes[1]} rolou ${dadosInicio[1]}. ${nomes[primeiro]} começa.`
-      : `${nomes[primeiro]} tem Palhaço preto e começa.`);
+      ? t('log.inicioDados', { a: nomes[0], da: dadosInicio[0], b: nomes[1], db: dadosInicio[1], j: nomes[primeiro] })
+      : t('log.inicioPreto', { j: nomes[primeiro] }));
     render();
     mostrarAnuncio(anuncioInicio(primeiro, dadosInicio) + botaoContinuar());
     await esperarContinuar(2600);
@@ -1446,10 +1408,10 @@ window.SS = window.SS || {};
         if (id !== partida) return;
         M.definirBloqueios(jogo, Bot.bloquear(jogo, d, cfg.nivel));
       } else if (!M.bloqueadoresAptos(jogo).length) {
-        M.registrar(jogo, `${jogo.jogadores[d].nome} não tem Senhores ativos para bloquear.`);
+        M.registrar(jogo, t('log.semBloqueadores', { j: jogo.jogadores[d].nome }));
         M.definirBloqueios(jogo, {});
       } else if (jogo.combate.ataques.every(at => M.ataqueDirecionado(jogo, at))) {
-        M.registrar(jogo, 'Ataques do Rei contra Senhores não podem ser bloqueados.');
+        M.registrar(jogo, t('log.reiNaoBloqueia'));
         M.definirBloqueios(jogo, {});
       } else {
         ui.ocupado = false;
@@ -1492,7 +1454,7 @@ window.SS = window.SS || {};
       if (temPopup) {
         const destaque = linhas.shift() || '';
         mostrarAnuncio(`${dueloHTML(foto, total, true)}
-          <div class="anuncio-resultado"><p class="principal">${escapar(destaque.replace(/^Ataque \d+: /, ''))}</p>${linhas.map(l => `<p>${escapar(l)}</p>`).join('')}</div>
+          <div class="anuncio-resultado"><p class="principal">${escapar(destaque.replace(/^\S+ \d+: /, ''))}</p>${linhas.map(l => `<p>${escapar(l)}</p>`).join('')}</div>
           ${botaoContinuar()}`, 'resultado');
         animarPV();
         await esperarContinuar();
@@ -1523,10 +1485,10 @@ window.SS = window.SS || {};
     render();
     const v = jogo.vencedor;
     const venceu = cfg.modo === 'bot' ? v === 0 : null;
-    const titulo = cfg.modo === 'bots' ? `${escapar(jogo.jogadores[v].nome)} venceu!` : venceu ? 'Vitória!' : 'Derrota';
+    const titulo = cfg.modo === 'bots' ? t('faixa.venceu', { j: escapar(jogo.jogadores[v].nome) }) : t(venceu ? 'fim.vitoria' : 'fim.derrota');
     modal(`<h2 class="titulo-fim${venceu === false ? ' derrota' : ''}">${titulo}</h2>
-      <p>Partida encerrada no turno ${jogo.turno}.</p>
-      <div class="acoes-menu"><button class="btn principal" data-m="denovo">Jogar de novo</button><button class="btn" data-m="ver">Ver a mesa</button><button class="btn" data-m="menu">Menu</button></div>`,
+      <p>${t('fim.turno', { n: jogo.turno })}</p>
+      <div class="acoes-menu"><button class="btn principal" data-m="denovo">${t('fim.denovo')}</button><button class="btn" data-m="ver">${t('fim.ver')}</button><button class="btn" data-m="menu">${t('fim.menu')}</button></div>`,
     ev => {
       const b = ev.target.closest('[data-m]');
       if (!b) return;
@@ -1539,9 +1501,10 @@ window.SS = window.SS || {};
   function confirmarDesistir() {
     if (!jogo || jogo.vencedor != null) return;
     const assistindo = cfg.modo === 'bots';
-    modal(`<h2>${assistindo ? 'Encerrar esta partida?' : 'Desistir da partida?'}</h2>
-      <p class="nota">${assistindo ? 'A partida entre os bots termina agora.' : 'O oponente vence e a partida termina agora.'}</p>
-      <div class="acoes-menu"><button class="btn principal" data-m="sim">${assistindo ? 'Encerrar' : 'Desistir'}</button><button class="btn" data-m="nao">Continuar jogando</button></div>`,
+    const k = assistindo ? 'conf.encerrar' : 'conf.desistir';
+    modal(`<h2>${t(k + 'Titulo')}</h2>
+      <p class="nota">${t(k + 'Nota')}</p>
+      <div class="acoes-menu"><button class="btn principal" data-m="sim">${t(k + 'Btn')}</button><button class="btn" data-m="nao">${t('conf.continuar')}</button></div>`,
     ev => {
       const b = ev.target.closest('[data-m]');
       if (!b) return;
@@ -1556,8 +1519,8 @@ window.SS = window.SS || {};
 
   function confirmarReiniciar() {
     if (!jogo) return;
-    modal(`<h2>Reiniciar a partida?</h2><p class="nota">Começa uma partida nova com as mesmas opções.</p>
-      <div class="acoes-menu"><button class="btn principal" data-m="sim">Reiniciar</button><button class="btn" data-m="nao">Continuar jogando</button></div>`,
+    modal(`<h2>${t('conf.reiniciarTitulo')}</h2><p class="nota">${t('conf.reiniciarNota')}</p>
+      <div class="acoes-menu"><button class="btn principal" data-m="sim">${t('conf.reiniciarBtn')}</button><button class="btn" data-m="nao">${t('conf.continuar')}</button></div>`,
     ev => {
       const b = ev.target.closest('[data-m]');
       if (!b) return;
@@ -1568,7 +1531,7 @@ window.SS = window.SS || {};
 
   function confirmarMenu() {
     if (!jogo || jogo.vencedor != null) return menu();
-    modal(`<h2>Abandonar a partida?</h2><div class="acoes-menu"><button class="btn principal" data-m="sim">Ir para o menu</button><button class="btn" data-m="nao">Continuar jogando</button></div>`,
+    modal(`<h2>${t('conf.menuTitulo')}</h2><div class="acoes-menu"><button class="btn principal" data-m="sim">${t('conf.menuBtn')}</button><button class="btn" data-m="nao">${t('conf.continuar')}</button></div>`,
       ev => {
         const b = ev.target.closest('[data-m]');
         if (!b) return;
@@ -1583,35 +1546,36 @@ window.SS = window.SS || {};
     jogo = null;
     ui = novoUi();
     renderVazio();
-    const grupo = (nome, opcoes, desativado) => `<div class="grupo" data-grupo="${nome}">${opcoes.map(([v, r]) =>
-      `<button data-v="${v}" class="${cfg[nome] === v ? 'ativo' : ''}"${desativado ? ' disabled' : ''}>${r}</button>`).join('')}</div>`;
+    const grupo = (nome, opcoes, desativado, valor) => `<div class="grupo" data-grupo="${nome}">${opcoes.map(([v, r]) =>
+      `<button data-v="${v}" class="${(valor !== undefined ? valor : cfg[nome]) === v ? 'ativo' : ''}"${desativado ? ' disabled' : ''}>${r}</button>`).join('')}</div>`;
     const tela = () => {
-      const decks = [{ id: 'palhaco', nome: 'Deck do Palhaço' }].concat(SS.Decks.opcoes());
+      const decks = [{ id: 'palhaco', nome: t('menu.deckPalhaco') }].concat(SS.Decks.opcoes());
       if (!decks.some(d => d.id === cfg.deck)) cfg.deck = 'palhaco';
       if (cfg.rival === cfg.palhaco) cfg.rival = 'aleatorio';
       const cartaPalhaco = pal => `<button class="escolha-palhaco cor-${pal.cor}${cfg.palhaco === pal.id ? ' ativo' : ''}" data-palhaco="${pal.id}">
           <div class="heroi mini cor-${pal.cor}"><div class="heroi-arte">${chapeu(pal.cor)}<span class="heroi-naipe">${SIMB[pal.naipe]}</span></div></div>
           <b>${pal.nome}</b><small>${pal.titulo} · ${NOME_NAIPE[pal.naipe]}</small>
-          <span class="ep-linha"><i>Passiva:</i> ${pal.passiva.texto}</span>
-          ${pal.poder ? `<span class="ep-linha"><i>Poder:</i> ${pal.poder.texto}</span>` : `<span class="ep-linha"><i>${pal.custo.nome}:</i> ${pal.custo.texto}</span>`}
+          <span class="ep-linha"><i>${t('menu.passiva')}</i> ${pal.passiva.texto}</span>
+          ${pal.poder ? `<span class="ep-linha"><i>${t('menu.poder')}</i> ${pal.poder.texto}</span>` : `<span class="ep-linha"><i>${pal.custo.nome}:</i> ${pal.custo.texto}</span>`}
         </button>`;
-      const rivais = [['aleatorio', 'Aleatório']].concat(P.LISTA.filter(x => x.id !== cfg.palhaco).map(x => [x.id, `${SIMB[x.naipe]} ${x.nome}`]));
-      modal(`<h1 class="titulo">Senhora <span>e</span> Senhores</h1>
-        <p class="sub">Protótipo · Regras v2</p>
-        <div class="opcao"><label>Escolha seu Palhaço</label><div class="grade-palhacos">${P.LISTA.map(cartaPalhaco).join('')}</div>
-          <p class="nota">Palhaço preto (♠ ♣) começa contra vermelho (♥ ♦). Dois da mesma cor: ganha quem tirar o dado maior.</p></div>
-        <div class="opcao"><label>Palhaço do bot</label>${grupo('rival', rivais)}</div>
-        <div class="opcao"><label>Dificuldade do bot</label>${grupo('nivel', [['facil', 'Fácil'], ['medio', 'Médio'], ['dificil', 'Difícil']])}</div>
-        <div class="opcao"><label>Seu deck</label>${grupo('deck', decks.map(d => [d.id, escapar(d.nome)]))}
-          <p class="nota">${cfg.deck === 'palhaco' ? `Deck temático de ${P.get(cfg.palhaco).nome}: ${P.get(cfg.palhaco).plano}` : 'Monte seus decks em "Montar decks" para escolher aqui.'}</p></div>
+      const rivais = [['aleatorio', t('menu.aleatorio')]].concat(P.LISTA.filter(x => x.id !== cfg.palhaco).map(x => [x.id, `${SIMB[x.naipe]} ${x.nome}`]));
+      modal(`<div class="opcao idioma">${grupo('idioma', [['en', 'English'], ['pt', 'Português']], false, SS.Idioma.atual())}</div>
+        <h1 class="titulo">Senhora <span>e</span> Senhores</h1>
+        <p class="sub">${t('menu.sub')}</p>
+        <div class="opcao"><label>${t('menu.escolhaPalhaco')}</label><div class="grade-palhacos">${P.LISTA.map(cartaPalhaco).join('')}</div>
+          <p class="nota">${t('menu.notaInicio')}</p></div>
+        <div class="opcao"><label>${t('menu.palhacoBot')}</label>${grupo('rival', rivais)}</div>
+        <div class="opcao"><label>${t('menu.dificuldade')}</label>${grupo('nivel', [['facil', NOME_NIVEL.facil], ['medio', NOME_NIVEL.medio], ['dificil', NOME_NIVEL.dificil]])}</div>
+        <div class="opcao"><label>${t('menu.seuDeck')}</label>${grupo('deck', decks.map(d => [d.id, escapar(d.nome)]))}
+          <p class="nota">${cfg.deck === 'palhaco' ? t('menu.deckTematico', { p: P.get(cfg.palhaco).nome, plano: P.get(cfg.palhaco).plano }) : t('menu.monteDecks')}</p></div>
         <div class="acoes-menu">
-          <button class="btn principal" data-m="jogar">Jogar contra o bot</button>
-          <button class="btn" data-m="assistir">Assistir bot × bot</button>
+          <button class="btn principal" data-m="jogar">${t('menu.jogar')}</button>
+          <button class="btn" data-m="assistir">${t('menu.assistir')}</button>
         </div>
         <div class="acoes-menu secundario">
-          <button class="btn" data-m="decks">🂠 Montar decks</button>
-          <button class="btn" data-m="regras">📖 Regras do jogo</button>
-          <button class="btn" data-m="simular">Simular partidas</button>
+          <button class="btn" data-m="decks">🂠 ${t('menu.decks')}</button>
+          <button class="btn" data-m="regras">📖 ${t('menu.regras')}</button>
+          <button class="btn" data-m="simular">${t('menu.simular')}</button>
         </div>`,
       ev => {
         const pc = ev.target.closest('[data-palhaco]');
@@ -1621,7 +1585,10 @@ window.SS = window.SS || {};
         }
         const g = ev.target.closest('[data-grupo] [data-v]');
         if (g && !g.disabled) {
-          cfg[g.parentElement.dataset.grupo] = g.dataset.v;
+          if (g.parentElement.dataset.grupo === 'idioma') {
+            SS.Idioma.definir(g.dataset.v);
+            renderVazio();
+          } else cfg[g.parentElement.dataset.grupo] = g.dataset.v;
           return tela();
         }
         const b = ev.target.closest('[data-m]');
@@ -1658,8 +1625,8 @@ window.SS = window.SS || {};
     const s = { n: 100, a: 'medio', b: 'medio', rodando: false, feitos: 0, r: null, id: 0 };
     const grupo = (chave, opcoes) => `<div class="grupo" data-s="${chave}">${opcoes.map(([v, r]) =>
       `<button data-v="${v}" class="${String(s[chave]) === String(v) ? 'ativo' : ''}"${s.rodando ? ' disabled' : ''}>${r}</button>`).join('')}</div>`;
-    const niveis = [['facil', 'Fácil'], ['medio', 'Médio'], ['dificil', 'Difícil']];
-    const pct = (x, t) => (t ? Math.round((100 * x) / t) + '%' : '–');
+    const niveis = ['facil', 'medio', 'dificil'].map(n => [n, NOME_NIVEL[n]]);
+    const pct = (x, tot) => (tot ? Math.round((100 * x) / tot) + '%' : '–');
     const resultado = () => {
       const r = s.r;
       if (!r) return '';
@@ -1669,24 +1636,24 @@ window.SS = window.SS || {};
         return `<tr><td>${SIMB[pal.naipe]} ${pal.nome}</td><td>${x.vit}/${x.jogos} (${pct(x.vit, x.jogos)})</td></tr>`;
       }).join('');
       return `<table class="tabela">
-        <tr><td>Partidas</td><td>${s.feitos}</td></tr>
-        <tr><td>Vitórias do Bot A (${NOME_NIVEL[s.a]})</td><td>${r.vit[0]} (${pct(r.vit[0], total)})</td></tr>
-        <tr><td>Vitórias do Bot B (${NOME_NIVEL[s.b]})</td><td>${r.vit[1]} (${pct(r.vit[1], total)})</td></tr>
-        <tr><td colspan="2"><b>Vitórias por Palhaço</b> (cada um com o seu deck)</td></tr>
+        <tr><td>${t('sim.partidas')}</td><td>${s.feitos}</td></tr>
+        <tr><td>${t('sim.vitBot', { b: 'A', n: NOME_NIVEL[s.a] })}</td><td>${r.vit[0]} (${pct(r.vit[0], total)})</td></tr>
+        <tr><td>${t('sim.vitBot', { b: 'B', n: NOME_NIVEL[s.b] })}</td><td>${r.vit[1]} (${pct(r.vit[1], total)})</td></tr>
+        <tr><td colspan="2">${t('sim.porPalhaco')}</td></tr>
         ${linhasPalhaco}
-        <tr><td>Quem começou venceu</td><td>${pct(r.primeiroVenceu, total)}</td></tr>
-        <tr><td>Média de turnos</td><td>${total ? (r.turnos / total).toFixed(1) : '–'}</td></tr>
-        <tr><td>Sem vencedor (limite de 200 turnos)</td><td>${r.empates}</td></tr>
-        ${r.erros ? `<tr><td>Partidas com erro</td><td>${r.erros}</td></tr>` : ''}
+        <tr><td>${t('sim.primeiro')}</td><td>${pct(r.primeiroVenceu, total)}</td></tr>
+        <tr><td>${t('sim.mediaTurnos')}</td><td>${total ? (r.turnos / total).toFixed(1) : '–'}</td></tr>
+        <tr><td>${t('sim.empates')}</td><td>${r.empates}</td></tr>
+        ${r.erros ? `<tr><td>${t('sim.erros')}</td><td>${r.erros}</td></tr>` : ''}
       </table>`;
     };
-    const tela = () => modal(`<h2>Simular partidas (bot × bot)</h2>
-        <p class="nota">Roda partidas completas sem animação para testar o equilíbrio das regras.<br>Os Palhaços se enfrentam em rodízio, cada um com o seu deck, e quem começa segue a regra do jogo. O nível Difícil é bem mais lento.</p>
-        <div class="opcao"><label>Partidas</label>${grupo('n', [[50, '50'], [100, '100'], [200, '200'], [500, '500']])}</div>
+    const tela = () => modal(`<h2>${t('sim.titulo')}</h2>
+        <p class="nota">${t('sim.nota')}</p>
+        <div class="opcao"><label>${t('sim.partidas')}</label>${grupo('n', [[50, '50'], [100, '100'], [200, '200'], [500, '500']])}</div>
         <div class="opcao"><label>Bot A</label>${grupo('a', niveis)}</div>
         <div class="opcao"><label>Bot B</label>${grupo('b', niveis)}</div>
-        <div id="sim-res">${s.rodando ? `<p>Rodando… ${s.feitos}/${s.n}</p>` : ''}${resultado()}</div>
-        <div class="acoes-menu"><button class="btn principal" data-m="rodar"${s.rodando ? ' disabled' : ''}>Rodar</button><button class="btn" data-m="voltar">Voltar</button></div>`,
+        <div id="sim-res">${s.rodando ? `<p>${t('sim.rodando')} ${s.feitos}/${s.n}</p>` : ''}${resultado()}</div>
+        <div class="acoes-menu"><button class="btn principal" data-m="rodar"${s.rodando ? ' disabled' : ''}>${t('sim.rodar')}</button><button class="btn" data-m="voltar">${t('btn.voltar')}</button></div>`,
     ev => {
       const g = ev.target.closest('[data-s] [data-v]');
       if (g && !s.rodando) {
@@ -1754,6 +1721,7 @@ window.SS = window.SS || {};
     if (jogo) desenharSetas();
   }
 
+  SS.Idioma.aplicarEstaticos();
   C.aplicarTexturas();
   ajustarEscala();
   addEventListener('resize', ajustarEscala);

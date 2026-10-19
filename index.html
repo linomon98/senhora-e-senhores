@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -36,11 +36,11 @@
       <div id="anuncio" hidden></div>
       <aside id="painel">
         <div class="barra-partida">
-          <button class="btn" data-acao="reiniciar" title="Começar de novo com as mesmas opções">⟲ Reiniciar</button>
-          <button class="btn" data-acao="desistir" title="Encerrar esta partida agora">⚑ Desistir</button>
-          <button class="btn" data-acao="menu" title="Voltar ao menu">☰ Menu</button>
+          <button class="btn" data-acao="reiniciar" data-i18n="barra.reiniciar" data-i18n-title="barra.reiniciarT">⟲ Restart</button>
+          <button class="btn" data-acao="desistir" data-i18n="barra.desistir" data-i18n-title="barra.desistirT">⚑ Concede</button>
+          <button class="btn" data-acao="menu" data-i18n="barra.menu" data-i18n-title="barra.menuT">☰ Menu</button>
         </div>
-        <h2>Registro</h2>
+        <h2 data-i18n="barra.registro">Log</h2>
         <div id="log"></div>
       </aside>
     </div>
@@ -48,6 +48,7 @@
   <div id="modal" hidden></div>
   <div id="dica" hidden></div>
 
+  <script src="js/idioma.js"></script>
   <script src="js/motor.js"></script>
   <script src="js/palhacos.js"></script>
   <script src="js/bot.js"></script>

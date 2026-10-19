@@ -321,7 +321,7 @@ window.SS = window.SS || {};
     const cv = renderer.domElement;
     cv.style.pointerEvents = 'auto';
     cv.style.cursor = 'grab';
-    mostrarAviso(n > 1 ? `Pegue os ${n} dados e jogue na mesa` : 'Pegue o dado e jogue na mesa');
+    mostrarAviso(SS.Idioma.t('dado.aviso', { n }));
     return new Promise(resolver => {
       estado = { fase: 'segurando', arrastando: false, trilha: [], resolver };
       const mover = ev => {

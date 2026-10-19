@@ -44,14 +44,14 @@ window.SS = window.SS || {};
   }
 
   const GLIFO = { J: '♞', Q: '♛', K: '♚' };
-  const NOME = { J: 'VALETE', Q: 'RAINHA', K: 'REI' };
+  const nomeFace = rank => (SS.Idioma ? SS.Idioma.t('carta.face.' + rank) : rank);
 
   function figura(c) {
     const cor = COR[c.naipe];
     const metade = `<text x="100" y="104" font-size="66" text-anchor="middle" fill="${cor}" font-family="'Segoe UI Symbol','DejaVu Sans',serif">${GLIFO[c.rank]}</text>
       ${pip(c.naipe, 64, 64, 32, false)}
       <text x="136" y="71" font-size="26" text-anchor="middle" fill="${cor}" font-family="${FONTE}" font-weight="700">${c.rank}</text>
-      <text x="100" y="129" font-size="11" letter-spacing="2" text-anchor="middle" fill="${cor}" opacity=".8" font-family="${FONTE}">${NOME[c.rank]}</text>`;
+      <text x="100" y="129" font-size="11" letter-spacing="2" text-anchor="middle" fill="${cor}" opacity=".8" font-family="${FONTE}">${nomeFace(c.rank)}</text>`;
     return `<rect x="34" y="34" width="132" height="212" rx="4" fill="#f1e4c3" stroke="${cor}" stroke-width="2.5"/>
       <rect x="40" y="40" width="120" height="200" rx="2" fill="none" stroke="#d1b779" stroke-width="1.5"/>
       <line x1="40" y1="140" x2="160" y2="140" stroke="#d1b779" stroke-width="1.5"/>
@@ -63,7 +63,8 @@ window.SS = window.SS || {};
   function frente(c) {
     const chave = c.rank + '-' + c.naipe;
     const arte = SS.ARTE[chave];
-    if (!arte && cache[chave]) return cache[chave];
+    const ck = chave + (SS.Idioma ? ':' + SS.Idioma.atual() : '');
+    if (!arte && cache[ck]) return cache[ck];
     let corpo;
     if (arte) corpo = `<image href="${arte}" x="34" y="34" width="132" height="212" preserveAspectRatio="xMidYMid slice"/>`;
     else if (c.rank === 'J' || c.rank === 'Q' || c.rank === 'K') corpo = figura(c);
@@ -72,7 +73,7 @@ window.SS = window.SS || {};
     const svg = `<svg class="svg-carta" viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg">
       <rect x="1.5" y="1.5" width="197" height="277" rx="14" fill="#fdfbf3" stroke="#bdb59f" stroke-width="2"/>
       ${corpo}<g>${canto(c)}</g><g transform="rotate(180 100 140)">${canto(c)}</g></svg>`;
-    if (!arte) cache[chave] = svg;
+    if (!arte) cache[ck] = svg;
     return svg;
   }
 

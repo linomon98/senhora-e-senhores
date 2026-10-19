@@ -9,7 +9,8 @@ window.SS = window.SS || {};
   const NAIPES = ['copas', 'ouros', 'paus', 'espadas'];
   const SIMBOLO = { copas: '♥', ouros: '♦', paus: '♣', espadas: '♠' };
   const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-  const NOME = { A: 'Ás', J: 'Valete', Q: 'Rainha', K: 'Rei' };
+  // Textos no idioma escolhido (idioma.js); sem ele, devolve a própria chave.
+  const t = (k, p) => (SS.Idioma ? SS.Idioma.t(k, p) : k);
   const LIMITE_FIGURA = { J: 5, Q: 10, K: 7 };
   const PV_INICIAL = 20; // não há máximo: Copas pode curar acima disso
   const ESPACOS = 8;
@@ -41,7 +42,8 @@ window.SS = window.SS || {};
   const ehAs = c => c.rank === 'A';
   const ehNumero = c => !ehFigura(c) && !ehAs(c);
   const valor = c => (ehAs(c) ? 1 : parseInt(c.rank, 10));
-  const nomeCarta = c => (NOME[c.rank] ? NOME[c.rank] + ' ' : c.rank) + SIMBOLO[c.naipe];
+  const nomeCarta = c => (['A', 'J', 'Q', 'K'].includes(c.rank) ? t('carta.' + c.rank) + ' ' : c.rank) + SIMBOLO[c.naipe];
+  const nomeNaipe = n => t('naipe.' + n);
   const curaDe = c => (valor(c) <= 3 ? 1 : valor(c) <= 7 ? 2 : 3);
 
   function nomeUnidade(u) {
@@ -67,7 +69,10 @@ window.SS = window.SS || {};
 
   // Cada jogador tem 2 baralhos: Letras (J, Q, K) e Números (Ás a 10).
   const BARALHOS = ['letras', 'numeros'];
-  const NOME_BARALHO = { letras: 'Letras', numeros: 'Números' };
+  const NOME_BARALHO = Object.defineProperties({}, {
+    letras: { get: () => t('baralho.letras'), enumerable: true },
+    numeros: { get: () => t('baralho.numeros'), enumerable: true },
+  });
   const outroBaralho = b => (b === 'letras' ? 'numeros' : 'letras');
 
   function criarJogo(opcoes) {
@@ -139,7 +144,7 @@ window.SS = window.SS || {};
     embaralhar(j.numeros);
     comprar(e, p, 3, 'numeros');
     j.abertura.mulligan = true;
-    registrar(e, `${j.nome} fez mulligan.`);
+    registrar(e, t('log.mulligan', { j: j.nome }));
     confirmarAbertura(e, p);
   }
 
@@ -163,7 +168,7 @@ window.SS = window.SS || {};
     if (j.pv <= 0 && e.vencedor == null) {
       e.vencedor = 1 - p;
       e.fase = 'fim';
-      registrar(e, `${e.jogadores[1 - p].nome} venceu a partida!`);
+      registrar(e, t('log.venceu', { j: e.jogadores[1 - p].nome }));
     }
     return perdido;
   }
@@ -190,7 +195,7 @@ window.SS = window.SS || {};
     for (let k = 0; k < n; k++) {
       const pilha = j[origem].length ? j[origem] : j[outroBaralho(origem)];
       if (!pilha.length) {
-        registrar(e, `${j.nome} não tem cartas para comprar e perde ${DANO_BARALHO_VAZIO} PV.`);
+        registrar(e, t('log.semCartas', { j: j.nome, n: DANO_BARALHO_VAZIO }));
         perderPV(e, p, DANO_BARALHO_VAZIO);
         if (e.vencedor != null) return;
       } else j.mao.push(pilha.pop());
@@ -266,7 +271,7 @@ window.SS = window.SS || {};
       j.cemiterio.push(u.figura, u.numero);
       delete e.jogadores[1 - p].feridas[u.uid];
     }
-    registrar(e, `${nomeUnidade(u)} de ${j.nome} morreu${motivo ? ' (' + motivo + ')' : ''}.`);
+    registrar(e, t('log.morreu', { u: nomeUnidade(u), j: j.nome, m: motivo ? t('mot.' + motivo) : '' }));
     verificarMortes(e);
   }
 
@@ -276,7 +281,7 @@ window.SS = window.SS || {};
       for (let i = 0; i < ESPACOS; i++) {
         const u = e.jogadores[p].campo[i];
         if (u && u.tipo === 'senhor' && !u.berserk && u.hits >= resistencia(e, p, i)) {
-          morrer(e, p, i, 'resistência perdida');
+          morrer(e, p, i, 'resistencia');
           return;
         }
       }
@@ -288,30 +293,30 @@ window.SS = window.SS || {};
     if (u.tipo === 'as') return morrer(e, p, i, 'golpeado');
     if (u.berserk) {
       u.berserk.hits++;
-      registrar(e, `${nomeUnidade(u)} levou 1 hit em berserk.`);
+      registrar(e, t('log.hitBerserk', { u: nomeUnidade(u) }));
       if (u.berserk.hits >= 2) morrer(e, p, i, 'berserk');
       return;
     }
     u.hits++;
     if (u.hits >= resistencia(e, p, i)) morrer(e, p, i, 'hits');
-    else registrar(e, `${nomeUnidade(u)} levou 1 hit.`);
+    else registrar(e, t('log.hit', { u: nomeUnidade(u) }));
   }
 
   function danoAoJogador(e, p, locA, dano) {
     if (dano <= 0) return;
     const d = 1 - p, D = e.jogadores[d];
     const perdido = Math.min(dano, D.pv);
-    registrar(e, `${D.nome} perdeu ${perdido} PV.`);
+    registrar(e, t('log.perdeuPV', { j: D.nome, n: perdido }));
     perderPV(e, d, dano);
     if (e.vencedor != null || !locA) return;
     const u = locA.u;
     if (naipado(u) === 'copas' && perdido > 0) {
       D.feridas[u.uid] = Math.min(D.feridas[u.uid] == null ? Infinity : D.feridas[u.uid], D.pv);
-      registrar(e, `Ferida de Copas: ${D.nome} não pode curar acima de ${D.feridas[u.uid]} PV enquanto ${nomeUnidade(u)} viver.`);
+      registrar(e, t('log.ferida', { j: D.nome, n: D.feridas[u.uid], u: nomeUnidade(u) }));
     }
     if (asesVizinhos(e, p, locA.i).includes('copas')) {
       const c = curar(e, p, 1);
-      if (c) registrar(e, `Ás de Copas (vampiro): ${e.jogadores[p].nome} cura 1 PV.`);
+      if (c) registrar(e, t('log.vampiro', { j: e.jogadores[p].nome }));
     }
   }
 
@@ -335,15 +340,15 @@ window.SS = window.SS || {};
         u.ataques = naipado(u) === 'ouros' ? 2 : 1;
       } else if (u.naipe === 'ouros') j.tokens++;
     }
-    registrar(e, `— Turno ${e.turno}: ${j.nome} —`);
+    registrar(e, t('log.turno', { n: e.turno, j: j.nome }));
     const pal = palhacoDe(j);
     e.compras = pal ? pal.compras : 1;
-    if (e.turno === 1) registrar(e, `${j.nome} começa: não compra nem ataca neste turno.`);
+    if (e.turno === 1) registrar(e, t('log.primeiroTurno', { j: j.nome }));
     else if (pal && pal.compraDupla) {
       // Ourinhos (Juros compostos): compra sozinho 1 Letra e 1 Número, sem escolher.
       comprar(e, p, 1, 'letras');
       if (e.vencedor == null) comprar(e, p, 1, 'numeros');
-      registrar(e, `Juros compostos: ${j.nome} comprou 1 Letra e 1 Número.`);
+      registrar(e, t('log.juros', { j: j.nome }));
     } else if (!j.letras.length && !j.numeros.length) comprar(e, p, e.compras, 'numeros'); // sem cartas: perde PV
     else e.fase = 'compra'; // o jogador escolhe de qual baralho comprar
   }
@@ -353,7 +358,7 @@ window.SS = window.SS || {};
     const j = e.jogadores[e.vez];
     if (!BARALHOS.includes(origem) || !j[origem].length) throw new Error('Baralho vazio ou inválido');
     comprar(e, e.vez, 1, origem);
-    registrar(e, `${j.nome} comprou do baralho de ${NOME_BARALHO[origem]}.`);
+    registrar(e, t('log.comprou', { j: j.nome, b: NOME_BARALHO[origem] }));
     e.compras--;
     if (e.vencedor != null) return;
     if (e.compras <= 0) e.fase = 'principal';
@@ -481,10 +486,10 @@ window.SS = window.SS || {};
             if (!s || s.p !== p || s.u.tipo !== 'senhor') throw new Error('Sacrifício inválido');
             if (s.u.entrou >= e.turno) throw new Error('Não pode sacrificar quem entrou neste turno');
           }
-          registrar(e, `${j.nome} sacrifica ${sacs.map(s => nomeUnidade(s.u)).join(' e ')} para a Rainha.`);
+          registrar(e, t('log.sacrifica', { j: j.nome, us: sacs.map(s => nomeUnidade(s.u)).join(` ${t('e')} `) }));
           for (const uid of [a.sacrificio, a.sacrificio2]) {
             const s = localizar(e, uid);
-            if (s) morrer(e, s.p, s.i, 'sacrifício');
+            if (s) morrer(e, s.p, s.i, 'sacrificio');
           }
         }
         if (j.campo[a.slot]) throw new Error('Espaço ocupado');
@@ -495,7 +500,7 @@ window.SS = window.SS || {};
         };
         j.campo[a.slot] = u;
         const nai = naipado(u);
-        registrar(e, `${j.nome} sumonou ${nomeUnidade(u)} com ataque ${ataque(e, p, a.slot)}${nai ? ` — Naipado de ${nai[0].toUpperCase() + nai.slice(1)}!` : '.'}`);
+        registrar(e, t('log.sumonou', { j: j.nome, u: nomeUnidade(u), a: ataque(e, p, a.slot), nai: nai ? nomeNaipe(nai) : '' }));
         break;
       }
       case 'invocarAs': {
@@ -505,7 +510,7 @@ window.SS = window.SS || {};
         j.cemiterio.push(custo);
         const empurrou = inserirNoCampo(j, a.slot, { uid: e.proximoUid++, tipo: 'as', carta: as, naipe: as.naipe });
         if (as.naipe === 'ouros') j.tokens++;
-        registrar(e, `${j.nome} invocou o ${nomeCarta(as)} sacrificando ${nomeCarta(custo)}${empurrou ? ' e empurrou as cartas para o lado' : ''}.`);
+        registrar(e, t('log.invocouAs', { j: j.nome, as: nomeCarta(as), c: nomeCarta(custo), emp: empurrou }));
         verificarMortes(e); // os vizinhos mudaram: a resistência de alguém pode ter mudado
         break;
       }
@@ -517,16 +522,16 @@ window.SS = window.SS || {};
         if (pal.poder === 'desafio') {
           if (alvo.p === p || !alvo.u.ativo) throw new Error('Desafie um Senhor(a) inimigo ativo');
           e.desafio = alvo.u.uid;
-          registrar(e, `${j.nome} usa Desafio!: ${nomeUnidade(alvo.u)} terá de bloquear o primeiro ataque.`);
+          registrar(e, t('log.desafio', { j: j.nome, u: nomeUnidade(alvo.u) }));
         } else if (pal.poder === 'transfusao') {
           if (alvo.p !== p || alvo.u.hits <= 0 || alvo.u.berserk || j.pv <= CUSTO_TRANSFUSAO) throw new Error('Transfusão inválida');
           j.pv -= CUSTO_TRANSFUSAO;
           alvo.u.hits--;
-          registrar(e, `${j.nome} usa Transfusão: paga ${CUSTO_TRANSFUSAO} PV e tira 1 hit de ${nomeUnidade(alvo.u)}.`);
+          registrar(e, t('log.transfusao', { j: j.nome, n: CUSTO_TRANSFUSAO, u: nomeUnidade(alvo.u) }));
         } else if (pal.poder === 'vigilia') {
           if (alvo.p !== p) throw new Error('Escolha um Senhor(a) seu');
           alvo.u.vigilia = true;
-          registrar(e, `${j.nome} usa Vigília: ${nomeUnidade(alvo.u)} não vira para baixo no fim do turno.`);
+          registrar(e, t('log.vigilia', { j: j.nome, u: nomeUnidade(alvo.u) }));
         }
         e.poderUsado = true;
         break;
@@ -535,7 +540,7 @@ window.SS = window.SS || {};
         const c = tirarDaMao(j, a.carta);
         const qtd = curar(e, p, curaDe(c));
         j.cemiterio.push(c);
-        registrar(e, `${j.nome} usou ${nomeCarta(c)} e curou ${qtd} PV.`);
+        registrar(e, t('log.curou', { j: j.nome, c: nomeCarta(c), n: qtd }));
         break;
       }
       case 'espadas': {
@@ -544,7 +549,7 @@ window.SS = window.SS || {};
         const c = tirarDaMao(j, a.carta);
         alvo.u.bonus.push(valor(c));
         j.cemiterio.push(c);
-        registrar(e, `${j.nome} usou ${nomeCarta(c)}: ${nomeUnidade(alvo.u)} ganha +1 de ataque (crítico no 6: +${Math.floor(valor(c) / 2)}).`);
+        registrar(e, t('log.espadas', { j: j.nome, c: nomeCarta(c), u: nomeUnidade(alvo.u), n: Math.floor(valor(c) / 2) }));
         break;
       }
       case 'paus': {
@@ -553,12 +558,12 @@ window.SS = window.SS || {};
         const c = tirarDaMao(j, a.carta);
         alvo.u.berserk = { hits: 0, expira: e.turno + 1 };
         j.cemiterio.push(c);
-        registrar(e, `${j.nome} usou ${nomeCarta(c)}: ${nomeUnidade(alvo.u)} entra em berserk.`);
+        registrar(e, t('log.paus', { j: j.nome, c: nomeCarta(c), u: nomeUnidade(alvo.u) }));
         break;
       }
       case 'comprar': {
         gastarOuros(e, p, a.carta);
-        registrar(e, `${j.nome} gastou 1 Ouros para comprar 1 carta de ${NOME_BARALHO[a.baralho]}.`);
+        registrar(e, t('log.ourosCompra', { j: j.nome, b: NOME_BARALHO[a.baralho] }));
         comprar(e, p, 1, a.baralho);
         break;
       }
@@ -568,7 +573,7 @@ window.SS = window.SS || {};
         const carta = j.cemiterio.splice(k, 1)[0];
         for (const o of a.cartas) gastarOuros(e, p, o);
         j.mao.push(carta);
-        registrar(e, `${j.nome} gastou 2 Ouros e recuperou ${nomeCarta(carta)} do cemitério.`);
+        registrar(e, t('log.reviver', { j: j.nome, c: nomeCarta(carta) }));
         break;
       }
       default:
@@ -671,7 +676,7 @@ window.SS = window.SS || {};
     if (!ataques.length) {
       e.combate = null;
       e.fase = 'fimCombate';
-      registrar(e, `${j.nome} não atacou.`);
+      registrar(e, t('log.naoAtacou', { j: j.nome }));
       return;
     }
     e.combate = { ataques, indice: 0 };
@@ -679,7 +684,7 @@ window.SS = window.SS || {};
     for (const at of ataques) {
       const loc = localizar(e, at.atacante);
       const alvo = at.alvo === 'jogador' ? e.jogadores[1 - p].nome : nomeUnidade(localizar(e, at.alvo).u);
-      registrar(e, `Ataque ${at.n}: ${nomeUnidade(loc.u)} → ${alvo}${at.dados > 1 ? ` (${at.dados} dados)` : ''}.`);
+      registrar(e, t('log.declara', { n: at.n, u: nomeUnidade(loc.u), alvo, d: at.dados }));
     }
   }
 
@@ -695,7 +700,7 @@ window.SS = window.SS || {};
       if (primeiro) {
         for (const n in mapa) mapa[n] = (mapa[n] || []).filter(uid => uid !== e.desafio);
         mapa[primeiro.n] = [e.desafio].concat(mapa[primeiro.n] || []);
-        registrar(e, `Desafio!: ${nomeUnidade(desafiado.u)} é obrigado(a) a bloquear o ataque ${primeiro.n}.`);
+        registrar(e, t('log.desafioBloqueio', { u: nomeUnidade(desafiado.u), n: primeiro.n }));
       }
     }
     for (const at of e.combate.ataques) {
@@ -707,7 +712,7 @@ window.SS = window.SS || {};
         if (uso[uid] > capacidadeBloqueio(loc.u)) throw new Error('Bloqueios demais para este Senhor(a)');
       }
       at.bloqueadores = lista.slice();
-      if (lista.length) registrar(e, `Ataque ${at.n} bloqueado por ${lista.map(uid => nomeUnidade(localizar(e, uid).u)).join(' + ')}.`);
+      if (lista.length) registrar(e, t('log.bloqueado', { n: at.n, us: lista.map(uid => nomeUnidade(localizar(e, uid).u)).join(' + ') }));
     }
     e.fase = 'resolucao';
     e.combate.indice = 0;
@@ -729,7 +734,7 @@ window.SS = window.SS || {};
 
     const locA = localizar(e, at.atacante);
     if (!locA) {
-      registrar(e, `Ataque ${at.n} cancelado: o atacante não está mais em campo.`);
+      registrar(e, t('log.cancelado', { n: at.n }));
       res.cancelado = true;
       return fim();
     }
@@ -740,7 +745,7 @@ window.SS = window.SS || {};
     const dano = maior >= DADO_ATAQUE_TOTAL ? total : Math.floor(total / 2);
     const numeroAtacante = base + u.bonus.length;
     res.dano = dano;
-    registrar(e, `Ataque ${at.n}: ${nomeUnidade(u)} rolou ${rolagens.join(', ')} → ${maior >= DADO_ATAQUE_TOTAL ? 'ataque total' : 'meio ataque'}${maior === 6 && u.bonus.length ? ' com crítico de Espadas' : ''}: ${dano} de dano.`);
+    registrar(e, t('log.rolou', { n: at.n, u: nomeUnidade(u), r: rolagens.join(', '), cheio: maior >= DADO_ATAQUE_TOTAL, crit: maior === 6 && u.bonus.length > 0, d: dano }));
 
     // Ataque do Rei contra um Senhor(a): o alvo se defende sozinho, como se bloqueasse.
     const alvoDireto = at.alvo !== 'jogador' ? localizar(e, at.alvo) : null;
@@ -749,7 +754,7 @@ window.SS = window.SS || {};
     if (!defensores.length) {
       if (at.alvo === 'jogador') danoAoJogador(e, p, locA, dano);
       else if (alvoDireto) morrer(e, alvoDireto.p, alvoDireto.i, 'atacado');
-      else registrar(e, 'O alvo já não está em campo.');
+      else registrar(e, t('log.alvoSumiu'));
       return fim();
     }
 
@@ -770,9 +775,9 @@ window.SS = window.SS || {};
       const loc = localizar(e, uid);
       if (!loc) return;
       const danoDefesa = danoPara(b);
-      if (danoDefesa < dano) registrar(e, `Casca grossa: o dano em ${nomeUnidade(loc.u)} cai para ${danoDefesa}.`);
-      if (danoDefesa * 2 < atkBloq[k]) registrar(e, `${nomeUnidade(loc.u)} ignorou o golpe (dano menor que metade do seu ataque).`);
-      else if (danoDefesa > atkBloq[k]) morrer(e, loc.p, loc.i, 'golpe fatal');
+      if (danoDefesa < dano) registrar(e, t('log.casca', { u: nomeUnidade(loc.u), n: danoDefesa }));
+      if (danoDefesa * 2 < atkBloq[k]) registrar(e, t('log.ignorou', { u: nomeUnidade(loc.u) }));
+      else if (danoDefesa > atkBloq[k]) morrer(e, loc.p, loc.i, 'fatal');
       else aplicarHit(e, loc.p, loc.i);
       if (localizar(e, uid)) todosMorreram = false;
     });
@@ -780,7 +785,7 @@ window.SS = window.SS || {};
     if (u.figura.rank === 'Q' && todosMorreram) {
       const sobra = dano - somaBloq;
       if (sobra > 0) {
-        registrar(e, `Atropelar! ${sobra} de dano passa para ${D.nome}.`);
+        registrar(e, t('log.atropelar', { n: sobra, j: D.nome }));
         danoAoJogador(e, p, localizar(e, at.atacante), sobra);
         if (e.vencedor != null) return res;
       }
@@ -789,7 +794,7 @@ window.SS = window.SS || {};
     if (bloq.length && numeroAtacante < somaBloq) {
       const l = localizar(e, at.atacante);
       if (l) {
-        registrar(e, `Contra-ataque! ${nomeUnidade(l.u)} leva 1 hit.`);
+        registrar(e, t('log.contra', { u: nomeUnidade(l.u) }));
         aplicarHit(e, l.p, l.i);
       }
     }
@@ -805,7 +810,7 @@ window.SS = window.SS || {};
       u.bonus = [];
       if (u.atacou) {
         if (!u.vigilia) u.ativo = false; // vira para baixo: não bloqueia no turno do oponente
-        else registrar(e, `Vigília: ${nomeUnidade(u)} continua de pé.`);
+        else registrar(e, t('log.vigiliaPe', { u: nomeUnidade(u) }));
         u.atacou = false;
       }
       u.vigilia = false;
@@ -816,8 +821,8 @@ window.SS = window.SS || {};
         if (u && u.tipo === 'senhor' && u.berserk && u.berserk.expira <= e.turno) {
           const levou = u.berserk.hits;
           u.berserk = null;
-          if (levou >= 1) morrer(e, q, i, 'fim do berserk');
-          else registrar(e, `O berserk de ${nomeUnidade(u)} acabou.`);
+          if (levou >= 1) morrer(e, q, i, 'fimBerserk');
+          else registrar(e, t('log.fimBerserk', { u: nomeUnidade(u) }));
         }
       }
     }
@@ -835,7 +840,7 @@ window.SS = window.SS || {};
     const j = e.jogadores[e.vez];
     if (j.mao.length - ids.length !== limiteMao(j)) throw new Error(`Descarte até ficar com ${limiteMao(j)} cartas`);
     for (const id of ids) j.cemiterio.push(tirarDaMao(j, id));
-    registrar(e, `${j.nome} descartou ${ids.length} carta(s) pelo limite de mão.`);
+    registrar(e, t('log.descartou', { j: j.nome, n: ids.length }));
     passarVez(e);
   }
 
@@ -846,10 +851,10 @@ window.SS = window.SS || {};
 
   function desistir(e, p) {
     if (e.vencedor != null) return;
-    registrar(e, `${e.jogadores[p].nome} desistiu da partida.`);
+    registrar(e, t('log.desistiu', { j: e.jogadores[p].nome }));
     e.vencedor = 1 - p;
     e.fase = 'fim';
-    registrar(e, `${e.jogadores[1 - p].nome} venceu a partida!`);
+    registrar(e, t('log.venceu', { j: e.jogadores[1 - p].nome }));
   }
 
   // ---------- Montagem de deck ----------
@@ -897,19 +902,19 @@ window.SS = window.SS || {};
   // Lista os problemas do deck (vazia = deck válido).
   function validarDeck(cont) {
     const R = REGRAS_DECK, r = resumoDeck(cont), erros = [];
-    if (r.letras !== R.letras) erros.push(`O baralho de Letras precisa ter exatamente ${R.letras} figuras (tem ${r.letras}).`);
-    if (r.numeros !== R.numeros) erros.push(`O baralho de Números precisa ter exatamente ${R.numeros} cartas (tem ${r.numeros}).`);
+    if (r.letras !== R.letras) erros.push(t('deck.erroLetras', { a: R.letras, b: r.letras }));
+    if (r.numeros !== R.numeros) erros.push(t('deck.erroNumeros', { a: R.numeros, b: r.numeros }));
     for (const chave in cont) {
       const n = cont[chave], [rank] = chave.split('-');
       const max = rank === 'J' || rank === 'Q' || rank === 'K' ? R.copiasFigura : R.copiasNumero;
-      if (n > max) erros.push(`${nomeCarta({ rank, naipe: chave.split('-')[1] })}: no máximo ${max} cópias (tem ${n}).`);
+      if (n > max) erros.push(t('deck.erroCopias', { c: nomeCarta({ rank, naipe: chave.split('-')[1] }), a: max, b: n }));
     }
-    for (const f of ['J', 'Q', 'K']) if (r.porFigura[f] > R.porFigura[f]) erros.push(`No máximo ${R.porFigura[f]} ${NOME[f]}s (tem ${r.porFigura[f]}).`);
-    if (r.ases > R.ases) erros.push(`No máximo ${R.ases} Ases (tem ${r.ases}).`);
-    if (r.soma > R.orcamento) erros.push(`A soma dos números passou do orçamento: ${r.soma} de ${R.orcamento}.`);
+    for (const f of ['J', 'Q', 'K']) if (r.porFigura[f] > R.porFigura[f]) erros.push(t('deck.erroFigura', { a: R.porFigura[f], f: t(`carta.${f}.pl`), b: r.porFigura[f] }));
+    if (r.ases > R.ases) erros.push(t('deck.erroAses', { a: R.ases, b: r.ases }));
+    if (r.soma > R.orcamento) erros.push(t('deck.erroSoma', { a: r.soma, b: R.orcamento }));
     for (const naipe of NAIPES) {
-      if (r.figurasNaipe[naipe] > R.figurasMesmoNaipe) erros.push(`No máximo ${R.figurasMesmoNaipe} figuras de ${naipe} (tem ${r.figurasNaipe[naipe]}).`);
-      if (r.numerosNaipe[naipe] > R.numerosMesmoNaipe) erros.push(`No máximo ${R.numerosMesmoNaipe} números de ${naipe} (tem ${r.numerosNaipe[naipe]}).`);
+      if (r.figurasNaipe[naipe] > R.figurasMesmoNaipe) erros.push(t('deck.erroFigNaipe', { a: R.figurasMesmoNaipe, n: nomeNaipe(naipe), b: r.figurasNaipe[naipe] }));
+      if (r.numerosNaipe[naipe] > R.numerosMesmoNaipe) erros.push(t('deck.erroNumNaipe', { a: R.numerosMesmoNaipe, n: nomeNaipe(naipe), b: r.numerosNaipe[naipe] }));
     }
     return erros;
   }
@@ -929,7 +934,7 @@ window.SS = window.SS || {};
     PALHACOS, CUSTO_TRANSFUSAO, SACRIFICIOS_RAINHA, palhacoDe, limiteMao, ataqueDirecionado,
     NAIPES, SIMBOLO, LIMITE_FIGURA, PV_INICIAL, ESPACOS, ACOES_POR_TURNO, CUSTO_RAINHA, DADO_ATAQUE_TOTAL, LIMITE_MAO,
     definirRng: f => { rng = f; },
-    ehFigura, ehAs, ehNumero, valor, nomeCarta, nomeUnidade, curaDe, naipado,
+    ehFigura, ehAs, ehNumero, valor, nomeCarta, nomeNaipe, nomeUnidade, curaDe, naipado,
     BARALHOS, NOME_BARALHO, baralhosDisponiveis, comprarDoTurno,
     criarJogo, registrar, figurasNoBaralho, escolherFiguras, mulligan, confirmarAbertura,
     localizar, tetoCura, ataque, ataqueBase, resistencia, postura, podeAtacar,

@@ -10,10 +10,12 @@ No menu:
 - **Montar decks**: até 4 decks próprios, com auto-build do deck padrão. Ficam salvos neste navegador.
 - **Regras do jogo**: todas as regras, separadas por tema.
 - **Simular partidas**: roda centenas de partidas sem animação e mostra as estatísticas (quem vence, se começar é vantagem, duração média). Serve para testar o equilíbrio das regras.
+- **Idioma**: English (padrão) ou Português, no canto do menu. A escolha fica salva neste navegador.
 
 ## Arquivos
 | Arquivo | O que faz |
 |---|---|
+| `js/idioma.js` | Todos os textos do jogo em inglês e português (`SS.t('chave')`). Para mudar um texto, edite aqui. |
 | `js/motor.js` | Todas as regras (Regras v2). Não depende da tela, então pode ir para um servidor no futuro multiplayer. |
 | `js/bot.js` | A inteligência do bot e a simulação de partidas. |
 | `js/cartas.js` | Desenho das cartas, dos dorsos e da textura da mesa. |

@@ -8,10 +8,11 @@ window.SS = window.SS || {};
   const ESPACOS = 4;
   const NAIPES = M.NAIPES;
   const SIMB = M.SIMBOLO;
-  const NOME_NAIPE = { copas: 'Copas', ouros: 'Ouros', paus: 'Paus', espadas: 'Espadas' };
+  const tr = (k, p) => SS.Idioma.t(k, p);
+  const NOME_NAIPE = new Proxy({}, { get: (_, k) => tr('naipe.' + String(k)) });
   const FIGURAS = ['J', 'Q', 'K'];
   const NUMEROS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
-  const NOME_FIG = { J: 'Valetes', Q: 'Rainhas', K: 'Reis' };
+  const NOME_FIG = new Proxy({}, { get: (_, k) => tr('carta.' + String(k) + '.pl') });
 
   // ---------- Armazenamento ----------
 
@@ -36,7 +37,7 @@ window.SS = window.SS || {};
 
   // Decks que podem ser usados numa partida.
   function opcoes() {
-    const r = [{ id: 'padrao', nome: 'Deck padrão' }];
+    const r = [{ id: 'padrao', nome: tr('dk.padrao') }];
     carregar().forEach((s, k) => { if (valido(s)) r.push({ id: String(k), nome: s.nome || `Deck ${k + 1}` }); });
     return r;
   }
@@ -85,13 +86,13 @@ window.SS = window.SS || {};
   const slotAtual = () => slots[atual];
 
   function guardar() {
-    avisoSalvo = salvar(slots) ? 'Salvo automaticamente' : 'Não foi possível salvar neste navegador';
+    avisoSalvo = salvar(slots) ? 'salvo' : 'naoSalvo';
   }
 
   function celula(rank, naipe, cont) {
     const chave = `${rank}-${naipe}`, n = cont[chave] || 0;
     const vermelho = naipe === 'copas' || naipe === 'ouros';
-    return `<div class="celula${n ? ' tem' : ''}" data-carta-deck="${chave}" title="${M.nomeCarta({ rank, naipe })} · clique: +1 · botão direito: −1">
+    return `<div class="celula${n ? ' tem' : ''}" data-carta-deck="${chave}" title="${M.nomeCarta({ rank, naipe })} · ${tr('dk.celula')}">
       <div class="mini-carta">${C.frente({ rank, naipe })}</div>
       <div class="celula-naipe${vermelho ? ' vermelho' : ''}">${SIMB[naipe]} ${NOME_NAIPE[naipe]}</div>
       <div class="celula-controles"><button data-menos="${chave}">−</button><b>${n}</b><button data-mais="${chave}">+</button></div></div>`;
@@ -108,24 +109,21 @@ window.SS = window.SS || {};
     const porFigOk = FIGURAS.every(f => r.porFigura[f] <= R.porFigura[f]);
     const figNaipeOk = NAIPES.every(n => r.figurasNaipe[n] <= R.figurasMesmoNaipe);
     const numNaipeOk = NAIPES.every(n => r.numerosNaipe[n] <= R.numerosMesmoNaipe);
-    return `<h3>Regras de limite</h3>
+    return `<h3>${tr('dk.regrasLimite')}</h3>
       <ul class="regras-deck">
-        ${linhaRegra(r.letras === R.letras, `Letras: exatamente <b>${R.letras}</b> figuras <em>(${r.letras})</em>`)}
-        ${linhaRegra(r.numeros === R.numeros, `Números: exatamente <b>${R.numeros}</b> cartas <em>(${r.numeros})</em>`)}
-        ${linhaRegra(r.soma <= R.orcamento, `Orçamento de poder: a soma dos números (Ás = 1) vai até <b>${R.orcamento}</b> <em>(${r.soma})</em>`)}
-        ${linhaRegra(porFigOk, `No máximo <b>${R.porFigura.J}</b> Valetes, <b>${R.porFigura.Q}</b> Rainhas e <b>${R.porFigura.K}</b> Reis <em>(${r.porFigura.J} · ${r.porFigura.Q} · ${r.porFigura.K})</em>`)}
-        ${linhaRegra(copiasFigOk, `Até <b>${R.copiasFigura}</b> cópias da mesma figura e naipe`)}
-        ${linhaRegra(copiasNumOk, `Até <b>${R.copiasNumero}</b> cópias do mesmo número e naipe`)}
-        ${linhaRegra(r.ases <= R.ases, `No máximo <b>${R.ases}</b> Ases <em>(${r.ases})</em>`)}
-        ${linhaRegra(figNaipeOk, `No máximo <b>${R.figurasMesmoNaipe}</b> figuras de um mesmo naipe`)}
-        ${linhaRegra(numNaipeOk, `No máximo <b>${R.numerosMesmoNaipe}</b> números de um mesmo naipe`)}
+        ${linhaRegra(r.letras === R.letras, tr('dk.rLetras', { n: R.letras, v: r.letras }))}
+        ${linhaRegra(r.numeros === R.numeros, tr('dk.rNumeros', { n: R.numeros, v: r.numeros }))}
+        ${linhaRegra(r.soma <= R.orcamento, tr('dk.rSoma', { n: R.orcamento, v: r.soma }))}
+        ${linhaRegra(porFigOk, tr('dk.rFiguras', { j: R.porFigura.J, q: R.porFigura.Q, k: R.porFigura.K, v: `${r.porFigura.J} · ${r.porFigura.Q} · ${r.porFigura.K}` }))}
+        ${linhaRegra(copiasFigOk, tr('dk.rCopiasFig', { n: R.copiasFigura }))}
+        ${linhaRegra(copiasNumOk, tr('dk.rCopiasNum', { n: R.copiasNumero }))}
+        ${linhaRegra(r.ases <= R.ases, tr('dk.rAses', { n: R.ases, v: r.ases }))}
+        ${linhaRegra(figNaipeOk, tr('dk.rFigNaipe', { n: R.figurasMesmoNaipe }))}
+        ${linhaRegra(numNaipeOk, tr('dk.rNumNaipe', { n: R.numerosMesmoNaipe }))}
       </ul>
       <div class="por-que">
-        <h4>Por que esses limites?</h4>
-        <p><b>Orçamento de poder:</b> sem ele, o melhor deck seria só de 9 e 10. Com 220 (a soma de um baralho comum), cada carta forte custa uma fraca.</p>
-        <p><b>Rainhas:</b> são as figuras mais fortes (equipam até 10 e atropelam), então têm limite menor.</p>
-        <p><b>Naipe:</b> deck de um naipe só faria quase todo Senhor virar Naipado. O limite deixa esse plano possível, mas não garantido.</p>
-        <p><b>Ases:</b> totens fortes demais em massa travariam a fileira.</p>
+        <h4>${tr('dk.porQue')}</h4>
+        ${tr('dk.porQueTexto')}
       </div>`;
   }
 
@@ -133,40 +131,40 @@ window.SS = window.SS || {};
     const el = tela();
     const s = slotAtual();
     const lista = slots.map((x, k) => {
-      const st = !x ? 'vazio' : valido(x) ? 'pronto para jogar' : 'incompleto';
+      const st = tr(!x ? 'dk.vazio' : valido(x) ? 'dk.pronto' : 'dk.incompleto');
       return `<button class="slot${k === atual ? ' atual' : ''}${x && valido(x) ? ' valido' : ''}" data-slot-deck="${k}">
-        <b>${x ? escapar(x.nome || `Deck ${k + 1}`) : `Espaço ${k + 1}`}</b><small>${st}</small></button>`;
+        <b>${x ? escapar(x.nome || `Deck ${k + 1}`) : tr('dk.espaco', { n: k + 1 })}</b><small>${st}</small></button>`;
     }).join('');
     let editor;
     if (!s) {
-      editor = `<div class="vazio-deck"><h3>Espaço ${atual + 1} vazio</h3>
-        <p class="nota">Comece pelo deck padrão (um baralho comum) e vá trocando as cartas, ou monte do zero.</p>
-        <div class="acoes-menu"><button class="btn principal" data-cmd="auto">Auto-build: deck padrão</button><button class="btn" data-cmd="novo">Começar do zero</button></div></div>`;
+      editor = `<div class="vazio-deck"><h3>${tr('dk.espacoVazio', { n: atual + 1 })}</h3>
+        <p class="nota">${tr('dk.comece')}</p>
+        <div class="acoes-menu"><button class="btn principal" data-cmd="auto">${tr('dk.autoPadrao')}</button><button class="btn" data-cmd="novo">${tr('dk.zero')}</button></div></div>`;
     } else {
       const r = M.resumoDeck(s.cont), erros = M.validarDeck(s.cont);
       const linhasFig = FIGURAS.map(f => `<div class="linha-cartas"><span class="rot">${NOME_FIG[f]}</span>${NAIPES.map(n => celula(f, n, s.cont)).join('')}</div>`).join('');
       const linhasNum = NAIPES.map(n => `<div class="linha-cartas"><span class="rot" style="color:${n === 'copas' || n === 'ouros' ? '#ff7b7b' : '#ddd'}">${SIMB[n]} ${NOME_NAIPE[n]}</span>${NUMEROS.map(v => celula(v, n, s.cont)).join('')}</div>`).join('');
       editor = `<div class="editor-topo">
-          <input class="nome-deck" value="${escapar(s.nome || '')}" placeholder="Nome do deck" maxlength="24">
-          <button class="btn" data-cmd="auto" title="Volta ao baralho comum: uma de cada carta">Auto-build (padrão)</button>
-          <button class="btn" data-cmd="limpar">Limpar</button>
-          <button class="btn" data-cmd="apagar">Apagar espaço</button>
-          <span class="status-deck ${erros.length ? 'falha' : 'ok'}">${erros.length ? `${erros.length} problema${erros.length > 1 ? 's' : ''}` : '✓ Pronto para jogar'}</span>
-          <span class="salvo">${avisoSalvo}</span>
+          <input class="nome-deck" value="${escapar(s.nome || '')}" placeholder="${tr('dk.nome')}" maxlength="24">
+          <button class="btn" data-cmd="auto" title="${tr('dk.autoTitulo')}">${tr('dk.auto')}</button>
+          <button class="btn" data-cmd="limpar">${tr('btn.limpar')}</button>
+          <button class="btn" data-cmd="apagar">${tr('dk.apagar')}</button>
+          <span class="status-deck ${erros.length ? 'falha' : 'ok'}">${erros.length ? tr('dk.problemas', { n: erros.length }) : '✓ ' + tr('dk.prontoBtn')}</span>
+          <span class="salvo">${avisoSalvo ? tr('dk.' + avisoSalvo) : ''}</span>
         </div>
         <div class="editor-corpo">
           <div class="editor-cartas">
-            <h3>Baralho de Letras <em>${r.letras}/${M.REGRAS_DECK.letras}</em></h3>
+            <h3>${tr('dk.baralhoLetras')} <em>${r.letras}/${M.REGRAS_DECK.letras}</em></h3>
             <div class="grade-deck">${linhasFig}</div>
-            <h3>Baralho de Números <em>${r.numeros}/${M.REGRAS_DECK.numeros} · soma ${r.soma}/${M.REGRAS_DECK.orcamento}</em></h3>
+            <h3>${tr('dk.baralhoNumeros')} <em>${r.numeros}/${M.REGRAS_DECK.numeros} · ${tr('dk.soma')} ${r.soma}/${M.REGRAS_DECK.orcamento}</em></h3>
             <div class="grade-deck">${linhasNum}</div>
           </div>
           <aside class="editor-regras">${painelRegras(s.cont)}</aside>
         </div>`;
     }
     el.innerHTML = `<div class="tela-caixa">
-      <div class="tela-cabecalho"><h1>Montar decks</h1><span class="nota">Clique numa carta para adicionar, botão direito para tirar. O deck do bot é sempre o padrão.</span>
-        <button class="btn principal" data-cmd="voltar">Voltar ao menu</button></div>
+      <div class="tela-cabecalho"><h1>${tr('menu.decks')}</h1><span class="nota">${tr('dk.ajuda')}</span>
+        <button class="btn principal" data-cmd="voltar">${tr('btn.voltarMenu')}</button></div>
       <div class="deck-layout"><nav class="slots">${lista}</nav><section class="editor">${editor}</section></div></div>`;
   }
 

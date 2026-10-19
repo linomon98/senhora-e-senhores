@@ -6,10 +6,7 @@ window.SS = window.SS || {};
 
   const LISTA = [
     {
-      id: 'lancalotte', nome: 'Lançalotte', titulo: 'o duelista', naipe: 'espadas', cor: 'azul',
-      passiva: { nome: 'Golpe certeiro', texto: 'O 1º ataque de cada turno ganha +1 dado (vale o maior) e +1 de ataque.' },
-      poder: { nome: 'Desafio!', texto: 'Escolha um Senhor(a) inimigo ativo: neste turno ele(a) é obrigado(a) a bloquear o seu primeiro ataque (se puder).' },
-      plano: 'Ataca cedo e forte: Valetes entram atacando, Rainhas fecham o jogo, Naipados de Espadas ganham +1.',
+      id: 'lancalotte', nome: 'Lançalotte', naipe: 'espadas', cor: 'azul',
       deck: {
         'J-espadas': 2, 'Q-espadas': 2, 'K-espadas': 1, 'J-copas': 1, 'J-ouros': 1, 'J-paus': 1,
         'Q-copas': 1, 'Q-ouros': 1, 'K-copas': 1, 'K-paus': 1,
@@ -20,10 +17,7 @@ window.SS = window.SS || {};
       },
     },
     {
-      id: 'infartitte', nome: 'Infartitte', titulo: 'o coração teimoso', naipe: 'copas', cor: 'vermelho',
-      passiva: { nome: 'Coração forte', texto: 'Começa com 24 PV em vez de 20.' },
-      poder: { nome: 'Transfusão', texto: 'Pague 2 PV para tirar 1 hit de um Senhor(a) seu.' },
-      plano: 'Aguenta e drena: Reis seguram a linha, Copas cura, Naipados de Copas aplicam ferida.',
+      id: 'infartitte', nome: 'Infartitte', naipe: 'copas', cor: 'vermelho',
       deck: {
         'K-copas': 2, 'Q-copas': 2, 'J-copas': 1, 'K-espadas': 1, 'K-paus': 1, 'K-ouros': 1,
         'Q-ouros': 1, 'J-espadas': 1, 'J-paus': 1, 'J-ouros': 1,
@@ -34,10 +28,7 @@ window.SS = window.SS || {};
       },
     },
     {
-      id: 'paumol', nome: 'Paumol', titulo: 'o muro', naipe: 'paus', cor: 'verde',
-      passiva: { nome: 'Casca grossa', texto: 'Seus Senhores com carta de Paus (na figura ou no número) recebem 1 de dano a menos ao defender. Começa com 18 PV.' },
-      poder: { nome: 'Vigília', texto: 'Escolha 1 Senhor(a) seu: ele(a) não vira para baixo no fim deste turno (ataca e ainda pode bloquear).' },
-      plano: 'Ninguém passa: Naipados de Paus aguentam 3 hits e Ases de Paus deixam a fileira mais resistente.',
+      id: 'paumol', nome: 'Paumol', naipe: 'paus', cor: 'verde',
       deck: {
         'K-paus': 2, 'Q-paus': 1, 'J-paus': 2, 'K-copas': 1, 'K-ouros': 1, 'K-espadas': 1,
         'Q-copas': 1, 'Q-espadas': 1, 'J-ouros': 1, 'J-copas': 1,
@@ -48,11 +39,7 @@ window.SS = window.SS || {};
       },
     },
     {
-      id: 'ourinhos', nome: 'Ourinhos', titulo: 'o banqueiro', naipe: 'ouros', cor: 'dourado',
-      passiva: { nome: 'Juros compostos', texto: 'No começo do turno, compra sozinho 2 cartas: 1 Letra e 1 Número (não precisa escolher).' },
-      poder: null,
-      custo: { nome: 'Endividado', texto: 'Começa com 15 PV e tem limite de mão de 6 cartas.' },
-      plano: 'Muitas cartas e muitos ataques: Valete Naipado de Ouros entra e ataca 2 vezes no mesmo turno.',
+      id: 'ourinhos', nome: 'Ourinhos', naipe: 'ouros', cor: 'dourado',
       deck: {
         'J-ouros': 2, 'Q-ouros': 2, 'K-ouros': 1, 'J-copas': 1, 'J-paus': 1, 'J-espadas': 1,
         'Q-copas': 1, 'Q-espadas': 1, 'K-paus': 1, 'K-copas': 1,
@@ -63,6 +50,80 @@ window.SS = window.SS || {};
       },
     },
   ];
+
+  // Textos de cada Palhaço nos dois idiomas (os nomes ficam iguais).
+  const TEXTOS = {
+    lancalotte: {
+      pt: {
+        titulo: 'o duelista',
+        passiva: { nome: 'Golpe certeiro', texto: 'O 1º ataque de cada turno ganha +1 dado (vale o maior) e +1 de ataque.' },
+        poder: { nome: 'Desafio!', texto: 'Escolha um Senhor(a) inimigo ativo: neste turno ele(a) é obrigado(a) a bloquear o seu primeiro ataque (se puder).' },
+        plano: 'Ataca cedo e forte: Valetes entram atacando, Rainhas fecham o jogo, Naipados de Espadas ganham +1.',
+      },
+      en: {
+        titulo: 'the duelist',
+        passiva: { nome: 'True Strike', texto: 'The 1st attack each turn gets +1 die (the highest counts) and +1 attack.' },
+        poder: { nome: 'Challenge!', texto: 'Choose a ready enemy Lord: this turn it must block your first attack (if it can).' },
+        plano: 'Attacks early and hard: Jacks come in swinging, Queens close the game, Suited Spades get +1.',
+      },
+    },
+    infartitte: {
+      pt: {
+        titulo: 'o coração teimoso',
+        passiva: { nome: 'Coração forte', texto: 'Começa com 24 PV em vez de 20.' },
+        poder: { nome: 'Transfusão', texto: 'Pague 2 PV para tirar 1 hit de um Senhor(a) seu.' },
+        plano: 'Aguenta e drena: Reis seguram a linha, Copas cura, Naipados de Copas aplicam ferida.',
+      },
+      en: {
+        titulo: 'the stubborn heart',
+        passiva: { nome: 'Strong Heart', texto: 'Starts with 24 HP instead of 20.' },
+        poder: { nome: 'Transfusion', texto: 'Pay 2 HP to remove 1 hit from one of your Lords.' },
+        plano: 'Endures and drains: Kings hold the line, Hearts heal, Suited Hearts inflict wounds.',
+      },
+    },
+    paumol: {
+      pt: {
+        titulo: 'o muro',
+        passiva: { nome: 'Casca grossa', texto: 'Seus Senhores com carta de Paus (na figura ou no número) recebem 1 de dano a menos ao defender. Começa com 18 PV.' },
+        poder: { nome: 'Vigília', texto: 'Escolha 1 Senhor(a) seu: ele(a) não vira para baixo no fim deste turno (ataca e ainda pode bloquear).' },
+        plano: 'Ninguém passa: Naipados de Paus aguentam 3 hits e Ases de Paus deixam a fileira mais resistente.',
+      },
+      en: {
+        titulo: 'the wall',
+        passiva: { nome: 'Thick Bark', texto: 'Your Lords with a Clubs card (face or number) take 1 less damage when defending. Starts with 18 HP.' },
+        poder: { nome: 'Vigil', texto: "Choose 1 of your Lords: it doesn't flip face down at the end of this turn (it attacks and can still block)." },
+        plano: 'None shall pass: Suited Clubs survive 3 hits and Aces of Clubs make the row sturdier.',
+      },
+    },
+    ourinhos: {
+      pt: {
+        titulo: 'o banqueiro',
+        passiva: { nome: 'Juros compostos', texto: 'No começo do turno, compra sozinho 2 cartas: 1 Letra e 1 Número (não precisa escolher).' },
+        poder: null,
+        custo: { nome: 'Endividado', texto: 'Começa com 15 PV e tem limite de mão de 6 cartas.' },
+        plano: 'Muitas cartas e muitos ataques: Valete Naipado de Ouros entra e ataca 2 vezes no mesmo turno.',
+      },
+      en: {
+        titulo: 'the banker',
+        passiva: { nome: 'Compound Interest', texto: 'At the start of the turn, automatically draws 2 cards: 1 Face and 1 Number (no need to choose).' },
+        poder: null,
+        custo: { nome: 'In Debt', texto: 'Starts with 15 HP and has a hand limit of 6 cards.' },
+        plano: 'Lots of cards and lots of attacks: a Suited Jack of Diamonds comes in and attacks twice in the same turn.',
+      },
+    },
+  };
+  for (const pal of LISTA) {
+    for (const campo of ['titulo', 'passiva', 'poder', 'custo', 'plano']) {
+      Object.defineProperty(pal, campo, {
+        enumerable: true,
+        get: () => {
+          const tx = TEXTOS[pal.id];
+          const lingua = SS.Idioma && tx[SS.Idioma.atual()] ? SS.Idioma.atual() : 'pt';
+          return tx[lingua][campo];
+        },
+      });
+    }
+  }
 
   const POR_ID = Object.fromEntries(LISTA.map(p => [p.id, p]));
   const PRETOS = ['espadas', 'paus'];
