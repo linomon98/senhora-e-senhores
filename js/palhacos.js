@@ -63,7 +63,7 @@ window.SS = window.SS || {};
       en: {
         titulo: 'the duelist',
         passiva: { nome: 'True Strike', texto: 'The 1st attack each turn gets +1 die (the highest counts) and +1 attack.' },
-        poder: { nome: 'Challenge!', texto: 'Choose a ready enemy Lord: this turn it must block your first attack (if it can).' },
+        poder: { nome: 'Challenge!', texto: 'Choose a ready enemy Gentleman: this turn it must block your first attack (if it can).' },
         plano: 'Attacks early and hard: Jacks come in swinging, Queens close the game, Suited Spades get +1.',
       },
     },
@@ -77,7 +77,7 @@ window.SS = window.SS || {};
       en: {
         titulo: 'the stubborn heart',
         passiva: { nome: 'Strong Heart', texto: 'Starts with 24 HP instead of 20.' },
-        poder: { nome: 'Transfusion', texto: 'Pay 2 HP to remove 1 hit from one of your Lords.' },
+        poder: { nome: 'Transfusion', texto: 'Pay 2 HP to remove 1 hit from one of your Gentlemen.' },
         plano: 'Endures and drains: Kings hold the line, Hearts heal, Suited Hearts inflict wounds.',
       },
     },
@@ -90,8 +90,8 @@ window.SS = window.SS || {};
       },
       en: {
         titulo: 'the wall',
-        passiva: { nome: 'Thick Bark', texto: 'Your Lords with a Clubs card (face or number) take 1 less damage when defending. Starts with 18 HP.' },
-        poder: { nome: 'Vigil', texto: "Choose 1 of your Lords: it doesn't flip face down at the end of this turn (it attacks and can still block)." },
+        passiva: { nome: 'Thick Bark', texto: 'Your Gentlemen with a Clubs card (face or number) take 1 less damage when defending. Starts with 18 HP.' },
+        poder: { nome: 'Vigil', texto: "Choose 1 of your Gentlemen: it doesn't flip face down at the end of this turn (it attacks and can still block)." },
         plano: 'None shall pass: Suited Clubs survive 3 hits and Aces of Clubs make the row sturdier.',
       },
     },

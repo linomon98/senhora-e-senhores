@@ -209,7 +209,7 @@ window.SS = window.SS || {};
           <li>A 6-sided die.</li>
         </ul>
         <h3>The idea</h3>
-        <p>You combine <b>1 face card + 1 number</b> to create a <b>Lord</b>, the game's creature. The number is its attack. Number cards can also be played alone, like spells, for their suit effect. <b>Aces</b> become totems that strengthen their neighbors.</p>`,
+        <p>You combine <b>1 face card + 1 number</b> to create a <b>Gentleman</b>, the game's creature. The number is its attack. Number cards can also be played alone, like spells, for their suit effect. <b>Aces</b> become totems that strengthen their neighbors.</p>`,
     },
     {
       id: 'turno', titulo: 'Setup and turn',
@@ -222,26 +222,26 @@ window.SS = window.SS || {};
         </ul>
         <h3>Turn order</h3>
         <ol>
-          <li><b>Ready:</b> your face-down Lords become ready again.</li>
+          <li><b>Ready:</b> your face-down Gentlemen become ready again.</li>
           <li><b>Draw:</b> draw 1 card from the deck of your choice: Faces or Numbers. If both are empty, lose 2 HP. <b>Ourinhos</b> doesn't choose: it automatically draws 1 Face and 1 Number.</li>
           <li><b>${M.ACOES_POR_TURNO} passive actions</b>, in any order: summon, invoke an Ace, use a number card's effect.</li>
-          <li><b>Offensive action:</b> attack with your ready Lords.</li>
+          <li><b>Offensive action:</b> attack with your ready Gentlemen.</li>
           <li><b>End of turn:</b> attackers flip face down, "1 turn" effects end and, with more than ${M.LIMITE_MAO} cards in hand, you discard the extra.</li>
         </ol>`,
     },
     {
-      id: 'senhores', titulo: 'Lords',
+      id: 'senhores', titulo: 'Gentlemen',
       html: () => `
         <h3>Summon (1 action)</h3>
         <p>Put 1 face card + 1 number (2 to 10) into an empty slot. The <b>number is the attack</b>.</p>
         <table class="tabela-regras">
           <tr><th>Face card</th><th>Equips</th><th>Cost</th><th>Ability</th></tr>
           <tr><td><b>Jack</b></td><td>2 to 5</td><td>1 action</td><td><b>Haste:</b> attacks the same turn it enters.</td></tr>
-          <tr><td><b>Queen</b></td><td>2 to 10</td><td>${M.CUSTO_RAINHA} action + sacrifice ${M.SACRIFICIOS_RAINHA} of your Lords that were already on the field before this turn</td><td><b>Trample:</b> if it kills its blocker, the leftover damage goes to HP.</td></tr>
-          <tr><td><b>King</b></td><td>2 to 7</td><td>1 action</td><td><b>Royal Order:</b> when attacking, may target an enemy Lord. The target must defend, and its owner's other ready Lords can join to help.</td></tr>
+          <tr><td><b>Queen</b></td><td>2 to 10</td><td>${M.CUSTO_RAINHA} action + sacrifice ${M.SACRIFICIOS_RAINHA} of your Gentlemen that were already on the field before this turn</td><td><b>Trample:</b> if it kills its blocker, the leftover damage goes to HP.</td></tr>
+          <tr><td><b>King</b></td><td>2 to 7</td><td>1 action</td><td><b>Royal Order:</b> when attacking, may target an enemy Gentleman. The target must defend, and its owner's other ready Gentlemen can join to help.</td></tr>
         </table>
         <h3>Health and card position</h3>
-        <p>A regular Lord survives <b>2 hits</b>. The card's position shows how much is left:</p>
+        <p>A regular Gentleman survives <b>2 hits</b>. The card's position shows how much is left:</p>
         <ul>
           <li><b>Upright:</b> healthy.</li>
           <li><b>Diagonal:</b> wounded, but survives more than 1 hit (only with Suited Clubs or a neighboring Ace of Clubs).</li>
@@ -257,9 +257,9 @@ window.SS = window.SS || {};
         </table>`,
     },
     {
-      id: 'naipados', titulo: 'Suited Lords',
+      id: 'naipados', titulo: 'Suited Gentlemen',
       html: () => `
-        <p>When the face card and the number share the <b>same suit</b>, a <b>Suited Lord</b> is born, with an extra power:</p>
+        <p>When the face card and the number share the <b>same suit</b>, a <b>Suited Gentleman</b> is born, with an extra power:</p>
         <table class="tabela-regras">
           <tr><th>Suit</th><th>Power</th></tr>
           <tr><td>♣ Clubs</td><td>Survives 3 hits (4 next to an Ace of Clubs).</td></tr>
@@ -273,8 +273,8 @@ window.SS = window.SS || {};
       id: 'ataque', titulo: 'Attack',
       html: () => `
         <ul>
-          <li>Each ready Lord attacks <b>once per turn</b> (Suited Diamonds, twice). Only Lords that entered on an earlier turn can attack, except the Jack.</li>
-          <li>The target is the opposing <b>player</b> or one of their <b>Aces</b>. The <b>King</b> can also target an enemy <b>Lord</b>: the target must defend, with the block and counterattack rules (even if face down), and its owner's other ready Lords can join to help.</li>
+          <li>Each ready Gentleman attacks <b>once per turn</b> (Suited Diamonds, twice). Only Gentlemen that entered on an earlier turn can attack, except the Jack.</li>
+          <li>The target is the opposing <b>player</b> or one of their <b>Aces</b>. The <b>King</b> can also target an enemy <b>Gentleman</b>: the target must defend, with the block and counterattack rules (even if face down), and its owner's other ready Gentlemen can join to help.</li>
           <li>You choose the <b>order</b> of the attacks; they are resolved one at a time.</li>
         </ul>
         <h3>Roll</h3>
@@ -296,9 +296,9 @@ window.SS = window.SS || {};
       html: () => `
         <h3>Blocking</h3>
         <ul>
-          <li>Each <b>ready</b> Lord blocks 1 attacker. Aces don't block.</li>
-          <li>Two or more Lords can block <b>the same attacker</b>: each one takes the full damage.</li>
-          <li>When the King attacks a Lord, the <b>target must defend</b>, and other ready Lords can join to <b>help</b> (each takes the full damage, and their attacks add up for the counterattack).</li>
+          <li>Each <b>ready</b> Gentleman blocks 1 attacker. Aces don't block.</li>
+          <li>Two or more Gentlemen can block <b>the same attacker</b>: each one takes the full damage.</li>
+          <li>When the King attacks a Gentleman, the <b>target must defend</b>, and other ready Gentlemen can join to <b>help</b> (each takes the full damage, and their attacks add up for the counterattack).</li>
         </ul>
         <h3>The blow against the blocker</h3>
         <p>Compare the <b>damage</b> with the <b>blocker's attack</b>. For a blocker with attack 6:</p>
@@ -323,8 +323,8 @@ window.SS = window.SS || {};
           <tr><th>Suit</th><th>Effect</th></tr>
           <tr><td>♥ Hearts</td><td>Heals HP: 2–3 heals 1, 4–7 heals 2, 8–10 heals 3. Can go above ${M.PV_INICIAL}.</td></tr>
           <tr><td>♦ Diamonds</td><td>Discard 1 to draw 1 card (from the deck of your choice) or 2 to recover 1 card from the graveyard. On attack, +1 die.</td></tr>
-          <tr><td>♠ Spades</td><td>+1 attack to a Lord until end of turn; on a 6, it becomes half the card's value.</td></tr>
-          <tr><td>♣ Clubs</td><td><b>Berserk:</b> a wounded Lord returns upright until the end of the opponent's next turn. If it takes 1 hit in that time, it dies when the effect ends; with 2 hits, it dies instantly.</td></tr>
+          <tr><td>♠ Spades</td><td>+1 attack to a Gentleman until end of turn; on a 6, it becomes half the card's value.</td></tr>
+          <tr><td>♣ Clubs</td><td><b>Berserk:</b> a wounded Gentleman returns upright until the end of the opponent's next turn. If it takes 1 hit in that time, it dies when the effect ends; with 2 hits, it dies instantly.</td></tr>
         </table>`,
     },
     {
@@ -333,8 +333,8 @@ window.SS = window.SS || {};
         <ul>
           <li><b>Invocation (1 action):</b> sacrifice 1 number card of the same suit as the Ace.</li>
           <li>The Ace takes 1 slot and affects its <b>neighbors</b> (left and right).</li>
-          <li><b>Push:</b> the Ace can enter in place of a card in your row, pushing cards toward the nearest empty slot (there must be an empty slot). This way you can place it between two Lords.</li>
-          <li>It doesn't attack, doesn't block and dies to <b>1 blow</b>. One of its owner's Lords can block to protect it.</li>
+          <li><b>Push:</b> the Ace can enter in place of a card in your row, pushing cards toward the nearest empty slot (there must be an empty slot). This way you can place it between two Gentlemen.</li>
+          <li>It doesn't attack, doesn't block and dies to <b>1 blow</b>. One of its owner's Gentlemen can block to protect it.</li>
         </ul>
         <table class="tabela-regras">
           <tr><th>Ace</th><th>Effect</th></tr>

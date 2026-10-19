@@ -1931,7 +1931,7 @@ window.SS = window.SS || {};
         </button>`;
       const rivais = [['aleatorio', t('menu.aleatorio')]].concat(P.LISTA.filter(x => x.id !== cfg.palhaco).map(x => [x.id, `${SIMB[x.naipe]} ${x.nome}`]));
       modal(`<div class="opcao idioma">${grupo('idioma', [['en', 'English'], ['pt', 'Português']], false, SS.Idioma.atual())}</div>
-        <h1 class="titulo">Senhora <span>e</span> Senhores</h1>
+        <h1 class="titulo">${t('menu.titulo')}</h1>
         <p class="sub">${t('menu.sub')}</p>
         <div class="opcao"><label>${t('menu.escolhaPalhaco')}</label><div class="grade-palhacos">${P.LISTA.map(cartaPalhaco).join('')}</div>
           <p class="nota">${t('menu.notaInicio')}</p></div>
