@@ -24,13 +24,15 @@ window.SS = window.SS || {};
   // Palhaços: o "herói" de cada jogador. Os textos e decks ficam em palhacos.js.
   // dadosPrimeiro/ataquePrimeiro: bônus do 1º ataque do turno (Lançalotte);
   // reducaoDefesa: dano a menos em quem defende; soPaus: só Senhores com carta de Paus (Paumol).
-  // Valores calibrados com o simulador (todos os Palhaços entre 46% e 55% de vitórias).
+  // Valores calibrados com o simulador.
+  // Todos compram sozinhos 1 Letra + 1 Número no começo do turno (COMPRA_AUTOMATICA).
   const PALHACOS = {
-    lancalotte: { naipe: 'espadas', pv: 20, limiteMao: 7, compras: 1, poder: 'desafio', dadosPrimeiro: 1, ataquePrimeiro: 1 },
-    infartitte: { naipe: 'copas', pv: 24, limiteMao: 7, compras: 1, poder: 'transfusao' },
-    paumol: { naipe: 'paus', pv: 18, limiteMao: 7, compras: 1, poder: 'vigilia', reducaoDefesa: 1, soPaus: true },
-    ourinhos: { naipe: 'ouros', pv: 15, limiteMao: 6, compras: 1, compraDupla: true, poder: null }, // compra 1 Letra + 1 Número sozinho
+    lancalotte: { naipe: 'espadas', pv: 19, limiteMao: 7, poder: 'desafio', dadosPrimeiro: 1, ataquePrimeiro: 1 },
+    infartitte: { naipe: 'copas', pv: 27, limiteMao: 7, poder: 'transfusao' },
+    paumol: { naipe: 'paus', pv: 18, limiteMao: 7, poder: 'vigilia', reducaoDefesa: 1, soPaus: true },
+    ourinhos: { naipe: 'ouros', pv: 20, limiteMao: 9, poder: 'roubo' }, // rouba 1 carta da mão do oponente
   };
+  const COMPRA_AUTOMATICA = true;
   const CUSTO_TRANSFUSAO = 2; // PV pagos pela Transfusão do Infartitte
   const palhacoDe = j => (j && PALHACOS[j.palhaco]) || null;
   const temPalhaco = (j, id) => !!j && j.palhaco === id;
@@ -341,14 +343,13 @@ window.SS = window.SS || {};
       } else if (u.naipe === 'ouros') j.tokens++;
     }
     registrar(e, t('log.turno', { n: e.turno, j: j.nome }));
-    const pal = palhacoDe(j);
-    e.compras = pal ? pal.compras : 1;
+    e.compras = 1;
     if (e.turno === 1) registrar(e, t('log.primeiroTurno', { j: j.nome }));
-    else if (pal && pal.compraDupla) {
-      // Ourinhos (Juros compostos): compra sozinho 1 Letra e 1 Número, sem escolher.
+    else if (COMPRA_AUTOMATICA) {
+      // Compra do turno: 1 Letra e 1 Número, sem escolher (baralho vazio: vem do outro; os dois vazios: perde PV).
       comprar(e, p, 1, 'letras');
       if (e.vencedor == null) comprar(e, p, 1, 'numeros');
-      registrar(e, t('log.juros', { j: j.nome }));
+      registrar(e, t('log.compraDupla', { j: j.nome }));
     } else if (!j.letras.length && !j.numeros.length) comprar(e, p, e.compras, 'numeros'); // sem cartas: perde PV
     else e.fase = 'compra'; // o jogador escolhe de qual baralho comprar
   }
@@ -434,6 +435,8 @@ window.SS = window.SS || {};
         if (j.pv > CUSTO_TRANSFUSAO) for (const s of senhores) if (j.campo[s].hits > 0 && !j.campo[s].berserk) r.push({ tipo: 'poder', alvo: j.campo[s].uid });
       } else if (pal.poder === 'vigilia') {
         for (const s of senhores) if (!j.campo[s].vigilia) r.push({ tipo: 'poder', alvo: j.campo[s].uid });
+      } else if (pal.poder === 'roubo') {
+        if (e.jogadores[1 - p].mao.length) r.push({ tipo: 'poder' }); // a carta é sorteada: não há alvo
       }
     }
     const teto = tetoCura(j);
@@ -517,6 +520,16 @@ window.SS = window.SS || {};
       case 'poder': {
         const pal = palhacoDe(j);
         if (!pal || !pal.poder || e.poderUsado) throw new Error('Poder indisponível');
+        if (pal.poder === 'roubo') {
+          // Ourinhos (Cobrança): pega 1 carta sorteada da mão do oponente.
+          const op = e.jogadores[1 - p];
+          if (!op.mao.length) throw new Error('O oponente está sem cartas na mão');
+          const c = op.mao.splice(Math.floor(rng() * op.mao.length), 1)[0];
+          j.mao.push(c);
+          registrar(e, t('log.roubo', { j: j.nome, o: op.nome, c: nomeCarta(c) }));
+          e.poderUsado = true;
+          break;
+        }
         const alvo = localizar(e, a.alvo);
         if (!alvo || alvo.u.tipo !== 'senhor') throw new Error('Alvo inválido');
         if (pal.poder === 'desafio') {

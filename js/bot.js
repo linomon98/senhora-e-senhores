@@ -125,12 +125,13 @@ window.SS = window.SS || {};
     let melhor = null, melhorValor = -Infinity;
     for (const a of legais) {
       let v;
-      if (a.tipo === 'comprar') {
-        // O bot não pode "espiar" o topo do baralho: faz a média de algumas compras embaralhadas.
+      if (a.tipo === 'comprar' || (a.tipo === 'poder' && a.alvo == null)) {
+        // Compra ou roubo (Ourinhos): a carta é sorteada. O bot não pode "espiar" o topo do
+        // baralho, então faz a média de algumas tentativas (com o baralho embaralhado).
         v = 0;
         for (let k = 0; k < 4; k++) {
           const c = clonar(e);
-          embaralhar(c.jogadores[p][a.baralho]);
+          if (a.baralho) embaralhar(c.jogadores[p][a.baralho]);
           M.aplicarAcao(c, a);
           v += avaliar(c, p) / 4;
         }

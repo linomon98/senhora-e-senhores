@@ -97,6 +97,8 @@ window.SS = window.SS || {};
     const cands = M.acoesLegais(jogo).filter(a => a.tipo === 'poder');
     if (!cands.length) return;
     ui.sel = [];
+    // Poder sem alvo (Cobrança do Ourinhos): acontece direto, sem clicar na mesa.
+    if (cands[0].alvo == null) return aplicarDoJogador(cands[0]);
     ui.pend = { tipo: 'poder', cands, passos: ['alvo'], k: 0, esc: {} };
     avancarPendente();
   }
@@ -849,6 +851,7 @@ window.SS = window.SS || {};
   const voando = new Set(), voandoCampo = new Set();
 
   function animarEntradas() {
+    const maosAntes = maoVista.slice(); // foto das mãos antes deste desenho (para detectar roubo)
     for (const p of [0, 1]) {
       const j = jogo.jogadores[p];
       // Senhores e Ases que acabaram de entrar voam da mão (ou de onde foram soltos) até o campo.
@@ -858,7 +861,9 @@ window.SS = window.SS || {};
       const atual = j.mao.map(c => c.id);
       if (maoVista[p]) {
         const novas = j.mao.filter(c => !maoVista[p].has(c.id));
-        novas.forEach((c, k) => voarParaMao(p, c, cemVisto[p].has(c.id) ? 'cemiterio' : M.ehFigura(c) ? 'letras' : 'numeros', k));
+        // De onde a carta veio: do cemitério, da mão do oponente (roubo do Ourinhos) ou do baralho.
+        const deOnde = c => (cemVisto[p].has(c.id) ? 'cemiterio' : maosAntes[1 - p] && maosAntes[1 - p].has(c.id) ? 'roubo' : M.ehFigura(c) ? 'letras' : 'numeros');
+        novas.forEach((c, k) => voarParaMao(p, c, deOnde(c), k));
       }
       maoVista[p] = new Set(atual);
       cemVisto[p] = new Set(j.cemiterio.map(c => c.id));
@@ -867,7 +872,8 @@ window.SS = window.SS || {};
 
   function voarParaMao(p, c, origem, ordem) {
     const alvo0 = document.querySelector(`#mao-${p} [data-voo="${c.id}"]`);
-    const fonte = document.querySelector(origem === 'cemiterio' ? `#pilhas-${p} [data-cemiterio] .carta` : `#pilhas-${p} [data-pilha="${p}:${origem}"] .carta`);
+    const fonte = origem === 'roubo' ? document.querySelector(`#mao-${1 - p} .carta`) || $(`#mao-${1 - p}`)
+      : document.querySelector(origem === 'cemiterio' ? `#pilhas-${p} [data-cemiterio] .carta` : `#pilhas-${p} [data-pilha="${p}:${origem}"] .carta`);
     if (!alvo0 || !fonte) return;
     voando.add(c.id);
     alvo0.style.visibility = 'hidden';
@@ -1499,9 +1505,7 @@ window.SS = window.SS || {};
         ${dados ? `<b class="dado-inicio">🎲 ${dados[p]}</b>` : ''}
         ${p === primeiro ? `<em>${t('inicio.comeca')}</em>` : ''}</div>`;
     };
-    const motivo = dados
-      ? t('inicio.mesmaCor')
-      : t('inicio.preto');
+    const motivo = t('inicio.dado');
     return `<div class="anuncio-topo">${t('inicio.quem')}</div><div class="duelo">${lado(0)}<div class="duelo-seta">×</div>${lado(1)}</div><p class="nota">${motivo}</p>`;
   }
 
@@ -1647,30 +1651,24 @@ window.SS = window.SS || {};
     const outros = ids.filter(x => x !== meu);
     const rival = modo !== 'bots' && outros.includes(cfg.rival) ? cfg.rival : sortear(outros);
     palhacos = [meu, rival];
-    // Quem começa: Palhaço preto (♠ ♣) contra vermelho (♥ ♦) começa o preto.
-    // Dois da mesma cor: cada um rola um dado e começa quem tirar mais.
-    const pretos = palhacos.map(P.ehPreto);
-    let primeiro = pretos[0] !== pretos[1] ? (pretos[0] ? 0 : 1) : 0, dadosInicio = null;
+    // Quem começa: sempre no dado. Cada jogador joga o seu (você arremessa; o bot rola) e
+    // começa quem tirar mais; empate, joga de novo.
     const nomes = palhacos.map(x => P.get(x).nome);
     const contagemMinha = modo === 'bots' || cfg.deck === 'palhaco' ? P.get(meu).deck
       : cfg.deck === 'padrao' ? M.contagemPadrao() : SS.Decks.contagemPara(cfg.deck);
     const decks = [M.cartasDoDeck(contagemMinha, 0), M.cartasDoDeck(P.get(rival).deck, 1)];
+    // Mesa provisória só para mostrar os Palhaços durante o sorteio.
+    jogo = M.criarJogo({ nomes, primeiro: 0, decks, palhacos });
+    ui = novoUi();
+    const dadosInicio = await sorteioNoDado(id, nomes);
+    if (!dadosInicio) return;
+    const primeiro = dadosInicio[0] > dadosInicio[1] ? 0 : 1;
     jogo = M.criarJogo({ nomes, primeiro, decks, palhacos });
     ui = novoUi();
-    if (pretos[0] === pretos[1]) {
-      // Mesma cor: cada jogador joga o dado de verdade (você arremessa o seu; o bot rola o dele).
-      dadosInicio = await sorteioNoDado(id, nomes);
-      if (!dadosInicio) return;
-      primeiro = dadosInicio[0] > dadosInicio[1] ? 0 : 1;
-      jogo = M.criarJogo({ nomes, primeiro, decks, palhacos });
-      ui = novoUi();
-      maoVista = [null, null];
-      campoVisto = [null, null];
-    }
+    maoVista = [null, null];
+    campoVisto = [null, null];
     M.registrar(jogo, `${nomes[0]} × ${nomes[1]}.`);
-    M.registrar(jogo, dadosInicio
-      ? t('log.inicioDados', { a: nomes[0], da: dadosInicio[0], b: nomes[1], db: dadosInicio[1], j: nomes[primeiro] })
-      : t('log.inicioPreto', { j: nomes[primeiro] }));
+    M.registrar(jogo, t('log.inicioDados', { a: nomes[0], da: dadosInicio[0], b: nomes[1], db: dadosInicio[1], j: nomes[primeiro] }));
     render();
     mostrarAnuncio(anuncioInicio(primeiro, dadosInicio) + botaoContinuar());
     await esperarContinuar(2600);
@@ -1981,10 +1979,8 @@ window.SS = window.SS || {};
     tela();
   }
 
-  // Quem começa entre dois Palhaços: o preto começa; mesma cor, maior dado (sem empate).
-  function quemComeca(par) {
-    const pretos = par.map(P.ehPreto);
-    if (pretos[0] !== pretos[1]) return pretos[0] ? 0 : 1;
+  // Quem começa (na simulação): maior dado, repetindo no empate, como na partida.
+  function quemComeca() {
     let a, b;
     do {
       a = Math.random();
@@ -2057,7 +2053,7 @@ window.SS = window.SS || {};
         while (s.feitos < s.n && performance.now() < fim) {
           try {
             const par = confrontos[s.feitos % confrontos.length];
-            const r = Bot.partidaAutomatica([s.a, s.b], quemComeca(par), 200, {
+            const r = Bot.partidaAutomatica([s.a, s.b], quemComeca(), 200, {
               palhacos: par, decks: par.map((x, k) => M.cartasDoDeck(P.get(x).deck, k)),
             });
             if (r.vencedor == null) s.r.empates++;

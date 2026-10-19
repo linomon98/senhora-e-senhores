@@ -30,12 +30,12 @@ window.SS = window.SS || {};
         <ul>
           <li>Cada jogador escolhe <b>3 figuras</b> do baralho de Letras para a mão e compra <b>4 cartas</b> do baralho de Números.</li>
           <li><b>Mulligan</b> (uma vez): devolve as 4 cartas numéricas, embaralha e compra 3. As figuras escolhidas ficam.</li>
-          <li><b>Quem começa:</b> Palhaço preto (♠ Lançalotte, ♣ Paumol) começa contra Palhaço vermelho (♥ Infartitte, ♦ Ourinhos). Se os dois forem da mesma cor, cada um rola um dado e começa quem tirar mais. No primeiro turno, quem começa <b>não compra e não ataca</b>.</li>
+          <li><b>Quem começa:</b> sempre no dado: cada jogador joga o seu e começa quem tirar mais (empate, joga de novo). No primeiro turno, quem começa <b>não compra e não ataca</b>.</li>
         </ul>
         <h3>Ordem do turno</h3>
         <ol>
           <li><b>Reativação:</b> seus Senhores virados para baixo voltam a ficar ativos.</li>
-          <li><b>Compra:</b> compre 1 carta do baralho que escolher: Letras ou Números. Se os dois estiverem vazios, perca 2 PV. O <b>Ourinhos</b> não escolhe: compra sozinho 1 Letra e 1 Número.</li>
+          <li><b>Compra:</b> compre sozinho <b>1 Letra e 1 Número</b> (não precisa escolher). Se um baralho estiver vazio, a carta vem do outro; se os dois estiverem vazios, perca 2 PV por carta.</li>
           <li><b>${M.ACOES_POR_TURNO} ações passivas</b>, em qualquer ordem: sumonar, invocar Ás, usar o efeito de uma carta numérica.</li>
           <li><b>Ação ofensiva:</b> ataque com os Senhores aptos.</li>
           <li><b>Fim do turno:</b> quem atacou vira para baixo, os efeitos de "1 turno" acabam e, com mais de ${M.LIMITE_MAO} cartas na mão, você descarta o excesso.</li>
@@ -165,7 +165,7 @@ window.SS = window.SS || {};
           ${SS.Palhacos.LISTA.map(p => `<tr><td><b>${M.SIMBOLO[p.naipe]} ${p.nome}</b><br><small>${p.titulo}</small></td><td><b>${p.passiva.nome}:</b> ${p.passiva.texto}</td>
             <td>${p.poder ? `<b>${p.poder.nome}:</b> ${p.poder.texto}` : `<b>${p.custo.nome}:</b> ${p.custo.texto}`}</td></tr>`).join('')}
         </table>
-        <p><b>Quem começa:</b> Palhaço preto (♠ ♣) começa contra vermelho (♥ ♦). Se os dois forem da mesma cor, cada um rola um dado e começa quem tirar mais.</p>
+        <p><b>Quem começa:</b> sempre no dado. Cada jogador joga o seu e começa quem tirar mais.</p>
         <p class="nota">Cada Palhaço tem um deck temático do seu naipe, que pode ser trocado por um deck montado por você.</p>`,
     },
     {
@@ -214,12 +214,12 @@ window.SS = window.SS || {};
         <ul>
           <li>Each player chooses <b>3 face cards</b> from the Faces deck for their hand and draws <b>4 cards</b> from the Numbers deck.</li>
           <li><b>Mulligan</b> (once): return the 4 number cards, shuffle and draw 3. The chosen face cards stay.</li>
-          <li><b>Who goes first:</b> a black Jester (♠ Lançalotte, ♣ Paumol) goes first against a red Jester (♥ Infartitte, ♦ Ourinhos). If both are the same color, each rolls a die and the higher roll goes first. On the first turn, the first player <b>doesn't draw and doesn't attack</b>.</li>
+          <li><b>Who goes first:</b> always by the die: each player throws one and the higher roll goes first (on a tie, roll again). On the first turn, the first player <b>doesn't draw and doesn't attack</b>.</li>
         </ul>
         <h3>Turn order</h3>
         <ol>
           <li><b>Ready:</b> your face-down Gentlemen become ready again.</li>
-          <li><b>Draw:</b> draw 1 card from the deck of your choice: Faces or Numbers. If both are empty, lose 2 HP. <b>Ourinhos</b> doesn't choose: it automatically draws 1 Face and 1 Number.</li>
+          <li><b>Draw:</b> automatically draw <b>1 Face and 1 Number</b> (no need to choose). If one deck is empty, the card comes from the other; if both are empty, lose 2 HP per card.</li>
           <li><b>${M.ACOES_POR_TURNO} passive actions</b>, in any order: summon, invoke an Ace, use a number card's effect.</li>
           <li><b>Offensive action:</b> attack with your ready Gentlemen.</li>
           <li><b>End of turn:</b> attackers flip face down, "1 turn" effects end and, with more than ${M.LIMITE_MAO} cards in hand, you discard the extra.</li>
@@ -349,7 +349,7 @@ window.SS = window.SS || {};
           ${SS.Palhacos.LISTA.map(p => `<tr><td><b>${M.SIMBOLO[p.naipe]} ${p.nome}</b><br><small>${p.titulo}</small></td><td><b>${p.passiva.nome}:</b> ${p.passiva.texto}</td>
             <td>${p.poder ? `<b>${p.poder.nome}:</b> ${p.poder.texto}` : `<b>${p.custo.nome}:</b> ${p.custo.texto}`}</td></tr>`).join('')}
         </table>
-        <p><b>Who goes first:</b> a black Jester (♠ ♣) goes first against a red one (♥ ♦). If both are the same color, each rolls a die and the higher roll goes first.</p>
+        <p><b>Who goes first:</b> always by the die. Each player throws one and the higher roll goes first.</p>
         <p class="nota">Each Jester has a themed deck of its suit, which you can swap for a deck you build.</p>`,
     },
     {
