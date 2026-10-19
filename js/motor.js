@@ -34,6 +34,7 @@ window.SS = window.SS || {};
   };
   const SENHORES_POR_TURNO = 1; // Senhores que dá para sumonar por turno (a Rainha conta)
   const ASES_POR_TURNO = 1; // Ases (totens) que dá para invocar por turno
+  const REDUCAO_POR_DEFENSOR = 1; // bloqueio em grupo: cada defensor a mais tira isso do ataque do atacante
   const CUSTO_TRANSFUSAO = 2; // PV pagos pela Transfusão do Infartitte para tirar 1 hit de um aliado
   const CUSTO_SANGRIA = 4; // PV pagos pela Transfusão para dar 1 hit num Senhor(a) inimigo
   const CUSTO_COBRANCA = 2; // PV pagos pelo Ourinhos para roubar 1 carta (Cobrança)
@@ -781,16 +782,19 @@ window.SS = window.SS || {};
     const u = locA.u;
     const base = ataqueBase(e, p, locA.i) + (at.bonusAtaque || 0);
     const bonus = maior === 6 ? u.bonus.reduce((s, v) => s + Math.floor(v / 2), 0) : u.bonus.length;
-    const total = base + bonus;
-    const dano = maior >= DADO_ATAQUE_TOTAL ? total : Math.floor(total / 2);
-    const numeroAtacante = base + u.bonus.length;
-    res.dano = dano;
-    registrar(e, t('log.rolou', { n: at.n, u: nomeUnidade(u), r: rolagens.join(', '), cheio: maior >= DADO_ATAQUE_TOTAL, crit: maior === 6 && u.bonus.length > 0, d: dano }));
-
     // Ataque do Rei contra um Senhor(a): o alvo defende como se bloqueasse, junto com quem veio ajudar.
     const alvoDireto = at.alvo !== 'jogador' ? localizar(e, at.alvo) : null;
     const direcionado = !!alvoDireto && alvoDireto.u.tipo === 'senhor';
     const defensores = direcionado ? [at.alvo].concat(at.bloqueadores.filter(uid => uid !== at.alvo)) : at.bloqueadores;
+    // Bloqueio em grupo: cada defensor a mais tira 1 do ataque do atacante (antes do dado decidir cheio ou metade).
+    const vivos = defensores.filter(uid => localizar(e, uid)).length;
+    const reducaoGrupo = Math.max(0, vivos - 1) * REDUCAO_POR_DEFENSOR;
+    const total = Math.max(0, base + bonus - reducaoGrupo);
+    const dano = maior >= DADO_ATAQUE_TOTAL ? total : Math.floor(total / 2);
+    const numeroAtacante = base + u.bonus.length;
+    res.dano = dano;
+    if (reducaoGrupo) registrar(e, t('log.grupo', { n: vivos, r: reducaoGrupo, u: nomeUnidade(u) }));
+    registrar(e, t('log.rolou', { n: at.n, u: nomeUnidade(u), r: rolagens.join(', '), cheio: maior >= DADO_ATAQUE_TOTAL, crit: maior === 6 && u.bonus.length > 0, d: dano }));
     if (!defensores.length) {
       if (at.alvo === 'jogador') danoAoJogador(e, p, locA, dano);
       else if (alvoDireto) morrer(e, alvoDireto.p, alvoDireto.i, 'atacado');
@@ -804,23 +808,19 @@ window.SS = window.SS || {};
     // Paumol (Casca grossa): quem defende do lado dele recebe dano a menos
     // (com soPaus, só os Senhores que têm carta de Paus, na figura ou no número).
     const pm = PALHACOS.paumol;
-    // Bloqueio em grupo: o dano do golpe é dividido igualmente entre quem defende
-    // (a sobra vai para o primeiro, que no ataque do Rei é o próprio alvo).
-    const parte = k => Math.floor(dano / bloq.length) + (k < dano % bloq.length ? 1 : 0);
-    if (bloq.length > 1) registrar(e, t('log.dividido', { d: dano, partes: bloq.map((b, k) => parte(k)).join(' + ') }));
-    const danoPara = (b, k) => {
-      const d = parte(k);
-      if (!temPalhaco(D, 'paumol')) return d;
-      if (pm.soPaus && b.u.figura.naipe !== 'paus' && b.u.numero.naipe !== 'paus') return d;
-      return Math.max(0, d - pm.reducaoDefesa);
+    // Cada defensor recebe o dano inteiro (já reduzido pelo bloqueio em grupo).
+    const danoPara = b => {
+      if (!temPalhaco(D, 'paumol')) return dano;
+      if (pm.soPaus && b.u.figura.naipe !== 'paus' && b.u.numero.naipe !== 'paus') return dano;
+      return Math.max(0, dano - pm.reducaoDefesa);
     };
     let todosMorreram = true;
     bloq.forEach((b, k) => {
       const uid = b.u.uid;
       const loc = localizar(e, uid);
       if (!loc) return;
-      const danoDefesa = danoPara(b, k);
-      if (danoDefesa < parte(k)) registrar(e, t('log.casca', { u: nomeUnidade(loc.u), n: danoDefesa }));
+      const danoDefesa = danoPara(b);
+      if (danoDefesa < dano) registrar(e, t('log.casca', { u: nomeUnidade(loc.u), n: danoDefesa }));
       if (danoDefesa * 2 < atkBloq[k]) registrar(e, t('log.ignorou', { u: nomeUnidade(loc.u) }));
       else if (danoDefesa > atkBloq[k]) morrer(e, loc.p, loc.i, 'fatal');
       else aplicarHit(e, loc.p, loc.i);
@@ -967,7 +967,7 @@ window.SS = window.SS || {};
 
   SS.Motor = {
     desistir, REGRAS_DECK, RANKS, contagemPadrao, resumoDeck, validarDeck, cartasDoDeck,
-    PALHACOS, CUSTO_TRANSFUSAO, CUSTO_SANGRIA, SACRIFICIOS_RAINHA, SENHORES_POR_TURNO, ASES_POR_TURNO, palhacoDe, limiteMao, ataqueDirecionado,
+    PALHACOS, CUSTO_TRANSFUSAO, CUSTO_SANGRIA, SACRIFICIOS_RAINHA, SENHORES_POR_TURNO, ASES_POR_TURNO, REDUCAO_POR_DEFENSOR, palhacoDe, limiteMao, ataqueDirecionado,
     NAIPES, SIMBOLO, LIMITE_FIGURA, PV_INICIAL, ESPACOS, ACOES_POR_TURNO, CUSTO_RAINHA, DADO_ATAQUE_TOTAL, LIMITE_MAO,
     definirRng: f => { rng = f; },
     ehFigura, ehAs, ehNumero, valor, nomeCarta, nomeNaipe, nomeUnidade, curaDe, curaPara, naipado,

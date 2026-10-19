@@ -109,8 +109,8 @@ window.SS = window.SS || {};
         <h3>Bloqueio</h3>
         <ul>
           <li>Cada Senhor(a) <b>ativo(a)</b> bloqueia 1 atacante. Ases não bloqueiam.</li>
-          <li>Dois ou mais Senhores podem bloquear <b>o mesmo atacante</b>: o <b>dano é dividido</b> igualmente entre eles (a sobra vai para o primeiro), e cada um compara a sua parte com o próprio ataque.</li>
-          <li>No ataque do Rei contra um Senhor(a), o <b>alvo defende obrigatoriamente</b>, e outros Senhores ativos podem entrar para <b>ajudar</b> (o dano se divide entre o alvo e quem ajuda, e os ataques de todos somam no contra-ataque).</li>
+          <li>Dois ou mais Senhores podem bloquear <b>o mesmo atacante</b>: cada defensor a mais <b>tira 1 do ataque</b> dele (2 defensores: −1; 3: −2). Cada defensor recebe o dano inteiro (já reduzido) e o compara com o próprio ataque.</li>
+          <li>No ataque do Rei contra um Senhor(a), o <b>alvo defende obrigatoriamente</b>, e outros Senhores ativos podem entrar para <b>ajudar</b> (cada ajudante tira 1 do ataque do Rei, e os ataques de todos somam no contra-ataque).</li>
         </ul>
         <h3>O golpe contra quem bloqueia</h3>
         <p>Compare o <b>dano</b> com o <b>ataque do bloqueador</b>. Para um bloqueador com ataque 6:</p>
@@ -293,8 +293,8 @@ window.SS = window.SS || {};
         <h3>Blocking</h3>
         <ul>
           <li>Each <b>ready</b> Gentleman blocks 1 attacker. Aces don't block.</li>
-          <li>Two or more Gentlemen can block <b>the same attacker</b>: the <b>damage is split</b> evenly between them (any remainder goes to the first one), and each compares its own share with its own attack.</li>
-          <li>When the King attacks a Gentleman, the <b>target must defend</b>, and other ready Gentlemen can join to <b>help</b> (the damage is split between the target and its helpers, and all their attacks add up for the counterattack).</li>
+          <li>Two or more Gentlemen can block <b>the same attacker</b>: each extra defender <b>lowers its attack by 1</b> (2 defenders: −1; 3: −2). Each defender takes the full (already reduced) damage and compares it with its own attack.</li>
+          <li>When the King attacks a Gentleman, the <b>target must defend</b>, and other ready Gentlemen can join to <b>help</b> (each helper lowers the King's attack by 1, and all their attacks add up for the counterattack).</li>
         </ul>
         <h3>The blow against the blocker</h3>
         <p>Compare the <b>damage</b> with the <b>blocker's attack</b>. For a blocker with attack 6:</p>

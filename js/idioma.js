@@ -84,7 +84,7 @@ window.SS = window.SS || {};
     ],
     'log.desafio': ['{j} usa Desafio!: {u} terá de bloquear o primeiro ataque.', '{j} uses Challenge!: {u} must block the first attack.'],
     'log.transfusao': ['{j} usa Transfusão: paga {n} PV e tira 1 hit de {u}.', '{j} uses Transfusion: pays {n} HP and removes 1 hit from {u}.'],
-    'log.dividido': ['Bloqueio em grupo: os {d} de dano se dividem ({partes}).', 'Group block: the {d} damage is split ({partes}).'],
+    'log.grupo': ['Bloqueio em grupo ({n} defensores): o ataque de {u} cai {r}.', "Group block ({n} defenders): {u}'s attack drops by {r}."],
     'log.sangria': ['{j} usa Transfusão contra {u}: paga {n} PV e causa 1 hit.', '{j} uses Transfusion on {u}: pays {n} HP and deals 1 hit.'],
     'log.vigilia': ['{j} usa Vigília: {u} não vira para baixo no fim do turno.', "{j} uses Vigil: {u} won't flip face down at the end of the turn."],
     'log.curou': ['{j} usou {c} e curou {n} PV.', '{j} used {c} and healed {n} HP.'],
