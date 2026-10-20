@@ -185,7 +185,7 @@ window.SS = window.SS || {};
           <li>Quem chegar a <b>0 PV</b> perde.</li>
           <li><b>Baralhos vazios:</b> se precisar comprar e os dois estiverem vazios, perca 2 PV por compra.</li>
           <li><b>Limite de mão:</b> ${M.LIMITE_MAO} cartas no fim do turno; o excesso vai para o cemitério.</li>
-          <li>Você pode <b>desistir</b> a qualquer momento pelo botão no topo do painel.</li>
+          <li>Você pode <b>desistir</b> a qualquer momento pelo botão no canto superior esquerdo da mesa. O registro da partida fica no botão do canto superior direito.</li>
         </ul>`,
     },
   ];
@@ -369,7 +369,7 @@ window.SS = window.SS || {};
           <li>Whoever reaches <b>0 HP</b> loses.</li>
           <li><b>Empty decks:</b> if you have to draw and both are empty, lose 2 HP per draw.</li>
           <li><b>Hand limit:</b> ${M.LIMITE_MAO} cards at end of turn; the extra goes to the graveyard.</li>
-          <li>You can <b>concede</b> at any time with the button at the top of the panel.</li>
+          <li>You can <b>concede</b> at any time with the button in the top-left corner of the table. The match log is behind the button in the top-right corner.</li>
         </ul>`,
     },
   ];

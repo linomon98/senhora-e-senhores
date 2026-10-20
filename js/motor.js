@@ -482,6 +482,12 @@ window.SS = window.SS || {};
     return r;
   }
 
+  // Desfaz o "ir para o ataque" (antes de declarar qualquer ataque): volta para as ações passivas.
+  function voltarAoPrincipal(e) {
+    if (e.fase !== 'ataque' || e.vencedor != null) throw new Error('Só dá para voltar antes de declarar os ataques');
+    e.fase = 'principal';
+  }
+
   function aplicarAcao(e, a) {
     if (e.fase !== 'principal') throw new Error('Fora da fase principal');
     if (a.tipo === 'atacar') {
@@ -997,7 +1003,7 @@ window.SS = window.SS || {};
     desistir, REGRAS_DECK, RANKS, contagemPadrao, resumoDeck, validarDeck, cartasDoDeck,
     PALHACOS, CUSTO_TRANSFUSAO, CUSTO_SANGRIA, SACRIFICIOS_RAINHA, SENHORES_POR_TURNO, ASES_POR_TURNO, REDUCAO_POR_DEFENSOR, palhacoDe, limiteMao, ataqueDirecionado,
     NAIPES, SIMBOLO, LIMITE_FIGURA, PV_INICIAL, ESPACOS, ACOES_POR_TURNO, CUSTO_RAINHA, DADO_ATAQUE_TOTAL, LIMITE_MAO,
-    definirRng: f => { rng = f; }, rngAtual: () => rng,
+    definirRng: f => { rng = f; }, rngAtual: () => rng, voltarAoPrincipal,
     ehFigura, ehAs, ehNumero, valor, nomeCarta, nomeNaipe, nomeUnidade, curaDe, curaPara, naipado,
     BARALHOS, NOME_BARALHO, baralhosDisponiveis, comprarDoTurno,
     criarJogo, registrar, figurasNoBaralho, escolherFiguras, mulligan, confirmarAbertura,

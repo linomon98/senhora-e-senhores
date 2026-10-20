@@ -8,7 +8,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://0.peerjs.com wss://0.peerjs.com; object-src 'none'; base-uri 'self'; form-action 'none'; frame-src 'none'">
   <meta name="referrer" content="no-referrer">
   <title data-i18n="jogo.nome">Lady and Gentlemen</title>
-  <link rel="stylesheet" href="estilo.css?v=202610200113">
+  <link rel="stylesheet" href="estilo.css?v=202610201530">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
@@ -17,6 +17,8 @@
   <div id="palco">
     <div id="app">
       <main id="mesa">
+        <div id="graminhas" aria-hidden="true"></div>
+        <div class="linha-meio" aria-hidden="true"></div>
         <section class="zona zona-op">
           <div class="info" id="info-1"></div>
           <div class="mao" id="mao-1"></div>
@@ -26,10 +28,12 @@
         <div id="acoes" hidden></div>
         <aside id="combate" hidden></aside>
         <section id="faixa">
-          <div id="fase"></div>
-          <div id="instrucao"></div>
-          <div id="chips"></div>
-          <div id="botoes"></div>
+          <div class="caixa-faixa">
+            <div id="fase"></div>
+            <div id="instrucao"></div>
+            <div id="chips"></div>
+            <div id="botoes"></div>
+          </div>
         </section>
         <section class="fileira" id="campo-0"></section>
         <section class="zona zona-eu">
@@ -37,33 +41,35 @@
           <div class="mao" id="mao-0"></div>
           <div class="pilhas" id="pilhas-0"></div>
         </section>
+        <div id="cartas-acao"></div>
+        <nav class="barra-partida">
+          <button class="btn btn-topo" data-acao="desistir" data-i18n="barra.desistir" data-i18n-title="barra.desistirT">⚑ Concede</button>
+          <button class="btn btn-topo" data-acao="reiniciar" data-i18n="barra.reiniciar" data-i18n-title="barra.reiniciarT">⟲ Restart</button>
+          <button class="btn btn-topo" data-acao="menu" data-i18n="barra.menu" data-i18n-title="barra.menuT">☰ Menu</button>
+        </nav>
+        <button class="btn btn-topo btn-log" data-acao="log" data-i18n="barra.registro">Log</button>
+        <aside id="painel" hidden>
+          <header><h2 data-i18n="barra.registro">Log</h2><button class="fechar-log" data-acao="fechar-log" aria-label="×">×</button></header>
+          <div id="log"></div>
+        </aside>
       </main>
-      <svg id="setas" width="1470" height="940"></svg>
+      <svg id="setas" width="1600" height="900"></svg>
       <div id="anuncio" hidden></div>
-      <aside id="painel">
-        <div class="barra-partida">
-          <button class="btn" data-acao="reiniciar" data-i18n="barra.reiniciar" data-i18n-title="barra.reiniciarT">⟲ Restart</button>
-          <button class="btn" data-acao="desistir" data-i18n="barra.desistir" data-i18n-title="barra.desistirT">⚑ Concede</button>
-          <button class="btn" data-acao="menu" data-i18n="barra.menu" data-i18n-title="barra.menuT">☰ Menu</button>
-        </div>
-        <h2 data-i18n="barra.registro">Log</h2>
-        <div id="log"></div>
-      </aside>
     </div>
   </div>
   <div id="modal" hidden></div>
   <div id="dica" hidden></div>
 
-  <script src="js/idioma.js?v=202610200113"></script>
-  <script src="js/motor.js?v=202610200113"></script>
-  <script src="js/palhacos.js?v=202610200113"></script>
-  <script src="js/pesos.js?v=202610200113"></script>
-  <script src="js/bot.js?v=202610200113"></script>
-  <script src="js/cartas.js?v=202610200113"></script>
-  <script src="js/dados3d.js?v=202610200113"></script>
-  <script src="js/decks.js?v=202610200113"></script>
-  <script src="js/regras.js?v=202610200113"></script>
-  <script src="js/rede.js?v=202610200113"></script>
-  <script src="js/interface.js?v=202610200113"></script>
+  <script src="js/idioma.js?v=202610201530"></script>
+  <script src="js/motor.js?v=202610201530"></script>
+  <script src="js/palhacos.js?v=202610201530"></script>
+  <script src="js/pesos.js?v=202610201530"></script>
+  <script src="js/bot.js?v=202610201530"></script>
+  <script src="js/cartas.js?v=202610201530"></script>
+  <script src="js/dados3d.js?v=202610201530"></script>
+  <script src="js/decks.js?v=202610201530"></script>
+  <script src="js/regras.js?v=202610201530"></script>
+  <script src="js/rede.js?v=202610201530"></script>
+  <script src="js/interface.js?v=202610201530"></script>
 </body>
 </html>

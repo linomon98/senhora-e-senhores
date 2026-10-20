@@ -29,6 +29,8 @@ No menu:
 | `js/pesos.js` | Pesos aprendidos pelo treino (usados do Médio ao Profissional). |
 | `ferramentas/treino.js` | Treino do bot por autojogo (rodar no console do navegador; não é carregado pelo jogo). |
 | `js/cartas.js` | Desenho das cartas, dos dorsos e da textura da mesa. |
+| `arte/` | Artes: `palhacos/` (Palhaços na mesa), `cartas/` (cartas do menu), `naipes/` (botões de poder), `acoes/` (cartas de ação), `mesa/` (grama). |
+| `fontes/` | Fonte dos títulos (Seventy Money). |
 | `js/dados3d.js` | Dado 3D com física (arremessado com o mouse). |
 | `js/decks.js` | Montagem de decks: 4 espaços salvos no navegador e checagem das regras de limite. |
 | `js/regras.js` | Tela "Regras do jogo", dividida por temas. |

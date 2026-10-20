@@ -348,6 +348,7 @@ window.SS = window.SS || {};
     const el = ev.target.closest('[data-acao],[data-mao],[data-token],[data-slot],[data-alvo],[data-ataque],[data-cemiterio],[data-pilha]');
     if (!el) return;
     const ds = el.dataset;
+    if (ds.acao === 'log' || ds.acao === 'fechar-log') return alternarLog(ds.acao === 'log');
     if (ds.acao === 'menu') return confirmarMenu();
     if (ds.acao === 'desistir') return confirmarDesistir();
     if (ds.acao === 'reiniciar') return confirmarReiniciar();
@@ -607,9 +608,15 @@ window.SS = window.SS || {};
       case 'tipo':
         return iniciarPendente(arg);
       case 'ir-ataque':
+        // No online o amigo só fica sabendo do ataque quando ele é confirmado (a mensagem "declarar"
+        // já leva para a fase de ataque), então dá para voltar atrás sem desencontrar as duas telas.
         ui.sel = []; ui.pend = null; ui.ataques = [];
-        enviarJogada({ t: 'acao', a: { tipo: 'atacar' } });
         M.aplicarAcao(jogo, { tipo: 'atacar' });
+        return render();
+      case 'voltar':
+        // Clicou em Atacar sem querer (esqueceu de sumonar): volta para as ações passivas.
+        ui.ataques = []; ui.atacanteSel = null; ui.mira = null;
+        M.voltarAoPrincipal(jogo);
         return render();
       case 'mais-dado': {
         const livres = ourosLivres();
@@ -1179,6 +1186,8 @@ window.SS = window.SS || {};
       $('#campo-' + p).innerHTML = Array.from({ length: M.ESPACOS }, () => '<div class="espaco"></div>').join('');
     }
     for (const id of ['#fase', '#instrucao', '#chips', '#botoes', '#log', '#setas']) $(id).innerHTML = '';
+    definirHTML($('#cartas-acao'), '');
+    $('#painel').hidden = true;
     $('#acoes').hidden = true;
     $('#combate').hidden = true;
     $('#combate').innerHTML = '';
@@ -1204,6 +1213,40 @@ window.SS = window.SS || {};
     return `<div class="heroi-arte">${chapeu(pal.cor)}<span class="heroi-naipe">${SIMB[pal.naipe]}</span></div>`;
   }
 
+  // Troca o conteúdo só quando ele muda (assim animações em andamento não recomeçam).
+  function definirHTML(el, html) {
+    if (el._html === html) return;
+    el._html = html;
+    el.innerHTML = html;
+  }
+
+  const COR_NAIPE = { espadas: '90, 140, 255', copas: '255, 77, 90', paus: '77, 220, 122', ouros: '255, 207, 77' };
+  let poderAnimado = null;
+
+  // Poder usado: o símbolo do naipe cresce e brilha na cor do naipe, e uma onda sai dele.
+  function brilhoPoder(p, naipe) {
+    requestAnimationFrame(() => {
+      const el = $(`#info-${p} .poder-naipe`);
+      if (!el || MOVIMENTO_REDUZIDO) return;
+      const cor = COR_NAIPE[naipe];
+      el.animate([
+        { transform: 'scale(1)', filter: `drop-shadow(0 0 0 rgba(${cor}, 0))` },
+        { transform: 'scale(1.3) rotate(-6deg)', filter: `drop-shadow(0 0 26px rgba(${cor}, 1)) brightness(1.35)`, offset: 0.3 },
+        { transform: 'scale(1)', filter: `drop-shadow(0 0 0 rgba(${cor}, 0))` },
+      ], { duration: 1000, easing: 'ease-out' });
+      const c = centroDe(el);
+      if (!c) return;
+      for (const [atraso, escalaFinal] of [[0, 3.2], [160, 2.4]]) {
+        const onda = document.createElement('div');
+        onda.className = 'onda-poder';
+        Object.assign(onda.style, { left: c.x + 'px', top: c.y + 'px', borderColor: `rgba(${cor}, .95)`, boxShadow: `0 0 26px rgba(${cor}, .9), inset 0 0 18px rgba(${cor}, .6)` });
+        $('#app').appendChild(onda);
+        onda.animate([{ transform: 'translate(-50%, -50%) scale(.3)', opacity: 1 }, { transform: `translate(-50%, -50%) scale(${escalaFinal})`, opacity: 0 }],
+          { duration: 750, delay: atraso, easing: 'cubic-bezier(.2, .8, .3, 1)', fill: 'backwards' }).onfinish = () => onda.remove();
+      }
+    });
+  }
+
   function renderJogador(p, alvos) {
     const j = jogo.jogadores[p], cor = corDe(p), teto = M.tetoCura(j), pal = palhacoDe(p);
     const quem = controle(p) === 'humano' ? t('ui.voce') : controle(p) === 'remoto' ? t('ui.amigo') : `bot · ${NOME_NIVEL[cfg.nivel]}`;
@@ -1212,26 +1255,45 @@ window.SS = window.SS || {};
     for (let k = 0; k < j.tokens; k++) {
       tokens += `<button class="token${ui.sel.includes('TOKEN#' + k) ? ' selecionada' : ''}" data-token="${k}"${podeJogar ? '' : ' disabled'}>♦ extra</button>`;
     }
-    // Botão do poder (em forma de carta, ao lado do Palhaço).
+    // Botão do poder: o próprio símbolo do naipe do Palhaço (pulsa enquanto dá para usar).
     let poder;
     if (pal.poder) {
       const usado = jogo.vez === p && jogo.poderUsado;
       const pode = podeJogar && !ui.pend && M.acoesLegais(jogo).some(a => a.tipo === 'poder');
-      poder = `<button class="poder-btn cor-${cor}${pode ? ' pronto' : ''}${usado ? ' usado' : ''}${ui.pend && ui.pend.tipo === 'poder' && jogo.vez === p ? ' ativo' : ''}"
-        data-poder="${p}"${pode ? ' data-acao="poder"' : ' disabled'}>
-        <span class="poder-icone">${SIMB[pal.naipe]}</span><b>${pal.poder.nome}</b><small>${t(usado ? 'ui.usado' : 'ui.umaAcao')}</small></button>`;
+      const dica = `${t('menu.poder')} ${pal.poder.nome} ${pal.poder.texto} (${t(usado ? 'ui.usado' : 'ui.umaAcao')})`;
+      poder = `<button class="poder-naipe naipe-${pal.naipe}${pode ? ' pronto' : ''}${usado ? ' usado' : ''}${ui.pend && ui.pend.tipo === 'poder' && jogo.vez === p ? ' ativo' : ''}"
+        data-poder="${p}"${pode ? ' data-acao="poder"' : ' disabled'} title="${escapar(dica)}" aria-label="${escapar(pal.poder.nome)}">
+        <img src="arte/naipes/${pal.naipe}.webp" alt="" draggable="false"></button>`;
     } else {
-      poder = `<div class="poder-btn cor-${cor} passivo" data-poder="${p}"><span class="poder-icone">${SIMB[pal.naipe]}</span><b>${pal.passiva.nome}</b><small>${t('ui.passiva')}</small></div>`;
+      poder = `<div class="poder-naipe naipe-${pal.naipe} passivo" data-poder="${p}" title="${escapar(pal.passiva.nome + ': ' + pal.passiva.texto)}"><img src="arte/naipes/${pal.naipe}.webp" alt="" draggable="false"></div>`;
     }
-    $('#info-' + p).innerHTML = `
-      <div class="heroi cor-${cor}${pal.retrato ? ' com-retrato' : ''}${alvos.has('jogador:' + p) ? ' clicavel' : ''}${jogo.vez === p ? ' da-vez' : ''}" data-alvo="jogador:${p}">
-        ${arteHeroi(pal)}
-        <div class="heroi-nome">${escapar(pal.nome)}</div>
-        <div class="heroi-quem">${quem}</div>
-        <div class="heroi-pv" title="${t('ui.pontosVida')}"><span>${j.pv}</span></div>
-        ${isFinite(teto) ? `<div class="heroi-ferida" title="${t('ui.feridaCopas')}">${t('ui.curaAte', { n: teto })}</div>` : ''}
-      </div>
-      <div class="lado-heroi">${poder}<div class="tokens">${tokens}</div></div>`;
+    // O Palhaço é um PNG solto que "respira": a peça é montada uma vez e só os detalhes mudam,
+    // para a animação não recomeçar a cada vez que a mesa é redesenhada.
+    const info = $('#info-' + p);
+    let heroi = info.querySelector('.heroi');
+    if (!heroi || heroi.dataset.pal !== pal.id) {
+      info.innerHTML = `<div class="heroi heroi-livre" data-alvo="jogador:${p}" data-pal="${pal.id}">
+          <img class="heroi-png" src="${pal.retrato}" alt="${escapar(pal.nome)}" draggable="false">
+          <div class="heroi-pv" title="${t('ui.pontosVida')}"><span></span></div>
+          <div class="heroi-ferida" title="${t('ui.feridaCopas')}" hidden></div>
+        </div>
+        <div class="lado-heroi"></div>`;
+      heroi = info.querySelector('.heroi');
+    }
+    const classes = `heroi heroi-livre cor-${cor}${alvos.has('jogador:' + p) ? ' clicavel' : ''}${jogo.vez === p ? ' da-vez' : ''}`;
+    for (const c of classes.split(' ')) heroi.classList.add(c);
+    for (const c of ['clicavel', 'da-vez']) if (!classes.includes(c)) heroi.classList.remove(c);
+    heroi.title = `${pal.nome} · ${quem}`;
+    heroi.querySelector('.heroi-pv span').textContent = j.pv;
+    const ferida = heroi.querySelector('.heroi-ferida');
+    ferida.hidden = !isFinite(teto);
+    if (isFinite(teto)) ferida.textContent = t('ui.curaAte', { n: teto });
+    definirHTML(info.querySelector('.lado-heroi'), `${poder}<div class="tokens">${tokens}</div>`);
+    // Brilho na cor do naipe quando o poder é usado (vale para os dois Palhaços).
+    if (jogo.vez === p && jogo.poderUsado && poderAnimado !== `${partida}:${jogo.turno}`) {
+      poderAnimado = `${partida}:${jogo.turno}`;
+      brilhoPoder(p, pal.naipe);
+    }
     const visivel = p === eu || cfg.modo === 'bots';
     const oculta = id => (voando.has(id) ? ' style="visibility:hidden"' : '');
     // Com 1 figura ou 1 Ás selecionado: o que combina pulsa, o resto escurece.
@@ -1420,15 +1482,20 @@ window.SS = window.SS || {};
     return a.tipo;
   }
 
-  // Botão grande do centro: ícone num círculo colorido + texto.
-  // (o símbolo no começo do texto sai: o ícone já faz esse papel)
-  const btnGrande = (acao, rotulo, icone, extra) =>
-    `<button class="btn-grande ic-${icone} ${extra || ''}" data-acao="${acao}"><span class="btn-icone">${iconeSvg(icone)}</span><span class="btn-rot">${rotulo.replace(/^[^\p{L}\p{N}+]+/u, '')}</span></button>`;
+  // Ações em forma de carta (canto inferior esquerdo): arte da carta + título na fonte dos títulos.
+  // O título vem do idioma (a arte não tem texto, por causa da versão em inglês).
+  const ARTE_ACAO = { atacar: 'atacar', espadas: 'atacar', paus: 'atacar', escudo: 'defesa', curar: 'defesa', comprar: 'comprar', reviver: 'cemiterio', sumonar: 'sumonar', rainha: 'sumonar', as: 'sumonar' };
+  const btnGrande = (acao, rotulo, icone, extra) => {
+    const arte = ARTE_ACAO[icone] || 'sumonar';
+    const sub = rotulo.replace(/^[^\p{L}\p{N}+]+/u, '');
+    return `<button class="carta-acao arte-${arte} ${extra || ''}" data-acao="${acao}" title="${escapar(sub)}">
+      <img src="arte/acoes/${arte}.webp" alt="" draggable="false"><b class="ca-titulo">${t('carta.' + icone)}</b><small class="ca-sub">${sub}</small></button>`;
+  };
 
   function renderFaixa() {
     const p = jogo.vez, j = jogo.jogadores[p], d = 1 - p;
     const btn = (acao, rotulo, extra) => `<button class="btn ${extra || ''}" data-acao="${acao}">${rotulo}</button>`;
-    let fase = t('faixa.turno', { n: jogo.turno, j: escapar(j.nome) }), texto = '', botoes = '';
+    let fase = t('faixa.turno', { n: jogo.turno, j: escapar(j.nome) }), texto = '', botoes = '', extras = '';
     const humanoNaVez = controle(p) === 'humano' && !ui.ocupado;
 
     if (jogo.vencedor != null) {
@@ -1450,11 +1517,11 @@ window.SS = window.SS || {};
       if (!humanoNaVez) texto = t('faixa.botJogando', { j: escapar(j.nome) });
       else if (ui.pend) {
         texto = textoPasso();
-        botoes = btn('cancelar', t('btn.cancelar'));
+        extras = btn('cancelar', t('btn.cancelar'));
       } else if (ui.destino != null && ui.sel.length === 1) {
         // Figura ou Ás esperando no campo: falta o número.
         texto = t('faixa.preparo');
-        botoes = btn('cancelar', t('btn.cancelar'));
+        extras = btn('cancelar', t('btn.cancelar'));
       } else {
         if (ui.sel.length) {
           const cands = candidatosSelecao();
@@ -1462,7 +1529,8 @@ window.SS = window.SS || {};
           botoes = chaves.map(k => {
             const a = cands.find(x => chaveAcao(x) === k);
             return btnGrande('tipo:' + k, rotuloTipo(a.tipo, a), iconeDaAcao(a));
-          }).join('') + btn('cancelar', t('btn.cancelarSelecao'));
+          }).join('');
+          extras = btn('cancelar', t('btn.cancelarSelecao'));
           texto = chaves.length ? t('faixa.escolhaAcao') : dicaSelecao();
         } else texto = t(jogo.acoes > 0 ? 'faixa.comoJogar' : 'faixa.semAcoes');
         botoes += btnGrande('ir-ataque', t('btn.irAtaque').replace(/^⚔\s*/, ''), 'atacar', 'perigo');
@@ -1476,7 +1544,7 @@ window.SS = window.SS || {};
         if (!M.atacantesAptos(jogo).length) texto = t(jogo.turno === 1 ? 'faixa.primeiroNaoAtaca' : 'faixa.ninguemApto');
         else texto = atacantesRestantes().length ? t('faixa.comoAtacar', { extra }) : t('faixa.ataquesDeclarados');
         if (ui.ataques.length) botoes += btnGrande('confirmar-ataques', t('btn.confirmarAtaques', { n: ui.ataques.length }), 'atacar', 'perigo');
-        botoes += btn('sem-ataque', t(ui.ataques.length ? 'btn.encerrarSemAtacar' : 'btn.encerrarTurno'));
+        extras = btn('voltar', t('btn.voltarAcoes'), 'voltar') + btn('sem-ataque', t(ui.ataques.length ? 'btn.encerrarSemAtacar' : 'btn.encerrarTurno'));
       } else texto = t('faixa.botDeclarando', { j: escapar(j.nome) });
     } else if (jogo.fase === 'bloqueio') {
       fase += ` · ${t('faixa.bloqueio')}`;
@@ -1485,7 +1553,8 @@ window.SS = window.SS || {};
         const desafiado = jogo.desafio != null && M.localizar(jogo, jogo.desafio);
         texto = t(ui.bloqSel != null ? 'faixa.solteBloqueio' : 'faixa.comoBloquear')
           + (desafiado ? ' ' + t('faixa.desafio', { u: M.nomeUnidade(desafiado.u) }) : '');
-        botoes = btnGrande('confirmar-bloqueios', t('btn.confirmarBloqueios'), 'escudo', 'defesa') + btn('limpar-bloqueios', t('btn.limpar'));
+        botoes = btnGrande('confirmar-bloqueios', t('btn.confirmarBloqueios'), 'escudo', 'defesa');
+        extras = btn('limpar-bloqueios', t('btn.limpar'));
       } else texto = t('faixa.botBloqueando', { j: escapar(jogo.jogadores[d].nome) });
     } else if (jogo.fase === 'resolucao' || jogo.fase === 'fimCombate') {
       fase += ` · ${t('faixa.combate')}`;
@@ -1498,7 +1567,8 @@ window.SS = window.SS || {};
     $('#fase').innerHTML = fase;
     $('#instrucao').innerHTML = texto;
     $('#chips').innerHTML = '';
-    $('#botoes').innerHTML = botoes;
+    $('#botoes').innerHTML = '';
+    definirHTML($('#cartas-acao'), botoes || extras ? `<div class="acoes-extra">${extras}</div><div class="leque-acoes">${botoes}</div>` : '');
   }
 
   // Painel de combate (lado direito, no meio da altura): a lista de ataques na declaração e no
@@ -1541,6 +1611,14 @@ window.SS = window.SS || {};
     caixa.innerHTML = `<div class="acoes-rotulo">${t('ui.acoesPassivas')}</div><div class="acoes-num"><b>${restantes}</b>/${total}</div><div class="acoes-pips">${pips}</div>
       <div class="acoes-vez">${t('ui.vezDe', { j: escapar(jogo.jogadores[jogo.vez].nome) })}</div>`;
     caixa.hidden = false;
+  }
+
+  // Registro da partida: fica escondido; o botão do canto superior direito abre uma caixa suspensa.
+  function alternarLog(abrir) {
+    const painel = $('#painel');
+    painel.hidden = abrir ? !painel.hidden : true;
+    $('.btn-log').classList.toggle('ativo', !painel.hidden);
+    if (!painel.hidden && jogo) renderLog();
   }
 
   function renderLog() {
@@ -2764,6 +2842,22 @@ window.SS = window.SS || {};
 
   // ---------- Início ----------
 
+  // Graminhas soltas pela mesa, balançando num vento leve (cada uma no seu ritmo).
+  function plantarGraminhas() {
+    const campo = $('#graminhas');
+    if (!campo || campo.childElementCount) return;
+    const sorte = (a, b) => a + Math.random() * (b - a);
+    let h = '';
+    for (let k = 0; k < 46; k++) {
+      const s = sorte(.7, 1.25).toFixed(2), d = sorte(2.6, 4.6).toFixed(2), a = (-sorte(0, 4.6)).toFixed(2);
+      const folhas = Math.random() < .5
+        ? '<path d="M6 17C5 12 3 9 1 6M12 17c0-5 0-9 .5-13M18 17c1-5 3-8 5-11"/>'
+        : '<path d="M7 17C6 13 4.5 10 3 8M12 17c.3-4 1-8 2.5-11M17 17c1.2-3.6 2.6-5.6 4.5-7.5"/>';
+      h += `<span class="tufo" style="left:${sorte(1, 98).toFixed(1)}%;top:${sorte(2, 96).toFixed(1)}%;--s:${s};--d:${d}s;--a:${a}s"><svg viewBox="0 0 24 18">${folhas}</svg></span>`;
+    }
+    campo.innerHTML = h;
+  }
+
   function ajustarEscala() {
     const app = $('#app');
     escala = Math.min(innerWidth / app.offsetWidth, innerHeight / app.offsetHeight);
@@ -2773,6 +2867,7 @@ window.SS = window.SS || {};
 
   SS.Idioma.aplicarEstaticos();
   C.aplicarTexturas();
+  plantarGraminhas();
   ajustarEscala();
   addEventListener('resize', ajustarEscala);
   document.addEventListener('click', aoClicar);

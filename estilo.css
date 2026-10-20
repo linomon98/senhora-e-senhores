@@ -965,3 +965,161 @@ button.cb-item { cursor: default; }
   .lado-rivais .carta-joker { width: 100%; }
 }
 .menu-tema .acoes-menu { margin-bottom: 0; }
+
+/* =====================================================================================
+   Tabuleiro de grama (layout novo): mesa larga, Palhaços soltos, poder no naipe,
+   barra do topo, registro suspenso e ações em forma de carta no canto inferior esquerdo.
+   ===================================================================================== */
+@font-face { font-family: 'Seventy Money'; src: url('fontes/SeventyMoney-Regular.ttf') format('truetype'); font-display: swap; }
+:root { --fonte-titulo: 'Seventy Money', Georgia, 'Times New Roman', serif; --fonte-ui: 'Segoe UI', system-ui, sans-serif; --tinta: #1d2a12; }
+.titulo, .titulo-etapa, .vs, .titulo-fim, .btn-menu, .caixa-info h3, #modal h2, .texto-regras h2, .pronto-info h2 { font-family: var(--fonte-titulo); font-weight: 400; letter-spacing: .5px; }
+
+html, body { background: #9de03a url('arte/mesa/grama.webp') center / cover; }
+#app { width: 1600px; height: 900px; padding: 0; display: block; gap: 0; }
+#mesa {
+  position: absolute; inset: 0; width: 1600px; height: 900px; padding: 8px 40px 0; border-radius: 0; overflow: hidden;
+  background: #9de03a url('arte/mesa/grama.webp') center / cover; box-shadow: none;
+}
+#mesa > .zona, #mesa > .fileira, #mesa > #faixa { position: relative; z-index: 2; }
+
+/* Graminhas que balançam com o vento + a linha branca do meio do campo */
+#graminhas { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.tufo {
+  position: absolute; width: calc(22px * var(--s)); height: calc(17px * var(--s)); transform-origin: 50% 100%;
+  animation: vento var(--d) ease-in-out var(--a) infinite alternate;
+}
+.tufo svg { display: block; width: 100%; height: 100%; fill: none; stroke: #2a4a12; stroke-width: 2.3; stroke-linecap: round; opacity: .55; }
+@keyframes vento { from { transform: rotate(-8deg) skewX(-7deg); } to { transform: rotate(7deg) skewX(6deg); } }
+.linha-meio {
+  position: absolute; left: 0; right: 0; top: 50%; height: 5px; transform: translateY(-50%); z-index: 1; pointer-events: none;
+  background: rgba(255, 255, 255, .78); box-shadow: 0 0 10px rgba(255, 255, 255, .35);
+}
+
+/* Barra do topo (desistir, reiniciar, menu) e botão do registro */
+#mesa .barra-partida { position: absolute; top: 14px; left: 18px; z-index: 30; display: flex; gap: 8px; }
+.btn.btn-topo, .barra-partida .btn.btn-topo {
+  flex: none; font: 700 15px var(--fonte-ui); padding: 8px 18px; border-radius: 14px; cursor: pointer;
+  color: var(--tinta); background: #fffdf6; border: 2px solid var(--tinta); box-shadow: 0 3px 0 var(--tinta), 0 6px 14px rgba(20, 50, 5, .25);
+  transition: transform .12s, box-shadow .12s, background .12s;
+}
+.btn.btn-topo:hover:not(:disabled) { background: #fff; transform: translateY(-2px); box-shadow: 0 5px 0 var(--tinta), 0 10px 18px rgba(20, 50, 5, .3); }
+.btn.btn-topo:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--tinta); }
+.btn-log { position: absolute; top: 14px; right: 18px; z-index: 30; }
+.btn.btn-log.ativo { background: var(--ouro); }
+
+/* Registro suspenso (à esquerda), com X para fechar */
+#painel {
+  position: absolute; left: 18px; top: 66px; z-index: 45; width: 340px; height: 560px; padding: 0; gap: 0; border-radius: 16px;
+  display: flex; flex-direction: column; background: rgba(16, 30, 10, .96); border: 2px solid var(--tinta); box-shadow: 0 18px 40px rgba(20, 50, 5, .45);
+  animation: log-entra .22s ease-out;
+}
+#painel[hidden] { display: none; }
+#painel header { display: flex; align-items: center; justify-content: space-between; padding: 10px 10px 8px 16px; border-bottom: 1px solid rgba(255, 255, 255, .12); }
+#painel h2 { font: 400 22px var(--fonte-titulo); letter-spacing: 1px; text-transform: none; color: var(--ouro); }
+#painel #log { padding: 10px 16px 14px; }
+.fechar-log { width: 32px; height: 32px; border-radius: 50%; border: 0; cursor: pointer; font-size: 20px; line-height: 1; color: #fff; background: rgba(255, 255, 255, .12); }
+.fechar-log:hover { background: #c41e2a; }
+@keyframes log-entra { from { opacity: 0; transform: translateX(-14px); } }
+
+/* Zonas: o Palhaço do oponente espia do alto (a mão cobre a parte de baixo) e o seu sobe da borda de baixo. */
+.zona .mao { position: relative; z-index: 3; width: 560px; }
+.zona .info { z-index: 2; }
+.zona-op { height: 200px; grid-template-rows: 138px 62px; }
+.zona-op .info { align-self: start; }
+.zona-op .pilhas { align-self: start; margin-top: 56px; }
+.zona-op .mao { margin-top: -26px; }
+.zona-eu { height: 268px; grid-template-rows: 124px 144px; }
+.zona-eu .info { align-self: start; }
+.pilha label { color: var(--tinta); opacity: .85; font-weight: 700; }
+
+/* Palhaço solto (PNG), respirando de leve */
+.heroi.heroi-livre {
+  width: 200px; height: 200px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; display: block; cursor: default;
+}
+.zona-eu .heroi.heroi-livre { width: 292px; height: 292px; margin-top: -28px; }
+.zona-op .heroi.heroi-livre { width: 236px; height: 236px; margin-top: -12px; }
+.zona-op .heroi-png { -webkit-mask-image: linear-gradient(#000 62%, transparent 92%); mask-image: linear-gradient(#000 62%, transparent 92%); }
+.heroi-png {
+  display: block; width: 100%; height: 100%; object-fit: contain; transform-origin: 50% 100%; pointer-events: none;
+  animation: respirar-palhaco 5s ease-in-out infinite; filter: drop-shadow(0 10px 12px rgba(20, 50, 5, .35)); transition: filter .25s;
+}
+.zona-op .heroi-png { animation-duration: 6.2s; animation-delay: -2.4s; }
+@keyframes respirar-palhaco {
+  0%, 100% { transform: translateY(0) rotate(-1.1deg) scale(1); }
+  50% { transform: translateY(-5px) rotate(1.1deg) scale(1.015); }
+}
+.heroi.heroi-livre.da-vez .heroi-png { filter: drop-shadow(0 0 10px rgba(255, 240, 160, .95)) drop-shadow(0 10px 12px rgba(20, 50, 5, .35)); }
+.heroi.heroi-livre.clicavel, .heroi.heroi-livre.destino-alvo { cursor: pointer; box-shadow: none; }
+.heroi.heroi-livre.clicavel .heroi-png, .heroi.heroi-livre.destino-alvo .heroi-png {
+  filter: drop-shadow(0 0 12px rgba(255, 60, 60, 1)) drop-shadow(0 0 4px rgba(255, 255, 255, .9));
+}
+.heroi-livre .heroi-pv { right: auto; left: 18px; top: 112px; bottom: auto; z-index: 2; width: 60px; height: 60px; font: 400 28px var(--fonte-titulo); }
+.zona-op .heroi-livre .heroi-pv { left: 2px; top: 30px; bottom: auto; width: 52px; height: 52px; font-size: 23px; }
+.heroi-livre .heroi-ferida { left: 4px; top: 178px; bottom: auto; z-index: 2; }
+.zona-op .heroi-livre .heroi-ferida { top: 88px; }
+
+/* Poder: o símbolo do naipe ao lado do Palhaço. Pulsa enquanto dá para usar (o do oponente fica parado). */
+.info .lado-heroi { left: calc(100% + 4px); }
+.zona-op .info .lado-heroi { top: 40%; }
+.naipe-espadas { --cn: 90, 140, 255; } .naipe-copas { --cn: 255, 77, 90; } .naipe-paus { --cn: 77, 220, 122; } .naipe-ouros { --cn: 255, 207, 77; }
+.poder-naipe { display: block; width: 112px; height: 112px; padding: 0; border: 0; background: none; cursor: default; transition: transform .2s; }
+.zona-op .poder-naipe { width: 84px; height: 84px; }
+.poder-naipe img { display: block; width: 100%; height: 100%; pointer-events: none; filter: drop-shadow(0 6px 8px rgba(20, 50, 5, .4)); transition: filter .2s, opacity .2s; }
+.poder-naipe.pronto { cursor: pointer; animation: pulsar-naipe 1.2s ease-in-out infinite; }
+.poder-naipe.pronto:hover { animation-play-state: paused; transform: scale(1.14); }
+@keyframes pulsar-naipe {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(var(--cn), 0)); }
+  50% { transform: scale(1.1); filter: drop-shadow(0 0 18px rgba(var(--cn), .95)); }
+}
+.poder-naipe.usado img { filter: grayscale(.85) brightness(.9) drop-shadow(0 6px 8px rgba(20, 50, 5, .35)); opacity: .7; }
+.poder-naipe.ativo img { filter: drop-shadow(0 0 10px #fff) drop-shadow(0 0 24px rgba(var(--cn), 1)); }
+.onda-poder { position: absolute; z-index: 63; width: 96px; height: 96px; border-radius: 50%; border: 4px solid; pointer-events: none; }
+
+/* Faixa do meio: um pop-up mais largo, com o texto centralizado */
+#faixa { height: 96px; padding: 0 !important; display: flex; align-items: center; justify-content: center; }
+.caixa-faixa {
+  min-width: 440px; max-width: 780px; padding: 9px 30px 11px; border-radius: 18px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  background: rgba(14, 30, 9, .88); border: 2px solid rgba(255, 255, 255, .7); box-shadow: 0 8px 22px rgba(20, 50, 5, .35);
+}
+.caixa-faixa:has(#fase:empty):has(#instrucao:empty) { display: none; }
+#instrucao { max-width: 720px; }
+#botoes:empty { display: none; }
+
+/* Ações em forma de carta, no canto inferior esquerdo (com Voltar/Cancelar ao lado) */
+#cartas-acao { position: absolute; left: 22px; bottom: 16px; z-index: 25; display: flex; align-items: flex-end; gap: 14px; }
+.leque-acoes { display: flex; align-items: flex-end; padding-left: 4px; }
+.carta-acao {
+  --r: 0deg; position: relative; flex: none; width: 128px; aspect-ratio: 300 / 402; margin-left: -30px; padding: 0; border: 0; background: none; cursor: pointer;
+  transform: rotate(var(--r)); transform-origin: 50% 100%; filter: drop-shadow(0 8px 10px rgba(20, 50, 5, .4));
+  transition: transform .2s cubic-bezier(.3, 1.4, .5, 1), filter .2s; animation: carta-acao-entra .35s cubic-bezier(.3, 1.3, .5, 1) backwards;
+}
+.carta-acao:first-child { margin-left: 0; }
+.carta-acao:nth-child(1) { --r: -7deg; } .carta-acao:nth-child(2) { --r: -1deg; } .carta-acao:nth-child(3) { --r: 5deg; } .carta-acao:nth-child(4) { --r: 10deg; }
+.carta-acao:nth-child(2) { animation-delay: .05s; } .carta-acao:nth-child(3) { animation-delay: .1s; } .carta-acao:nth-child(4) { animation-delay: .15s; }
+.carta-acao:hover { z-index: 5; transform: translateY(-20px) rotate(0deg) scale(1.07); filter: drop-shadow(0 16px 16px rgba(20, 50, 5, .45)); }
+.carta-acao:active { transform: translateY(-12px) scale(1.02); }
+.carta-acao img { display: block; width: 100%; height: 100%; pointer-events: none; }
+.ca-titulo {
+  position: absolute; left: 17%; right: 17%; top: 13%; pointer-events: none; text-align: center;
+  font: 400 21px/1 var(--fonte-titulo); color: var(--ca-cor); letter-spacing: .3px; text-shadow: 0 1px 0 rgba(255, 255, 255, .9);
+}
+.ca-sub { position: absolute; left: 17%; right: 17%; bottom: 13.5%; pointer-events: none; text-align: center; font: 700 10px/1.15 var(--fonte-ui); color: #3a3a3a; }
+.arte-atacar { --ca-cor: #d8322f; } .arte-defesa { --ca-cor: #1f5fd6; } .arte-comprar { --ca-cor: #b98310; } .arte-sumonar { --ca-cor: #1a1a1a; } .arte-cemiterio { --ca-cor: #8a10b0; }
+@keyframes carta-acao-entra { from { opacity: 0; transform: translateY(60px) rotate(var(--r)); } }
+.acoes-extra { display: flex; flex-direction: column; gap: 8px; }
+.acoes-extra:empty { display: none; }
+.acoes-extra .btn {
+  font: 700 14px var(--fonte-ui); text-transform: uppercase; letter-spacing: .5px; padding: 9px 16px; border-radius: 12px;
+  color: #fff; background: var(--tinta); border: 2px solid var(--tinta); box-shadow: 0 3px 0 #0b1206, 0 6px 12px rgba(20, 50, 5, .25);
+}
+.acoes-extra .btn:hover:not(:disabled) { background: #2e4420; }
+
+/* Caixas da mesa com o mesmo traço de tinta dos botões (ações passivas, combate e o pop-up do meio) */
+#acoes { border: 3px solid var(--tinta); border-radius: 18px; box-shadow: 0 4px 0 var(--tinta), 0 10px 20px rgba(20, 50, 5, .3); }
+.acoes-rotulo { font: 400 14px var(--fonte-titulo); letter-spacing: 1px; text-transform: none; opacity: 1; }
+.acoes-num b { font: 400 46px var(--fonte-titulo); }
+#combate { background: rgba(16, 30, 10, .95); border: 3px solid var(--tinta); box-shadow: 0 4px 0 var(--tinta), 0 16px 34px rgba(20, 50, 5, .4); }
+.cb-topo { font: 400 16px var(--fonte-titulo); letter-spacing: 1px; text-transform: none; }
+.caixa-faixa { border: 3px solid var(--tinta); box-shadow: 0 4px 0 var(--tinta), 0 10px 22px rgba(20, 50, 5, .3); }
+#fase { font: 400 15px var(--fonte-titulo); letter-spacing: 1px; text-transform: none; }
