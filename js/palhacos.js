@@ -117,7 +117,7 @@ window.SS = window.SS || {};
     },
   };
   // Retrato de cada Palhaço (provisório). Para trocar a arte, substitua o arquivo com o mesmo nome.
-  for (const pal of LISTA) pal.retrato = `arte/palhacos/${pal.id}.jpg`;
+  for (const pal of LISTA) pal.retrato = `arte/palhacos/${pal.id}.webp`;
 
   for (const pal of LISTA) {
     for (const campo of ['titulo', 'passiva', 'poder', 'custo', 'plano']) {
