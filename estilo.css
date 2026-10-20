@@ -873,3 +873,95 @@ button.cb-item { cursor: default; }
 .copiar-para { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 14px; padding: 10px 12px; border-radius: 12px; background: rgba(233, 196, 106, .1); border: 1px solid rgba(233, 196, 106, .45); }
 .copiar-para span { font-weight: 700; margin-right: 4px; }
 .nota.aviso-ip { opacity: .95; padding: 8px 12px; border-radius: 10px; background: rgba(0, 0, 0, .3); border: 1px solid rgba(255, 255, 255, .18); text-align: left; }
+
+/* ---------- Menu temático: início, escolha do Palhaço por cartas e VS ---------- */
+#modal .caixa:has(.menu-tema) { max-width: min(1000px, 96vw); padding: 20px 30px; background: radial-gradient(ellipse at top, #1a7a42, #0b4423 55%, #072d17); }
+.titulo-etapa { margin: 0 0 6px; font-family: Georgia, 'Times New Roman', serif; font-size: 28px; color: var(--ouro); letter-spacing: 1px; text-shadow: 0 2px 0 rgba(0, 0, 0, .45); }
+
+.leque-inicio { position: relative; width: 420px; max-width: 100%; height: 200px; margin: 0 auto 6px; }
+.leque-inicio img {
+  position: absolute; left: 50%; bottom: 0; width: 124px; border-radius: 10px; transform-origin: 50% 170%;
+  transform: translateX(-50%) rotate(calc((var(--i) - 1.5) * 13deg)); filter: drop-shadow(0 8px 12px rgba(0, 0, 0, .55));
+  animation: abrir-leque .9s cubic-bezier(.3, 1.3, .5, 1) backwards; animation-delay: calc(var(--i) * 90ms);
+}
+@keyframes abrir-leque { from { transform: translateX(-50%) translateY(30px) rotate(0deg); opacity: 0; } }
+
+.menu-principal { display: flex; flex-direction: column; gap: 10px; width: min(360px, 100%); margin: 18px auto 12px; }
+.btn-menu {
+  display: flex; align-items: center; justify-content: center; gap: 10px; padding: 13px 18px; border-radius: 14px; cursor: pointer;
+  font: 700 18px Georgia, 'Times New Roman', serif; color: var(--texto); background: rgba(0, 0, 0, .28); border: 2px solid rgba(233, 196, 106, .45);
+  transition: transform .15s, background .15s, box-shadow .15s;
+}
+.btn-menu span { font-size: 20px; }
+.btn-menu:hover { transform: translateY(-2px); background: rgba(233, 196, 106, .14); box-shadow: 0 6px 18px rgba(0, 0, 0, .35); }
+.btn-menu.principal { color: #2a1a05; background: linear-gradient(#f2d27e, #c99a2e); border-color: #f7e2a6; }
+.btn-menu.principal:hover { background: linear-gradient(#f7dc95, #d6a73a); }
+
+/* Cartas dos Palhaços: entram em sequência; a escolhida sobe e brilha na cor do naipe. */
+.mesa-cartas { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px; padding: 14px 0 4px; }
+.carta-joker {
+  --brilho: rgba(233, 196, 106, .95);
+  position: relative; width: 178px; aspect-ratio: 1493 / 2000; padding: 0; border: 0; border-radius: 12px; background: none; cursor: pointer;
+  transition: transform .25s cubic-bezier(.3, 1.4, .5, 1), opacity .25s, filter .25s;
+  animation: carta-entra .6s cubic-bezier(.3, 1.2, .5, 1) backwards; animation-delay: calc(var(--i, 0) * 90ms);
+}
+.carta-joker img { display: block; width: 100%; height: 100%; pointer-events: none; filter: drop-shadow(0 10px 14px rgba(0, 0, 0, .45)); transition: filter .25s; }
+.carta-joker:hover { transform: translateY(-8px) rotate(-1.5deg); }
+.carta-joker.ativo { transform: translateY(-14px) scale(1.04); }
+.carta-joker.ativo img { filter: drop-shadow(0 0 14px var(--brilho)) drop-shadow(0 12px 16px rgba(0, 0, 0, .5)); }
+.com-escolha .carta-joker:not(.ativo) { opacity: .6; filter: saturate(.7); }
+.com-escolha .carta-joker:not(.ativo):hover { opacity: .9; }
+.carta-joker.cor-azul { --brilho: rgba(90, 140, 255, .95); }
+.carta-joker.cor-vermelho { --brilho: rgba(255, 85, 85, .95); }
+.carta-joker.cor-verde { --brilho: rgba(70, 220, 120, .95); }
+.carta-joker.cor-dourado { --brilho: rgba(255, 205, 80, .95); }
+@keyframes carta-entra { from { transform: translateY(40px) rotate(4deg); opacity: 0; } }
+
+/* Caixa branca com as habilidades (texto preto). */
+.info-carta { display: grid; place-items: center; min-height: 96px; max-width: 760px; margin: 4px auto 2px; }
+.dica-carta { margin: 0; font-style: italic; opacity: .75; }
+.caixa-info {
+  width: 100%; padding: 14px 18px; border: 3px solid #1b1b1b; border-radius: 12px; text-align: left;
+  color: #1b1b1b; background: #fbf8f1; font-size: 14.5px; line-height: 1.45; box-shadow: 0 10px 24px rgba(0, 0, 0, .4);
+  animation: info-entra .3s ease-out;
+}
+.caixa-info h3 { margin: 0 0 8px; font: 700 22px Georgia, 'Times New Roman', serif; color: #111; }
+.caixa-info h3 small { margin-left: 6px; font: 400 13px system-ui, sans-serif; color: #555; }
+.caixa-info p { margin: 4px 0; }
+.caixa-info b { color: #000; }
+.caixa-info .plano { color: #444; font-style: italic; }
+.caixa-info.cor-azul { border-color: #2c4fd0; } .caixa-info.cor-azul .naipe-info { color: #2c4fd0; }
+.caixa-info.cor-vermelho { border-color: #c41e2a; } .caixa-info.cor-vermelho .naipe-info { color: #c41e2a; }
+.caixa-info.cor-verde { border-color: #1d8a45; } .caixa-info.cor-verde .naipe-info { color: #1d8a45; }
+.caixa-info.cor-dourado { border-color: #c48a12; } .caixa-info.cor-dourado .naipe-info { color: #c48a12; }
+@keyframes info-entra { from { opacity: 0; transform: translateY(8px); } }
+
+/* VS: a sua carta à esquerda, o VS no meio e os oponentes à direita. */
+.versus { display: grid; grid-template-columns: auto auto auto; justify-content: center; align-items: center; gap: 26px; }
+.lado-eu .carta-joker.grande { width: 205px; cursor: default; animation: none; }
+.lado-eu .carta-joker.grande, .lado-eu .carta-joker.grande:hover { transform: none; }
+.vs {
+  font: italic 900 66px Georgia, 'Times New Roman', serif; color: var(--ouro);
+  text-shadow: 0 0 18px rgba(255, 200, 80, .6), 0 4px 0 #6b4020; animation: vs-entra .7s cubic-bezier(.3, 1.6, .5, 1) .35s backwards;
+}
+@keyframes vs-entra { from { transform: scale(3) rotate(-12deg); opacity: 0; } }
+.lado-rivais { display: grid; grid-template-columns: repeat(2, 108px); gap: 14px; padding: 12px 0 2px; }
+.lado-rivais .carta-joker { width: 108px; animation-delay: calc(.45s + var(--i, 0) * 90ms); }
+.carta-joker.aleatoria { display: grid; place-items: center; border: 3px solid var(--ouro); background: repeating-linear-gradient(45deg, #2a1a10 0 10px, #3b2616 10px 20px); box-shadow: 0 10px 14px rgba(0, 0, 0, .45); }
+.carta-joker.aleatoria span { font: 900 64px Georgia, serif; color: var(--ouro); text-shadow: 0 3px 0 #000; }
+.carta-joker.aleatoria.ativo { box-shadow: 0 0 16px rgba(255, 205, 80, .95), 0 12px 16px rgba(0, 0, 0, .5); }
+.btn.grande { padding: 12px 30px; font-size: 18px; }
+
+@media (max-width: 720px) {
+  .titulo-etapa { font-size: 24px; }
+  .leque-inicio { height: 150px; }
+  .leque-inicio img { width: 90px; }
+  .mesa-cartas { gap: 12px; }
+  .mesa-cartas .carta-joker { width: calc(50% - 12px); max-width: 170px; }
+  .versus { grid-template-columns: 1fr; gap: 6px; }
+  .lado-eu .carta-joker.grande { width: 150px; margin: 0 auto; }
+  .vs { font-size: 44px; }
+  .lado-rivais { grid-template-columns: repeat(2, minmax(0, 132px)); justify-content: center; }
+  .lado-rivais .carta-joker { width: 100%; }
+}
+.menu-tema .acoes-menu { margin-bottom: 0; }
