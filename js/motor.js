@@ -558,6 +558,7 @@ window.SS = window.SS || {};
     if (cs.length !== 2 || !cs[0] || !cs[1] || cs[0] === cs[1] || !ehNumero(cs[0]) || !ehNumero(cs[1]) || cs[0].rank !== cs[1].rank) {
       throw new Error('Par de números inválido');
     }
+    evento(e, { tipo: 'magia', p: d, cartas: cs.map(c => Object.assign({}, c)) });
     for (const c of cs) j.cemiterio.push(tirarDaMao(j, c.id));
     at.refletido = true;
     registrar(e, t('log.refletiu', { j: j.nome, n, c: cs[0].rank }));
@@ -723,6 +724,7 @@ window.SS = window.SS || {};
           else l.u.atkExtra = (l.u.atkExtra || 0) + 1;
           registrar(e, t(a.naipe === 'paus' ? 'log.magiaPaus' : 'log.magiaEspadas', { j: j.nome, u: nomeUnidade(l.u) }));
         }
+        evento(e, { tipo: 'magia', p, cartas: cs.map(c => Object.assign({}, c)) });
         for (const c of cs) j.cemiterio.push(tirarDaMao(j, c.id));
         break;
       }

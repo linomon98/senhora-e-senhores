@@ -974,11 +974,45 @@ window.SS = window.SS || {};
     }
   }
 
-  // Acontecimentos anotados pelo motor: curas (Ás de Copas, Naipado de Copas) e Ouros extra do Ás.
+  // Magia (par de naipe ou par de números): as duas cartas saem da mão de quem usou, sobem ao meio da mesa,
+  // brilham roxo, tremem e se desfazem numa explosão de faíscas roxas.
+  const ROXO = '200, 90, 255';
+  function animarParDestruido(p, cartas) {
+    if (MOVIMENTO_REDUZIDO || !cartas || !cartas.length) return;
+    const app = $('#app'), centro = { x: 800, y: 450 };
+    const mao = centroDe($('#mao-' + p)) || { x: 800, y: p === eu ? 760 : 140 };
+    cartas.forEach((c, k) => {
+      const el = document.createElement('div');
+      el.className = 'carta par-magia';
+      el.innerHTML = C.frente(c);
+      Object.assign(el.style, { left: centro.x + 'px', top: centro.y + 'px' });
+      app.appendChild(el);
+      const lado = k ? 1 : -1, dx0 = (mao.x - centro.x).toFixed(1), dy0 = (mao.y - centro.y).toFixed(1);
+      el.animate([
+        { transform: `translate(calc(-50% + ${dx0}px), calc(-50% + ${dy0}px)) scale(.75)`, filter: 'none', opacity: 1 },
+        { transform: `translate(calc(-50% + ${lado * 64}px), -50%) scale(1.25) rotate(${lado * 7}deg)`, filter: `drop-shadow(0 0 20px rgba(${ROXO}, 1))`, opacity: 1, offset: .32 },
+        { transform: `translate(calc(-50% + ${lado * 68}px), -50%) scale(1.28) rotate(${-lado * 4}deg)`, filter: `drop-shadow(0 0 32px rgba(${ROXO}, 1)) brightness(1.25)`, opacity: 1, offset: .55 },
+        { transform: `translate(calc(-50% + ${lado * 60}px), -50%) scale(1.3) rotate(${lado * 5}deg)`, filter: `drop-shadow(0 0 36px rgba(${ROXO}, 1)) brightness(1.5)`, opacity: 1, offset: .72 },
+        { transform: `translate(calc(-50% + ${lado * 24}px), -50%) scale(1.7) rotate(0deg)`, filter: `drop-shadow(0 0 44px rgba(${ROXO}, 1)) brightness(2.6)`, opacity: 0 },
+      ], { duration: 1350, easing: 'ease-in-out', fill: 'forwards' }).onfinish = () => el.remove();
+    });
+    setTimeout(() => {
+      particulas(centro, 34, true, ROXO);
+      ondaEm(centro, ROXO, 3.6);
+      ondaEm(centro, ROXO, 2.4, 140);
+    }, 1120);
+    ui.magiaAte = performance.now() + 1550;
+  }
+
+  // Quanto falta para a animação da magia terminar (o fluxo da partida espera um pouco por ela).
+  const esperaMagia = () => Math.max(0, (ui.magiaAte || 0) - performance.now());
+
+  // Acontecimentos anotados pelo motor: magias, curas (Ás de Copas, Naipado de Copas) e Ouros extra do Ás.
   function processarEventos() {
     if (!jogo.eventos || !jogo.eventos.length) return;
     const lista = jogo.eventos.splice(0);
     lista.forEach((ev, k) => {
+      if (ev.tipo === 'magia') return animarParDestruido(ev.p, ev.cartas);
       const de = ev.de != null ? elUnidade(ev.de) : null;
       if (!de) return;
       if (ev.tipo === 'cura') voarIcone(de, pvDe(ev.p), `<span>+${ev.n}</span>`, 'bola-cura', 250 + k * 180);
@@ -1150,7 +1184,8 @@ window.SS = window.SS || {};
   }
 
   // Faíscas e onda de choque no ponto do impacto.
-  function particulas(ponto, n, forte) {
+  // cor (opcional, "r, g, b"): faíscas de uma cor só (ex.: roxo da magia).
+  function particulas(ponto, n, forte, cor) {
     const app = $('#app');
     const onda = document.createElement('div');
     onda.className = 'onda-impacto';
@@ -1163,6 +1198,7 @@ window.SS = window.SS || {};
       p.className = 'faisca' + (k % 3 === 0 ? ' brasa' : '');
       const ang = Math.random() * Math.PI * 2, dist = (28 + Math.random() * 62) * (forte ? 1.5 : 1), tam = 5 + Math.random() * 7;
       Object.assign(p.style, { left: ponto.x + 'px', top: ponto.y + 'px', width: tam + 'px', height: tam + 'px' });
+      if (cor) Object.assign(p.style, { background: k % 2 ? `rgb(${cor})` : '#fff', boxShadow: `0 0 10px 3px rgba(${cor}, .95)` });
       app.appendChild(p);
       p.animate([
         { transform: 'translate(-50%, -50%) scale(1)', opacity: 1 },
@@ -1188,9 +1224,9 @@ window.SS = window.SS || {};
   // Recuo de quem apanha: é empurrado na direção do golpe, pisca vermelho e volta (ou some, se morreu).
   function recuo(el, n, atraso, morreu) {
     const quadros = [
-      { transform: 'translate(0, 0) rotate(0deg)', filter: 'none' },
-      { transform: `translate(${(n.x * 16).toFixed(1)}px, ${(n.y * 16).toFixed(1)}px) rotate(${(n.x * 6).toFixed(1)}deg)`, filter: 'brightness(1.9) sepia(1) saturate(6) hue-rotate(-30deg)', offset: 0.18 },
-      { transform: `translate(${(-n.x * 5).toFixed(1)}px, ${(-n.y * 5).toFixed(1)}px) rotate(${(-n.x * 2).toFixed(1)}deg)`, filter: 'brightness(1.2)', offset: 0.5 },
+      { transform: 'translate(0, 0) rotate(0deg)', filter: 'none', opacity: 1 },
+      { transform: `translate(${(n.x * 16).toFixed(1)}px, ${(n.y * 16).toFixed(1)}px) rotate(${(n.x * 6).toFixed(1)}deg)`, filter: 'brightness(1.9) sepia(1) saturate(6) hue-rotate(-30deg)', opacity: 1, offset: 0.18 },
+      { transform: `translate(${(-n.x * 5).toFixed(1)}px, ${(-n.y * 5).toFixed(1)}px) rotate(${(-n.x * 2).toFixed(1)}deg)`, filter: 'brightness(1.2)', opacity: 1, offset: 0.5 },
       morreu ? { transform: 'translate(0, 8px) scale(.82)', filter: 'grayscale(1) brightness(.6)', opacity: 0 } : { transform: 'translate(0, 0) rotate(0deg)', filter: 'none' },
     ];
     return el.animate(quadros, { duration: morreu ? 760 : 520, delay: atraso, easing: 'ease-out', fill: morreu ? 'forwards' : 'none' });
@@ -1935,38 +1971,115 @@ window.SS = window.SS || {};
   // Abertura do jogador desta tela, em duas etapas: escolher as figuras (devolve os ids) e,
   // depois de ver a mão, decidir o mulligan (devolve true/false). No online, as etapas dos dois
   // jogadores são aplicadas na mesma ordem nas duas telas, para o sorteio dar igual.
-  function escolherFigurasModal() {
+  // Palco de cartas (abertura, mulligan e descarte): a mesa escurece, as cartas voam de um lugar da mesa
+  // (baralho, mão) até o meio, o jogador escolhe e, no fim, elas voam para onde vão (baralho, mão, cemitério).
+  // o: { titulo, sub, cartas, origem(), qtd (0 = só olhar), botao(n), botoes: [{ m, rotulo, secundario }],
+  //      destino(id, escolhida, m) } → Promise { ids, m }
+  function palcoCartas(o) {
     return new Promise(resolver => {
-      const figs = M.figurasNoBaralho(jogo, eu), qtd = Math.min(3, figs.length), esc = [];
-      const tela = () => modal(`<h2>${t('ab.escolha', { n: qtd })}</h2>
-          <p class="nota">${t('ab.nota')}</p>
-          ${gradeCartas(figs, esc, true)}
-          <div class="acoes-menu"><button class="btn principal" data-m="ok"${esc.length === qtd ? '' : ' disabled'}>${t('btn.confirmar')} (${esc.length}/${qtd})</button></div>`,
-        ev => {
-          const id = cartaClicada(ev);
-          if (id) {
-            const k = esc.indexOf(id);
-            if (k >= 0) esc.splice(k, 1);
-            else if (esc.length < qtd) esc.push(id);
-            return tela();
-          }
-          if (ev.target.closest('[data-m="ok"]') && esc.length === qtd) resolver(esc.slice());
-        });
-      tela();
+      const esc = [];
+      let saindo = false;
+      modal(`<div class="palco-cartas">
+          <h2 class="palco-titulo">${o.titulo}</h2>${o.sub ? `<p class="palco-sub">${o.sub}</p>` : ''}
+          <div class="palco-fila">${o.cartas.map(c => `<div class="carta grande palco-carta${o.qtd ? ' clicavel' : ''}" data-pc="${c.id}">${C.frente(c)}</div>`).join('')}</div>
+          <div class="palco-botoes">${o.qtd ? `<button class="palco-btn" data-m="ok" disabled>${o.botao(0)}</button>` : ''}${(o.botoes || []).map(b => `<button class="palco-btn${b.secundario ? ' secundario' : ''}" data-m="${b.m}">${b.rotulo}</button>`).join('')}</div>
+        </div>`,
+      ev => {
+        if (saindo) return;
+        const carta = ev.target.closest('[data-pc]');
+        if (carta && o.qtd) {
+          const id = carta.dataset.pc, k = esc.indexOf(id);
+          if (k >= 0) esc.splice(k, 1);
+          else if (esc.length < o.qtd) esc.push(id);
+          carta.classList.toggle('selecionada', esc.includes(id));
+          const ok = $('#modal [data-m="ok"]');
+          ok.textContent = o.botao(esc.length);
+          ok.disabled = esc.length !== o.qtd;
+          return;
+        }
+        const b = ev.target.closest('[data-m]');
+        if (!b || b.disabled) return;
+        saindo = true;
+        sairPalco(o, esc, b.dataset.m).then(() => resolver({ ids: esc.slice(), m: b.dataset.m }));
+      });
+      entrarPalco(o.origem);
     });
   }
 
-  function decidirMulliganModal() {
-    return new Promise(resolver => {
-      modal(`<h2>${t('ab.suaMao')}</h2>
-          ${gradeCartas(jogo.jogadores[eu].mao, null, false)}
-          <p class="nota">${t('ab.mulliganNota')}</p>
-          <div class="acoes-menu"><button class="btn principal" data-m="manter">${t('ab.manter')}</button><button class="btn" data-m="mulligan">Mulligan</button></div>`,
-      ev => {
-        const b = ev.target.closest('[data-m]');
-        if (b) resolver(b.dataset.m === 'mulligan');
-      });
+  const caixaDe = el => (el ? el.getBoundingClientRect() : null);
+  // Escala de uma carta voando até/de outra caixa (limitada: a origem pode ser um lugar maior que uma carta).
+  const escalaVoo = (a, r) => Math.min(1.1, Math.max(.3, a.width / r.width)).toFixed(3);
+  const cartaNaMao = (p, id) => $(`#mao-${p} [data-voo="${id}"]`) || $('#mao-' + p);
+
+  // As cartas saem de "origem" (em leque, uma de cada vez) e pousam no meio da tela.
+  function entrarPalco(origem) {
+    $('#modal').querySelectorAll('.palco-carta').forEach((el, k) => {
+      const s = caixaDe(origem(el.dataset.pc));
+      if (!s || MOVIMENTO_REDUZIDO) return;
+      const r = el.getBoundingClientRect();
+      const dx = s.left + s.width / 2 - (r.left + r.width / 2), dy = s.top + s.height / 2 - (r.top + r.height / 2);
+      el.animate([
+        { transform: `translate(${dx}px, ${dy}px) scale(${escalaVoo(s, r)}) rotate(-10deg)`, opacity: .4 },
+        { transform: 'translate(0, -18px) scale(1.06) rotate(2deg)', opacity: 1, offset: .75 },
+        { transform: 'none', opacity: 1 },
+      ], { duration: 560, delay: k * 75, easing: 'cubic-bezier(.3, .8, .3, 1)', fill: 'backwards' });
     });
+  }
+
+  // Cada carta voa para o seu destino; o resto do palco some junto.
+  function sairPalco(o, esc, m) {
+    const els = [...$('#modal').querySelectorAll('.palco-carta')];
+    for (const sel of ['.palco-titulo', '.palco-sub', '.palco-botoes']) {
+      const el = $('#modal ' + sel);
+      if (el) el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 250, fill: 'forwards' });
+    }
+    if (MOVIMENTO_REDUZIDO) {
+      fecharModal();
+      return Promise.resolve();
+    }
+    const fim = els.map((el, k) => {
+      const id = el.dataset.pc, d = caixaDe(o.destino(id, esc.includes(id), m)), r = el.getBoundingClientRect();
+      if (!d) return el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' }).finished;
+      const dx = d.left + d.width / 2 - (r.left + r.width / 2), dy = d.top + d.height / 2 - (r.top + r.height / 2);
+      return el.animate([
+        { transform: 'none', opacity: 1 },
+        { transform: 'translateY(-16px) scale(1.05)', opacity: 1, offset: .2 },
+        { transform: `translate(${dx}px, ${dy}px) scale(${escalaVoo(d, r)}) rotate(8deg)`, opacity: .3 },
+      ], { duration: 520, delay: k * 55, easing: 'cubic-bezier(.5, 0, .3, 1)', fill: 'forwards' }).finished;
+    });
+    $('#modal').animate([{ backgroundColor: 'rgba(6, 14, 4, .72)' }, { backgroundColor: 'rgba(6, 14, 4, 0)' }], { duration: 520 + els.length * 55, fill: 'forwards' });
+    // Garantia: se a aba ficar escondida no meio (animação pausada), o jogo não trava esperando.
+    const limite = esperar(520 + els.length * 55 + 500);
+    return Promise.race([Promise.all(fim).catch(() => {}), limite]).then(() => {
+      fecharModal();
+      $('#modal').getAnimations().forEach(a => a.cancel());
+    });
+  }
+
+  const pilhaDe = (p, b) => $(`#pilhas-${p} [data-pilha="${p}:${b}"] .carta`);
+  const cemiterioDe = p => $(`#pilhas-${p} [data-cemiterio] .carta`);
+
+  async function escolherFigurasModal() {
+    const figs = M.figurasNoBaralho(jogo, eu), qtd = Math.min(3, figs.length);
+    const r = await palcoCartas({
+      titulo: t('ab.escolha', { n: qtd }), sub: t('ab.nota'), cartas: figs, qtd,
+      origem: () => pilhaDe(eu, 'letras'), botao: n => `${t('btn.confirmar')} (${n}/${qtd})`,
+      destino: () => pilhaDe(eu, 'letras'), // todas voltam para o baralho de Letras; as escolhidas saem dele para a mão
+    });
+    return r.ids;
+  }
+
+  async function decidirMulliganModal() {
+    const r = await palcoCartas({
+      titulo: t('ab.suaMao'), sub: t('ab.mulliganNota'), cartas: jogo.jogadores[eu].mao, qtd: 0,
+      origem: id => cartaNaMao(eu, id),
+      botoes: [{ m: 'manter', rotulo: t('ab.manter') }, { m: 'mulligan', rotulo: 'Mulligan', secundario: true }],
+      destino: (id, _, m) => {
+        const c = jogo.jogadores[eu].mao.find(x => x.id === id);
+        return m === 'mulligan' && c && !M.ehFigura(c) ? pilhaDe(eu, 'numeros') : cartaNaMao(eu, id);
+      },
+    });
+    return r.m === 'mulligan';
   }
 
   async function aberturaHumana() {
@@ -2008,27 +2121,15 @@ window.SS = window.SS || {};
     return true;
   }
 
-  function escolherDescarte() {
-    return new Promise(resolver => {
-      const j = jogo.jogadores[jogo.vez], n = j.mao.length - M.limiteMao(j), esc = [];
-      const tela = () => modal(`<h2>${t('desc.titulo', { n })}</h2>
-          ${gradeCartas(j.mao, esc, true)}
-          <div class="acoes-menu"><button class="btn principal" data-m="ok"${esc.length === n ? '' : ' disabled'}>${t('desc.btn')} (${esc.length}/${n})</button></div>`,
-        ev => {
-          const id = cartaClicada(ev);
-          if (id) {
-            const k = esc.indexOf(id);
-            if (k >= 0) esc.splice(k, 1);
-            else if (esc.length < n) esc.push(id);
-            return tela();
-          }
-          if (ev.target.closest('[data-m="ok"]') && esc.length === n) {
-            fecharModal();
-            resolver(esc.slice());
-          }
-        });
-      tela();
+  // Descarte: as cartas saem da mão; as escolhidas voam para o cemitério e o resto volta para a mão.
+  async function escolherDescarte() {
+    const p = jogo.vez, j = jogo.jogadores[p], n = j.mao.length - M.limiteMao(j);
+    const r = await palcoCartas({
+      titulo: t('desc.titulo', { n }), cartas: j.mao, qtd: n,
+      origem: id => cartaNaMao(p, id), botao: k => `${t('desc.btn')} (${k}/${n})`,
+      destino: (id, escolhida) => (escolhida ? cemiterioDe(p) : cartaNaMao(p, id)),
     });
+    return r.ids;
   }
 
   const cancelarEscolha = ev => {
@@ -2083,6 +2184,12 @@ window.SS = window.SS || {};
     return M.paresIguais(jogo, 1 - jogo.vez).filter(par => !par.some(id => usadas.has(id)));
   }
 
+  // Ainda dá para mandar alguém bloquear algum ataque que não foi refletido?
+  function temOQueBloquear() {
+    const restantes = jogo.combate.ataques.filter(at => !(ui.reflexos || []).some(r => r.n === at.n));
+    return restantes.length > 0 && bloqueadoresComCapacidade().some(uid => restantes.some(at => !alvoDoRei(at, uid)));
+  }
+
   function oferecerReflexo() {
     const livres = paresLivres(), j = jogo.jogadores[1 - jogo.vez];
     const ataques = jogo.combate.ataques.filter(at => !(ui.reflexos || []).some(r => r.n === at.n));
@@ -2111,6 +2218,7 @@ window.SS = window.SS || {};
         fecharModal();
         render();
         if (paresLivres().length) setTimeout(oferecerReflexo, 250); // tem outro par? oferece de novo
+        else if (!temOQueBloquear()) setTimeout(() => { if (humanoBloqueia()) clicarBotao('confirmar-bloqueios'); }, 350); // nada mais a fazer: defende sozinho
         return;
       }
       if (ev.target.closest('[data-m="nao"]')) {
@@ -2342,7 +2450,7 @@ window.SS = window.SS || {};
       M.aplicarAcao(jogo, a);
       render();
       if (jogo.vencedor != null) return fimDeJogo();
-      await esperar(a.tipo === 'atacar' ? 300 : 900);
+      await esperar(Math.max(a.tipo === 'atacar' ? 300 : 900, esperaMagia())); // deixa a magia terminar
       if (id !== partida) return;
     }
     if (jogo.fase === 'principal') M.aplicarAcao(jogo, { tipo: 'atacar' });
@@ -2463,7 +2571,7 @@ window.SS = window.SS || {};
         ui.ocupado = true;
       }
       render();
-      await esperar(600);
+      await esperar(Math.max(600, esperaMagia())); // se alguém refletiu, espera o par se desfazer
       if (id !== partida) return;
     }
     const total = jogo.combate ? jogo.combate.ataques.length : 0;
@@ -3073,5 +3181,7 @@ window.SS = window.SS || {};
     duelo: (foto, total, linhas) => { mostrarDuelo(foto, total, linhas || null); if (linhas) animarPV(); },
     fila: ligar => { ui.mostrarFila = !!ligar; render(); },
     combate: () => fluxoCombate(partida),
+    palcoFiguras: () => escolherFigurasModal(), palcoDescarte: () => escolherDescarte(),
+    magia: (p, cartas) => animarParDestruido(p, cartas),
   };
 })(window.SS);

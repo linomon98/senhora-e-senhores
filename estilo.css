@@ -1220,3 +1220,27 @@ html, body { background: #9de03a url('arte/mesa/grama.webp') center / cover; }
 .refl-atacantes { gap: 22px; --cw: 92px; --ch: 129px; }
 .refl-unidade { width: 122px; height: 184px; }
 .refl-nao { font-size: 30px; padding: 12px 32px; margin-top: 18px; }
+
+/* Palco de cartas (abertura, mulligan, descarte): sem caixa, mesa escurecida, cartas no meio */
+#modal:has(.palco-cartas) { background: rgba(6, 14, 4, .72); }
+#modal .caixa:has(.palco-cartas) { max-width: min(1200px, 96vw); background: none; border: 0; box-shadow: none; overflow: visible; }
+.palco-cartas { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.palco-titulo { margin: 0; font: 400 46px var(--fonte-titulo); color: #fff; letter-spacing: .5px; text-shadow: 0 3px 0 rgba(0, 0, 0, .5); }
+.palco-sub { margin: 0 0 10px; max-width: 760px; font: 700 18px var(--fonte-ui); color: #fff; opacity: .92; text-shadow: 0 2px 4px rgba(0, 0, 0, .6); }
+.palco-fila { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; padding: 18px 6px 10px; }
+.palco-carta { width: 120px; height: 168px; border-radius: 10px; box-shadow: 0 10px 18px rgba(0, 0, 0, .45); transition: transform .18s cubic-bezier(.3, 1.4, .5, 1), box-shadow .18s; }
+.palco-carta.clicavel { cursor: pointer; }
+.palco-carta.clicavel:hover { transform: translateY(-10px) scale(1.04); }
+.palco-carta.selecionada { transform: translateY(-22px) scale(1.06); box-shadow: 0 0 0 4px #ffc93c, 0 0 26px rgba(255, 201, 60, .9), 0 14px 22px rgba(0, 0, 0, .5); }
+.palco-botoes { display: flex; gap: 14px; margin-top: 14px; }
+.palco-btn {
+  padding: 11px 28px; border-radius: 16px; cursor: pointer; font: 900 22px var(--fonte-ui); text-transform: uppercase;
+  color: #111; background: #fff; border: 3px solid #111; box-shadow: 0 4px 0 #111; transition: transform .12s, box-shadow .12s, opacity .15s;
+}
+.palco-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 0 #111; }
+.palco-btn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 #111; }
+.palco-btn:disabled { opacity: .45; cursor: default; }
+.palco-btn.secundario { background: #1d2a12; color: #fff; border-color: #fff; box-shadow: 0 4px 0 #000; }
+
+/* Par usado numa magia: as duas cartas sobem, brilham roxo e se desfazem */
+.par-magia { position: absolute; z-index: 66; width: 100px; height: 140px; border-radius: 9px; pointer-events: none; background: #fdfbf3; }
