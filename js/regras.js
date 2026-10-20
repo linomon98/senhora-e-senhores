@@ -87,7 +87,7 @@ window.SS = window.SS || {};
         <ul>
           <li>Cada Senhor(a) apto(a) ataca <b>1 vez por turno</b> (o Naipado de Ouros, 2). Só ataca quem entrou em turno anterior, exceto o Valete.</li>
           <li>O alvo é o <b>jogador</b> oponente ou um <b>Ás</b> dele. O <b>Rei</b> também pode mirar um <b>Senhor(a)</b> inimigo: o alvo é obrigado a defender, com as regras de bloqueio e contra-ataque (mesmo se estiver virado), e outros Senhores ativos do dono podem entrar junto para ajudar.</li>
-          <li>Você escolhe a <b>ordem</b> dos ataques; eles são resolvidos um por vez.</li>
+          <li>Você escolhe a <b>ordem</b> dos ataques; eles são resolvidos um por vez. Se o alvo de um ataque (um Ás ou um Senhor) cair antes da vez dele, o golpe vai <b>direto no Palhaço</b> adversário (quem foi bloquear continua no caminho).</li>
         </ul>
         <h3>Rolagem</h3>
         <table class="tabela-regras">
@@ -271,7 +271,7 @@ window.SS = window.SS || {};
         <ul>
           <li>Each ready Gentleman attacks <b>once per turn</b> (Suited Diamonds, twice). Only Gentlemen that entered on an earlier turn can attack, except the Jack.</li>
           <li>The target is the opposing <b>player</b> or one of their <b>Aces</b>. The <b>King</b> can also target an enemy <b>Gentleman</b>: the target must defend, with the block and counterattack rules (even if face down), and its owner's other ready Gentlemen can join to help.</li>
-          <li>You choose the <b>order</b> of the attacks; they are resolved one at a time.</li>
+          <li>You choose the <b>order</b> of the attacks; they are resolved one at a time. If an attack's target (an Ace or a Gentleman) falls before its turn, the blow goes <b>straight to the enemy Jester</b> (any blockers stay in the way).</li>
         </ul>
         <h3>Roll</h3>
         <table class="tabela-regras">

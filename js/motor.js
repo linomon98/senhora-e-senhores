@@ -123,6 +123,7 @@ window.SS = window.SS || {};
   }
 
   function registrar(e, msg) {
+    if (e.mudo) return; // cópias que o bot usa para pensar não guardam registro
     e.log.push(msg);
     if (e.log.length > 400) e.log.shift();
   }
@@ -759,6 +760,21 @@ window.SS = window.SS || {};
     e.combate.indice = 0;
   }
 
+  // Antes de cada ataque pendente: bloqueador que já morreu sai do caminho (se não sobrar nenhum, o ataque
+  // passa livre) e, se o alvo (Ás ou Senhor) já caiu, o golpe vai direto no Palhaço adversário
+  // (quem ainda está vivo para bloquear continua no caminho).
+  function redirecionarOrfaos(e) {
+    if (!e.combate) return;
+    for (let k = e.combate.indice; k < e.combate.ataques.length; k++) {
+      const at = e.combate.ataques[k];
+      at.bloqueadores = at.bloqueadores.filter(uid => localizar(e, uid));
+      if (at.alvo !== 'jogador' && !localizar(e, at.alvo)) {
+        at.alvo = 'jogador';
+        registrar(e, t('log.redirecionado', { n: at.n, j: e.jogadores[1 - e.vez].nome }));
+      }
+    }
+  }
+
   // rolagens: resultados dos dados deste ataque (vale o maior)
   function resolverProximo(e, rolagens) {
     if (e.fase !== 'resolucao') throw new Error('Nada para resolver');
@@ -769,6 +785,7 @@ window.SS = window.SS || {};
     at.resultado = res;
     e.combate.indice++;
     const fim = () => {
+      redirecionarOrfaos(e);
       if (e.vencedor == null && e.combate.indice >= e.combate.ataques.length) e.fase = 'fimCombate';
       return res;
     };

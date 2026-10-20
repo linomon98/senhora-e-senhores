@@ -105,6 +105,7 @@ window.SS = window.SS || {};
       p => `Ataque ${p.n}: ${p.u} rolou ${p.r} → ${p.cheio ? 'ataque total' : 'meio ataque'}${p.crit ? ' com crítico de Espadas' : ''}: ${p.d} de dano.`,
       p => `Attack ${p.n}: ${p.u} rolled ${p.r} → ${p.cheio ? 'full attack' : 'half attack'}${p.crit ? ' with a Spades critical' : ''}: ${p.d} damage.`,
     ],
+    'log.redirecionado': ['Ataque {n}: o alvo já caiu, então o golpe vai direto em {j}.', 'Attack {n}: the target already fell, so the blow goes straight to {j}.'],
     'log.alvoSumiu': ['O alvo já não está em campo.', 'The target is no longer on the field.'],
     'log.casca': ['Casca grossa: o dano em {u} cai para {n}.', 'Thick Bark: damage to {u} drops to {n}.'],
     'log.ignorou': ['{u} ignorou o golpe (dano menor que metade do seu ataque).', '{u} shrugged off the blow (damage below half its attack).'],
