@@ -16,6 +16,7 @@ window.SS = window.SS || {};
   // Tabelas de textos ligadas ao idioma atual: TABELA[x] devolve t(prefixo + x).
   const tabela = prefixo => new Proxy({}, { get: (_, k) => t(prefixo + String(k)) });
   const NOME_NIVEL = tabela('nivel.');
+  const NIVEIS_BOT = ['facil', 'medio', 'dificil', 'profissional'];
   const NOME_NAIPE = tabela('naipe.');
   const PODER_FIGURA = tabela('fig.');
   const PODER_NAIPADO = tabela('naipado.');
@@ -989,6 +990,168 @@ window.SS = window.SS || {};
     }, dur);
   }
 
+  // ---------- Ataque animado: a carta levanta, pega impulso para trás e bate no alvo ----------
+  const MOVIMENTO_REDUZIDO = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const IMPACTO_MS = 560, INVESTIDA_MS = 1000;
+
+  // Foto da mesa ANTES de resolver: onde está cada carta (e o seu desenho) e quanto dano já tinha.
+  function prepararInvestida(at) {
+    const loc = M.localizar(jogo, at.atacante);
+    const unidades = [];
+    for (const j of jogo.jogadores) for (const u of j.campo) {
+      if (!u) continue;
+      const el = elUnidade(u.uid), dentro = el && el.querySelector('.unidade');
+      unidades.push({ uid: u.uid, hits: u.hits, bhits: u.berserk ? u.berserk.hits : 0, el, caixa: el && el.getBoundingClientRect(), html: dentro ? dentro.outerHTML : '' });
+    }
+    let alvos;
+    if (at.alvo !== 'jogador' && (M.ataqueDirecionado(jogo, at) || !at.bloqueadores.length)) alvos = [elUnidade(at.alvo)];
+    else if (at.bloqueadores.length) alvos = at.bloqueadores.map(elUnidade);
+    else alvos = [elRetrato(1 - jogo.vez)];
+    const pontos = alvos.map(centroDe).filter(Boolean);
+    const alvo = pontos.length ? { x: pontos.reduce((s, q) => s + q.x, 0) / pontos.length, y: pontos.reduce((s, q) => s + q.y, 0) / pontos.length } : null;
+    return { atacante: at.atacante, forca: loc ? M.ataque(jogo, loc.p, loc.i) : 0, unidades, pv: jogo.jogadores.map(j => j.pv), alvo, de: centroDe(elUnidade(at.atacante)) };
+  }
+
+  // Quem levou dano no ataque (cartas com mais hits, cartas que morreram e Palhaços que perderam PV).
+  function danosDesde(cena) {
+    const r = [];
+    for (const f of cena.unidades) {
+      const l = M.localizar(jogo, f.uid), bh = l && l.u.berserk ? l.u.berserk.hits : 0;
+      if (!l || l.u.hits > f.hits || bh > f.bhits) r.push({ f, morreu: !l });
+    }
+    for (const p of [0, 1]) if (jogo.jogadores[p].pv < cena.pv[p]) r.push({ heroi: p });
+    return r;
+  }
+
+  // Cópia flutuante de uma carta do campo (a original some enquanto a cópia anima).
+  function copiaFlutuante(f) {
+    const app = $('#app'), ra = app.getBoundingClientRect(), c = f.caixa;
+    const el = document.createElement('div');
+    el.className = 'unidade-voando';
+    el.innerHTML = f.html;
+    Object.assign(el.style, { left: (c.left - ra.left) / escala + 'px', top: (c.top - ra.top) / escala + 'px', width: c.width / escala + 'px', height: c.height / escala + 'px' });
+    app.appendChild(el);
+    voandoCampo.add(f.uid);
+    if (f.el && f.el.isConnected) f.el.classList.add('voo-oculto');
+    return el;
+  }
+
+  function soltarCopia(f, el) {
+    el.remove();
+    voandoCampo.delete(f.uid);
+    const e = elUnidade(f.uid);
+    if (e) e.classList.remove('voo-oculto');
+  }
+
+  // Faíscas e onda de choque no ponto do impacto.
+  function particulas(ponto, n, forte) {
+    const app = $('#app');
+    const onda = document.createElement('div');
+    onda.className = 'onda-impacto';
+    Object.assign(onda.style, { left: ponto.x + 'px', top: ponto.y + 'px' });
+    app.appendChild(onda);
+    onda.animate([{ transform: 'translate(-50%, -50%) scale(.2)', opacity: 1 }, { transform: `translate(-50%, -50%) scale(${forte ? 2 : 1.4})`, opacity: 0 }],
+      { duration: 460, easing: 'cubic-bezier(.2, .8, .3, 1)' }).onfinish = () => onda.remove();
+    for (let k = 0; k < n; k++) {
+      const p = document.createElement('div');
+      p.className = 'faisca' + (k % 3 === 0 ? ' brasa' : '');
+      const ang = Math.random() * Math.PI * 2, dist = (28 + Math.random() * 62) * (forte ? 1.5 : 1), tam = 5 + Math.random() * 7;
+      Object.assign(p.style, { left: ponto.x + 'px', top: ponto.y + 'px', width: tam + 'px', height: tam + 'px' });
+      app.appendChild(p);
+      p.animate([
+        { transform: 'translate(-50%, -50%) scale(1)', opacity: 1 },
+        { transform: `translate(calc(-50% + ${(Math.cos(ang) * dist * 0.75).toFixed(1)}px), calc(-50% + ${(Math.sin(ang) * dist * 0.75).toFixed(1)}px)) scale(.8)`, opacity: 1, offset: 0.55 },
+        { transform: `translate(calc(-50% + ${(Math.cos(ang) * dist).toFixed(1)}px), calc(-50% + ${(Math.sin(ang) * dist + 16).toFixed(1)}px)) scale(.2)`, opacity: 0 },
+      ], { duration: 520 + Math.random() * 420, easing: 'cubic-bezier(.15, .8, .3, 1)' }).onfinish = () => p.remove();
+    }
+  }
+
+  // Tremor da tela: levinho (ataque 1–5), médio (6–8) e forte (9 ou mais).
+  function tremor(forca) {
+    if (MOVIMENTO_REDUZIDO) return;
+    const amp = forca >= 9 ? 9 : forca >= 6 ? 4.5 : 1.6, dur = forca >= 9 ? 520 : forca >= 6 ? 400 : 240;
+    const quadros = [];
+    for (let k = 0; k < 8; k++) {
+      const a = amp * (1 - k / 8);
+      quadros.push({ transform: `translate(${((Math.random() * 2 - 1) * a).toFixed(1)}px, ${((Math.random() * 2 - 1) * a).toFixed(1)}px)` });
+    }
+    quadros.push({ transform: 'translate(0, 0)' });
+    $('#palco').animate(quadros, { duration: dur, easing: 'linear' });
+  }
+
+  // Recuo de quem apanha: é empurrado na direção do golpe, pisca vermelho e volta (ou some, se morreu).
+  function recuo(el, n, atraso, morreu) {
+    const quadros = [
+      { transform: 'translate(0, 0) rotate(0deg)', filter: 'none' },
+      { transform: `translate(${(n.x * 16).toFixed(1)}px, ${(n.y * 16).toFixed(1)}px) rotate(${(n.x * 6).toFixed(1)}deg)`, filter: 'brightness(1.9) sepia(1) saturate(6) hue-rotate(-30deg)', offset: 0.18 },
+      { transform: `translate(${(-n.x * 5).toFixed(1)}px, ${(-n.y * 5).toFixed(1)}px) rotate(${(-n.x * 2).toFixed(1)}deg)`, filter: 'brightness(1.2)', offset: 0.5 },
+      morreu ? { transform: 'translate(0, 8px) scale(.82)', filter: 'grayscale(1) brightness(.6)', opacity: 0 } : { transform: 'translate(0, 0) rotate(0deg)', filter: 'none' },
+    ];
+    return el.animate(quadros, { duration: morreu ? 760 : 520, delay: atraso, easing: 'ease-out', fill: morreu ? 'forwards' : 'none' });
+  }
+
+  async function investida(cena, danos) {
+    const fa = cena.unidades.find(f => f.uid === cena.atacante);
+    if (!fa || !fa.caixa || !fa.html || !cena.alvo || !cena.de) return;
+    const dx = cena.alvo.x - cena.de.x, dy = cena.alvo.y - cena.de.y, dist = Math.hypot(dx, dy) || 1;
+    const n = { x: dx / dist, y: dy / dist }, k = Math.max(0, dist - 74);
+    const setas = $('#setas');
+    setas.style.opacity = '.2';
+    const copia = copiaFlutuante(fa);
+    const giro = (n.x >= 0 ? -1 : 1) * 7;
+    copia.animate([
+      { transform: 'translate(0, 0) scale(1) rotate(0deg)', filter: 'drop-shadow(0 2px 3px rgba(0,0,0,.4))', easing: 'cubic-bezier(.3, .7, .4, 1)' },
+      { transform: 'translate(0, -18px) scale(1.15) rotate(0deg)', filter: 'drop-shadow(0 18px 14px rgba(0,0,0,.45))', offset: 0.2, easing: 'ease-in-out' },
+      { transform: `translate(${(-n.x * 38).toFixed(1)}px, ${(-n.y * 38 - 18).toFixed(1)}px) scale(1.18) rotate(${giro}deg)`, filter: 'drop-shadow(0 22px 16px rgba(0,0,0,.45))', offset: 0.42, easing: 'cubic-bezier(.6, 0, .9, .5)' },
+      { transform: `translate(${(n.x * k).toFixed(1)}px, ${(n.y * k).toFixed(1)}px) scale(1.08) rotate(${-giro / 2}deg)`, filter: 'drop-shadow(0 4px 4px rgba(0,0,0,.5))', offset: IMPACTO_MS / INVESTIDA_MS, easing: 'ease-out' },
+      { transform: `translate(${(n.x * (k - 18)).toFixed(1)}px, ${(n.y * (k - 18)).toFixed(1)}px) scale(1.06) rotate(0deg)`, filter: 'drop-shadow(0 8px 8px rgba(0,0,0,.45))', offset: 0.66, easing: 'cubic-bezier(.4, 0, .3, 1)' },
+      { transform: 'translate(0, 0) scale(1) rotate(0deg)', filter: 'drop-shadow(0 2px 3px rgba(0,0,0,.4))' },
+    ], { duration: INVESTIDA_MS, fill: 'both' });
+    // Quem vai apanhar: cópias prontas desde já (uma carta que morre continua visível até o fim do recuo).
+    const alvos = [];
+    let atacanteMorreu = false;
+    for (const d of danos) {
+      if (d.heroi != null) {
+        const el = elRetrato(d.heroi);
+        if (el) recuo(el, n, IMPACTO_MS, false);
+        continue;
+      }
+      if (d.f.uid === cena.atacante) {
+        atacanteMorreu = d.morreu;
+        continue;
+      }
+      if (!d.f.caixa || !d.f.html) continue;
+      const el = copiaFlutuante(d.f);
+      recuo(el, n, IMPACTO_MS, d.morreu);
+      alvos.push({ f: d.f, el, morreu: d.morreu });
+    }
+    await esperar(IMPACTO_MS);
+    const contato = { x: cena.de.x + n.x * (k + 34), y: cena.de.y + n.y * (k + 34) };
+    const forte = cena.forca >= 9;
+    particulas(contato, forte ? 26 : cena.forca >= 6 ? 18 : 12, forte);
+    for (const d of danos) {
+      if (d.heroi != null) {
+        const c = centroDe(elRetrato(d.heroi));
+        if (c) particulas(c, 10, forte);
+      } else if (d.f.caixa && d.f.uid !== cena.atacante) {
+        const r = d.f.caixa, c = pontoNoApp(r.left + r.width / 2, r.top + r.height / 2);
+        if (Math.hypot(c.x - contato.x, c.y - contato.y) > 40) particulas(c, 8, false);
+      }
+    }
+    // Contra-ataque: o atacante também apanha (pisca vermelho no impacto).
+    if (danos.some(d => d.f && d.f.uid === cena.atacante)) {
+      copia.firstElementChild && copia.firstElementChild.animate([{ filter: 'none' }, { filter: 'brightness(1.9) sepia(1) saturate(6) hue-rotate(-30deg)' }, { filter: 'none' }], { duration: 380 });
+    }
+    tremor(cena.forca);
+    await esperar(INVESTIDA_MS - IMPACTO_MS);
+    if (atacanteMorreu) await copia.animate([{ opacity: 1 }, { opacity: 0, transform: 'translate(0, 8px) scale(.82)', filter: 'grayscale(1)' }], { duration: 320, fill: 'forwards' }).finished.catch(() => {});
+    else await esperar(80);
+    if (alvos.some(a => a.morreu)) await esperar(280);
+    soltarCopia(fa, copia);
+    for (const a of alvos) soltarCopia(a.f, a.el);
+    setas.style.opacity = '';
+  }
+
   // A mão fica ao lado do Palhaço: com muitas cartas, elas se sobrepõem mais para caber.
   function ajustarSobreposicao(mao) {
     const cartas = mao.children;
@@ -1152,7 +1315,7 @@ window.SS = window.SS || {};
     if (reg.post !== post) posturaAnterior[u.uid] = { post, de: reg.post, desde: t };
     const r = posturaAnterior[u.uid], passou = t - r.desde;
     if (passou >= DURACAO_ANIM) return '';
-    return ` girando" style="--de:${ANGULO[r.de]}deg;--de-escala:${r.de === 'vertical' ? 1 : 0.92};animation-delay:${-passou.toFixed(0)}ms`;
+    return ` girando" style="--de:${ANGULO[r.de]}deg;--de-escala:var(--esc-${r.de}, 1);animation-delay:${-passou.toFixed(0)}ms`;
   }
 
   // Anima a carta virando para baixo (fim do turno) ou desvirando (reativação).
@@ -2012,8 +2175,11 @@ window.SS = window.SS || {};
       await esperar(600); // tempo para ver a face do dado
       if (id !== partida) return;
       const antes = jogo.log.length;
+      const cena = prepararInvestida(at);
       M.resolverProximo(jogo, rolagens);
       const linhas = jogo.log.slice(antes);
+      await investida(cena, danosDesde(cena));
+      if (id !== partida) return;
       render();
       if (temDuelo) {
         mostrarDuelo(foto, total, linhas);
@@ -2300,7 +2466,7 @@ window.SS = window.SS || {};
         <div class="opcao"><label>${t('menu.escolhaPalhaco')}</label><div class="grade-palhacos">${P.LISTA.map(cartaPalhaco).join('')}</div>
           <p class="nota">${t('menu.notaInicio')}</p></div>
         <div class="opcao"><label>${t('menu.palhacoBot')}</label>${grupo('rival', rivais)}</div>
-        <div class="opcao"><label>${t('menu.dificuldade')}</label>${grupo('nivel', [['facil', NOME_NIVEL.facil], ['medio', NOME_NIVEL.medio], ['dificil', NOME_NIVEL.dificil]])}</div>
+        <div class="opcao"><label>${t('menu.dificuldade')}</label>${grupo('nivel', NIVEIS_BOT.map(n => [n, NOME_NIVEL[n]]))}</div>
         <div class="opcao"><label>${t('menu.seuDeck')}</label>${grupo('deck', decks.map(d => [d.id, escapar(d.nome)]))}
           <p class="nota">${cfg.deck === 'palhaco' ? t('menu.deckTematico', { p: P.get(cfg.palhaco).nome, plano: P.get(cfg.palhaco).plano }) : t('menu.monteDecks')}</p></div>
         <div class="acoes-menu">
@@ -2361,7 +2527,7 @@ window.SS = window.SS || {};
     const s = { n: 100, a: 'medio', b: 'medio', rodando: false, feitos: 0, r: null, id: 0 };
     const grupo = (chave, opcoes) => `<div class="grupo" data-s="${chave}">${opcoes.map(([v, r]) =>
       `<button data-v="${v}" class="${String(s[chave]) === String(v) ? 'ativo' : ''}"${s.rodando ? ' disabled' : ''}>${r}</button>`).join('')}</div>`;
-    const niveis = ['facil', 'medio', 'dificil'].map(n => [n, NOME_NIVEL[n]]);
+    const niveis = NIVEIS_BOT.map(n => [n, NOME_NIVEL[n]]);
     const pct = (x, tot) => (tot ? Math.round((100 * x) / tot) + '%' : '–');
     const resultado = () => {
       const r = s.r;

@@ -5,7 +5,7 @@ Dê dois cliques em `index.html` para abrir no Chrome (ou Edge/Firefox).
 O dado 3D carrega duas bibliotecas da internet (Three.js e Cannon.js). Sem internet, o jogo funciona com um dado 2D simples.
 
 No menu:
-- **Jogar contra o bot**: Fácil, Médio ou Difícil.
+- **Jogar contra o bot**: Fácil, Médio, Difícil ou Profissional. Os três últimos usam pesos aprendidos por autojogo (`ferramentas/treino.js` → `js/pesos.js`): o Médio fica no meio do caminho, o Difícil usa a 1ª rodada de treino e o Profissional uma 2ª rodada, treinada contra o Difícil.
 - **Jogar com um amigo** (online): um cria a sala e manda o link; o outro abre o link e entra. A partida roda direto entre os dois navegadores (WebRTC, pela biblioteca PeerJS), sem cadastro e sem servidor próprio. Em algumas redes (por exemplo, certas redes de celular ou de empresa) a conexão direta pode não funcionar.
 - **Assistir bot × bot**: os dois lados jogam sozinhos.
 - **Montar decks**: até 4 decks próprios, com auto-build do deck padrão. Ficam salvos neste navegador.
@@ -25,7 +25,9 @@ No menu:
 |---|---|
 | `js/idioma.js` | Todos os textos do jogo em inglês e português (`SS.t('chave')`). Para mudar um texto, edite aqui. |
 | `js/motor.js` | Todas as regras (Regras v2). Não depende da tela, então pode ir para um servidor no futuro multiplayer. |
-| `js/bot.js` | A inteligência do bot e a simulação de partidas. |
+| `js/bot.js` | A inteligência do bot (níveis) e a simulação de partidas. |
+| `js/pesos.js` | Pesos aprendidos pelo treino (usados do Médio ao Profissional). |
+| `ferramentas/treino.js` | Treino do bot por autojogo (rodar no console do navegador; não é carregado pelo jogo). |
 | `js/cartas.js` | Desenho das cartas, dos dorsos e da textura da mesa. |
 | `js/dados3d.js` | Dado 3D com física (arremessado com o mouse). |
 | `js/decks.js` | Montagem de decks: 4 espaços salvos no navegador e checagem das regras de limite. |

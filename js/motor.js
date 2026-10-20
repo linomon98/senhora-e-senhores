@@ -980,7 +980,7 @@ window.SS = window.SS || {};
     desistir, REGRAS_DECK, RANKS, contagemPadrao, resumoDeck, validarDeck, cartasDoDeck,
     PALHACOS, CUSTO_TRANSFUSAO, CUSTO_SANGRIA, SACRIFICIOS_RAINHA, SENHORES_POR_TURNO, ASES_POR_TURNO, REDUCAO_POR_DEFENSOR, palhacoDe, limiteMao, ataqueDirecionado,
     NAIPES, SIMBOLO, LIMITE_FIGURA, PV_INICIAL, ESPACOS, ACOES_POR_TURNO, CUSTO_RAINHA, DADO_ATAQUE_TOTAL, LIMITE_MAO,
-    definirRng: f => { rng = f; },
+    definirRng: f => { rng = f; }, rngAtual: () => rng,
     ehFigura, ehAs, ehNumero, valor, nomeCarta, nomeNaipe, nomeUnidade, curaDe, curaPara, naipado,
     BARALHOS, NOME_BARALHO, baralhosDisponiveis, comprarDoTurno,
     criarJogo, registrar, figurasNoBaralho, escolherFiguras, mulligan, confirmarAbertura,

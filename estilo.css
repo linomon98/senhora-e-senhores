@@ -82,8 +82,8 @@ html, body {
 .pilha-senhor .carta.numero { position: absolute; right: 0; top: 0; }
 .pilha-senhor .carta.figura { position: absolute; left: 0; bottom: 0; }
 .unidade.as .pilha-senhor { width: var(--cw); height: var(--ch); }
-.postura-diagonal .pilha-senhor { transform: rotate(45deg) scale(.92); }
-.postura-horizontal .pilha-senhor { transform: rotate(90deg) scale(.92); }
+.postura-diagonal .pilha-senhor { transform: rotate(45deg) scale(var(--esc-diagonal, .92)); }
+.postura-horizontal .pilha-senhor { transform: rotate(90deg) scale(var(--esc-horizontal, .92)); }
 
 /* Desativado: a carta fica virada para baixo (mostra o dorso). */
 .desativado .pilha-senhor .carta::after {
@@ -668,6 +668,11 @@ html, body {
 /* Senhor(a) voando da mão até o campo e "pousando" */
 .unidade-voando { position: absolute; z-index: 50; pointer-events: none; display: grid; place-items: center; }
 .espaco.voo-oculto .unidade { visibility: hidden; }
+/* Impacto do ataque: faíscas e onda de choque (criadas pelo JS no ponto do golpe). */
+.faisca { position: absolute; z-index: 62; pointer-events: none; border-radius: 50%; background: #fff4c8; box-shadow: 0 0 8px 2px rgba(255, 205, 90, .9); }
+.faisca.brasa { background: #ff7a45; box-shadow: 0 0 8px 2px rgba(255, 80, 40, .9); }
+.onda-impacto { position: absolute; z-index: 61; pointer-events: none; width: 92px; height: 92px; border-radius: 50%;
+  border: 3px solid rgba(255, 232, 170, .95); box-shadow: 0 0 20px rgba(255, 200, 90, .85), inset 0 0 14px rgba(255, 220, 140, .6); }
 .espaco.pousou::after {
   content: ''; position: absolute; left: 50%; top: 50%; width: 80px; height: 80px; border-radius: 50%;
   border: 3px solid rgba(255, 236, 170, .9); transform: translate(-50%, -50%) scale(.3); pointer-events: none;
@@ -792,10 +797,12 @@ button.cb-item { cursor: default; }
 #mesa { width: 1224px; }
 #painel { width: 186px; padding: 12px; }
 .barra-partida .btn { font-size: 11px; padding: 6px 3px; }
-.fileira { --cw: 72px; --ch: 101px; gap: 5px; height: 148px; padding: 0; }
+/* As cartas do campo (e as cópias que voam ou atacam) usam o mesmo tamanho. Deitada (horizontal) a carta
+   mantém o tamanho: o espaço dela alarga para caber, em vez de a carta encolher. */
+.fileira, .unidade-voando { --cw: 72px; --ch: 101px; --esc-diagonal: .72; --esc-horizontal: 1; }
+.fileira { gap: 5px; height: 148px; padding: 0; }
 .fileira .espaco { width: 96px; height: 146px; }
-.fileira .postura-diagonal .pilha-senhor { transform: rotate(45deg) scale(.72); }
-.fileira .postura-horizontal .pilha-senhor { transform: rotate(90deg) scale(.74); }
+.fileira .espaco:has(> .postura-horizontal) { width: 128px; }
 #faixa { height: 104px; padding: 0 210px; }
 #combate { right: 16px; width: 180px; }
 

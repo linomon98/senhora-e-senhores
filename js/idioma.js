@@ -47,6 +47,7 @@ window.SS = window.SS || {};
     'nivel.facil': ['Fácil', 'Easy'],
     'nivel.medio': ['Médio', 'Medium'],
     'nivel.dificil': ['Difícil', 'Hard'],
+    'nivel.profissional': ['Profissional', 'Pro'],
   });
 
   // ---------- Registro da partida (motor) ----------
