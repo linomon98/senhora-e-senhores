@@ -1182,3 +1182,41 @@ html, body { background: #9de03a url('arte/mesa/grama.webp') center / cover; }
 .reflexo-popup h2 { color: #d9a8ff; font-size: 34px; }
 .reflexo-lista { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .cb-item.refletido { border-color: #c48cff; background: rgba(122, 10, 168, .35); }
+
+/* Pop-up do reflexo, sem caixa: mesa escurecida, carta do espelho brilhando e os atacantes como opções */
+#modal:has(.reflexo-tela) { background: rgba(6, 14, 4, .72); }
+#modal .caixa:has(.reflexo-tela) { max-width: min(1100px, 96vw); background: none; border: 0; box-shadow: none; overflow: visible; }
+.reflexo-tela { display: flex; align-items: center; gap: 34px; text-align: left; }
+.refl-carta.carta-acao { --r: 0deg; width: 210px; margin: 0; cursor: default; transform: rotate(-3deg); animation: refl-entra .55s cubic-bezier(.3, 1.4, .5, 1) backwards, refl-brilho 1.6s ease-in-out .55s infinite alternate; }
+.refl-carta.carta-acao:hover { transform: rotate(-3deg); }
+.refl-carta .ca-titulo { font-size: 30px; top: 12.5%; }
+@keyframes refl-entra { from { transform: rotate(-24deg) scale(.5); opacity: 0; } }
+@keyframes refl-brilho { from { filter: drop-shadow(0 0 10px rgba(214, 60, 255, .7)); } to { filter: drop-shadow(0 0 26px rgba(214, 60, 255, 1)) drop-shadow(0 0 6px rgba(255, 255, 255, .6)); } }
+.refl-lado { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.refl-titulo { margin: 0; font: 400 40px var(--fonte-titulo); color: #fff; letter-spacing: .5px; text-shadow: 0 3px 0 rgba(0, 0, 0, .5); }
+.refl-titulo span { color: #ffc93c; }
+.refl-pergunta { margin: 0 0 8px; font: 800 22px var(--fonte-ui); color: #fff; text-shadow: 0 2px 4px rgba(0, 0, 0, .6); }
+.refl-atacantes { display: flex; flex-wrap: wrap; gap: 14px; --cw: 72px; --ch: 101px; --esc-diagonal: .72; --esc-horizontal: 1; }
+.refl-unidade {
+  position: relative; width: 98px; height: 148px; padding: 0; border: 0; border-radius: 12px; background: none; cursor: pointer;
+  transition: transform .18s cubic-bezier(.3, 1.4, .5, 1), filter .18s; animation: carta-entra .45s cubic-bezier(.3, 1.2, .5, 1) backwards;
+}
+.refl-unidade:nth-child(2) { animation-delay: .06s; } .refl-unidade:nth-child(3) { animation-delay: .12s; } .refl-unidade:nth-child(4) { animation-delay: .18s; } .refl-unidade:nth-child(5) { animation-delay: .24s; }
+.refl-unidade:hover { transform: translateY(-10px) scale(1.06); filter: drop-shadow(0 0 14px rgba(214, 60, 255, .95)); }
+.refl-unidade .tags { display: none; }
+.refl-nao {
+  align-self: center; margin-top: 14px; padding: 10px 26px; border-radius: 16px; cursor: pointer;
+  font: 900 24px var(--fonte-ui); text-transform: uppercase; color: #111; background: #fff; border: 3px solid #111; box-shadow: 0 4px 0 #111;
+  transition: transform .12s, box-shadow .12s;
+}
+.refl-nao:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #111; }
+.refl-nao:active { transform: translateY(2px); box-shadow: 0 1px 0 #111; }
+/* (tamanhos maiores, como no desenho) */
+.reflexo-tela { gap: 44px; }
+.refl-carta.carta-acao { width: 270px; }
+.refl-carta .ca-titulo { font-size: 38px; }
+.refl-titulo { font-size: 56px; }
+.refl-pergunta { font-size: 28px; margin-bottom: 14px; }
+.refl-atacantes { gap: 22px; --cw: 92px; --ch: 129px; }
+.refl-unidade { width: 122px; height: 184px; }
+.refl-nao { font-size: 30px; padding: 12px 32px; margin-top: 18px; }

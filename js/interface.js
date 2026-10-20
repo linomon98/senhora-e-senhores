@@ -2088,14 +2088,19 @@ window.SS = window.SS || {};
     const ataques = jogo.combate.ataques.filter(at => !(ui.reflexos || []).some(r => r.n === at.n));
     if (!livres.length || !ataques.length) return;
     const par = livres[0], rank = j.mao.find(c => c.id === par[0]).rank;
-    modal(`<div class="reflexo-popup">
-        <img class="reflexo-arte" src="arte/acoes/reflexo.webp" alt="" draggable="false">
-        <div><h2>${t('refl.titulo')}</h2><p>${t('refl.texto', { c: rank })}</p>
-        <div class="reflexo-lista">${ataques.map(at => {
-          const l = M.localizar(jogo, at.atacante);
-          return l ? `<button class="btn principal" data-refletir="${at.n}">${t('refl.ataque', { n: at.n, u: M.nomeUnidade(l.u), a: M.ataque(jogo, l.p, l.i) })}</button>` : '';
-        }).join('')}</div>
-        <div class="acoes-menu"><button class="btn" data-m="nao">${t('refl.nao')}</button></div></div>
+    // Sem caixa: a mesa escurece, a carta do espelho brilha à esquerda e os próprios Senhores
+    // atacantes são as opções (clica no que vai bater no próprio dono).
+    modal(`<div class="reflexo-tela">
+        <div class="carta-acao arte-reflexo refl-carta"><img src="arte/acoes/reflexo.webp" alt="" draggable="false"><b class="ca-titulo">${t('refl.titulo')}</b></div>
+        <div class="refl-lado">
+          <h2 class="refl-titulo">${t('refl.voceTem', { c: rank })}</h2>
+          <p class="refl-pergunta">${t('refl.pergunta')}</p>
+          <div class="refl-atacantes">${ataques.map(at => {
+            const l = M.localizar(jogo, at.atacante);
+            return l ? `<button class="refl-unidade" data-refletir="${at.n}" title="${escapar(t('refl.ataque', { n: at.n, u: M.nomeUnidade(l.u), a: M.ataque(jogo, l.p, l.i) }))}">${htmlUnidade(l.p, l.i, l.u)}</button>` : '';
+          }).join('')}</div>
+          <button class="refl-nao" data-m="nao">${t('refl.nao')}</button>
+        </div>
       </div>`,
     ev => {
       const b = ev.target.closest('[data-refletir]');
