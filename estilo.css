@@ -1138,3 +1138,10 @@ html, body { background: #9de03a url('arte/mesa/grama.webp') center / cover; }
 .zona-eu .info .lado-heroi { top: 70%; }
 /* O leque do oponente tem o mesmo arco do seu. */
 .zona-op .mao .carta { transform-origin: 50% 100%; transform: translateY(var(--desce, 0px)) rotate(var(--giro, 0deg)); }
+
+/* Ajuste 2: o topo do seu Palhaço fica sempre no mesmo lugar (um pouco abaixo do meio das cartas da mão),
+   seja qual for a proporção da arte; o que passar da borda de baixo fica cortado. PV mais embaixo. */
+.zona-eu .info { align-self: start; margin-top: -44px; }
+.zona-eu .heroi-livre .heroi-pv { top: 120px; left: 0; }
+.zona-eu .heroi-livre .heroi-ferida { top: 128px; left: 64px; }
+.zona-eu .info .lado-heroi { top: 118px; }
