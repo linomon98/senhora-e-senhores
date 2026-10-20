@@ -76,7 +76,7 @@ window.SS = window.SS || {};
           <tr><th>Naipe</th><th>Poder</th></tr>
           <tr><td>♣ Paus</td><td>Aguenta 3 hits (4 ao lado de um Ás de Paus).</td></tr>
           <tr><td>♠ Espadas</td><td>+1 de ataque fixo.</td></tr>
-          <tr><td>♥ Copas</td><td><b>Ferida:</b> depois que ele(a) causa dano no PV do oponente, o oponente não pode curar acima do PV que ficou, enquanto ele(a) viver.</td></tr>
+          <tr><td>♥ Copas</td><td><b>Cura:</b> quando ele(a) acerta o PV do Palhaço inimigo, você cura <b>${M.CURA_NAIPADO_COPAS} PV</b>.</td></tr>
           <tr><td>♦ Ouros</td><td>Ataca 2 vezes por turno (os dois ataques são declarados juntos).</td></tr>
         </table>
         <p class="exemplo"><b>Exemplo:</b> Rei de Copas + 7 de Copas vira um Rei Naipado de Copas com ataque 7.</p>`,
@@ -134,7 +134,7 @@ window.SS = window.SS || {};
         <table class="tabela-regras">
           <tr><th>Naipe</th><th>Efeito</th></tr>
           <tr><td>♥ Copas</td><td>Cura PV: 2–3 cura 1, 4–7 cura 2, 8–10 cura 3. Pode passar de ${M.PV_INICIAL}.</td></tr>
-          <tr><td>♦ Ouros</td><td>Descarte 1 para comprar 1 carta (do baralho que escolher) ou 2 para recuperar 1 carta do cemitério. No ataque, +1 dado.</td></tr>
+          <tr><td>♦ Ouros</td><td>Descarte 1 para comprar 1 carta (do baralho que escolher). No ataque, +1 dado.</td></tr>
           <tr><td>♠ Espadas</td><td>+1 de ataque a um Senhor(a) até o fim do turno; no 6, vira metade do valor da carta.</td></tr>
           <tr><td>♣ Paus</td><td><b>Berserk:</b> um Senhor(a) ferido(a) volta à vertical até o fim do próximo turno do oponente. Se levar 1 hit nesse tempo, morre quando o efeito acabar; com 2 hits, morre na hora.</td></tr>
         </table>`,
@@ -153,8 +153,22 @@ window.SS = window.SS || {};
           <tr><td>♣ Paus</td><td>Vizinhos ganham +1 de resistência (cria o estado diagonal).</td></tr>
           <tr><td>♠ Espadas</td><td>Vizinhos ganham +1 de ataque fixo.</td></tr>
           <tr><td>♦ Ouros</td><td>Vale 1 Ouros extra por turno.</td></tr>
-          <tr><td>♥ Copas</td><td><b>Vampiro:</b> vizinho que causar dano ao PV do oponente cura 1 PV seu.</td></tr>
+          <tr><td>♥ Copas</td><td><b>Cura:</b> no começo de cada turno seu, você cura ${M.CURA_AS_COPAS} PV (cada Ás de Copas em campo).</td></tr>
         </table>`,
+    },
+    {
+      id: 'magia', titulo: 'Magia dos pares',
+      html: () => `
+        <p>Duas cartas <b>numéricas do mesmo naipe</b> (2 a 10) viram uma magia: <b>1 ação</b>, e as duas vão para o cemitério.</p>
+        <table class="tabela-regras">
+          <tr><th>Par</th><th>Magia</th></tr>
+          <tr><td>♥ Copas</td><td><b>Reviver:</b> um Senhor(a) seu do cemitério volta <b>direto para o campo</b>, com o mesmo número que tinha.</td></tr>
+          <tr><td>♦ Ouros</td><td><b>Buscar Ás:</b> escolha um Ás do seu baralho de Números e ponha <b>direto no campo</b>.</td></tr>
+          <tr><td>♣ Paus</td><td><b>+1 de defesa para sempre</b> num Senhor(a) seu.</td></tr>
+          <tr><td>♠ Espadas</td><td><b>+1 de dano para sempre</b> num Senhor(a) seu.</td></tr>
+        </table>
+        <h3>Par de números iguais: Refletir</h3>
+        <p>Dois números iguais (ex.: dois 7, de qualquer naipe) servem na <b>defesa</b>: quando o adversário ataca, aparece um aviso no meio da tela e você escolhe um ataque para <b>refletir</b>. O Senhor(a) adversário bate no <b>próprio dono</b> (o dado ainda decide entre cheio e metade). O par vai para o cemitério.</p>`,
     },
     {
       id: 'palhacos', titulo: 'Palhaços',
@@ -260,7 +274,7 @@ window.SS = window.SS || {};
           <tr><th>Suit</th><th>Power</th></tr>
           <tr><td>♣ Clubs</td><td>Survives 3 hits (4 next to an Ace of Clubs).</td></tr>
           <tr><td>♠ Spades</td><td>+1 permanent attack.</td></tr>
-          <tr><td>♥ Hearts</td><td><b>Wound:</b> after it deals damage to the opponent's HP, the opponent can't heal above the HP they were left with, while it lives.</td></tr>
+          <tr><td>♥ Hearts</td><td><b>Heal:</b> when it hits the enemy Jester's HP, you heal <b>${M.CURA_NAIPADO_COPAS} HP</b>.</td></tr>
           <tr><td>♦ Diamonds</td><td>Attacks twice per turn (both attacks are declared together).</td></tr>
         </table>
         <p class="exemplo"><b>Example:</b> King of Hearts + 7 of Hearts becomes a Suited King of Hearts with attack 7.</p>`,
@@ -318,7 +332,7 @@ window.SS = window.SS || {};
         <table class="tabela-regras">
           <tr><th>Suit</th><th>Effect</th></tr>
           <tr><td>♥ Hearts</td><td>Heals HP: 2–3 heals 1, 4–7 heals 2, 8–10 heals 3. Can go above ${M.PV_INICIAL}.</td></tr>
-          <tr><td>♦ Diamonds</td><td>Discard 1 to draw 1 card (from the deck of your choice) or 2 to recover 1 card from the graveyard. On attack, +1 die.</td></tr>
+          <tr><td>♦ Diamonds</td><td>Discard 1 to draw 1 card (from the deck of your choice). On attack, +1 die.</td></tr>
           <tr><td>♠ Spades</td><td>+1 attack to a Gentleman until end of turn; on a 6, it becomes half the card's value.</td></tr>
           <tr><td>♣ Clubs</td><td><b>Berserk:</b> a wounded Gentleman returns upright until the end of the opponent's next turn. If it takes 1 hit in that time, it dies when the effect ends; with 2 hits, it dies instantly.</td></tr>
         </table>`,
@@ -337,8 +351,22 @@ window.SS = window.SS || {};
           <tr><td>♣ Clubs</td><td>Neighbors get +1 toughness (creates the diagonal state).</td></tr>
           <tr><td>♠ Spades</td><td>Neighbors get +1 permanent attack.</td></tr>
           <tr><td>♦ Diamonds</td><td>Counts as 1 extra Diamond per turn.</td></tr>
-          <tr><td>♥ Hearts</td><td><b>Vampire:</b> a neighbor that damages the opponent's HP heals you 1 HP.</td></tr>
+          <tr><td>♥ Hearts</td><td><b>Heal:</b> at the start of each of your turns, you heal ${M.CURA_AS_COPAS} HP (each Ace of Hearts on the field).</td></tr>
         </table>`,
+    },
+    {
+      id: 'magia', titulo: 'Pair magic',
+      html: () => `
+        <p>Two <b>number cards of the same suit</b> (2 to 10) become a spell: <b>1 action</b>, and both go to the graveyard.</p>
+        <table class="tabela-regras">
+          <tr><th>Pair</th><th>Spell</th></tr>
+          <tr><td>♥ Hearts</td><td><b>Revive:</b> one of your Gentlemen in the graveyard comes back <b>straight to the field</b>, with the same number it had.</td></tr>
+          <tr><td>♦ Diamonds</td><td><b>Fetch Ace:</b> pick an Ace from your Numbers deck and put it <b>straight onto the field</b>.</td></tr>
+          <tr><td>♣ Clubs</td><td><b>+1 defense for good</b> on one of your Gentlemen.</td></tr>
+          <tr><td>♠ Spades</td><td><b>+1 damage for good</b> on one of your Gentlemen.</td></tr>
+        </table>
+        <h3>Pair of equal numbers: Reflect</h3>
+        <p>Two equal numbers (e.g. two 7s, any suits) work on <b>defense</b>: when the opponent attacks, a prompt shows up in the middle of the screen and you pick an attack to <b>reflect</b>. The enemy Gentleman hits its <b>own owner</b> (the die still decides full or half). The pair goes to the graveyard.</p>`,
     },
     {
       id: 'palhacos', titulo: 'Jesters',

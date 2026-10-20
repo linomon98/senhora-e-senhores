@@ -1153,3 +1153,32 @@ html, body { background: #9de03a url('arte/mesa/grama.webp') center / cover; }
 .pilha .carta { width: 74px; height: 104px; }
 .zona-op .pilha .carta { width: 65px; height: 90px; }
 .ca-titulo { white-space: nowrap; } .ca-titulo.longo { font-size: 16px; top: 14%; }
+
+/* Ícones que voam: espadinha (+1 de Espadas), escudinho (+1 de Paus), Ouros extra e bolinha de cura */
+.icone-voando { position: absolute; z-index: 64; pointer-events: none; display: flex; align-items: center; gap: 1px; filter: drop-shadow(0 3px 4px rgba(0, 0, 0, .45)); }
+.icone-voando svg { width: 30px; height: 30px; }
+.icone-mais { font: 400 19px var(--fonte-titulo); color: #fff; text-shadow: 0 0 3px #000, 0 1px 0 #000, 0 0 8px rgba(0, 0, 0, .6); }
+.bonus-espadas .icone-mais { color: #cfe0ff; }
+.bonus-paus .icone-mais { color: #c9f5d6; }
+.token-ouro img { display: block; width: 38px; height: 38px; }
+.bola-cura {
+  width: 40px; height: 40px; border-radius: 50%; justify-content: center; border: 2px solid #fff;
+  font: 400 19px var(--fonte-titulo); color: #fff; text-shadow: 0 1px 0 #5e0a10;
+  background: radial-gradient(circle at 35% 30%, #ff9a9a, #d0202e 60%, #7d0d14); box-shadow: 0 0 16px rgba(255, 60, 60, .9);
+}
+
+/* Cartas das magias dos pares (tema roxo) */
+.arte-parouros, .arte-parpaus, .arte-parespadas, .arte-reflexo, .arte-cemiterio { --ca-cor: #7a0aa8; }
+
+/* Par de Copas: escolher quem volta do cemitério (figura + número) */
+.grade-mortos { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; margin: 14px 0; }
+.morto { display: flex; gap: 4px; padding: 10px; border-radius: 14px; cursor: pointer; background: rgba(0, 0, 0, .25); border: 2px solid rgba(255, 255, 255, .2); transition: transform .15s, border-color .15s; }
+.morto:hover { transform: translateY(-4px); border-color: var(--ouro); }
+
+/* Pop-up do reflexo (par de números iguais), no meio da tela */
+.reflexo-popup { display: flex; align-items: center; gap: 22px; text-align: left; max-width: 640px; }
+.reflexo-arte { width: 150px; flex: none; filter: drop-shadow(0 10px 14px rgba(0, 0, 0, .5)); animation: reflexo-gira .6s cubic-bezier(.3, 1.4, .5, 1); }
+@keyframes reflexo-gira { from { transform: rotate(-20deg) scale(.6); opacity: 0; } }
+.reflexo-popup h2 { color: #d9a8ff; font-size: 34px; }
+.reflexo-lista { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.cb-item.refletido { border-color: #c48cff; background: rgba(122, 10, 168, .35); }

@@ -38,6 +38,8 @@ window.SS = window.SS || {};
   const CUSTO_TRANSFUSAO = 2; // PV pagos pela Transfusão do Infartitte para tirar 1 hit de um aliado
   const CUSTO_SANGRIA = 4; // PV pagos pela Transfusão para dar 1 hit num Senhor(a) inimigo
   const CUSTO_COBRANCA = 2; // PV pagos pelo Ourinhos para roubar 1 carta (Cobrança)
+  const CURA_AS_COPAS = 1; // Ás de Copas em campo: cura o dono no começo de cada turno dele
+  const CURA_NAIPADO_COPAS = 2; // Naipado de Copas que acerta o Palhaço inimigo cura o dono
   const palhacoDe = j => (j && PALHACOS[j.palhaco]) || null;
   const temPalhaco = (j, id) => !!j && j.palhaco === id;
   const limiteMao = j => (palhacoDe(j) ? palhacoDe(j).limiteMao : LIMITE_MAO);
@@ -101,6 +103,7 @@ window.SS = window.SS || {};
           cemiterio: [],
           campo: new Array(ESPACOS).fill(null),
           feridas: {}, // uid do Naipado de Copas inimigo -> PV máximo até onde dá para curar
+          mortos: [], // Senhores que morreram (figura + número), para o Par de Copas trazer de volta
           tokens: 0, // Ouros extras do Ás de Ouros neste turno
           abertura: { figuras: [], mulligan: false, pronto: false },
         };
@@ -119,7 +122,15 @@ window.SS = window.SS || {};
       vencedor: null,
       proximoUid: 1,
       log: [],
+      eventos: [], // o que a tela anima (curas, Ouros extra…); a interface consome
     };
+  }
+
+  // Acontecimentos para a tela animar (o motor só anota; quem desenha é a interface).
+  function evento(e, ev) {
+    if (e.mudo || !e.eventos) return;
+    e.eventos.push(ev);
+    if (e.eventos.length > 40) e.eventos.shift();
   }
 
   function registrar(e, msg) {
@@ -241,6 +252,7 @@ window.SS = window.SS || {};
   function ataqueBase(e, p, i) {
     const u = e.jogadores[p].campo[i];
     let a = valor(u.numero);
+    a += u.atkExtra || 0; // Par de Espadas: +1 de dano permanente
     if (naipado(u) === 'espadas') a++;
     if (asesVizinhos(e, p, i).includes('espadas')) a++;
     return a;
@@ -253,6 +265,7 @@ window.SS = window.SS || {};
     const u = e.jogadores[p].campo[i];
     if (u.tipo === 'as') return 1;
     let r = 2;
+    r += u.resExtra || 0; // Par de Paus: +1 de defesa permanente
     if (naipado(u) === 'paus') r++;
     if (asesVizinhos(e, p, i).includes('paus')) r++;
     return r;
@@ -280,6 +293,7 @@ window.SS = window.SS || {};
     if (u.tipo === 'as') j.cemiterio.push(u.carta);
     else {
       j.cemiterio.push(u.figura, u.numero);
+      j.mortos.push({ figura: u.figura.id, numero: u.numero.id });
       delete e.jogadores[1 - p].feridas[u.uid];
     }
     registrar(e, t('log.morreu', { u: nomeUnidade(u), j: j.nome, m: motivo ? t('mot.' + motivo) : '' }));
@@ -321,13 +335,13 @@ window.SS = window.SS || {};
     perderPV(e, d, dano);
     if (e.vencedor != null || !locA) return;
     const u = locA.u;
+    // Naipado de Copas: quando acerta o Palhaço inimigo, cura o próprio dono.
     if (naipado(u) === 'copas' && perdido > 0) {
-      D.feridas[u.uid] = Math.min(D.feridas[u.uid] == null ? Infinity : D.feridas[u.uid], D.pv);
-      registrar(e, t('log.ferida', { j: D.nome, n: D.feridas[u.uid], u: nomeUnidade(u) }));
-    }
-    if (asesVizinhos(e, p, locA.i).includes('copas')) {
-      const c = curar(e, p, 1);
-      if (c) registrar(e, t('log.vampiro', { j: e.jogadores[p].nome }));
+      const c = curar(e, p, CURA_NAIPADO_COPAS);
+      if (c) {
+        registrar(e, t('log.curaNaipado', { u: nomeUnidade(u), j: e.jogadores[p].nome, n: c }));
+        evento(e, { tipo: 'cura', p, n: c, de: u.uid });
+      }
     }
   }
 
@@ -351,9 +365,21 @@ window.SS = window.SS || {};
         u.atacou = false;
         u.vigilia = false;
         u.ataques = naipado(u) === 'ouros' ? 2 : 1;
-      } else if (u.naipe === 'ouros') j.tokens++;
+      } else if (u.naipe === 'ouros') {
+        j.tokens++;
+        evento(e, { tipo: 'token', p, de: u.uid });
+      }
     }
     registrar(e, t('log.turno', { n: e.turno, j: j.nome }));
+    // Ás de Copas: cada um em campo cura o dono no começo do turno dele.
+    for (const u of j.campo) {
+      if (!u || u.tipo !== 'as' || u.naipe !== 'copas') continue;
+      const c = curar(e, p, CURA_AS_COPAS);
+      if (c) {
+        registrar(e, t('log.asCopas', { j: j.nome, n: c }));
+        evento(e, { tipo: 'cura', p, n: c, de: u.uid });
+      }
+    }
     e.compras = 1;
     if (e.turno === 1) registrar(e, t('log.primeiroTurno', { j: j.nome }));
     else if (palhacoDe(j) && palhacoDe(j).compraDupla) {
@@ -468,18 +494,73 @@ window.SS = window.SS || {};
     const ouros = ourosDisponiveis(e, p);
     const fontes = baralhosDisponiveis(e, p);
     for (const o of new Set(ouros)) for (const b of fontes) r.push({ tipo: 'comprar', carta: o, baralho: b });
-    if (j.cemiterio.length && ouros.length >= 2) {
-      const pares = new Map();
-      for (let a = 0; a < ouros.length; a++) {
-        for (let b = a + 1; b < ouros.length; b++) {
-          const par = [ouros[a], ouros[b]].sort();
-          pares.set(par.join('|'), par);
-        }
-      }
-      const escolhas = [...new Set(j.cemiterio.map(c => c.id))];
-      for (const par of pares.values()) for (const id of escolhas) r.push({ tipo: 'reviver', cartas: par, escolha: id });
+    // Magia dos pares: 2 cartas numéricas do mesmo naipe (1 ação).
+    //   Copas: traz um Senhor(a) do cemitério direto para o campo (com o mesmo número de antes).
+    //   Ouros: pega um Ás do baralho direto para o campo.
+    //   Paus: +1 de defesa permanente num Senhor(a) seu. Espadas: +1 de dano permanente.
+    for (const par of paresDoNaipe(numeros)) {
+      const base = { tipo: 'magia', naipe: par.naipe, cartas: par.cartas };
+      if (par.naipe === 'copas') {
+        if (vazios.length) j.mortos.forEach((m, k) => { if (noCemiterio(j, m)) r.push(Object.assign({ morto: k }, base)); });
+      } else if (par.naipe === 'ouros') {
+        if (vazios.length) for (const c of j.numeros) if (ehAs(c)) r.push(Object.assign({ as: c.id }, base));
+      } else for (const s of senhores) r.push(Object.assign({ alvo: j.campo[s].uid }, base));
     }
     return r;
+  }
+
+  // Todos os pares de cartas numéricas do mesmo naipe na mão (cada par uma vez, ids em ordem).
+  function paresDoNaipe(numeros) {
+    const r = [];
+    for (let a = 0; a < numeros.length; a++) {
+      for (let b = a + 1; b < numeros.length; b++) {
+        if (numeros[a].naipe === numeros[b].naipe) r.push({ naipe: numeros[a].naipe, cartas: [numeros[a].id, numeros[b].id].sort() });
+      }
+    }
+    return r;
+  }
+
+  const noCemiterio = (j, m) => j.cemiterio.some(c => c.id === m.figura) && j.cemiterio.some(c => c.id === m.numero);
+
+  function tirarDoCemiterio(j, id) {
+    const k = j.cemiterio.findIndex(c => c.id === id);
+    if (k < 0) throw new Error('Carta não está no cemitério: ' + id);
+    return j.cemiterio.splice(k, 1)[0];
+  }
+
+  // Espaço vazio mais perto do meio da fileira (onde a magia coloca a carta).
+  function espacoCentral(j) {
+    let melhor = -1;
+    for (let i = 0; i < ESPACOS; i++) {
+      if (j.campo[i]) continue;
+      if (melhor < 0 || Math.abs(i - (ESPACOS - 1) / 2) < Math.abs(melhor - (ESPACOS - 1) / 2)) melhor = i;
+    }
+    if (melhor < 0) throw new Error('Fileira cheia');
+    return melhor;
+  }
+
+  // Par de números iguais (ex.: dois 7, de qualquer naipe): na hora de bloquear, o defensor faz um
+  // ataque do adversário bater no próprio dono.
+  function paresIguais(e, p) {
+    const nums = e.jogadores[p].mao.filter(ehNumero), r = [];
+    for (let a = 0; a < nums.length; a++) {
+      for (let b = a + 1; b < nums.length; b++) if (nums[a].rank === nums[b].rank) r.push([nums[a].id, nums[b].id].sort());
+    }
+    return r;
+  }
+
+  function refletir(e, n, cartas) {
+    if (e.fase !== 'bloqueio') throw new Error('Só dá para refletir na hora do bloqueio');
+    const d = 1 - e.vez, j = e.jogadores[d];
+    const at = e.combate.ataques.find(x => x.n === n);
+    if (!at || at.refletido) throw new Error('Ataque inválido para refletir');
+    const cs = Array.isArray(cartas) && cartas.length === 2 ? cartas.map(id => j.mao.find(c => c.id === id)) : [];
+    if (cs.length !== 2 || !cs[0] || !cs[1] || cs[0] === cs[1] || !ehNumero(cs[0]) || !ehNumero(cs[1]) || cs[0].rank !== cs[1].rank) {
+      throw new Error('Par de números inválido');
+    }
+    for (const c of cs) j.cemiterio.push(tirarDaMao(j, c.id));
+    at.refletido = true;
+    registrar(e, t('log.refletiu', { j: j.nome, n, c: cs[0].rank }));
   }
 
   // Desfaz o "ir para o ataque" (antes de declarar qualquer ataque): volta para as ações passivas.
@@ -613,13 +694,36 @@ window.SS = window.SS || {};
         comprar(e, p, 1, a.baralho);
         break;
       }
-      case 'reviver': {
-        const k = j.cemiterio.findIndex(c => c.id === a.escolha);
-        if (k < 0) throw new Error('Carta não está no cemitério');
-        const carta = j.cemiterio.splice(k, 1)[0];
-        for (const o of a.cartas) gastarOuros(e, p, o);
-        j.mao.push(carta);
-        registrar(e, t('log.reviver', { j: j.nome, c: nomeCarta(carta) }));
+      case 'magia': {
+        const cs = (Array.isArray(a.cartas) ? a.cartas : []).map(id => j.mao.find(c => c.id === id));
+        if (cs.length !== 2 || !cs[0] || !cs[1] || cs[0] === cs[1] || !cs.every(c => ehNumero(c) && c.naipe === a.naipe)) throw new Error('Par inválido');
+        if (a.naipe === 'copas') {
+          const m = j.mortos[a.morto];
+          if (!m || !noCemiterio(j, m) || !j.campo.includes(null)) throw new Error('Não dá para reviver');
+          const f = tirarDoCemiterio(j, m.figura), n = tirarDoCemiterio(j, m.numero);
+          j.mortos.splice(a.morto, 1);
+          const u = {
+            uid: e.proximoUid++, tipo: 'senhor', figura: f, numero: n, hits: 0, ativo: true, atacou: false,
+            ataques: f.naipe === n.naipe && f.naipe === 'ouros' ? 2 : 1, entrou: e.turno, bonus: [], berserk: null,
+          };
+          j.campo[espacoCentral(j)] = u;
+          registrar(e, t('log.magiaCopas', { j: j.nome, u: nomeUnidade(u) }));
+        } else if (a.naipe === 'ouros') {
+          const k = j.numeros.findIndex(c => c.id === a.as && ehAs(c));
+          if (k < 0 || !j.campo.includes(null)) throw new Error('Ás não está no baralho');
+          const as = j.numeros.splice(k, 1)[0];
+          j.campo[espacoCentral(j)] = { uid: e.proximoUid++, tipo: 'as', carta: as, naipe: as.naipe };
+          if (as.naipe === 'ouros') j.tokens++;
+          registrar(e, t('log.magiaOuros', { j: j.nome, as: nomeCarta(as) }));
+          verificarMortes(e);
+        } else {
+          const l = localizar(e, a.alvo);
+          if (!l || l.p !== p || l.u.tipo !== 'senhor') throw new Error('Alvo inválido');
+          if (a.naipe === 'paus') l.u.resExtra = (l.u.resExtra || 0) + 1;
+          else l.u.atkExtra = (l.u.atkExtra || 0) + 1;
+          registrar(e, t(a.naipe === 'paus' ? 'log.magiaPaus' : 'log.magiaEspadas', { j: j.nome, u: nomeUnidade(l.u) }));
+        }
+        for (const c of cs) j.cemiterio.push(tirarDaMao(j, c.id));
         break;
       }
       default:
@@ -743,7 +847,7 @@ window.SS = window.SS || {};
     // Desafio! do Lançalotte: o Senhor(a) desafiado(a) bloqueia o primeiro ataque que dá para bloquear.
     const desafiado = e.desafio != null ? localizar(e, e.desafio) : null;
     if (desafiado && desafiado.p === d && desafiado.u.ativo) {
-      const primeiro = e.combate.ataques.find(at => !(ataqueDirecionado(e, at) && at.alvo === e.desafio));
+      const primeiro = e.combate.ataques.find(at => !at.refletido && !(ataqueDirecionado(e, at) && at.alvo === e.desafio));
       if (primeiro) {
         for (const n in mapa) mapa[n] = (mapa[n] || []).filter(uid => uid !== e.desafio);
         mapa[primeiro.n] = [e.desafio].concat(mapa[primeiro.n] || []);
@@ -752,7 +856,7 @@ window.SS = window.SS || {};
     }
     for (const at of e.combate.ataques) {
       // No ataque do Rei a um Senhor(a), o alvo já defende: a lista são só os ajudantes.
-      const lista = (mapa[at.n] || []).filter(uid => !(ataqueDirecionado(e, at) && uid === at.alvo));
+      const lista = at.refletido ? [] : (mapa[at.n] || []).filter(uid => !(ataqueDirecionado(e, at) && uid === at.alvo));
       for (const uid of lista) {
         const loc = localizar(e, uid);
         if (!loc || loc.p !== d || loc.u.tipo !== 'senhor' || !loc.u.ativo) throw new Error('Bloqueador inválido');
@@ -808,7 +912,7 @@ window.SS = window.SS || {};
     // Ataque do Rei contra um Senhor(a): o alvo defende como se bloqueasse, junto com quem veio ajudar.
     const alvoDireto = at.alvo !== 'jogador' ? localizar(e, at.alvo) : null;
     const direcionado = !!alvoDireto && alvoDireto.u.tipo === 'senhor';
-    const defensores = direcionado ? [at.alvo].concat(at.bloqueadores.filter(uid => uid !== at.alvo)) : at.bloqueadores;
+    const defensores = at.refletido ? [] : direcionado ? [at.alvo].concat(at.bloqueadores.filter(uid => uid !== at.alvo)) : at.bloqueadores;
     // Bloqueio em grupo: cada defensor a mais tira 1 do ataque do atacante (antes do dado decidir cheio ou metade).
     const vivos = defensores.filter(uid => localizar(e, uid)).length;
     const reducaoGrupo = Math.max(0, vivos - 1) * REDUCAO_POR_DEFENSOR;
@@ -818,6 +922,13 @@ window.SS = window.SS || {};
     res.dano = dano;
     if (reducaoGrupo) registrar(e, t('log.grupo', { n: vivos, r: reducaoGrupo, u: nomeUnidade(u) }));
     registrar(e, t('log.rolou', { n: at.n, u: nomeUnidade(u), r: rolagens.join(', '), cheio: maior >= DADO_ATAQUE_TOTAL, crit: maior === 6 && u.bonus.length > 0, d: dano }));
+    // Refletido (par de números do defensor): o golpe acerta o próprio dono do atacante.
+    if (at.refletido) {
+      registrar(e, t('log.refletido', { u: nomeUnidade(u), j: e.jogadores[p].nome, d: dano }));
+      perderPV(e, p, dano);
+      evento(e, { tipo: 'reflexo', p, de: u.uid });
+      return fim();
+    }
     if (!defensores.length) {
       if (at.alvo === 'jogador') danoAoJogador(e, p, locA, dano);
       else if (alvoDireto) morrer(e, alvoDireto.p, alvoDireto.i, 'atacado');
@@ -1003,7 +1114,7 @@ window.SS = window.SS || {};
     desistir, REGRAS_DECK, RANKS, contagemPadrao, resumoDeck, validarDeck, cartasDoDeck,
     PALHACOS, CUSTO_TRANSFUSAO, CUSTO_SANGRIA, SACRIFICIOS_RAINHA, SENHORES_POR_TURNO, ASES_POR_TURNO, REDUCAO_POR_DEFENSOR, palhacoDe, limiteMao, ataqueDirecionado,
     NAIPES, SIMBOLO, LIMITE_FIGURA, PV_INICIAL, ESPACOS, ACOES_POR_TURNO, CUSTO_RAINHA, DADO_ATAQUE_TOTAL, LIMITE_MAO,
-    definirRng: f => { rng = f; }, rngAtual: () => rng, voltarAoPrincipal,
+    definirRng: f => { rng = f; }, rngAtual: () => rng, voltarAoPrincipal, refletir, paresIguais, CURA_AS_COPAS, CURA_NAIPADO_COPAS,
     ehFigura, ehAs, ehNumero, valor, nomeCarta, nomeNaipe, nomeUnidade, curaDe, curaPara, naipado,
     BARALHOS, NOME_BARALHO, baralhosDisponiveis, comprarDoTurno,
     criarJogo, registrar, figurasNoBaralho, escolherFiguras, mulligan, confirmarAbertura,

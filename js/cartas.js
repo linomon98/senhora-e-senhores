@@ -9,7 +9,8 @@ window.SS = window.SS || {};
 
   SS.ARTE = SS.ARTE || {};
 
-  const COR = { copas: '#c41e2a', ouros: '#c41e2a', paus: '#17171f', espadas: '#17171f' };
+  // Cada naipe com a sua cor: Copas vermelho, Ouros amarelo, Paus verde, Espadas azul.
+  const COR = { copas: '#d0202e', ouros: '#d49a06', paus: '#1c8a3a', espadas: '#1f55c8' };
   const FORMA = {
     copas: '<path d="M50 92C22 70 4 52 4 31 4 15 16 5 29 5c10 0 17 6 21 14 4-8 11-14 21-14 13 0 25 10 25 26 0 21-18 39-46 61z"/>',
     ouros: '<path d="M50 3 88 50 50 97 12 50z"/>',

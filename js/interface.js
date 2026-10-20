@@ -29,7 +29,8 @@ window.SS = window.SS || {};
   // Parâmetros que o jogador escolhe clicando na mesa, em ordem, para cada tipo de ação.
   // "sacrificios" é um passo de 2 cliques (a Rainha sacrifica 2 Senhores).
   // O espaço na fileira não é um passo: vale o lugar onde a carta foi solta (ou o centro, pelo botão).
-  const PASSOS = { sumonar: ['sacrificios'], invocarAs: [], espadas: ['alvo'], paus: ['alvo'], reviver: ['escolha'], curar: [], comprar: [], poder: ['alvo'] };
+  // Magia dos pares: "morto" (Copas, quem volta do cemitério), "as" (Ouros, o Ás do baralho) ou "alvo" (Paus/Espadas).
+  const PASSOS = { sumonar: ['sacrificios'], invocarAs: [], espadas: ['alvo'], paus: ['alvo'], magia: ['morto', 'as', 'alvo'], curar: [], comprar: [], poder: ['alvo'] };
   const CENTRO_FILEIRA = (M.ESPACOS - 1) / 2;
 
   // Entre as opções que só mudam de espaço, fica a mais perto de onde a carta foi solta.
@@ -50,6 +51,7 @@ window.SS = window.SS || {};
 
   const novoUi = () => ({
     sel: [], pend: null, ataques: [], atacanteSel: null, bloqueios: {}, bloqSel: null,
+    reflexos: [],
     ocupado: false, foco: null, aoConfirmarBloqueio: null, aoContinuar: null, mira: null, mouse: null,
     // Arrastar da mão: carta sendo arrastada, espaço onde uma figura/Ás espera o número,
     // e de onde a carta voa até o campo.
@@ -86,7 +88,7 @@ window.SS = window.SS || {};
     switch (a.tipo) {
       case 'sumonar': return [a.figura, a.numero];
       case 'invocarAs': return [a.as, a.custo];
-      case 'reviver': return a.cartas.slice();
+      case 'magia': return a.cartas.slice();
       default: return [a.carta];
     }
   }
@@ -134,7 +136,8 @@ window.SS = window.SS || {};
   function avancarPendente() {
     const pd = ui.pend;
     if (pd.k < pd.passos.length) {
-      if (pd.passos[pd.k] === 'escolha') return escolherDoCemiterio();
+      if (pd.passos[pd.k] === 'morto') return escolherMorto();
+      if (pd.passos[pd.k] === 'as') return escolherAsDoBaralho();
       return render();
     }
     const acao = maisPerto(candidatosPendentes(), pd.destino);
@@ -179,7 +182,7 @@ window.SS = window.SS || {};
       case 'espadas': return t('acao.espadas');
       case 'paus': return t('acao.paus');
       case 'comprar': return t(a.baralho === 'letras' ? 'acao.comprarLetra' : 'acao.comprarNumero');
-      case 'reviver': return t('acao.reviver');
+      case 'magia': return t('acao.magia.' + a.naipe);
     }
     return tipo;
   }
@@ -211,6 +214,7 @@ window.SS = window.SS || {};
     if (passo === 'alvo') {
       if (tipo === 'espadas') return t('passo.espadas');
       if (tipo === 'paus') return t('passo.paus');
+      if (tipo === 'magia') return t(ui.pend.cands[0].naipe === 'paus' ? 'passo.magiaPaus' : 'passo.magiaEspadas');
       const poder = palhacoDe(jogo.vez).poder;
       return t('passo.poder', { nome: poder.nome, texto: poder.texto });
     }
@@ -267,6 +271,10 @@ window.SS = window.SS || {};
   }
 
   function atribuirBloqueio(n) {
+    if ((ui.reflexos || []).some(r => r.n === n)) { // ataque refletido não leva bloqueador
+      ui.bloqSel = null;
+      return render();
+    }
     const lista = ui.bloqueios[n] || (ui.bloqueios[n] = []);
     const k = lista.indexOf(ui.bloqSel);
     if (k >= 0) lista.splice(k, 1);
@@ -644,15 +652,18 @@ window.SS = window.SS || {};
         return fluxoCombate(partida);
       }
       case 'confirmar-bloqueios': {
-        const mapa = ui.bloqueios;
-        ui.bloqueios = {}; ui.bloqSel = null;
-        enviarJogada({ t: 'bloqueios', mapa });
+        const mapa = ui.bloqueios, reflexos = ui.reflexos || [];
+        ui.bloqueios = {}; ui.bloqSel = null; ui.reflexos = [];
+        enviarJogada({ t: 'bloqueios', mapa, reflexos });
+        for (const rf of reflexos) M.refletir(jogo, rf.n, rf.cartas);
         M.definirBloqueios(jogo, mapa);
         const continuar = ui.aoConfirmarBloqueio;
         ui.aoConfirmarBloqueio = null;
         if (continuar) continuar();
         return;
       }
+      case 'refletir':
+        return oferecerReflexo();
       case 'limpar-bloqueios':
         ui.bloqueios = bloqueiosIniciais();
         ui.bloqSel = null;
@@ -889,6 +900,90 @@ window.SS = window.SS || {};
     renderLog();
     desenharSetas();
     animarEntradas();
+    processarEventos();
+  }
+
+  // ---------- Efeitos dos Ases e das curas ----------
+
+  // Ícone que voa num arco de um elemento até outro (o destino é procurado de novo no fim do voo,
+  // porque a mesa pode ter sido redesenhada no meio do caminho).
+  function voarIcone(deEl, paraFn, html, classe, atraso) {
+    const a = centroDe(deEl), alvo0 = paraFn(), b = centroDe(alvo0);
+    if (!a || !b || MOVIMENTO_REDUZIDO) return;
+    const el = document.createElement('div');
+    el.className = 'icone-voando ' + classe;
+    el.innerHTML = html;
+    Object.assign(el.style, { left: a.x + 'px', top: a.y + 'px' });
+    $('#app').appendChild(el);
+    const dx = b.x - a.x, dy = b.y - a.y, alto = -Math.min(110, 36 + Math.hypot(dx, dy) * 0.22);
+    const pos = (k, s, o) => ({ transform: `translate(calc(-50% + ${(dx * k).toFixed(1)}px), calc(-50% + ${(dy * k + alto * (k < 1 ? Math.sin(k * Math.PI) : 0)).toFixed(1)}px)) scale(${s})`, opacity: o });
+    el.animate([pos(0, .3, 0), Object.assign(pos(.2, 1.2, 1), { offset: .2 }), Object.assign(pos(.6, 1, 1), { offset: .6 }), pos(1, .7, .95)],
+      { duration: 950, delay: atraso || 0, easing: 'ease-in-out', fill: 'backwards' }).onfinish = () => {
+      el.remove();
+      const alvo = paraFn();
+      if (alvo) alvo.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.22)', offset: .4 }, { transform: 'scale(1)' }], { duration: 380, easing: 'ease-out' });
+    };
+  }
+
+  function ondaEm(c, cor, escalaFinal, atraso) {
+    const onda = document.createElement('div');
+    onda.className = 'onda-poder';
+    Object.assign(onda.style, { left: c.x + 'px', top: c.y + 'px', borderColor: `rgba(${cor}, .95)`, boxShadow: `0 0 26px rgba(${cor}, .9), inset 0 0 18px rgba(${cor}, .6)` });
+    $('#app').appendChild(onda);
+    onda.animate([{ transform: 'translate(-50%, -50%) scale(.3)', opacity: 1 }, { transform: `translate(-50%, -50%) scale(${escalaFinal})`, opacity: 0 }],
+      { duration: 750, delay: atraso || 0, easing: 'cubic-bezier(.2, .8, .3, 1)', fill: 'backwards' }).onfinish = () => onda.remove();
+  }
+
+  // (função, não constante: o ICONE dos botões é definido mais abaixo no arquivo)
+  const iconeBonus = naipe => (naipe === 'espadas'
+    ? `<span class="icone-mais">+1</span><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M25.5 3.5l3 3-14 14-3-3z" fill="#e6eef8" stroke="#1a2230" stroke-width="1.3" stroke-linejoin="round"/><path d="M8.5 16.5l7 7M10 22l-5.5 5.5" stroke="#c99a34" stroke-width="3" stroke-linecap="round"/></svg>`
+    : `<span class="icone-mais">+1</span><svg viewBox="0 0 32 32" aria-hidden="true">${ICONE.escudo}</svg>`);
+  const pvDe = p => () => $(`#info-${p} .heroi-pv`);
+  const poderDe = p => () => $(`#info-${p} .poder-naipe`);
+
+  // Logo depois que uma carta pousa no campo: o Ás aparece com brilho e solta o efeito do naipe;
+  // um Senhor(a) que cai do lado de um Ás de Espadas/Paus recebe a espadinha/o escudinho.
+  function efeitoEntrada(p, uid) {
+    if (!jogo || MOVIMENTO_REDUZIDO) return;
+    const l = M.localizar(jogo, uid), esp = elUnidade(uid);
+    if (!l || !esp) return;
+    const campo = jogo.jogadores[p].campo, vizinhos = [l.i - 1, l.i + 1].map(k => campo[k]).filter(Boolean);
+    if (l.u.tipo === 'as') {
+      const naipe = l.u.naipe, cor = COR_NAIPE[naipe], un = esp.querySelector('.unidade');
+      if (un) {
+        un.animate([
+          { transform: 'scale(.4) rotate(-14deg)', filter: `drop-shadow(0 0 0 rgba(${cor}, 0))` },
+          { transform: 'scale(1.2) rotate(4deg)', filter: `drop-shadow(0 0 24px rgba(${cor}, 1))`, offset: .55 },
+          { transform: 'scale(1)', filter: `drop-shadow(0 0 0 rgba(${cor}, 0))` },
+        ], { duration: 750, easing: 'cubic-bezier(.3, 1.4, .5, 1)' });
+      }
+      const c = centroDe(esp);
+      if (c) ondaEm(c, cor, 2.6, 120);
+      if (naipe === 'espadas' || naipe === 'paus') {
+        vizinhos.filter(u => u.tipo === 'senhor').forEach((u, k) => voarIcone(esp, () => elUnidade(u.uid), iconeBonus(naipe), 'bonus-' + naipe, 420 + k * 140));
+      } else if (naipe === 'ouros') {
+        voarIcone(esp, poderDe(p), '<img src="arte/naipes/ouros.webp" alt="">', 'token-ouro', 420);
+      } else if (naipe === 'copas') {
+        voarIcone(esp, pvDe(p), '<span>♥</span>', 'bola-cura', 420);
+      }
+    } else {
+      vizinhos.filter(u => u.tipo === 'as' && (u.naipe === 'espadas' || u.naipe === 'paus')).forEach((a, k) => {
+        const de = elUnidade(a.uid);
+        if (de) voarIcone(de, () => elUnidade(uid), iconeBonus(a.naipe), 'bonus-' + a.naipe, 120 + k * 140);
+      });
+    }
+  }
+
+  // Acontecimentos anotados pelo motor: curas (Ás de Copas, Naipado de Copas) e Ouros extra do Ás.
+  function processarEventos() {
+    if (!jogo.eventos || !jogo.eventos.length) return;
+    const lista = jogo.eventos.splice(0);
+    lista.forEach((ev, k) => {
+      const de = ev.de != null ? elUnidade(ev.de) : null;
+      if (!de) return;
+      if (ev.tipo === 'cura') voarIcone(de, pvDe(ev.p), `<span>+${ev.n}</span>`, 'bola-cura', 250 + k * 180);
+      else if (ev.tipo === 'token') voarIcone(de, poderDe(ev.p), '<img src="arte/naipes/ouros.webp" alt="">', 'token-ouro', 250 + k * 180);
+    });
   }
 
   // ---------- Cartas voando do baralho (ou do cemitério) para a mão ----------
@@ -902,7 +997,10 @@ window.SS = window.SS || {};
       const j = jogo.jogadores[p];
       // Senhores e Ases que acabaram de entrar voam da mão (ou de onde foram soltos) até o campo.
       const noCampo = j.campo.filter(Boolean);
-      if (campoVisto[p]) noCampo.filter(u => !campoVisto[p].has(u.uid)).forEach(u => voarParaCampo(p, u.uid));
+      if (campoVisto[p]) noCampo.filter(u => !campoVisto[p].has(u.uid)).forEach(u => {
+        voarParaCampo(p, u.uid);
+        setTimeout(() => efeitoEntrada(p, u.uid), 660); // depois que ela pousa
+      });
       campoVisto[p] = new Set(noCampo.map(u => u.uid));
       const atual = j.mao.map(c => c.id);
       if (maoVista[p]) {
@@ -1011,7 +1109,8 @@ window.SS = window.SS || {};
       unidades.push({ uid: u.uid, hits: u.hits, bhits: u.berserk ? u.berserk.hits : 0, el, caixa: el && el.getBoundingClientRect(), html: dentro ? dentro.outerHTML : '' });
     }
     let alvos;
-    if (at.alvo !== 'jogador' && (M.ataqueDirecionado(jogo, at) || !at.bloqueadores.length)) alvos = [elUnidade(at.alvo)];
+    if (at.refletido) alvos = [elRetrato(jogo.vez)]; // refletido: vai no próprio dono
+    else if (at.alvo !== 'jogador' && (M.ataqueDirecionado(jogo, at) || !at.bloqueadores.length)) alvos = [elUnidade(at.alvo)];
     else if (at.bloqueadores.length) alvos = at.bloqueadores.map(elUnidade);
     else alvos = [elRetrato(1 - jogo.vez)];
     const pontos = alvos.map(centroDe).filter(Boolean);
@@ -1438,8 +1537,10 @@ window.SS = window.SS || {};
     if (M.ataqueDirecionado(jogo, at)) extras.push(t('chip.direto'));
     if (at.dados > 1) extras.push(t('chip.dados', { n: at.dados }));
     if (bl.length) extras.push(`⛨ ${bl.join(' + ')}`);
+    const refletido = at.refletido || (jogo.fase === 'bloqueio' && (ui.reflexos || []).some(r => r.n === at.n));
+    if (refletido) extras.push('↩ ' + t('tag.refletido'));
     if (at.resultado) extras.push(t('chip.resultado', { r: at.resultado.rolagens.join(','), d: at.resultado.dano }).replace(/^ · /, ''));
-    return `<button class="cb-item${clicavel ? ' clicavel' : ''}${ui.foco === at.n ? ' foco' : ''}${at.resultado ? ' feito' : ''}" data-ataque="${at.n}">
+    return `<button class="cb-item${refletido ? ' refletido' : ''}${clicavel && !refletido ? ' clicavel' : ''}${ui.foco === at.n ? ' foco' : ''}${at.resultado ? ' feito' : ''}" data-ataque="${at.n}">
       <span class="cb-num">${at.n}</span>
       <span class="cb-txt"><b>${nome} <em>⚔${atk}</em></b><span>→ ${nomeAlvo(at)}</span>${extras.length ? `<small>${extras.join(' · ')}</small>` : ''}</span></button>`;
   }
@@ -1479,12 +1580,14 @@ window.SS = window.SS || {};
   function iconeDaAcao(a) {
     if (a.tipo === 'sumonar') return a.sacrificio != null ? 'rainha' : 'sumonar';
     if (a.tipo === 'invocarAs') return 'as';
+    if (a.tipo === 'magia') return 'par-' + a.naipe;
     return a.tipo;
   }
 
   // Ações em forma de carta (canto inferior esquerdo): arte da carta + título na fonte dos títulos.
   // O título vem do idioma (a arte não tem texto, por causa da versão em inglês).
-  const ARTE_ACAO = { atacar: 'atacar', espadas: 'dano', paus: 'berserk', escudo: 'defesa', curar: 'cura', comprar: 'comprar', reviver: 'cemiterio', sumonar: 'sumonar', rainha: 'sumonar', as: 'sumonar' };
+  const ARTE_ACAO = { atacar: 'atacar', espadas: 'dano', paus: 'berserk', escudo: 'defesa', curar: 'cura', comprar: 'comprar', reviver: 'cemiterio', sumonar: 'sumonar', rainha: 'sumonar', as: 'sumonar',
+    'par-copas': 'cemiterio', 'par-ouros': 'parouros', 'par-paus': 'parpaus', 'par-espadas': 'parespadas', reflexo: 'reflexo' };
   const btnGrande = (acao, rotulo, icone, extra) => {
     const arte = ARTE_ACAO[icone] || 'sumonar';
     const sub = rotulo.replace(/^[^\p{L}\p{N}+]+/u, '');
@@ -1554,6 +1657,7 @@ window.SS = window.SS || {};
         texto = t(ui.bloqSel != null ? 'faixa.solteBloqueio' : 'faixa.comoBloquear')
           + (desafiado ? ' ' + t('faixa.desafio', { u: M.nomeUnidade(desafiado.u) }) : '');
         botoes = btnGrande('confirmar-bloqueios', t('btn.confirmarBloqueios'), 'escudo', 'defesa');
+        if (paresLivres().length && jogo.combate.ataques.some(at => !ui.reflexos.some(r => r.n === at.n))) botoes += btnGrande('refletir', t('refl.titulo'), 'reflexo');
         extras = btn('limpar-bloqueios', t('btn.limpar'));
       } else texto = t('faixa.botBloqueando', { j: escapar(jogo.jogadores[d].nome) });
     } else if (jogo.fase === 'resolucao' || jogo.fase === 'fimCombate') {
@@ -1651,6 +1755,13 @@ window.SS = window.SS || {};
 
   function capturarDuelo(at) {
     const d = 1 - jogo.vez;
+    // Refletido: o golpe vai no Palhaço do próprio atacante (sem bloqueio).
+    if (at.refletido) {
+      return {
+        n: at.n, dados: at.dados, bonusAtaque: at.bonusAtaque || 0, defensor: jogo.vez, pvAntes: jogo.jogadores[jogo.vez].pv,
+        atacante: fotoUnidade(at.atacante), bloqueadores: [], alvoAs: null, direto: false, refletido: true,
+      };
+    }
     return {
       n: at.n, dados: at.dados, bonusAtaque: at.bonusAtaque || 0, defensor: d, pvAntes: jogo.jogadores[d].pv,
       atacante: fotoUnidade(at.atacante),
@@ -1920,11 +2031,41 @@ window.SS = window.SS || {};
     });
   }
 
-  function escolherDoCemiterio() {
+  const cancelarEscolha = ev => {
+    if (!ev.target.closest('[data-m="cancelar"]')) return false;
+    fecharModal();
+    ui.pend = null;
+    render();
+    return true;
+  };
+
+  // Par de Copas: escolhe qual Senhor(a) do cemitério volta (figura + o número que ele tinha).
+  function escolherMorto() {
     const j = jogo.jogadores[jogo.vez];
-    const ids = new Set(candidatosPendentes().map(a => a.escolha));
-    modal(`<h2>${t('cem.reviver')}</h2>
-      ${gradeCartas(j.cemiterio.filter(c => ids.has(c.id)), null, true)}
+    const ks = [...new Set(candidatosPendentes().map(a => a.morto))];
+    const carta = id => j.cemiterio.find(c => c.id === id);
+    modal(`<h2>${t('magia.mortos')}</h2>
+      <div class="grade-mortos">${ks.map(k => {
+        const m = j.mortos[k];
+        return `<button class="morto" data-morto="${k}"><div class="carta grande">${C.frente(carta(m.figura))}</div><div class="carta grande">${C.frente(carta(m.numero))}</div></button>`;
+      }).join('')}</div>
+      <div class="acoes-menu"><button class="btn" data-m="cancelar">${t('btn.cancelar')}</button></div>`,
+    ev => {
+      const b = ev.target.closest('[data-morto]');
+      if (b) {
+        fecharModal();
+        return escolherParametro(Number(b.dataset.morto));
+      }
+      cancelarEscolha(ev);
+    });
+  }
+
+  // Par de Ouros: escolhe qual Ás do baralho vai direto para o campo.
+  function escolherAsDoBaralho() {
+    const j = jogo.jogadores[jogo.vez];
+    const ids = new Set(candidatosPendentes().map(a => a.as));
+    modal(`<h2>${t('magia.ases')}</h2>
+      ${gradeCartas(j.numeros.filter(c => ids.has(c.id)), null, true)}
       <div class="acoes-menu"><button class="btn" data-m="cancelar">${t('btn.cancelar')}</button></div>`,
     ev => {
       const id = cartaClicada(ev);
@@ -1932,9 +2073,43 @@ window.SS = window.SS || {};
         fecharModal();
         return escolherParametro(id);
       }
-      if (ev.target.closest('[data-m="cancelar"]')) {
+      cancelarEscolha(ev);
+    });
+  }
+
+  // Par de números iguais na hora de bloquear: pop-up no meio da tela para escolher o ataque refletido.
+  function paresLivres() {
+    const usadas = new Set((ui.reflexos || []).flatMap(r => r.cartas));
+    return M.paresIguais(jogo, 1 - jogo.vez).filter(par => !par.some(id => usadas.has(id)));
+  }
+
+  function oferecerReflexo() {
+    const livres = paresLivres(), j = jogo.jogadores[1 - jogo.vez];
+    const ataques = jogo.combate.ataques.filter(at => !(ui.reflexos || []).some(r => r.n === at.n));
+    if (!livres.length || !ataques.length) return;
+    const par = livres[0], rank = j.mao.find(c => c.id === par[0]).rank;
+    modal(`<div class="reflexo-popup">
+        <img class="reflexo-arte" src="arte/acoes/reflexo.webp" alt="" draggable="false">
+        <div><h2>${t('refl.titulo')}</h2><p>${t('refl.texto', { c: rank })}</p>
+        <div class="reflexo-lista">${ataques.map(at => {
+          const l = M.localizar(jogo, at.atacante);
+          return l ? `<button class="btn principal" data-refletir="${at.n}">${t('refl.ataque', { n: at.n, u: M.nomeUnidade(l.u), a: M.ataque(jogo, l.p, l.i) })}</button>` : '';
+        }).join('')}</div>
+        <div class="acoes-menu"><button class="btn" data-m="nao">${t('refl.nao')}</button></div></div>
+      </div>`,
+    ev => {
+      const b = ev.target.closest('[data-refletir]');
+      if (b) {
+        const n = Number(b.dataset.refletir);
+        ui.reflexos.push({ n, cartas: par });
+        delete ui.bloqueios[n];
         fecharModal();
-        ui.pend = null;
+        render();
+        if (paresLivres().length) setTimeout(oferecerReflexo, 250); // tem outro par? oferece de novo
+        return;
+      }
+      if (ev.target.closest('[data-m="nao"]')) {
+        fecharModal();
         render();
       }
     });
@@ -2246,16 +2421,19 @@ window.SS = window.SS || {};
     render();
     if (jogo.fase === 'bloqueio') {
       const d = 1 - jogo.vez;
+      // Par de números iguais na mão: dá para refletir um ataque (mesmo sem ninguém para bloquear).
+      const podeRefletir = M.paresIguais(jogo, d).length > 0;
       if (controle(d) === 'bot') {
         await esperar(500);
         if (id !== partida) return;
+        for (const rf of Bot.refletir(jogo, d)) M.refletir(jogo, rf.n, rf.cartas);
         const mapa = await pensar('bloquear', jogo, d, cfg.nivel);
         if (id !== partida) return;
         M.definirBloqueios(jogo, mapa);
-      } else if (!M.bloqueadoresAptos(jogo).length) {
+      } else if (!M.bloqueadoresAptos(jogo).length && !podeRefletir) {
         M.registrar(jogo, t('log.semBloqueadores', { j: jogo.jogadores[d].nome }));
         M.definirBloqueios(jogo, {});
-      } else if (!jogo.combate.ataques.some(at => M.bloqueadoresAptos(jogo).some(uid => !alvoDoRei(at, uid)))) {
+      } else if (!podeRefletir && !jogo.combate.ataques.some(at => M.bloqueadoresAptos(jogo).some(uid => !alvoDoRei(at, uid)))) {
         // Só o próprio alvo do Rei estaria livre: não há quem mandar para ajudar.
         M.registrar(jogo, t('log.ninguemAjuda', { j: jogo.jogadores[d].nome }));
         M.definirBloqueios(jogo, {});
@@ -2264,12 +2442,17 @@ window.SS = window.SS || {};
         if (id !== partida) return;
         const mapa = m.mapa && typeof m.mapa === 'object' && !Array.isArray(m.mapa) ? m.mapa : null;
         if (!mapa || !Object.values(mapa).every(Array.isArray)) return jogadaInvalida(m.mapa);
+        const reflexos = m.reflexos == null ? [] : m.reflexos;
+        if (!Array.isArray(reflexos) || reflexos.length > 4) return jogadaInvalida(m.reflexos);
+        for (const rf of reflexos) if (!rf || !aplicarRemoto(() => M.refletir(jogo, rf.n, rf.cartas))) return;
         if (!aplicarRemoto(() => M.definirBloqueios(jogo, mapa))) return;
       } else {
         ui.ocupado = false;
         ui.bloqueios = bloqueiosIniciais();
+        ui.reflexos = [];
         ui.bloqSel = null;
         render();
+        if (podeRefletir) oferecerReflexo();
         await new Promise(r => { ui.aoConfirmarBloqueio = r; });
         if (id !== partida) return;
         ui.ocupado = true;

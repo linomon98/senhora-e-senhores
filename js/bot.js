@@ -406,6 +406,23 @@ window.SS = window.SS || {};
     return plano;
   }
 
+  // Par de números iguais na mão: o bot reflete os ataques mais fortes (o golpe volta no dono do atacante).
+  // Gasta primeiro os pares de valor mais baixo; só vale a pena contra ataques de pelo menos 4.
+  function refletir(e, d) {
+    const pares = M.paresIguais(e, d), usadas = new Set(), r = [];
+    const valorPar = par => M.valor(e.jogadores[d].mao.find(c => c.id === par[0]));
+    pares.sort((a, b) => valorPar(a) - valorPar(b));
+    const ataques = e.combate.ataques.slice().sort((a, b) => forca(e, b.atacante) * b.dados - forca(e, a.atacante) * a.dados);
+    for (const at of ataques) {
+      if (at.refletido || forca(e, at.atacante) < 4) continue;
+      const par = pares.find(pr => !pr.some(id => usadas.has(id)));
+      if (!par) break;
+      par.forEach(id => usadas.add(id));
+      r.push({ n: at.n, cartas: par });
+    }
+    return r;
+  }
+
   function bloquear(e, d, nivel) {
     const cfg = usar(configDe(nivel));
     const mapa = {}, usados = {};
@@ -483,7 +500,10 @@ window.SS = window.SS || {};
       if (e.vencedor != null) break;
       if (e.fase === 'principal') M.aplicarAcao(e, { tipo: 'atacar' });
       M.declararAtaques(e, declararAtaques(e, p, niveis[p]));
-      if (e.fase === 'bloqueio') M.definirBloqueios(e, bloquear(e, 1 - p, niveis[1 - p]));
+      if (e.fase === 'bloqueio') {
+        for (const rf of refletir(e, 1 - p)) M.refletir(e, rf.n, rf.cartas);
+        M.definirBloqueios(e, bloquear(e, 1 - p, niveis[1 - p]));
+      }
       while (e.fase === 'resolucao') M.resolverProximo(e, rolar(e.combate.ataques[e.combate.indice].dados));
       if (e.vencedor != null) break;
       M.encerrarTurno(e);
@@ -491,5 +511,5 @@ window.SS = window.SS || {};
     }
   }
 
-  SS.Bot = { proximaAcao, escolherBaralho, declararAtaques, bloquear, descartar, escolherFiguras, querMulligan, partidaAutomatica, avaliar, caracteristicas, PESOS_BASE, PESOS_APRENDIDOS, PESOS_PRO, NIVEIS };
+  SS.Bot = { proximaAcao, escolherBaralho, declararAtaques, bloquear, refletir, descartar, escolherFiguras, querMulligan, partidaAutomatica, avaliar, caracteristicas, PESOS_BASE, PESOS_APRENDIDOS, PESOS_PRO, NIVEIS };
 })(window.SS);
