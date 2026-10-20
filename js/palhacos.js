@@ -120,6 +120,7 @@ window.SS = window.SS || {};
   for (const pal of LISTA) {
     pal.retrato = `arte/palhacos/${pal.id}.webp`;
     pal.carta = `arte/cartas/${pal.id}.webp`; // arte em formato de carta (tela de escolha)
+    pal.corpo = `arte/corpo/${pal.id}.webp`; // corpo inteiro, sem corte (Palhaço solto na mesa)
   }
 
   for (const pal of LISTA) {

@@ -1273,7 +1273,7 @@ window.SS = window.SS || {};
     let heroi = info.querySelector('.heroi');
     if (!heroi || heroi.dataset.pal !== pal.id) {
       info.innerHTML = `<div class="heroi heroi-livre" data-alvo="jogador:${p}" data-pal="${pal.id}">
-          <img class="heroi-png" src="${pal.retrato}" alt="${escapar(pal.nome)}" draggable="false">
+          <img class="heroi-png" src="${pal.corpo}" alt="${escapar(pal.nome)}" draggable="false">
           <div class="heroi-pv" title="${t('ui.pontosVida')}"><span></span></div>
           <div class="heroi-ferida" title="${t('ui.feridaCopas')}" hidden></div>
         </div>
