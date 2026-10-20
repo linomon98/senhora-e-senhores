@@ -1484,12 +1484,12 @@ window.SS = window.SS || {};
 
   // Ações em forma de carta (canto inferior esquerdo): arte da carta + título na fonte dos títulos.
   // O título vem do idioma (a arte não tem texto, por causa da versão em inglês).
-  const ARTE_ACAO = { atacar: 'atacar', espadas: 'atacar', paus: 'atacar', escudo: 'defesa', curar: 'defesa', comprar: 'comprar', reviver: 'cemiterio', sumonar: 'sumonar', rainha: 'sumonar', as: 'sumonar' };
+  const ARTE_ACAO = { atacar: 'atacar', espadas: 'dano', paus: 'berserk', escudo: 'defesa', curar: 'cura', comprar: 'comprar', reviver: 'cemiterio', sumonar: 'sumonar', rainha: 'sumonar', as: 'sumonar' };
   const btnGrande = (acao, rotulo, icone, extra) => {
     const arte = ARTE_ACAO[icone] || 'sumonar';
     const sub = rotulo.replace(/^[^\p{L}\p{N}+]+/u, '');
     return `<button class="carta-acao arte-${arte} ${extra || ''}" data-acao="${acao}" title="${escapar(sub)}">
-      <img src="arte/acoes/${arte}.webp" alt="" draggable="false"><b class="ca-titulo">${t('carta.' + icone)}</b><small class="ca-sub">${sub}</small></button>`;
+      <img src="arte/acoes/${arte}.webp" alt="" draggable="false"><b class="ca-titulo${t('carta.' + icone).length > 7 ? ' longo' : ''}">${t('carta.' + icone)}</b><small class="ca-sub">${sub}</small></button>`;
   };
 
   function renderFaixa() {

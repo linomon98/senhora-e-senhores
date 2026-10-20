@@ -1145,3 +1145,11 @@ html, body { background: #9de03a url('arte/mesa/grama.webp') center / cover; }
 .zona-eu .heroi-livre .heroi-pv { top: 120px; left: 0; }
 .zona-eu .heroi-livre .heroi-ferida { top: 128px; left: 64px; }
 .zona-eu .info .lado-heroi { top: 118px; }
+
+/* Cartas de ação próprias: +1 de dano (punhal), cura (poção) e berserk (olhos) */
+.arte-dano { --ca-cor: #1a64d6; } .arte-cura { --ca-cor: #e04545; } .arte-berserk { --ca-cor: #13921a; }
+
+/* Baralhos 16% maiores */
+.pilha .carta { width: 74px; height: 104px; }
+.zona-op .pilha .carta { width: 65px; height: 90px; }
+.ca-titulo { white-space: nowrap; } .ca-titulo.longo { font-size: 16px; top: 14%; }
