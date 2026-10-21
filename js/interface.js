@@ -1616,6 +1616,10 @@ window.SS = window.SS || {};
         palco.className = 'palco ' + (meu ? 'palco-eu' : 'palco-op') + ' palco-' + pal.naipe;
         palco.hidden = false;
       }
+      // Laterais da tela: à direita a cor do seu naipe, à esquerda a do adversário.
+      const COR_LADO = { azul: '#2b6fe0', vermelho: '#d83a34', verde: '#3aa335', dourado: '#e0aa1e' };
+      document.documentElement.style.setProperty(meu ? '--lado-dir' : '--lado-esq', COR_LADO[pal.cor] || '#3aa335');
+      document.documentElement.classList.add('com-lados');
     }
     const classes = `heroi heroi-livre cor-${cor}${alvos.has('jogador:' + p) ? ' clicavel' : ''}${jogo.vez === p ? ' da-vez' : ''}`;
     for (const c of classes.split(' ')) heroi.classList.add(c);
@@ -3482,6 +3486,8 @@ window.SS = window.SS || {};
     const app = $('#app');
     escala = Math.min(innerWidth / app.offsetWidth, innerHeight / app.offsetHeight);
     app.style.transform = `translate(-50%, -50%) scale(${escala})`;
+    // Largura das faixas que sobram dos lados da mesa (o degradê dos naipes ocupa só elas).
+    document.documentElement.style.setProperty('--faixa-lateral', Math.max(0, (innerWidth - app.offsetWidth * escala) / 2).toFixed(1) + 'px');
     if (jogo) desenharSetas();
   }
 

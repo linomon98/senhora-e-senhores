@@ -1331,3 +1331,19 @@ html, body { background: #9de03a url('arte/mesa/grama.webp') center / cover; }
 .palco[hidden] { display: none; }
 .palco-op { top: -8px; width: 470px; transform: translateX(-50%); }
 .palco-eu { bottom: -26px; width: 680px; transform: translateX(-50%); }
+
+/* Sombra nos Palhaços: contorno escuro fino + sombra projetada, para destacar do cenário. */
+.heroi-png { filter: drop-shadow(0 0 1.5px rgba(8, 22, 4, .85)) drop-shadow(0 14px 14px rgba(5, 18, 2, .5)); }
+.heroi.heroi-livre.da-vez .heroi-png { filter: drop-shadow(0 0 1.5px rgba(8, 22, 4, .85)) drop-shadow(0 0 10px rgba(255, 240, 160, .95)) drop-shadow(0 14px 14px rgba(5, 18, 2, .5)); }
+
+/* Faixas dos lados da mesa (tela mais larga que 16:9): degradê na cor dos naipes, da borda da tela
+   (cor viva) até a mesa (escurecido), com uma sombra suave na borda da mesa no lugar do recorte. */
+html.com-lados {
+  --lado-esq: #3aa335; --lado-dir: #3aa335;
+  background:
+    linear-gradient(90deg, var(--lado-esq) 0, color-mix(in srgb, var(--lado-esq) 45%, #0d1f08) var(--faixa-lateral, 0px)) left / 50.1% 100% no-repeat,
+    linear-gradient(270deg, var(--lado-dir) 0, color-mix(in srgb, var(--lado-dir) 45%, #0d1f08) var(--faixa-lateral, 0px)) right / 50.1% 100% no-repeat,
+    #14300c;
+}
+html.com-lados body { background: transparent; }
+html.com-lados #app { box-shadow: 0 0 46px 6px rgba(0, 0, 0, .5); }
