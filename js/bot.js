@@ -423,6 +423,16 @@ window.SS = window.SS || {};
     return r;
   }
 
+  // Ataque do bot refletido e par de números na mão: reflete de volta (com o par mais barato) se o golpe
+  // ainda tem força de pelo menos 3. Devolve as duas cartas ou null.
+  function contraRefletir(e, p) {
+    if (!M.podeContraRefletir(e)) return null;
+    const at = e.combate.ataques[e.combate.indice];
+    if (forca(e, at.atacante) < 3) return null;
+    const valorPar = par => M.valor(e.jogadores[p].mao.find(c => c.id === par[0]));
+    return M.paresIguais(e, p).sort((a, b) => valorPar(a) - valorPar(b))[0];
+  }
+
   function bloquear(e, d, nivel) {
     const cfg = usar(configDe(nivel));
     const mapa = {}, usados = {};
@@ -504,12 +514,16 @@ window.SS = window.SS || {};
         for (const rf of refletir(e, 1 - p)) M.refletir(e, rf.n, rf.cartas);
         M.definirBloqueios(e, bloquear(e, 1 - p, niveis[1 - p]));
       }
-      while (e.fase === 'resolucao') M.resolverProximo(e, rolar(e.combate.ataques[e.combate.indice].dados));
+      while (e.fase === 'resolucao') {
+        const cr = contraRefletir(e, p);
+        if (cr) M.contraRefletir(e, cr);
+        M.resolverProximo(e, rolar(e.combate.ataques[e.combate.indice].dados));
+      }
       if (e.vencedor != null) break;
       M.encerrarTurno(e);
       if (e.fase === 'descarte') M.descartar(e, descartar(e, e.vez));
     }
   }
 
-  SS.Bot = { proximaAcao, escolherBaralho, declararAtaques, bloquear, refletir, descartar, escolherFiguras, querMulligan, partidaAutomatica, avaliar, caracteristicas, PESOS_BASE, PESOS_APRENDIDOS, PESOS_PRO, NIVEIS };
+  SS.Bot = { proximaAcao, escolherBaralho, declararAtaques, bloquear, refletir, contraRefletir, descartar, escolherFiguras, querMulligan, partidaAutomatica, avaliar, caracteristicas, PESOS_BASE, PESOS_APRENDIDOS, PESOS_PRO, NIVEIS };
 })(window.SS);

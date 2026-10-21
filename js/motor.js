@@ -40,6 +40,7 @@ window.SS = window.SS || {};
   const CUSTO_COBRANCA = 2; // PV pagos pelo Ourinhos para roubar 1 carta (Cobrança)
   const CURA_AS_COPAS = 1; // Ás de Copas em campo: cura o dono no começo de cada turno dele
   const CURA_NAIPADO_COPAS = 2; // Naipado de Copas que acerta o Palhaço inimigo cura o dono
+  const REDUCAO_REFLEXO = 2; // ataque refletido que acerta cheio (dado 4–6) bate 2 a menos
   const palhacoDe = j => (j && PALHACOS[j.palhaco]) || null;
   const temPalhaco = (j, id) => !!j && j.palhaco === id;
   const limiteMao = j => (palhacoDe(j) ? palhacoDe(j).limiteMao : LIMITE_MAO);
@@ -567,6 +568,28 @@ window.SS = window.SS || {};
     registrar(e, t('log.refletiu', { j: j.nome, n, c: cs[0].rank }));
   }
 
+  // Refletir o reflexo: antes do dado, o dono do atacante refletido pode gastar um par de números
+  // dele para mandar o golpe de volta no Palhaço do defensor (sem bloqueio). Só uma vez por ataque.
+  function podeContraRefletir(e) {
+    if (e.fase !== 'resolucao') return false;
+    const at = e.combate.ataques[e.combate.indice];
+    return !!at && at.refletido && !at.contra && !!localizar(e, at.atacante) && paresIguais(e, e.vez).length > 0;
+  }
+
+  function contraRefletir(e, cartas) {
+    if (!podeContraRefletir(e)) throw new Error('Não dá para refletir o reflexo agora');
+    const p = e.vez, j = e.jogadores[p];
+    const at = e.combate.ataques[e.combate.indice];
+    const cs = Array.isArray(cartas) && cartas.length === 2 ? cartas.map(id => j.mao.find(c => c.id === id)) : [];
+    if (cs.length !== 2 || !cs[0] || !cs[1] || cs[0] === cs[1] || !ehSacrificavel(cs[0]) || !ehSacrificavel(cs[1]) || cs[0].rank !== cs[1].rank) {
+      throw new Error('Par de números inválido');
+    }
+    evento(e, { tipo: 'magia', p, cartas: cs.map(c => Object.assign({}, c)) });
+    for (const c of cs) j.cemiterio.push(tirarDaMao(j, c.id));
+    at.contra = true;
+    registrar(e, t('log.contraRefletiu', { j: j.nome, n: at.n, c: cs[0].rank }));
+  }
+
   // Desfaz o "ir para o ataque" (antes de declarar qualquer ataque): volta para as ações passivas.
   function voltarAoPrincipal(e) {
     if (e.fase !== 'ataque' || e.vencedor != null) throw new Error('Só dá para voltar antes de declarar os ataques');
@@ -922,16 +945,27 @@ window.SS = window.SS || {};
     const vivos = defensores.filter(uid => localizar(e, uid)).length;
     const reducaoGrupo = Math.max(0, vivos - 1) * REDUCAO_POR_DEFENSOR;
     const total = Math.max(0, base + bonus - reducaoGrupo);
-    const dano = maior >= DADO_ATAQUE_TOTAL ? total : Math.floor(total / 2);
+    // Ataque direto no Palhaço, sem ninguém defendendo, com o dado em 1: erra o golpe (que vergonha!).
+    const errou = !at.refletido && !defensores.length && at.alvo === 'jogador' && maior === 1;
+    // Refletido (ou refletido de volta): acertando cheio, o golpe perde força.
+    const dano = errou ? 0 : maior >= DADO_ATAQUE_TOTAL ? Math.max(0, total - (at.refletido ? REDUCAO_REFLEXO : 0)) : Math.floor(total / 2);
     const numeroAtacante = base + u.bonus.length;
     res.dano = dano;
     if (reducaoGrupo) registrar(e, t('log.grupo', { n: vivos, r: reducaoGrupo, u: nomeUnidade(u) }));
+    if (errou) {
+      res.errou = true;
+      registrar(e, t('log.errou', { n: at.n, u: nomeUnidade(u), r: rolagens.join(', ') }));
+      evento(e, { tipo: 'errou', p, de: u.uid });
+      return fim();
+    }
     registrar(e, t('log.rolou', { n: at.n, u: nomeUnidade(u), r: rolagens.join(', '), cheio: maior >= DADO_ATAQUE_TOTAL, crit: maior === 6 && u.bonus.length > 0, d: dano }));
     // Refletido (par de números do defensor): o golpe acerta o próprio dono do atacante.
+    // Refletido de volta (par do atacante): volta para o Palhaço do defensor, sem bloqueio.
     if (at.refletido) {
-      registrar(e, t('log.refletido', { u: nomeUnidade(u), j: e.jogadores[p].nome, d: dano }));
-      perderPV(e, p, dano);
-      evento(e, { tipo: 'reflexo', p, de: u.uid });
+      const vitima = at.contra ? 1 - p : p;
+      registrar(e, t(at.contra ? 'log.contraRefletido' : 'log.refletido', { u: nomeUnidade(u), j: e.jogadores[vitima].nome, d: dano }));
+      perderPV(e, vitima, dano);
+      evento(e, { tipo: 'reflexo', p: vitima, de: u.uid });
       return fim();
     }
     if (!defensores.length) {
@@ -1119,7 +1153,7 @@ window.SS = window.SS || {};
     desistir, REGRAS_DECK, RANKS, contagemPadrao, resumoDeck, validarDeck, cartasDoDeck,
     PALHACOS, CUSTO_TRANSFUSAO, CUSTO_SANGRIA, SACRIFICIOS_RAINHA, SENHORES_POR_TURNO, ASES_POR_TURNO, REDUCAO_POR_DEFENSOR, palhacoDe, limiteMao, ataqueDirecionado,
     NAIPES, SIMBOLO, LIMITE_FIGURA, PV_INICIAL, ESPACOS, ACOES_POR_TURNO, CUSTO_RAINHA, DADO_ATAQUE_TOTAL, LIMITE_MAO,
-    definirRng: f => { rng = f; }, rngAtual: () => rng, voltarAoPrincipal, refletir, paresIguais, CURA_AS_COPAS, CURA_NAIPADO_COPAS,
+    definirRng: f => { rng = f; }, rngAtual: () => rng, voltarAoPrincipal, refletir, paresIguais, contraRefletir, podeContraRefletir, REDUCAO_REFLEXO, CURA_AS_COPAS, CURA_NAIPADO_COPAS,
     ehFigura, ehAs, ehNumero, ehSacrificavel, valor, nomeCarta, nomeNaipe, nomeUnidade, curaDe, curaPara, naipado,
     BARALHOS, NOME_BARALHO, baralhosDisponiveis, comprarDoTurno,
     criarJogo, registrar, figurasNoBaralho, escolherFiguras, mulligan, confirmarAbertura,

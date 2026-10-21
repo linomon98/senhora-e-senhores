@@ -688,6 +688,9 @@ window.SS = window.SS || {};
       }
       case 'refletir':
         return iniciarReflexo();
+      case 'nao-refletir':
+        ui.reflexoModo = null;
+        return ui.contra && ui.contra.responder(null);
       case 'limpar-bloqueios':
         ui.bloqueios = bloqueiosIniciais();
         ui.bloqSel = null;
@@ -1182,7 +1185,7 @@ window.SS = window.SS || {};
       unidades.push({ uid: u.uid, hits: u.hits, bhits: u.berserk ? u.berserk.hits : 0, el, caixa: el && el.getBoundingClientRect(), html: dentro ? dentro.outerHTML : '' });
     }
     let alvos;
-    if (at.refletido) alvos = [elRetrato(jogo.vez)]; // refletido: vai no próprio dono
+    if (at.refletido) alvos = [elRetrato(at.contra ? 1 - jogo.vez : jogo.vez)]; // refletido: vai no próprio dono (de volta: no defensor)
     else if (at.alvo !== 'jogador' && (M.ataqueDirecionado(jogo, at) || !at.bloqueadores.length)) alvos = [elUnidade(at.alvo)];
     else if (at.bloqueadores.length) alvos = at.bloqueadores.map(elUnidade);
     else alvos = [elRetrato(1 - jogo.vez)];
@@ -1280,6 +1283,12 @@ window.SS = window.SS || {};
     setas.style.opacity = '.2';
     const copia = copiaFlutuante(fa);
     const giro = (n.x >= 0 ? -1 : 1) * 7;
+    if (cena.errou) {
+      await golpeNoVento(copia, n, k, giro);
+      soltarCopia(fa, copia);
+      setas.style.opacity = '';
+      return;
+    }
     copia.animate([
       { transform: 'translate(0, 0) scale(1) rotate(0deg)', filter: 'drop-shadow(0 2px 3px rgba(0,0,0,.4))', easing: 'cubic-bezier(.3, .7, .4, 1)' },
       { transform: 'translate(0, -18px) scale(1.15) rotate(0deg)', filter: 'drop-shadow(0 18px 14px rgba(0,0,0,.45))', offset: 0.2, easing: 'ease-in-out' },
@@ -1331,6 +1340,51 @@ window.SS = window.SS || {};
     soltarCopia(fa, copia);
     for (const a of alvos) soltarCopia(a.f, a.el);
     setas.style.opacity = '';
+  }
+
+  // Errou (dado 1 no ataque direto): a carta toma impulso, passa raspando ao lado do Palhaço, rodopia
+  // perdida no vento e volta, sem impacto nenhum.
+  async function golpeNoVento(copia, n, k, giro) {
+    const lado = { x: -n.y, y: n.x }, desvio = 95, alem = k + 70;
+    const px = (a, b) => (n.x * a + lado.x * b).toFixed(1), py = (a, b) => (n.y * a + lado.y * b).toFixed(1);
+    const rastro = setInterval(() => ventinho(copia), 70);
+    await copia.animate([
+      { transform: 'translate(0, 0) scale(1) rotate(0deg)', easing: 'cubic-bezier(.3, .7, .4, 1)' },
+      { transform: 'translate(0, -18px) scale(1.15) rotate(0deg)', offset: 0.16, easing: 'ease-in-out' },
+      { transform: `translate(${px(-38, 0)}px, ${py(-38, 0) - 18}px) scale(1.18) rotate(${giro}deg)`, offset: 0.32, easing: 'cubic-bezier(.6, 0, .9, .5)' },
+      { transform: `translate(${px(alem, desvio)}px, ${py(alem, desvio)}px) scale(1.05) rotate(${-giro * 4}deg)`, offset: 0.55, easing: 'ease-out' },
+      { transform: `translate(${px(alem + 30, desvio + 30)}px, ${py(alem + 30, desvio + 30)}px) scale(1) rotate(${-giro * 10}deg)`, offset: 0.7, easing: 'ease-in-out' },
+      { transform: `translate(${px(alem * .5, desvio * .6)}px, ${py(alem * .5, desvio * .6)}px) scale(.96) rotate(${-giro * 12}deg)`, offset: 0.86 },
+      { transform: 'translate(0, 0) scale(1) rotate(-1440deg)' },
+    ], { duration: MOVIMENTO_REDUZIDO ? 10 : 1500, fill: 'both' }).finished.catch(() => {});
+    clearInterval(rastro);
+  }
+
+  // Risquinho de vento atrás da carta que errou.
+  function ventinho(el) {
+    const c = centroDe(el);
+    if (!c) return;
+    const v = document.createElement('div');
+    v.className = 'risco-vento';
+    Object.assign(v.style, { left: c.x + 'px', top: c.y + 'px' });
+    $('#app').appendChild(v);
+    v.animate([{ opacity: .8, transform: 'translate(-50%, -50%) scaleX(1)' }, { opacity: 0, transform: 'translate(-50%, -50%) scaleX(2.2)' }], { duration: 520, easing: 'ease-out' }).onfinish = () => v.remove();
+  }
+
+  // "QUE VERGONHA!" gigante no meio da tela.
+  async function queVergonha() {
+    const el = document.createElement('div');
+    el.className = 'que-vergonha';
+    el.textContent = t('vergonha');
+    $('#app').appendChild(el);
+    await el.animate([
+      { opacity: 0, transform: 'translate(-50%, -50%) scale(2.6) rotate(-14deg)' },
+      { opacity: 1, transform: 'translate(-50%, -50%) scale(.92) rotate(-6deg)', offset: 0.12 },
+      { opacity: 1, transform: 'translate(-50%, -50%) scale(1.04) rotate(-7deg)', offset: 0.2 },
+      { opacity: 1, transform: 'translate(-50%, -50%) scale(1) rotate(-6deg)', offset: 0.82 },
+      { opacity: 0, transform: 'translate(-50%, -60%) scale(1.1) rotate(-6deg)' },
+    ], { duration: 2000, easing: 'ease-out' }).finished.catch(() => {});
+    el.remove();
   }
 
   // A mão fica ao lado do Palhaço: com muitas cartas, elas se sobrepõem mais para caber.
@@ -1482,10 +1536,12 @@ window.SS = window.SS || {};
     };
     // Refletir: na escolha do par, as cartas que formam par brilham roxo (o par escolhido sobe); o par já
     // descartado (mirando ou confirmado) some da mão.
-    const rm = ui.reflexoModo, defendo = jogo.fase === 'bloqueio' && p === 1 - jogo.vez && controle(p) === 'humano';
-    const usadas = new Set(defendo ? (ui.reflexos || []).flatMap(r => r.cartas).concat(rm && rm.etapa === 'alvo' ? rm.par : []) : []);
-    const candidatas = new Set(defendo && rm && rm.etapa === 'par' ? paresLivres().flat() : []);
-    const classePar = c => (usadas.has(c.id) ? ' par-usado' : candidatas.has(c.id) ? (rm.par.includes(c.id) ? ' par-escolhido' : ' par-candidato') : '');
+    // (No contra-reflexo, é o dono do ataque refletido quem escolhe o par.)
+    const rm = ui.reflexoModo, defendo = controle(p) === 'humano' && (ui.contra ? p === jogo.vez : jogo.fase === 'bloqueio' && p === 1 - jogo.vez);
+    const usadas = new Set(defendo ? (ui.contra ? [] : (ui.reflexos || []).flatMap(r => r.cartas)).concat(rm && rm.etapa === 'alvo' ? rm.par : []) : []);
+    const escolhendo = defendo && rm && rm.etapa === 'par';
+    const candidatas = new Set(escolhendo ? paresLivres().flat() : []);
+    const classePar = c => (usadas.has(c.id) ? ' par-usado' : candidatas.has(c.id) ? (rm.par.includes(c.id) ? ' par-escolhido' : ' par-candidato') : escolhendo ? ' par-apagada' : '');
     $('#mao-' + p).innerHTML = j.mao.map(c => (visivel
       ? `<div class="carta${ui.sel.includes(c.id) ? ' selecionada' : ''}${podeJogar ? ' jogavel' : ''}${estilo(c)}${classePar(c)}"${podeJogar ? ` data-mao="${c.id}"` : ` data-carta="${c.id}"`}${candidatas.has(c.id) ? ` data-par="${c.id}"` : ''} data-voo="${c.id}"${oculta(c.id)}>${C.frente(c)}</div>`
       : `<div class="carta dorso ${cor}" data-voo="${c.id}"${oculta(c.id)}></div>`)).join('');
@@ -1767,6 +1823,12 @@ window.SS = window.SS || {};
     } else if (jogo.fase === 'resolucao' || jogo.fase === 'fimCombate') {
       fase += ` · ${t('faixa.combate')}`;
       texto = t('faixa.vejaPainel');
+      if (ui.contra) {
+        // Seu ataque foi refletido e você tem par: Refletir de volta ou deixar bater.
+        texto = ui.reflexoModo ? t('faixa.reflexoPar') : t('faixa.contraReflexo', { n: ui.contra.n });
+        botoes = btnGrande('nao-refletir', t('carta.naoRefletir'), 'naoDefender')
+          + btnGrande('refletir', t('refl.titulo'), 'reflexo', 'chamativa' + (ui.reflexoModo ? ' ativa' : ''));
+      } else if (ui.esperaContra) texto = t('faixa.contraEsperando', { j: escapar(j.nome) });
     } else if (jogo.fase === 'descarte') {
       texto = t('faixa.descarte', { n: M.limiteMao(j) });
     }
@@ -2254,6 +2316,7 @@ window.SS = window.SS || {};
 
   // Par de números iguais na hora de bloquear: pop-up no meio da tela para escolher o ataque refletido.
   function paresLivres() {
+    if (ui.contra) return M.paresIguais(jogo, jogo.vez);
     const usadas = new Set((ui.reflexos || []).flatMap(r => r.cartas));
     return M.paresIguais(jogo, 1 - jogo.vez).filter(par => !par.some(id => usadas.has(id)));
   }
@@ -2265,33 +2328,40 @@ window.SS = window.SS || {};
   }
 
   // Refletir em passos, sem pop-up: (1) a carta Refletir pulsa roxo; (2) ao clicar nela, o par de números
-  // já vem escolhido (as outras cartas que formam par também brilham, para trocar); (3) clicando de novo em
-  // Refletir o par é descartado e uma seta roxa segue o mouse até o atacante que vai bater no próprio dono.
-  // Com um par só, pula direto para a seta. (O motor só aplica no Defender: aqui é tudo da tela.)
+  // sobe já escolhido e o resto da mão escurece (as outras cartas que formam par brilham, para trocar);
+  // (3) clicando numa carta do par que subiu, ele é sacrificado e uma seta roxa segue o mouse até o atacante
+  // que vai bater no próprio dono. Clicar de novo em Refletir desiste. (O motor só aplica no Defender.)
+  // No contra-reflexo (ui.contra) é igual, sem a seta: o golpe já tem destino.
   const ORIGEM_REFLEXO = { x: 800, y: 600 }; // logo abaixo da faixa do meio (não tapa o texto)
   function iniciarReflexo() {
-    if (!humanoBloqueia()) return;
+    if (!humanoBloqueia() && !ui.contra) return;
     const livres = paresLivres();
     if (!livres.length) return;
-    if (ui.reflexoModo && ui.reflexoModo.etapa === 'par') return descartarParReflexo(); // 2º clique: confirma o par
+    if (ui.reflexoModo && ui.reflexoModo.etapa === 'par') { ui.reflexoModo = null; return render(); } // 2º clique: desiste
     if (ui.reflexoModo) return; // já mirando
     ui.reflexoModo = { etapa: 'par', par: livres[0] };
-    if (livres.length === 1) return descartarParReflexo();
     render();
   }
 
   function trocarParReflexo(id) {
+    if (ui.reflexoModo.par.includes(id)) return descartarParReflexo(); // clicou no par que subiu: sacrifica
     const par = paresLivres().find(pr => pr.includes(id));
     if (par) ui.reflexoModo.par = par;
     render();
   }
 
   function descartarParReflexo() {
-    const par = ui.reflexoModo.par, j = jogo.jogadores[1 - jogo.vez];
+    const par = ui.reflexoModo.par, dono = ui.contra ? jogo.vez : 1 - jogo.vez, j = jogo.jogadores[dono];
+    if (ui.contra) {
+      ui.reflexoModo = null;
+      animarParDestruido(dono, par.map(id => j.mao.find(c => c.id === id)).filter(Boolean));
+      ui.magiaFeita = new Set([...(ui.magiaFeita || []), ...par]);
+      return ui.contra.responder(par);
+    }
     const cartaRefletir = $('.carta-acao[data-acao="refletir"]');
     ui.reflexoModo = { etapa: 'alvo', par };
     mostrarRefletirFlutuante(cartaRefletir);
-    animarParDestruido(1 - jogo.vez, par.map(id => j.mao.find(c => c.id === id)).filter(Boolean));
+    animarParDestruido(dono, par.map(id => j.mao.find(c => c.id === id)).filter(Boolean));
     ui.magiaFeita = new Set([...(ui.magiaFeita || []), ...par]); // o evento do motor não anima de novo
     ui.mouse = ui.mouse || Object.assign({}, ORIGEM_REFLEXO);
     render();
@@ -2685,6 +2755,37 @@ window.SS = window.SS || {};
       const at = jogo.combate.ataques[jogo.combate.indice];
       ui.foco = at.n;
       render();
+      // Ataque refletido e o dono dele tem par de números: pode refletir de volta (antes do dado).
+      if (M.podeContraRefletir(jogo)) {
+        const a = jogo.vez;
+        let cartas = null;
+        if (controle(a) === 'bot') {
+          await esperar(700);
+          cartas = Bot.contraRefletir(jogo, a);
+        } else if (controle(a) === 'remoto') {
+          ui.esperaContra = true;
+          render();
+          const m = await SS.Rede.esperar(['contra']);
+          ui.esperaContra = false;
+          cartas = m.cartas == null ? null : m.cartas;
+          if (cartas !== null && !Array.isArray(cartas)) return jogadaInvalida(m.cartas);
+        } else {
+          ui.ocupado = false;
+          cartas = await new Promise(r => { ui.contra = { n: at.n, responder: r }; render(); });
+          ui.contra = null;
+          ui.reflexoModo = null;
+          ui.ocupado = true;
+          if (cfg.modo === 'online') SS.Rede.enviar({ t: 'contra', cartas });
+        }
+        if (id !== partida) return;
+        if (cartas) {
+          if (controle(a) === 'remoto') { if (!aplicarRemoto(() => M.contraRefletir(jogo, cartas))) return; }
+          else M.contraRefletir(jogo, cartas);
+          render();
+          await esperar(Math.max(700, esperaMagia()));
+          if (id !== partida) return;
+        } else render();
+      }
       const foto = capturarDuelo(at);
       const temDuelo = !!foto.atacante;
       // O duelo aparece no painel da direita (dentro do tabuleiro); os dados rolam soltos pela mesa.
@@ -2697,9 +2798,11 @@ window.SS = window.SS || {};
       if (id !== partida) return;
       const antes = jogo.log.length;
       const cena = prepararInvestida(at);
-      M.resolverProximo(jogo, rolagens);
+      cena.errou = !!M.resolverProximo(jogo, rolagens).errou;
       const linhas = jogo.log.slice(antes);
       await investida(cena, danosDesde(cena));
+      if (id !== partida) return;
+      if (cena.errou) await queVergonha();
       if (id !== partida) return;
       render();
       if (temDuelo) {

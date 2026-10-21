@@ -1285,3 +1285,24 @@ html, body { background: #9de03a url('arte/mesa/grama.webp') center / cover; }
   50% { transform: translate(-50%, -50%) translateY(-12px) rotate(2.5deg); filter: drop-shadow(0 0 28px rgba(214, 60, 255, 1)) drop-shadow(0 16px 16px rgba(0, 0, 0, .4)); }
 }
 .refletir-flutuante .ca-titulo, .refletir-saindo .ca-titulo { font-size: 17px; }
+
+/* ---------- Refletir: o resto da mão escurece enquanto o par espera o sacrifício ---------- */
+.zona-eu .mao .carta.par-apagada { filter: brightness(.38) saturate(.5); }
+.zona-eu .mao .carta.par-escolhido { animation: par-chama 1s ease-in-out infinite; }
+@keyframes par-chama {
+  0%, 100% { box-shadow: 0 0 0 4px #d63cff, 0 0 18px rgba(214, 60, 255, .8); }
+  50% { box-shadow: 0 0 0 5px #e48bff, 0 0 34px rgba(214, 60, 255, 1); }
+}
+
+/* ---------- Errou o golpe: risquinhos de vento e "QUE VERGONHA!" ---------- */
+.risco-vento {
+  position: absolute; z-index: 60; width: 70px; height: 4px; border-radius: 4px; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .85), transparent);
+}
+.que-vergonha {
+  position: absolute; left: 50%; top: 45%; z-index: 95; pointer-events: none; white-space: nowrap;
+  font-family: 'Seventy Money', Georgia, serif; font-size: 150px; line-height: 1; letter-spacing: 2px;
+  color: #ffdf3d; -webkit-text-stroke: 5px #5a1206; paint-order: stroke fill;
+  text-shadow: 0 8px 0 #5a1206, 0 14px 28px rgba(0, 0, 0, .6);
+  transform: translate(-50%, -50%) rotate(-6deg);
+}
