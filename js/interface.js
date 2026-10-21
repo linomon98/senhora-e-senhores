@@ -3590,13 +3590,13 @@ window.SS = window.SS || {};
   // Cobra no meio do campo (no lugar da linha branca): rasteja da direita para a esquerda sem parar.
   // O corpo é cortado em fatias finas que sobem e descem numa onda parada no chão, então cada pedaço
   // passa pelas mesmas curvas que a cabeça fez (o rastejar de cobra). Uma cobra vem logo atrás da outra,
-  // com 40 px entre a cauda e a cabeça: de vez em quando a cabeça abre a boca e tenta morder a cauda da
+  // com 25 px entre a cauda e a cabeça: de vez em quando a cabeça abre a boca e tenta morder a cauda da
   // frente (os quadros da cabeça são recortes da mesma arte, na mesma escala do corpo).
   function animarCobra() {
     const tela = $('#cobra');
     if (!tela || tela.dataset.pronta) return;
     tela.dataset.pronta = '1';
-    const LARG = 1600, ALT = 46, AMP = 11, VEL = 95, FATIA = 4, VAO = 40; // px da mesa; VEL em px/s
+    const LARG = 1600, ALT = 46, AMP = 11, VEL = 95, FATIA = 4, VAO = 25; // px da mesa; VEL em px/s
     const altTela = ALT + AMP * 2 + 24, dpr = 2;
     tela.width = LARG * dpr; tela.height = altTela * dpr;
     const g = tela.getContext('2d');
