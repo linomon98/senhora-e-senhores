@@ -1244,3 +1244,32 @@ html, body { background: #9de03a url('arte/mesa/grama.webp') center / cover; }
 
 /* Par usado numa magia: as duas cartas sobem, brilham roxo e se desfazem */
 .par-magia { position: absolute; z-index: 66; width: 100px; height: 140px; border-radius: 9px; pointer-events: none; background: #fdfbf3; }
+
+/* Pop-ups do combate somem com um fade no fim (sem botão Continuar) */
+#combate.saindo, #anuncio.saindo { opacity: 0; transition: opacity .4s ease; }
+#combate.duelo-ativo { cursor: pointer; }
+
+/* Carta Refletir: pulsa forte com brilho roxo para chamar atenção */
+.carta-acao.chamativa { animation: carta-acao-entra .35s cubic-bezier(.3, 1.3, .5, 1) backwards, refletir-pulsa 1s ease-in-out .35s infinite; z-index: 4; }
+.carta-acao.chamativa.ativa { animation: none; transform: translateY(-22px) rotate(0deg) scale(1.08); filter: drop-shadow(0 0 22px rgba(214, 60, 255, 1)) drop-shadow(0 0 6px #fff); }
+@keyframes refletir-pulsa {
+  0%, 100% { transform: rotate(var(--r)) scale(1); filter: drop-shadow(0 0 6px rgba(214, 60, 255, .6)); }
+  50% { transform: translateY(-10px) rotate(0deg) scale(1.1); filter: drop-shadow(0 0 26px rgba(214, 60, 255, 1)) drop-shadow(0 0 8px rgba(255, 255, 255, .7)); }
+}
+
+/* Escolha do par na mão: as que formam par brilham roxo, o par escolhido sobe; o par descartado some */
+.zona-eu .mao .carta.par-candidato { cursor: pointer; box-shadow: 0 0 0 3px rgba(214, 60, 255, .7), 0 0 16px rgba(214, 60, 255, .7); }
+.zona-eu .mao .carta.par-escolhido { cursor: pointer; z-index: 3; transform: translateY(calc(var(--desce, 0px) - 30px)) rotate(var(--giro, 0deg)); box-shadow: 0 0 0 4px #d63cff, 0 0 26px rgba(214, 60, 255, 1); }
+.zona-eu .mao .carta.par-usado { visibility: hidden; }
+
+/* Setas presas no mouse: roxa (refletir) e dourada (poder do Palhaço) */
+.seta.mira-reflexo .linha { stroke: #c86bff; stroke-dasharray: 14 9; }
+.seta.mira-reflexo .brilho { stroke: #c86bff; }
+.seta.mira-poder .linha { stroke: #ffd166; stroke-dasharray: 14 9; }
+.seta.mira-poder .brilho { stroke: #ffd166; }
+
+/* Cartas de ação ainda sem arte (placeholder): moldura vazia + desenho simples */
+.ca-desenho { position: absolute; left: 50%; top: 52%; width: 54%; transform: translate(-50%, -50%); pointer-events: none; }
+.ca-desenho svg { display: block; width: 100%; height: auto; }
+.arte-vazia { --ca-cor: #1d2a12; }
+.ca-titulo.duas-linhas { white-space: normal; font-size: 16px; line-height: .95; top: 12%; }

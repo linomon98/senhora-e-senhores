@@ -130,6 +130,7 @@ window.SS = window.SS || {};
     // Poder sem alvo (Cobrança do Ourinhos): acontece direto, sem clicar na mesa.
     if (cands[0].alvo == null) return aplicarDoJogador(cands[0]);
     ui.pend = { tipo: 'poder', cands, passos: ['alvo'], k: 0, esc: {} };
+    ui.mouse = centroDe($(`#info-${jogo.vez} .poder-naipe`)); // a seta já nasce no símbolo do poder
     avancarPendente();
   }
 
@@ -348,11 +349,21 @@ window.SS = window.SS || {};
   }
 
   function aoClicar(ev) {
-    if (ev.target.closest('[data-continuar]')) {
+    if (ev.target.closest('[data-continuar], #combate.duelo-ativo, #anuncio')) {
       if (ui && ui.aoContinuar) ui.aoContinuar();
       return;
     }
     if (ev.target.closest('#modal') || (ui && ui.ignorarClique)) return;
+    // Refletir: trocar o par (cartas roxas da mão) ou escolher o atacante com a seta roxa.
+    if (jogo && ui.reflexoModo) {
+      const parEl = ev.target.closest('[data-par]');
+      if (parEl && ui.reflexoModo.etapa === 'par') return trocarParReflexo(parEl.dataset.par);
+      if (ui.reflexoModo.etapa === 'alvo') {
+        const n = ataqueEm(ev.target);
+        if (n != null && !(ui.reflexos || []).some(r => r.n === n)) return refletirAtaque(n);
+        if (!ev.target.closest('[data-acao]')) return; // mirando: outros cliques na mesa não fazem nada
+      }
+    }
     const el = ev.target.closest('[data-acao],[data-mao],[data-token],[data-slot],[data-alvo],[data-ataque],[data-cemiterio],[data-pilha]');
     if (!el) return;
     const ds = el.dataset;
@@ -449,7 +460,7 @@ window.SS = window.SS || {};
   function aoMover(ev) {
     if (ui && ui.arrasto && jogo) return moverArrasto(ev);
     if (ui && ui.mira && !ui.mira.moveu && Math.hypot(ev.clientX - ui.mira.x, ev.clientY - ui.mira.y) > 8) ui.mira.moveu = true;
-    if (jogo && ((ui.atacanteSel != null && ui.mira && ui.mira.moveu) || ui.bloqSel != null)) {
+    if (jogo && ((ui.atacanteSel != null && ui.mira && ui.mira.moveu) || ui.bloqSel != null || mirandoSeta())) {
       ui.mouse = pontoNoApp(ev.clientX, ev.clientY);
       desenharSetas();
     }
@@ -462,7 +473,7 @@ window.SS = window.SS || {};
       return ui.aoContinuar();
     }
     if (ev.key !== 'Escape' || !jogo) return;
-    ui.sel = []; ui.pend = null; ui.atacanteSel = null; ui.bloqSel = null; ui.mira = null; ui.destino = null;
+    ui.sel = []; ui.pend = null; ui.atacanteSel = null; ui.bloqSel = null; ui.mira = null; ui.destino = null; ui.reflexoModo = null;
     render();
   }
 
@@ -643,15 +654,21 @@ window.SS = window.SS || {};
       case 'remover-ataque':
         ui.ataques.splice(Number(arg), 1);
         return render();
+      case 'passar-turno':
+        // Passa o turno de qualquer ponto (na fase de ações ou no preparo do ataque), sem atacar.
+        ui.sel = []; ui.pend = null; ui.destino = null;
+        if (jogo.fase === 'principal') M.aplicarAcao(jogo, { tipo: 'atacar' });
+      // falls through
       case 'confirmar-ataques':
       case 'sem-ataque': {
-        const lista = nome === 'sem-ataque' ? [] : ui.ataques;
+        const lista = nome === 'confirmar-ataques' ? ui.ataques : [];
         ui.ataques = []; ui.atacanteSel = null;
         enviarJogada({ t: 'declarar', lista });
         M.declararAtaques(jogo, lista);
         return fluxoCombate(partida);
       }
       case 'confirmar-bloqueios': {
+        ui.reflexoModo = null;
         const mapa = ui.bloqueios, reflexos = ui.reflexos || [];
         ui.bloqueios = {}; ui.bloqSel = null; ui.reflexos = [];
         enviarJogada({ t: 'bloqueios', mapa, reflexos });
@@ -663,7 +680,7 @@ window.SS = window.SS || {};
         return;
       }
       case 'refletir':
-        return oferecerReflexo();
+        return iniciarReflexo();
       case 'limpar-bloqueios':
         ui.bloqueios = bloqueiosIniciais();
         ui.bloqSel = null;
@@ -731,6 +748,9 @@ window.SS = window.SS || {};
     return { d: `M${a.x.toFixed(1)} ${a.y.toFixed(1)} Q${c.x.toFixed(1)} ${c.y.toFixed(1)} ${fim.x.toFixed(1)} ${fim.y.toFixed(1)}`, meio };
   }
 
+  const mirandoPoder = () => !!(ui && ui.pend && ui.pend.tipo === 'poder' && passoAtual() === 'alvo');
+  const mirandoSeta = () => !!(ui && ((ui.reflexoModo && ui.reflexoModo.etapa === 'alvo') || mirandoPoder()));
+
   function desenharSetas() {
     const svg = $('#setas');
     if (!jogo) {
@@ -756,11 +776,19 @@ window.SS = window.SS || {};
       const de = centroDe(elUnidade(ui.atacanteSel != null ? ui.atacanteSel : ui.bloqSel));
       if (de) setas.push({ de, para: ui.mouse, cor: ui.atacanteSel != null ? 'mira-ataque' : 'mira-bloqueio', viva: true });
     }
+    // Seta presa no mouse: roxa ao escolher o ataque a refletir; na cor do poder ao escolher o alvo do Palhaço.
+    if (ui.mouse && ui.reflexoModo && ui.reflexoModo.etapa === 'alvo') setas.push({ de: ORIGEM_REFLEXO, para: ui.mouse, cor: 'mira-reflexo', viva: true });
+    if (ui.mouse && mirandoPoder()) {
+      const de = centroDe($(`#info-${jogo.vez} .poder-naipe`));
+      if (de) setas.push({ de, para: ui.mouse, cor: 'mira-poder', viva: true });
+    }
     svg.innerHTML = `<defs>
         <marker id="ponta-ataque" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#ff4b4b"/></marker>
         <marker id="ponta-bloqueio" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#5aa7ff"/></marker>
         <marker id="ponta-mira-ataque" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#ffd166"/></marker>
         <marker id="ponta-mira-bloqueio" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#9fd0ff"/></marker>
+        <marker id="ponta-mira-reflexo" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#c86bff"/></marker>
+        <marker id="ponta-mira-poder" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#ffd166"/></marker>
       </defs>` + setas.map(s => {
       const { d, meio } = caminhoSeta(s.de, s.para, s.viva ? 0 : 46, 58);
       const cls = `seta ${s.cor}${s.tenue ? ' tenue' : ''}${s.foco ? ' foco' : ''}${s.viva ? ' viva' : ''}`;
@@ -1012,7 +1040,10 @@ window.SS = window.SS || {};
     if (!jogo.eventos || !jogo.eventos.length) return;
     const lista = jogo.eventos.splice(0);
     lista.forEach((ev, k) => {
-      if (ev.tipo === 'magia') return animarParDestruido(ev.p, ev.cartas);
+      if (ev.tipo === 'magia') {
+        if (ui.magiaFeita && ev.cartas.every(c => ui.magiaFeita.has(c.id))) return; // já animado na hora do clique
+        return animarParDestruido(ev.p, ev.cartas);
+      }
       const de = ev.de != null ? elUnidade(ev.de) : null;
       if (!de) return;
       if (ev.tipo === 'cura') voarIcone(de, pvDe(ev.p), `<span>+${ev.n}</span>`, 'bola-cura', 250 + k * 180);
@@ -1439,8 +1470,14 @@ window.SS = window.SS || {};
       if (!filtrar || c.id === selUnica.id) return '';
       return parceiros.has(c.id) ? ' combina' : ' apagada';
     };
+    // Refletir: na escolha do par, as cartas que formam par brilham roxo (o par escolhido sobe); o par já
+    // descartado (mirando ou confirmado) some da mão.
+    const rm = ui.reflexoModo, defendo = jogo.fase === 'bloqueio' && p === 1 - jogo.vez && controle(p) === 'humano';
+    const usadas = new Set(defendo ? (ui.reflexos || []).flatMap(r => r.cartas).concat(rm && rm.etapa === 'alvo' ? rm.par : []) : []);
+    const candidatas = new Set(defendo && rm && rm.etapa === 'par' ? paresLivres().flat() : []);
+    const classePar = c => (usadas.has(c.id) ? ' par-usado' : candidatas.has(c.id) ? (rm.par.includes(c.id) ? ' par-escolhido' : ' par-candidato') : '');
     $('#mao-' + p).innerHTML = j.mao.map(c => (visivel
-      ? `<div class="carta${ui.sel.includes(c.id) ? ' selecionada' : ''}${podeJogar ? ' jogavel' : ''}${estilo(c)}"${podeJogar ? ` data-mao="${c.id}"` : ` data-carta="${c.id}"`} data-voo="${c.id}"${oculta(c.id)}>${C.frente(c)}</div>`
+      ? `<div class="carta${ui.sel.includes(c.id) ? ' selecionada' : ''}${podeJogar ? ' jogavel' : ''}${estilo(c)}${classePar(c)}"${podeJogar ? ` data-mao="${c.id}"` : ` data-carta="${c.id}"`}${candidatas.has(c.id) ? ` data-par="${c.id}"` : ''} data-voo="${c.id}"${oculta(c.id)}>${C.frente(c)}</div>`
       : `<div class="carta dorso ${cor}" data-voo="${c.id}"${oculta(c.id)}></div>`)).join('');
     ajustarSobreposicao($('#mao-' + p));
     const topo = j.cemiterio[j.cemiterio.length - 1];
@@ -1623,12 +1660,20 @@ window.SS = window.SS || {};
   // Ações em forma de carta (canto inferior esquerdo): arte da carta + título na fonte dos títulos.
   // O título vem do idioma (a arte não tem texto, por causa da versão em inglês).
   const ARTE_ACAO = { atacar: 'atacar', espadas: 'dano', paus: 'berserk', escudo: 'defesa', curar: 'cura', comprar: 'comprar', reviver: 'cemiterio', sumonar: 'sumonar', rainha: 'sumonar', as: 'sumonar',
-    'par-copas': 'cemiterio', 'par-ouros': 'parouros', 'par-paus': 'parpaus', 'par-espadas': 'parespadas', reflexo: 'reflexo' };
+    'par-copas': 'cemiterio', 'par-ouros': 'parouros', 'par-paus': 'parpaus', 'par-espadas': 'parespadas', reflexo: 'reflexo',
+    passar: 'vazia', preparar: 'vazia', naoDefender: 'vazia' };
+  // Cartas ainda sem arte própria (placeholder): moldura vazia + um desenho simples no meio.
+  const DESENHO_PROVISORIO = {
+    passar: '<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="22" fill="none" stroke="#1d2a12" stroke-width="5"/><path d="M24 20l16 12-16 12z" fill="#e9b949" stroke="#1d2a12" stroke-width="3" stroke-linejoin="round"/></svg>',
+    preparar: '<svg viewBox="0 0 64 64"><path d="M14 10l6 0 30 30-6 6L14 16z" fill="#fff" stroke="#1d2a12" stroke-width="3"/><path d="M50 10l-6 0L14 40l6 6L50 16z" fill="#fff" stroke="#1d2a12" stroke-width="3"/><path d="M16 46l-6 6M48 46l6 6" stroke="#d8322f" stroke-width="6" stroke-linecap="round"/><circle cx="32" cy="30" r="5" fill="#d8322f"/></svg>',
+    naoDefender: '<svg viewBox="0 0 64 64"><path d="M32 8l20 7v15c0 13-9 21-20 26C21 51 12 43 12 30V15z" fill="#9fc6e8" stroke="#1d2a12" stroke-width="3" stroke-linejoin="round"/><path d="M14 52L50 12" stroke="#d8322f" stroke-width="7" stroke-linecap="round"/></svg>',
+  };
   const btnGrande = (acao, rotulo, icone, extra) => {
-    const arte = ARTE_ACAO[icone] || 'sumonar';
+    const arte = ARTE_ACAO[icone] || 'sumonar', titulo = t('carta.' + icone);
     const sub = rotulo.replace(/^[^\p{L}\p{N}+]+/u, '');
+    const classeTitulo = titulo.length > 10 && titulo.includes(' ') ? ' duas-linhas' : titulo.length > 7 ? ' longo' : '';
     return `<button class="carta-acao arte-${arte} ${extra || ''}" data-acao="${acao}" title="${escapar(sub)}">
-      <img src="arte/acoes/${arte}.webp" alt="" draggable="false"><b class="ca-titulo${t('carta.' + icone).length > 7 ? ' longo' : ''}">${t('carta.' + icone)}</b><small class="ca-sub">${sub}</small></button>`;
+      <img src="arte/acoes/${arte}.webp" alt="" draggable="false">${DESENHO_PROVISORIO[icone] ? `<span class="ca-desenho">${DESENHO_PROVISORIO[icone]}</span>` : ''}<b class="ca-titulo${classeTitulo}">${titulo}</b><small class="ca-sub">${sub}</small></button>`;
   };
 
   function renderFaixa() {
@@ -1672,7 +1717,8 @@ window.SS = window.SS || {};
           extras = btn('cancelar', t('btn.cancelarSelecao'));
           texto = chaves.length ? t('faixa.escolhaAcao') : dicaSelecao();
         } else texto = t(jogo.acoes > 0 ? 'faixa.comoJogar' : 'faixa.semAcoes');
-        botoes += btnGrande('ir-ataque', t('btn.irAtaque').replace(/^⚔\s*/, ''), 'atacar', 'perigo');
+        botoes += btnGrande('ir-ataque', t('btn.irAtaque').replace(/^⚔\s*/, ''), 'preparar', 'perigo');
+        botoes += btnGrande('passar-turno', t('btn.encerrarTurno'), 'passar');
       }
     } else if (jogo.fase === 'ataque') {
       fase += ` · ${t('faixa.ataque')}`;
@@ -1683,17 +1729,24 @@ window.SS = window.SS || {};
         if (!M.atacantesAptos(jogo).length) texto = t(jogo.turno === 1 ? 'faixa.primeiroNaoAtaca' : 'faixa.ninguemApto');
         else texto = atacantesRestantes().length ? t('faixa.comoAtacar', { extra }) : t('faixa.ataquesDeclarados');
         if (ui.ataques.length) botoes += btnGrande('confirmar-ataques', t('btn.confirmarAtaques', { n: ui.ataques.length }), 'atacar', 'perigo');
-        extras = btn('voltar', t('btn.voltarAcoes'), 'voltar') + btn('sem-ataque', t(ui.ataques.length ? 'btn.encerrarSemAtacar' : 'btn.encerrarTurno'));
+        botoes += btnGrande('passar-turno', t(ui.ataques.length ? 'btn.encerrarSemAtacar' : 'btn.encerrarTurno'), 'passar');
+        extras = btn('voltar', t('btn.voltarAcoes'), 'voltar');
       } else texto = t('faixa.botDeclarando', { j: escapar(j.nome) });
     } else if (jogo.fase === 'bloqueio') {
       fase += ` · ${t('faixa.bloqueio')}`;
       const humanoDefende = controle(d) === 'humano' && !ui.ocupado;
       if (humanoDefende) {
         const desafiado = jogo.desafio != null && M.localizar(jogo, jogo.desafio);
-        texto = t(ui.bloqSel != null ? 'faixa.solteBloqueio' : 'faixa.comoBloquear')
+        texto = ui.reflexoModo ? t(ui.reflexoModo.etapa === 'par' ? 'faixa.reflexoPar' : 'faixa.reflexoAlvo')
+          : t(ui.bloqSel != null ? 'faixa.solteBloqueio' : 'faixa.comoBloquear')
           + (desafiado ? ' ' + t('faixa.desafio', { u: M.nomeUnidade(desafiado.u) }) : '');
-        botoes = btnGrande('confirmar-bloqueios', t('btn.confirmarBloqueios'), 'escudo', 'defesa');
-        if (paresLivres().length && jogo.combate.ataques.some(at => !ui.reflexos.some(r => r.n === at.n))) botoes += btnGrande('refletir', t('refl.titulo'), 'reflexo');
+        // Defender só aparece depois que você puxou alguma seta de bloqueio; sem nenhuma, a carta é "Não defender".
+        const temBloqueio = Object.values(ui.bloqueios).some(l => l.length);
+        botoes = temBloqueio ? btnGrande('confirmar-bloqueios', t('btn.confirmarBloqueios'), 'escudo', 'defesa')
+          : btnGrande('confirmar-bloqueios', t('btn.naoDefender'), 'naoDefender');
+        if (paresLivres().length && jogo.combate.ataques.some(at => !ui.reflexos.some(r => r.n === at.n))) {
+          botoes += btnGrande('refletir', t('refl.titulo'), 'reflexo', 'chamativa' + (ui.reflexoModo ? ' ativa' : ''));
+        }
         extras = btn('limpar-bloqueios', t('btn.limpar'));
       } else texto = t('faixa.botBloqueando', { j: escapar(jogo.jogadores[d].nome) });
     } else if (jogo.fase === 'resolucao' || jogo.fase === 'fimCombate') {
@@ -1893,16 +1946,22 @@ window.SS = window.SS || {};
     requestAnimationFrame(passo);
   }
 
-  const botaoContinuar = () => `<div class="anuncio-acoes"><button class="btn principal" data-continuar>${t('btn.continuar')}</button><span>${t('ui.ouEnter')}</span></div>`;
+  // Sem botão Continuar: o pop-up mostra a ação e some sozinho (clique ou Enter adiantam).
+  const botaoContinuar = () => '';
 
-  // Espera o jogador clicar em Continuar. Assistindo bot × bot, segue sozinho.
+  // Espera alguns segundos (o pop-up some com um fade no fim); clique ou Enter adiantam.
   function esperarContinuar(msAuto) {
+    const ms = msAuto || 2800;
     return new Promise(r => {
+      const fade = setTimeout(() => {
+        for (const el of [$('#combate'), $('#anuncio')]) if (el && !el.hidden) el.classList.add('saindo');
+      }, ms - 420);
       ui.aoContinuar = () => {
         ui.aoContinuar = null;
+        clearTimeout(fade);
         r();
       };
-      if (cfg.modo === 'bots') setTimeout(() => { if (ui.aoContinuar) ui.aoContinuar(); }, msAuto || 2600);
+      setTimeout(() => { if (ui.aoContinuar) ui.aoContinuar(); }, ms);
     });
   }
 
@@ -2190,42 +2249,45 @@ window.SS = window.SS || {};
     return restantes.length > 0 && bloqueadoresComCapacidade().some(uid => restantes.some(at => !alvoDoRei(at, uid)));
   }
 
-  function oferecerReflexo() {
-    const livres = paresLivres(), j = jogo.jogadores[1 - jogo.vez];
-    const ataques = jogo.combate.ataques.filter(at => !(ui.reflexos || []).some(r => r.n === at.n));
-    if (!livres.length || !ataques.length) return;
-    const par = livres[0], rank = j.mao.find(c => c.id === par[0]).rank;
-    // Sem caixa: a mesa escurece, a carta do espelho brilha à esquerda e os próprios Senhores
-    // atacantes são as opções (clica no que vai bater no próprio dono).
-    modal(`<div class="reflexo-tela">
-        <div class="carta-acao arte-reflexo refl-carta"><img src="arte/acoes/reflexo.webp" alt="" draggable="false"><b class="ca-titulo">${t('refl.titulo')}</b></div>
-        <div class="refl-lado">
-          <h2 class="refl-titulo">${t('refl.voceTem', { c: rank })}</h2>
-          <p class="refl-pergunta">${t('refl.pergunta')}</p>
-          <div class="refl-atacantes">${ataques.map(at => {
-            const l = M.localizar(jogo, at.atacante);
-            return l ? `<button class="refl-unidade" data-refletir="${at.n}" title="${escapar(t('refl.ataque', { n: at.n, u: M.nomeUnidade(l.u), a: M.ataque(jogo, l.p, l.i) }))}">${htmlUnidade(l.p, l.i, l.u)}</button>` : '';
-          }).join('')}</div>
-          <button class="refl-nao" data-m="nao">${t('refl.nao')}</button>
-        </div>
-      </div>`,
-    ev => {
-      const b = ev.target.closest('[data-refletir]');
-      if (b) {
-        const n = Number(b.dataset.refletir);
-        ui.reflexos.push({ n, cartas: par });
-        delete ui.bloqueios[n];
-        fecharModal();
-        render();
-        if (paresLivres().length) setTimeout(oferecerReflexo, 250); // tem outro par? oferece de novo
-        else if (!temOQueBloquear()) setTimeout(() => { if (humanoBloqueia()) clicarBotao('confirmar-bloqueios'); }, 350); // nada mais a fazer: defende sozinho
-        return;
-      }
-      if (ev.target.closest('[data-m="nao"]')) {
-        fecharModal();
-        render();
-      }
-    });
+  // Refletir em passos, sem pop-up: (1) a carta Refletir pulsa roxo; (2) ao clicar nela, o par de números
+  // já vem escolhido (as outras cartas que formam par também brilham, para trocar); (3) clicando de novo em
+  // Refletir o par é descartado e uma seta roxa segue o mouse até o atacante que vai bater no próprio dono.
+  // Com um par só, pula direto para a seta. (O motor só aplica no Defender: aqui é tudo da tela.)
+  const ORIGEM_REFLEXO = { x: 800, y: 470 };
+  function iniciarReflexo() {
+    if (!humanoBloqueia()) return;
+    const livres = paresLivres();
+    if (!livres.length) return;
+    if (ui.reflexoModo && ui.reflexoModo.etapa === 'par') return descartarParReflexo(); // 2º clique: confirma o par
+    if (ui.reflexoModo) return; // já mirando
+    ui.reflexoModo = { etapa: 'par', par: livres[0] };
+    if (livres.length === 1) return descartarParReflexo();
+    render();
+  }
+
+  function trocarParReflexo(id) {
+    const par = paresLivres().find(pr => pr.includes(id));
+    if (par) ui.reflexoModo.par = par;
+    render();
+  }
+
+  function descartarParReflexo() {
+    const par = ui.reflexoModo.par, j = jogo.jogadores[1 - jogo.vez];
+    ui.reflexoModo = { etapa: 'alvo', par };
+    animarParDestruido(1 - jogo.vez, par.map(id => j.mao.find(c => c.id === id)).filter(Boolean));
+    ui.magiaFeita = new Set([...(ui.magiaFeita || []), ...par]); // o evento do motor não anima de novo
+    ui.mouse = ui.mouse || Object.assign({}, ORIGEM_REFLEXO);
+    render();
+  }
+
+  function refletirAtaque(n) {
+    const par = ui.reflexoModo.par;
+    ui.reflexoModo = null;
+    ui.reflexos.push({ n, cartas: par });
+    delete ui.bloqueios[n];
+    render();
+    // Nada mais a fazer (sem outro par e sem quem bloquear): defende sozinho.
+    if (!paresLivres().length && !temOQueBloquear()) setTimeout(() => { if (humanoBloqueia()) clicarBotao('confirmar-bloqueios'); }, 450);
   }
 
   function verCemiterio(p) {
@@ -2565,7 +2627,6 @@ window.SS = window.SS || {};
         ui.reflexos = [];
         ui.bloqSel = null;
         render();
-        if (podeRefletir) oferecerReflexo();
         await new Promise(r => { ui.aoConfirmarBloqueio = r; });
         if (id !== partida) return;
         ui.ocupado = true;
