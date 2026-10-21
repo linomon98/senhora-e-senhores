@@ -1273,3 +1273,15 @@ html, body { background: #9de03a url('arte/mesa/grama.webp') center / cover; }
 .ca-desenho svg { display: block; width: 100%; height: auto; }
 .arte-vazia { --ca-cor: #1d2a12; }
 .ca-titulo.duas-linhas { white-space: normal; font-size: 16px; line-height: .95; top: 12%; }
+
+/* Carta Refletir flutuando no meio da mesa enquanto a seta roxa (que sai dela) escolhe o atacante */
+.carta-acao.refletir-flutuante, .carta-acao.refletir-saindo {
+  position: absolute; z-index: 45; width: 120px; margin: 0; pointer-events: none; transform: translate(-50%, -50%);
+  filter: drop-shadow(0 0 18px rgba(214, 60, 255, .95)) drop-shadow(0 10px 14px rgba(0, 0, 0, .45));
+}
+.carta-acao.refletir-flutuante { animation: flutuar-refletir 2.2s ease-in-out 1.6s infinite; }
+@keyframes flutuar-refletir {
+  0%, 100% { transform: translate(-50%, -50%) translateY(0) rotate(-2.5deg); filter: drop-shadow(0 0 14px rgba(214, 60, 255, .85)) drop-shadow(0 10px 14px rgba(0, 0, 0, .45)); }
+  50% { transform: translate(-50%, -50%) translateY(-12px) rotate(2.5deg); filter: drop-shadow(0 0 28px rgba(214, 60, 255, 1)) drop-shadow(0 16px 16px rgba(0, 0, 0, .4)); }
+}
+.refletir-flutuante .ca-titulo, .refletir-saindo .ca-titulo { font-size: 17px; }

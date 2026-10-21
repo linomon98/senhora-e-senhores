@@ -49,6 +49,8 @@ window.SS = window.SS || {};
   const ehFigura = c => c.rank === 'J' || c.rank === 'Q' || c.rank === 'K';
   const ehAs = c => c.rank === 'A';
   const ehNumero = c => !ehFigura(c) && !ehAs(c);
+  // Carta que pode ser sacrificada (descartada) num efeito: número ou Ás (o Ás vale 1).
+  const ehSacrificavel = c => ehNumero(c) || ehAs(c);
   const valor = c => (ehAs(c) ? 1 : parseInt(c.rank, 10));
   const nomeCarta = c => (['A', 'J', 'Q', 'K'].includes(c.rank) ? t('carta.' + c.rank) + ' ' : c.rank) + SIMBOLO[c.naipe];
   const nomeNaipe = n => t('naipe.' + n);
@@ -408,7 +410,7 @@ window.SS = window.SS || {};
 
   function ourosDisponiveis(e, p) {
     const j = e.jogadores[p];
-    const r = j.mao.filter(c => ehNumero(c) && c.naipe === 'ouros').map(c => c.id);
+    const r = j.mao.filter(c => ehSacrificavel(c) && c.naipe === 'ouros').map(c => c.id);
     for (let t = 0; t < j.tokens; t++) r.push('TOKEN');
     return r;
   }
@@ -420,7 +422,7 @@ window.SS = window.SS || {};
       j.tokens--;
     } else {
       const c = tirarDaMao(j, id);
-      if (c.naipe !== 'ouros' || !ehNumero(c)) throw new Error('Não é Ouros: ' + id);
+      if (c.naipe !== 'ouros' || !ehSacrificavel(c)) throw new Error('Não é Ouros: ' + id);
       j.cemiterio.push(c);
     }
   }
@@ -432,6 +434,7 @@ window.SS = window.SS || {};
     if (e.acoes <= 0) return r;
     const p = e.vez, j = e.jogadores[p];
     const figuras = j.mao.filter(ehFigura), numeros = j.mao.filter(ehNumero), ases = j.mao.filter(ehAs);
+    const sacrificaveis = j.mao.filter(ehSacrificavel); // números e Ases (para efeitos de naipe e magias)
     const vazios = [], senhores = [];
     j.campo.forEach((u, i) => {
       if (!u) vazios.push(i);
@@ -461,8 +464,8 @@ window.SS = window.SS || {};
     // O Ás pode entrar num espaço ocupado: empurra as cartas para o lado (se houver espaço vazio).
     const espacosAs = vazios.length ? [...Array(ESPACOS).keys()] : [];
     for (const a of podeAs ? ases : []) {
-      for (const c of numeros) {
-        if (c.naipe === a.naipe) for (const slot of espacosAs) r.push({ tipo: 'invocarAs', as: a.id, custo: c.id, slot });
+      for (const c of sacrificaveis) {
+        if (c.id !== a.id && c.naipe === a.naipe) for (const slot of espacosAs) r.push({ tipo: 'invocarAs', as: a.id, custo: c.id, slot });
       }
     }
     // Poder do Palhaço (1 ação, 1 vez por turno).
@@ -481,7 +484,7 @@ window.SS = window.SS || {};
       }
     }
     const teto = tetoCura(j);
-    for (const c of numeros) {
+    for (const c of sacrificaveis) {
       if (c.naipe === 'copas' && j.pv < teto) r.push({ tipo: 'curar', carta: c.id });
       if (c.naipe === 'espadas') for (const s of senhores) r.push({ tipo: 'espadas', carta: c.id, alvo: j.campo[s].uid });
       if (c.naipe === 'paus') {
@@ -498,7 +501,7 @@ window.SS = window.SS || {};
     //   Copas: traz um Senhor(a) do cemitério direto para o campo (com o mesmo número de antes).
     //   Ouros: pega um Ás do baralho direto para o campo.
     //   Paus: +1 de defesa permanente num Senhor(a) seu. Espadas: +1 de dano permanente.
-    for (const par of paresDoNaipe(numeros)) {
+    for (const par of paresDoNaipe(sacrificaveis)) {
       const base = { tipo: 'magia', naipe: par.naipe, cartas: par.cartas };
       if (par.naipe === 'copas') {
         if (vazios.length) j.mortos.forEach((m, k) => { if (noCemiterio(j, m)) r.push(Object.assign({ morto: k }, base)); });
@@ -542,7 +545,7 @@ window.SS = window.SS || {};
   // Par de números iguais (ex.: dois 7, de qualquer naipe): na hora de bloquear, o defensor faz um
   // ataque do adversário bater no próprio dono.
   function paresIguais(e, p) {
-    const nums = e.jogadores[p].mao.filter(ehNumero), r = [];
+    const nums = e.jogadores[p].mao.filter(ehSacrificavel), r = [];
     for (let a = 0; a < nums.length; a++) {
       for (let b = a + 1; b < nums.length; b++) if (nums[a].rank === nums[b].rank) r.push([nums[a].id, nums[b].id].sort());
     }
@@ -555,7 +558,7 @@ window.SS = window.SS || {};
     const at = e.combate.ataques.find(x => x.n === n);
     if (!at || at.refletido) throw new Error('Ataque inválido para refletir');
     const cs = Array.isArray(cartas) && cartas.length === 2 ? cartas.map(id => j.mao.find(c => c.id === id)) : [];
-    if (cs.length !== 2 || !cs[0] || !cs[1] || cs[0] === cs[1] || !ehNumero(cs[0]) || !ehNumero(cs[1]) || cs[0].rank !== cs[1].rank) {
+    if (cs.length !== 2 || !cs[0] || !cs[1] || cs[0] === cs[1] || !ehSacrificavel(cs[0]) || !ehSacrificavel(cs[1]) || cs[0].rank !== cs[1].rank) {
       throw new Error('Par de números inválido');
     }
     evento(e, { tipo: 'magia', p: d, cartas: cs.map(c => Object.assign({}, c)) });
@@ -616,7 +619,7 @@ window.SS = window.SS || {};
         if (e.asesTurno >= ASES_POR_TURNO) throw new Error('Só 1 Ás por turno');
         e.asesTurno++;
         const as = tirarDaMao(j, a.as), custo = tirarDaMao(j, a.custo);
-        if (!ehAs(as) || !ehNumero(custo) || custo.naipe !== as.naipe) throw new Error('Invocação de Ás inválida');
+        if (!ehAs(as) || !ehSacrificavel(custo) || custo.naipe !== as.naipe) throw new Error('Invocação de Ás inválida');
         j.cemiterio.push(custo);
         const empurrou = inserirNoCampo(j, a.slot, { uid: e.proximoUid++, tipo: 'as', carta: as, naipe: as.naipe });
         if (as.naipe === 'ouros') j.tokens++;
@@ -697,7 +700,7 @@ window.SS = window.SS || {};
       }
       case 'magia': {
         const cs = (Array.isArray(a.cartas) ? a.cartas : []).map(id => j.mao.find(c => c.id === id));
-        if (cs.length !== 2 || !cs[0] || !cs[1] || cs[0] === cs[1] || !cs.every(c => ehNumero(c) && c.naipe === a.naipe)) throw new Error('Par inválido');
+        if (cs.length !== 2 || !cs[0] || !cs[1] || cs[0] === cs[1] || !cs.every(c => ehSacrificavel(c) && c.naipe === a.naipe)) throw new Error('Par inválido');
         if (a.naipe === 'copas') {
           const m = j.mortos[a.morto];
           if (!m || !noCemiterio(j, m) || !j.campo.includes(null)) throw new Error('Não dá para reviver');
@@ -1117,7 +1120,7 @@ window.SS = window.SS || {};
     PALHACOS, CUSTO_TRANSFUSAO, CUSTO_SANGRIA, SACRIFICIOS_RAINHA, SENHORES_POR_TURNO, ASES_POR_TURNO, REDUCAO_POR_DEFENSOR, palhacoDe, limiteMao, ataqueDirecionado,
     NAIPES, SIMBOLO, LIMITE_FIGURA, PV_INICIAL, ESPACOS, ACOES_POR_TURNO, CUSTO_RAINHA, DADO_ATAQUE_TOTAL, LIMITE_MAO,
     definirRng: f => { rng = f; }, rngAtual: () => rng, voltarAoPrincipal, refletir, paresIguais, CURA_AS_COPAS, CURA_NAIPADO_COPAS,
-    ehFigura, ehAs, ehNumero, valor, nomeCarta, nomeNaipe, nomeUnidade, curaDe, curaPara, naipado,
+    ehFigura, ehAs, ehNumero, ehSacrificavel, valor, nomeCarta, nomeNaipe, nomeUnidade, curaDe, curaPara, naipado,
     BARALHOS, NOME_BARALHO, baralhosDisponiveis, comprarDoTurno,
     criarJogo, registrar, figurasNoBaralho, escolherFiguras, mulligan, confirmarAbertura,
     localizar, tetoCura, ataque, ataqueBase, resistencia, postura, podeAtacar,

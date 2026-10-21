@@ -130,7 +130,7 @@ window.SS = window.SS || {};
     {
       id: 'efeitos', titulo: 'Efeitos dos naipes',
       html: () => `
-        <p>Uma carta numérica usada sozinha gasta <b>1 ação</b> e vai para o cemitério.</p>
+        <p>Uma carta numérica usada sozinha gasta <b>1 ação</b> e vai para o cemitério. O <b>Ás</b> também serve como carta de sacrifício (vale 1): nos efeitos de naipe, no Ouros e nas magias dos pares.</p>
         <table class="tabela-regras">
           <tr><th>Naipe</th><th>Efeito</th></tr>
           <tr><td>♥ Copas</td><td>Cura PV: 2–3 cura 1, 4–7 cura 2, 8–10 cura 3. Pode passar de ${M.PV_INICIAL}.</td></tr>
@@ -159,7 +159,7 @@ window.SS = window.SS || {};
     {
       id: 'magia', titulo: 'Magia dos pares',
       html: () => `
-        <p>Duas cartas <b>numéricas do mesmo naipe</b> (2 a 10) viram uma magia: <b>1 ação</b>, e as duas vão para o cemitério.</p>
+        <p>Duas cartas <b>numéricas do mesmo naipe</b> (2 a 10, ou Ás) viram uma magia: <b>1 ação</b>, e as duas vão para o cemitério.</p>
         <table class="tabela-regras">
           <tr><th>Par</th><th>Magia</th></tr>
           <tr><td>♥ Copas</td><td><b>Reviver:</b> um Senhor(a) seu do cemitério volta <b>direto para o campo</b>, com o mesmo número que tinha.</td></tr>
@@ -168,7 +168,7 @@ window.SS = window.SS || {};
           <tr><td>♠ Espadas</td><td><b>+1 de dano para sempre</b> num Senhor(a) seu.</td></tr>
         </table>
         <h3>Par de números iguais: Refletir</h3>
-        <p>Dois números iguais (ex.: dois 7, de qualquer naipe) servem na <b>defesa</b>: quando o adversário ataca, aparece um aviso no meio da tela e você escolhe um ataque para <b>refletir</b>. O Senhor(a) adversário bate no <b>próprio dono</b> (o dado ainda decide entre cheio e metade). O par vai para o cemitério.</p>`,
+        <p>Dois números iguais (ex.: dois 7 ou dois Ases, de qualquer naipe) servem na <b>defesa</b>: quando o adversário ataca, a carta <b>Refletir</b> aparece pulsando; você confirma o par e leva a seta roxa até o ataque que quer <b>refletir</b>. O Senhor(a) adversário bate no <b>próprio dono</b> (o dado ainda decide entre cheio e metade). O par vai para o cemitério.</p>`,
     },
     {
       id: 'palhacos', titulo: 'Palhaços',
@@ -328,7 +328,7 @@ window.SS = window.SS || {};
     {
       id: 'efeitos', titulo: 'Suit effects',
       html: () => `
-        <p>A number card played alone costs <b>1 action</b> and goes to the graveyard.</p>
+        <p>A number card played alone costs <b>1 action</b> and goes to the graveyard. An <b>Ace</b> also works as a sacrifice card (worth 1): in suit effects, Diamonds and pair magic.</p>
         <table class="tabela-regras">
           <tr><th>Suit</th><th>Effect</th></tr>
           <tr><td>♥ Hearts</td><td>Heals HP: 2–3 heals 1, 4–7 heals 2, 8–10 heals 3. Can go above ${M.PV_INICIAL}.</td></tr>
@@ -357,7 +357,7 @@ window.SS = window.SS || {};
     {
       id: 'magia', titulo: 'Pair magic',
       html: () => `
-        <p>Two <b>number cards of the same suit</b> (2 to 10) become a spell: <b>1 action</b>, and both go to the graveyard.</p>
+        <p>Two <b>number cards of the same suit</b> (2 to 10, or an Ace) become a spell: <b>1 action</b>, and both go to the graveyard.</p>
         <table class="tabela-regras">
           <tr><th>Pair</th><th>Spell</th></tr>
           <tr><td>♥ Hearts</td><td><b>Revive:</b> one of your Gentlemen in the graveyard comes back <b>straight to the field</b>, with the same number it had.</td></tr>
@@ -366,7 +366,7 @@ window.SS = window.SS || {};
           <tr><td>♠ Spades</td><td><b>+1 damage for good</b> on one of your Gentlemen.</td></tr>
         </table>
         <h3>Pair of equal numbers: Reflect</h3>
-        <p>Two equal numbers (e.g. two 7s, any suits) work on <b>defense</b>: when the opponent attacks, a prompt shows up in the middle of the screen and you pick an attack to <b>reflect</b>. The enemy Gentleman hits its <b>own owner</b> (the die still decides full or half). The pair goes to the graveyard.</p>`,
+        <p>Two equal numbers (e.g. two 7s or two Aces, any suits) work on <b>defense</b>: when the opponent attacks, the <b>Reflect</b> card shows up pulsing; you confirm the pair and bring the purple arrow to the attack you want to <b>reflect</b>. The enemy Gentleman hits its <b>own owner</b> (the die still decides full or half). The pair goes to the graveyard.</p>`,
     },
     {
       id: 'palhacos', titulo: 'Jesters',

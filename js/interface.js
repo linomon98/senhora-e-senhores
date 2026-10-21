@@ -936,6 +936,7 @@ window.SS = window.SS || {};
     desenharSetas();
     animarEntradas();
     processarEventos();
+    sincronizarRefletirFlutuante();
   }
 
   // ---------- Efeitos dos Ases e das curas ----------
@@ -1360,6 +1361,8 @@ window.SS = window.SS || {};
     }
     for (const id of ['#fase', '#instrucao', '#chips', '#botoes', '#log', '#setas']) $(id).innerHTML = '';
     definirHTML($('#cartas-acao'), '');
+    const flutuante = $('#app .refletir-flutuante');
+    if (flutuante) flutuante.remove();
     $('#painel').hidden = true;
     $('#acoes').hidden = true;
     $('#combate').hidden = true;
@@ -1716,14 +1719,20 @@ window.SS = window.SS || {};
         if (ui.sel.length) {
           const cands = candidatosSelecao();
           const chaves = [...new Set(cands.map(chaveAcao))];
+          // Ordem: sumonar (Senhor, Rainha, Ás) primeiro; efeitos de naipe e magias à direita.
+          const ORDEM = { sumonar: 0, invocarAs: 1 };
+          chaves.sort((x, y) => (ORDEM[x.split('/')[0]] ?? 5) - (ORDEM[y.split('/')[0]] ?? 5));
           botoes = chaves.map(k => {
             const a = cands.find(x => chaveAcao(x) === k);
             return btnGrande('tipo:' + k, rotuloTipo(a.tipo, a), iconeDaAcao(a));
           }).join('');
           texto = chaves.length ? t('faixa.escolhaAcao') : dicaSelecao();
         } else texto = t(jogo.acoes > 0 ? 'faixa.comoJogar' : 'faixa.semAcoes');
-        botoes += btnGrande('ir-ataque', t('btn.irAtaque').replace(/^⚔\s*/, ''), 'preparar', 'perigo');
-        botoes += btnGrande('passar-turno', t('btn.encerrarTurno'), 'passar');
+        // Passar turno sempre na ponta esquerda; Preparar ataque só se alguém puder atacar neste turno.
+        const alguemAtaca = jogo.jogadores[p].campo.some((u, i) => u && M.podeAtacar(jogo, p, i));
+        botoes = btnGrande('passar-turno', t('btn.encerrarTurno'), 'passar')
+          + (alguemAtaca ? btnGrande('ir-ataque', t('btn.irAtaque').replace(/^⚔\s*/, ''), 'preparar', 'perigo') : '')
+          + botoes;
       }
     } else if (jogo.fase === 'ataque') {
       fase += ` · ${t('faixa.ataque')}`;
@@ -1733,8 +1742,8 @@ window.SS = window.SS || {};
         const extra = [temAs ? t('faixa.dicaAs') : '', temRei ? t('faixa.dicaRei') : ''].filter(Boolean).join('; ');
         if (!M.atacantesAptos(jogo).length) texto = t(jogo.turno === 1 ? 'faixa.primeiroNaoAtaca' : 'faixa.ninguemApto');
         else texto = atacantesRestantes().length ? t('faixa.comoAtacar', { extra }) : t('faixa.ataquesDeclarados');
+        botoes = btnGrande('passar-turno', t(ui.ataques.length ? 'btn.encerrarSemAtacar' : 'btn.encerrarTurno'), 'passar') + botoes;
         if (ui.ataques.length) botoes += btnGrande('confirmar-ataques', t('btn.confirmarAtaques', { n: ui.ataques.length }), 'atacar', 'perigo');
-        botoes += btnGrande('passar-turno', t(ui.ataques.length ? 'btn.encerrarSemAtacar' : 'btn.encerrarTurno'), 'passar');
         extras = btn('voltar', t('btn.voltarAcoes'), 'voltar');
       } else texto = t('faixa.botDeclarando', { j: escapar(j.nome) });
     } else if (jogo.fase === 'bloqueio') {
@@ -1749,7 +1758,8 @@ window.SS = window.SS || {};
         const temBloqueio = Object.values(ui.bloqueios).some(l => l.length);
         botoes = temBloqueio ? btnGrande('confirmar-bloqueios', t('btn.confirmarBloqueios'), 'escudo', 'defesa')
           : btnGrande('confirmar-bloqueios', t('btn.naoDefender'), 'naoDefender');
-        if (paresLivres().length && jogo.combate.ataques.some(at => !ui.reflexos.some(r => r.n === at.n))) {
+        const mirandoReflexo = ui.reflexoModo && ui.reflexoModo.etapa === 'alvo'; // a carta está flutuando no meio
+        if (!mirandoReflexo && paresLivres().length && jogo.combate.ataques.some(at => !ui.reflexos.some(r => r.n === at.n))) {
           botoes += btnGrande('refletir', t('refl.titulo'), 'reflexo', 'chamativa' + (ui.reflexoModo ? ' ativa' : ''));
         }
         extras = btn('limpar-bloqueios', t('btn.limpar'));
@@ -2258,7 +2268,7 @@ window.SS = window.SS || {};
   // já vem escolhido (as outras cartas que formam par também brilham, para trocar); (3) clicando de novo em
   // Refletir o par é descartado e uma seta roxa segue o mouse até o atacante que vai bater no próprio dono.
   // Com um par só, pula direto para a seta. (O motor só aplica no Defender: aqui é tudo da tela.)
-  const ORIGEM_REFLEXO = { x: 800, y: 470 };
+  const ORIGEM_REFLEXO = { x: 800, y: 600 }; // logo abaixo da faixa do meio (não tapa o texto)
   function iniciarReflexo() {
     if (!humanoBloqueia()) return;
     const livres = paresLivres();
@@ -2278,11 +2288,41 @@ window.SS = window.SS || {};
 
   function descartarParReflexo() {
     const par = ui.reflexoModo.par, j = jogo.jogadores[1 - jogo.vez];
+    const cartaRefletir = $('.carta-acao[data-acao="refletir"]');
     ui.reflexoModo = { etapa: 'alvo', par };
+    mostrarRefletirFlutuante(cartaRefletir);
     animarParDestruido(1 - jogo.vez, par.map(id => j.mao.find(c => c.id === id)).filter(Boolean));
     ui.magiaFeita = new Set([...(ui.magiaFeita || []), ...par]); // o evento do motor não anima de novo
     ui.mouse = ui.mouse || Object.assign({}, ORIGEM_REFLEXO);
     render();
+  }
+
+  // A carta Refletir sai do canto, sobe até o meio da mesa e fica flutuando: é dela que a seta roxa sai.
+  function mostrarRefletirFlutuante(deEl) {
+    let el = $('#app .refletir-flutuante');
+    if (el) return;
+    el = document.createElement('div');
+    el.className = 'carta-acao arte-reflexo refletir-flutuante';
+    el.innerHTML = `<img src="arte/acoes/reflexo.webp" alt="" draggable="false"><b class="ca-titulo">${t('refl.titulo')}</b>`;
+    Object.assign(el.style, { left: ORIGEM_REFLEXO.x + 'px', top: ORIGEM_REFLEXO.y + 'px' });
+    $('#app').appendChild(el);
+    const de = centroDe(deEl);
+    if (de && !MOVIMENTO_REDUZIDO) {
+      el.animate([
+        { transform: `translate(calc(-50% + ${(de.x - ORIGEM_REFLEXO.x).toFixed(1)}px), calc(-50% + ${(de.y - ORIGEM_REFLEXO.y).toFixed(1)}px)) scale(.9) rotate(-8deg)`, opacity: 1 },
+        { transform: 'translate(-50%, -50%) scale(1.08) rotate(3deg)', opacity: 1, offset: .8 },
+        { transform: 'translate(-50%, -50%) scale(1) rotate(0deg)', opacity: 1 },
+      ], { duration: 700, delay: 900, easing: 'cubic-bezier(.3, .8, .3, 1)', fill: 'backwards' });
+    }
+  }
+
+  // Some quando a mira acaba (escolheu o ataque, cancelou ou confirmou a defesa).
+  function sincronizarRefletirFlutuante() {
+    const el = $('#app .refletir-flutuante');
+    if (!el || (ui.reflexoModo && ui.reflexoModo.etapa === 'alvo')) return;
+    el.classList.remove('refletir-flutuante');
+    el.classList.add('refletir-saindo');
+    el.animate([{ opacity: 1, transform: 'translate(-50%, -50%) scale(1)' }, { opacity: 0, transform: 'translate(-50%, -50%) scale(1.3)' }], { duration: 380, fill: 'forwards' }).onfinish = () => el.remove();
   }
 
   function refletirAtaque(n) {
