@@ -1608,6 +1608,14 @@ window.SS = window.SS || {};
         </div>
         <div class="lado-heroi"></div>`;
       heroi = info.querySelector('.heroi');
+      // Palco atrás do Palhaço: o seu é o do naipe dele; o do oponente é sempre o mesmo, com a cortina
+      // e as bandeirinhas na cor do Palhaço adversário.
+      const meu = !!info.closest('.zona-eu'), palco = $(meu ? '#palco-eu' : '#palco-op');
+      if (palco) {
+        palco.src = meu ? `arte/palcos/${pal.naipe}.webp` : `arte/palcos/oponente-${pal.cor}.webp`;
+        palco.className = 'palco ' + (meu ? 'palco-eu' : 'palco-op') + ' palco-' + pal.naipe;
+        palco.hidden = false;
+      }
     }
     const classes = `heroi heroi-livre cor-${cor}${alvos.has('jogador:' + p) ? ' clicavel' : ''}${jogo.vez === p ? ' da-vez' : ''}`;
     for (const c of classes.split(' ')) heroi.classList.add(c);

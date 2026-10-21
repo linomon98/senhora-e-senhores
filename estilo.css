@@ -1325,3 +1325,9 @@ html, body { background: #9de03a url('arte/mesa/grama.webp') center / cover; }
 .carta-acao.mirando { z-index: 5; transform: translateY(-22px) rotate(0deg) scale(1.08); filter: drop-shadow(0 0 16px rgba(255, 214, 80, 1)) drop-shadow(0 0 5px #fff); }
 /* Ourinhos: a arte é cortada embaixo; um pouco maior para o corte encostar na borda da tela (o topo não muda). */
 .zona-eu .heroi.heroi-livre[data-pal="ourinhos"] { width: 288px; }
+
+/* Palcos atrás dos Palhaços (por cima da grama, por baixo de todo o resto) */
+.palco { position: absolute; left: 50%; z-index: 0; pointer-events: none; user-select: none; filter: drop-shadow(0 10px 14px rgba(20, 50, 5, .35)); }
+.palco[hidden] { display: none; }
+.palco-op { top: -8px; width: 470px; transform: translateX(-50%); }
+.palco-eu { bottom: -26px; width: 680px; transform: translateX(-50%); }
