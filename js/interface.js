@@ -365,7 +365,14 @@ window.SS = window.SS || {};
       }
     }
     const el = ev.target.closest('[data-acao],[data-mao],[data-token],[data-slot],[data-alvo],[data-ataque],[data-cemiterio],[data-pilha]');
-    if (!el) return;
+    if (!el) {
+      // Clique num lugar vazio do tabuleiro: desfaz a seleção de cartas da mão.
+      if (jogo && !ui.pend && (ui.sel.length || ui.destino != null) && ev.target.closest('#mesa') && !ev.target.closest('#cartas-acao, #painel')) {
+        ui.sel = []; ui.destino = null;
+        render();
+      }
+      return;
+    }
     const ds = el.dataset;
     if (ds.acao === 'log' || ds.acao === 'fechar-log') return alternarLog(ds.acao === 'log');
     if (ds.acao === 'menu') return confirmarMenu();
@@ -1705,7 +1712,6 @@ window.SS = window.SS || {};
       } else if (ui.destino != null && ui.sel.length === 1) {
         // Figura ou Ás esperando no campo: falta o número.
         texto = t('faixa.preparo');
-        extras = btn('cancelar', t('btn.cancelar'));
       } else {
         if (ui.sel.length) {
           const cands = candidatosSelecao();
@@ -1714,7 +1720,6 @@ window.SS = window.SS || {};
             const a = cands.find(x => chaveAcao(x) === k);
             return btnGrande('tipo:' + k, rotuloTipo(a.tipo, a), iconeDaAcao(a));
           }).join('');
-          extras = btn('cancelar', t('btn.cancelarSelecao'));
           texto = chaves.length ? t('faixa.escolhaAcao') : dicaSelecao();
         } else texto = t(jogo.acoes > 0 ? 'faixa.comoJogar' : 'faixa.semAcoes');
         botoes += btnGrande('ir-ataque', t('btn.irAtaque').replace(/^⚔\s*/, ''), 'preparar', 'perigo');
