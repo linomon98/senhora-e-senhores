@@ -1307,3 +1307,4 @@ html, body { background: #9de03a url('arte/mesa/grama.webp') center / cover; }
   transform: translate(-50%, -50%) rotate(-6deg);
 }
 .arte-passar { --ca-cor: #1f5fd6; } .arte-preparar { --ca-cor: #d8322f; } .arte-naodefender { --ca-cor: #1f5fd6; }
+.arte-sumonar { --ca-cor: #8a10b0; } .arte-comprarletra, .arte-comprarnumero, .arte-dado { --ca-cor: #b98310; }

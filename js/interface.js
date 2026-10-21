@@ -156,7 +156,8 @@ window.SS = window.SS || {};
     ui.destino = null;
     enviarJogada({ t: 'acao', a: acao });
     M.aplicarAcao(jogo, acao);
-    render();
+    if (ui.voltarAoAtaque && jogo.vencedor == null) voltarAoAtaque();
+    else render();
     ui.vooDe = null;
     if (jogo.vencedor != null) fimDeJogo();
   }
@@ -354,6 +355,7 @@ window.SS = window.SS || {};
       return;
     }
     if (ev.target.closest('#modal') || (ui && ui.ignorarClique)) return;
+    if (ui && ui.ignorarProximoClique) { ui.ignorarProximoClique = false; return; }
     // Refletir: trocar o par (cartas roxas da mão) ou escolher o atacante com a seta roxa.
     if (jogo && ui.reflexoModo) {
       const parEl = ev.target.closest('[data-par]');
@@ -369,6 +371,7 @@ window.SS = window.SS || {};
       // Clique num lugar vazio do tabuleiro: desfaz a seleção de cartas da mão.
       if (jogo && !ui.pend && (ui.sel.length || ui.destino != null) && ev.target.closest('#mesa') && !ev.target.closest('#cartas-acao, #painel')) {
         ui.sel = []; ui.destino = null;
+        if (ui.voltarAoAtaque) return voltarAoAtaque();
         render();
       }
       return;
@@ -403,7 +406,19 @@ window.SS = window.SS || {};
 
   function aoPressionar(ev) {
     if (ev.button !== 0 || !jogo || ev.target.closest('#modal')) return;
+    if (ui) ui.ignorarProximoClique = false; // (o clique depois de fechar uma mira pode nem chegar a acontecer)
     const naMao = ev.target.closest('[data-mao]');
+    // Mirando o Dado adicional: o clique escolhe o Senhor(a); fora dele, desiste.
+    if (ui.miraDado) {
+      if (ev.target.closest('[data-acao]')) { ui.miraDado = null; return; }
+      ev.preventDefault();
+      ui.ignorarProximoClique = true;
+      const loc = unidadeEm(ev.target);
+      if (loc && podeReceberDado(loc.u.uid)) return darDado(loc.u.uid);
+      ui.miraDado = null;
+      return render();
+    }
+    if (naMao && jogo.fase === 'ataque' && humanoAtaca() && ui.miraRei == null && !ui.pend) entrarAcoesNoAtaque();
     if (naMao && jogo.fase === 'principal' && controle(jogo.vez) === 'humano' && !ui.ocupado && !ui.pend) {
       ev.preventDefault();
       return iniciarArrasto(ev, naMao.dataset.mao);
@@ -495,19 +510,82 @@ window.SS = window.SS || {};
       return ui.aoContinuar();
     }
     if (ev.key !== 'Escape' || !jogo) return;
-    ui.sel = []; ui.pend = null; ui.atacanteSel = null; ui.bloqSel = null; ui.mira = null; ui.destino = null; ui.reflexoModo = null; ui.miraRei = null;
+    ui.sel = []; ui.pend = null; ui.atacanteSel = null; ui.bloqSel = null; ui.mira = null; ui.destino = null; ui.reflexoModo = null; ui.miraRei = null; ui.miraDado = null;
+    if (ui.voltarAoAtaque) return voltarAoAtaque();
     render();
   }
 
   function clicarMao(id) {
+    if (jogo.fase === 'ataque' && humanoAtaca() && ui.miraRei == null) entrarAcoesNoAtaque();
     if (jogo.fase !== 'principal' || controle(jogo.vez) !== 'humano') return;
     ui.pend = null;
     const k = ui.sel.indexOf(id);
     if (k >= 0) ui.sel.splice(k, 1);
     else ui.sel.push(id);
     if (!ui.sel.length) ui.destino = null;
+    if (!ui.sel.length && ui.voltarAoAtaque) return voltarAoAtaque();
     // Uma figura (ou Ás) já está esperando no campo: o número clicado completa a jogada.
     if (ui.destino != null && ui.sel.length === 2 && jogarNoDestino()) return;
+    render();
+  }
+
+  // Cartas de ação também valem depois do "Preparar ataque" (antes de confirmar): o jogo volta por um
+  // instante às ações passivas (no online o amigo ainda nem soube do ataque) e, feita a jogada ou
+  // desfeita a seleção, retorna ao ataque com os ataques que você já tinha marcado.
+  function entrarAcoesNoAtaque() {
+    if (jogo.fase !== 'ataque') return;
+    M.voltarAoPrincipal(jogo);
+    ui.voltarAoAtaque = true;
+    ui.atacanteSel = null; ui.mira = null;
+  }
+
+  function voltarAoAtaque() {
+    if (!ui.voltarAoAtaque) return render();
+    ui.voltarAoAtaque = false;
+    ui.sel = []; ui.pend = null; ui.destino = null;
+    if (jogo.fase !== 'principal' || jogo.vencedor != null) return render();
+    M.aplicarAcao(jogo, { tipo: 'atacar' });
+    // A jogada pode ter tirado um atacante (sacrifício), o alvo do Rei ou um Ouros reservado.
+    const aptos = new Set(M.atacantesAptos(jogo)), pool = M.ourosDisponiveis(jogo, jogo.vez).slice();
+    ui.ataques = ui.ataques.filter(a => aptos.has(a.atacante));
+    for (const a of ui.ataques) {
+      if (a.alvo !== 'jogador' && !M.alvosPossiveis(jogo, a.atacante).includes(a.alvo)) a.alvo = 'jogador';
+      a.ouros = a.ouros.filter(o => { const k = pool.indexOf(o); if (k < 0) return false; pool.splice(k, 1); return true; });
+    }
+    render();
+  }
+
+  // Carta "Dado adicional": com um Ouros selecionado, uma seta sai dele até o Senhor(a) que vai rolar
+  // 1 dado a mais. Escolhido, o jogo vai para o ataque (se ainda não estava) e marca o ataque dele.
+  function iniciarDadoAdicional() {
+    const id = ui.sel[0];
+    if (!id) return;
+    const el = id.startsWith('TOKEN#') ? $('[data-token="' + id.slice(6) + '"]') : $('[data-mao="' + id + '"]');
+    ui.miraDado = { ouro: id.startsWith('TOKEN') ? 'TOKEN' : id, de: centroDe(el) || { x: 800, y: 700 } };
+    ui.mouse = Object.assign({}, ui.miraDado.de);
+    render();
+  }
+
+  const podeReceberDado = uid => {
+    const l = M.localizar(jogo, uid);
+    return !!l && l.p === jogo.vez && (jogo.fase === 'ataque' ? M.atacantesAptos(jogo).includes(uid) : M.podeAtacar(jogo, l.p, l.i));
+  };
+
+  function darDado(uid) {
+    const ouro = ui.miraDado.ouro;
+    ui.miraDado = null;
+    if (jogo.fase === 'principal') {
+      if (ui.voltarAoAtaque) voltarAoAtaque();
+      else {
+        ui.sel = []; ui.pend = null; ui.ataques = [];
+        M.aplicarAcao(jogo, { tipo: 'atacar' });
+      }
+    }
+    ui.sel = [];
+    if (!M.atacantesAptos(jogo).includes(uid)) return render();
+    if (!ui.ataques.some(a => a.atacante === uid)) adicionarAtaque(uid, 'jogador');
+    const at = ui.ataques.find(a => a.atacante === uid);
+    if (at && ourosLivres().includes(ouro)) at.ouros.push(ouro);
     render();
   }
 
@@ -645,12 +723,16 @@ window.SS = window.SS || {};
     switch (nome) {
       case 'cancelar':
         ui.sel = []; ui.pend = null; ui.atacanteSel = null; ui.bloqSel = null; ui.destino = null;
+        if (ui.voltarAoAtaque) return voltarAoAtaque();
         return render();
+      case 'dado-adicional':
+        return iniciarDadoAdicional();
       case 'tipo':
         return iniciarPendente(arg);
       case 'ir-ataque':
         // No online o amigo só fica sabendo do ataque quando ele é confirmado (a mensagem "declarar"
         // já leva para a fase de ataque), então dá para voltar atrás sem desencontrar as duas telas.
+        if (ui.voltarAoAtaque) return voltarAoAtaque(); // já estava no ataque: mantém os ataques marcados
         ui.sel = []; ui.pend = null; ui.ataques = [];
         M.aplicarAcao(jogo, { tipo: 'atacar' });
         return render();
@@ -774,7 +856,7 @@ window.SS = window.SS || {};
   }
 
   const mirandoPoder = () => !!(ui && ui.pend && ui.pend.tipo === 'poder' && passoAtual() === 'alvo');
-  const mirandoSeta = () => !!(ui && ((ui.reflexoModo && ui.reflexoModo.etapa === 'alvo') || mirandoPoder() || (ui.miraRei != null && humanoAtaca())));
+  const mirandoSeta = () => !!(ui && ((ui.reflexoModo && ui.reflexoModo.etapa === 'alvo') || mirandoPoder() || ui.miraDado || (ui.miraRei != null && humanoAtaca())));
 
   function desenharSetas() {
     const svg = $('#setas');
@@ -803,6 +885,7 @@ window.SS = window.SS || {};
     }
     // Seta presa no mouse: roxa ao escolher o ataque a refletir; na cor do poder ao escolher o alvo do Palhaço.
     if (ui.mouse && ui.reflexoModo && ui.reflexoModo.etapa === 'alvo') setas.push({ de: ORIGEM_REFLEXO, para: ui.mouse, cor: 'mira-reflexo', viva: true });
+    if (ui.mouse && ui.miraDado) setas.push({ de: ui.miraDado.de, para: ui.mouse, cor: 'mira-ataque', viva: true });
     if (ui.mouse && mirandoPoder()) {
       const de = centroDe($(`#info-${jogo.vez} .poder-naipe`));
       if (de) setas.push({ de, para: ui.mouse, cor: 'mira-poder', viva: true });
@@ -1495,7 +1578,7 @@ window.SS = window.SS || {};
   function renderJogador(p, alvos) {
     const j = jogo.jogadores[p], cor = corDe(p), teto = M.tetoCura(j), pal = palhacoDe(p);
     const quem = controle(p) === 'humano' ? t('ui.voce') : controle(p) === 'remoto' ? t('ui.amigo') : `bot · ${NOME_NIVEL[cfg.nivel]}`;
-    const podeJogar = controle(p) === 'humano' && jogo.vez === p && jogo.fase === 'principal' && !ui.ocupado;
+    const podeJogar = controle(p) === 'humano' && jogo.vez === p && (jogo.fase === 'principal' || jogo.fase === 'ataque') && !ui.ocupado;
     let tokens = '';
     for (let k = 0; k < j.tokens; k++) {
       tokens += `<button class="token${ui.sel.includes('TOKEN#' + k) ? ' selecionada' : ''}" data-token="${k}"${podeJogar ? '' : ' disabled'}>♦ extra</button>`;
@@ -1735,6 +1818,7 @@ window.SS = window.SS || {};
     if (a.tipo === 'sumonar') return a.sacrificio != null ? 'rainha' : 'sumonar';
     if (a.tipo === 'invocarAs') return 'as';
     if (a.tipo === 'magia') return 'par-' + a.naipe;
+    if (a.tipo === 'comprar') return a.baralho === 'letras' ? 'comprarLetra' : 'comprarNumero';
     return a.tipo;
   }
 
@@ -1742,7 +1826,8 @@ window.SS = window.SS || {};
   // O título vem do idioma (a arte não tem texto, por causa da versão em inglês).
   const ARTE_ACAO = { atacar: 'atacar', espadas: 'dano', paus: 'berserk', escudo: 'defesa', curar: 'cura', comprar: 'comprar', reviver: 'cemiterio', sumonar: 'sumonar', rainha: 'sumonar', as: 'sumonar',
     'par-copas': 'cemiterio', 'par-ouros': 'parouros', 'par-paus': 'parpaus', 'par-espadas': 'parespadas', reflexo: 'reflexo',
-    passar: 'passar', preparar: 'preparar', naoDefender: 'naodefender', naoRefletir: 'naodefender' };
+    passar: 'passar', preparar: 'preparar', naoDefender: 'naodefender', naoRefletir: 'naodefender',
+    comprarLetra: 'comprarletra', comprarNumero: 'comprarnumero', dado: 'dado' };
   // Cartas ainda sem arte própria (placeholder): moldura vazia + um desenho simples (SVG) no meio.
   const DESENHO_PROVISORIO = {};
   const btnGrande = (acao, rotulo, icone, extra) => {
@@ -1797,6 +1882,13 @@ window.SS = window.SS || {};
         } else texto = t(jogo.acoes > 0 ? 'faixa.comoJogar' : 'faixa.semAcoes');
         // Passar turno sempre na ponta esquerda; Preparar ataque só se alguém puder atacar neste turno.
         const alguemAtaca = jogo.jogadores[p].campo.some((u, i) => u && M.podeAtacar(jogo, p, i));
+        // Um Ouros sozinho selecionado (carta ou ficha do Ás): também pode virar 1 dado a mais num ataque.
+        const ouroSel = ui.sel.length === 1 && M.ourosDisponiveis(jogo, p).includes(ui.sel[0].startsWith('TOKEN') ? 'TOKEN' : ui.sel[0]);
+        if (ouroSel && alguemAtaca) {
+          botoes += btnGrande('dado-adicional', t('acao.dadoAdicional'), 'dado');
+          if (!botoes.includes('data-acao="tipo:')) texto = t('faixa.escolhaAcao');
+        }
+        if (ui.miraDado) texto = t('faixa.miraDado');
         botoes = btnGrande('passar-turno', t('btn.encerrarTurno'), 'passar')
           + (alguemAtaca ? btnGrande('ir-ataque', t('btn.irAtaque').replace(/^⚔\s*/, ''), 'preparar', 'perigo') : '')
           + botoes;

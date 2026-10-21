@@ -96,7 +96,8 @@ window.SS = window.SS || {};
           <tr><td>1 a ${M.DADO_ATAQUE_TOTAL - 1}</td><td>Metade do ataque, arredondada para baixo</td></tr>
         </table>
         <ul>
-          <li><b>Ouros no ataque:</b> cada Ouros gasto dá +1 dado; vale o maior resultado.</li>
+          <li><b>Ouros no ataque:</b> cada Ouros gasto dá +1 dado; vale o maior resultado. Selecione um Ouros na mão e use a carta <b>Dado adicional</b>: a seta escolhe o Senhor(a) que rola o dado a mais.</li>
+          <li><b>Cartas de ação no ataque:</b> depois de Preparar ataque (e antes de confirmar), você ainda pode jogar cartas da mão; os ataques já marcados continuam.</li>
           <li><b>Espadas:</b> +1 de ataque no turno; se o dado der 6, o bônus vira metade do valor da carta de Espadas (crítico).</li>
           <li><b>Sem bloqueio:</b> o dano vai direto no PV. Se o alvo era um Ás, ele é destruído.</li>
           <li><b>Errou!:</b> no ataque direto ao Palhaço sem ninguém defendendo, se o maior dado for <b>1</b> o golpe passa no vento: <b>0 de dano</b> (que vergonha!).</li>
@@ -296,7 +297,8 @@ window.SS = window.SS || {};
           <tr><td>1 to ${M.DADO_ATAQUE_TOTAL - 1}</td><td>Half the attack, rounded down</td></tr>
         </table>
         <ul>
-          <li><b>Diamonds on attack:</b> each Diamond spent gives +1 die; the highest result counts.</li>
+          <li><b>Diamonds on attack:</b> each Diamond spent gives +1 die; the highest result counts. Select a Diamond in your hand and use the <b>Extra die</b> card: the arrow picks the Gentleman that rolls the extra die.</li>
+          <li><b>Action cards while attacking:</b> after Prepare attack (and before confirming) you can still play cards from your hand; the attacks you marked stay.</li>
           <li><b>Spades:</b> +1 attack this turn; if the die shows 6, the bonus becomes half the Spades card's value (critical).</li>
           <li><b>Unblocked:</b> the damage goes straight to HP. If the target was an Ace, it is destroyed.</li>
           <li><b>Miss!:</b> on a direct attack at the Jester with no one blocking, if the highest die is <b>1</b> the blow hits only air: <b>0 damage</b> (shame on you!).</li>
