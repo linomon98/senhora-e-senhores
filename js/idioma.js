@@ -322,7 +322,8 @@ window.SS = window.SS || {};
     'faixa.semAcoes': ['Suas ações acabaram. Vá para o ataque.', 'No actions left. Go to attack.'],
     'faixa.ataque': ['Ataque', 'Attack'],
     'faixa.dicaAs': ['para atacar um Ás, arraste até ele', 'to attack an Ace, drag onto it'],
-    'faixa.dicaRei': ['o Rei pode ser arrastado até um Senhor(a) inimigo (o alvo é obrigado a defender)', 'the King can be dragged onto an enemy Gentleman (the target must defend)'],
+    'faixa.miraRei': ['Mire com a seta e clique onde o Rei vai bater (fora de um alvo, desiste).', 'Aim the arrow and click where the King will strike (clicking elsewhere backs out).'],
+    'faixa.dicaRei': ['clique no Rei e mire com a seta onde ele vai bater: o Palhaço, um Ás ou um Senhor(a) inimigo (que é obrigado a defender)', 'click the King and aim the arrow where it will strike: the Jester, an Ace or an enemy Gentleman (who must defend)'],
     'faixa.primeiroNaoAtaca': ['Quem começa não ataca no primeiro turno.', "The first player can't attack on the first turn."],
     'faixa.ninguemApto': ['Nenhum Senhor(a) apto(a) a atacar.', 'No Gentleman is ready to attack.'],
     'faixa.comoAtacar': [

@@ -408,6 +408,16 @@ window.SS = window.SS || {};
       ev.preventDefault();
       return iniciarArrasto(ev, naMao.dataset.mao);
     }
+    // Mirando com o Rei: o clique escolhe o alvo (o Palhaço, um Ás ou um Senhor); fora de um alvo, desiste.
+    if (ui.miraRei != null && humanoAtaca()) {
+      if (ev.target.closest('[data-acao]')) { ui.miraRei = null; ui.atacanteSel = null; return; }
+      ev.preventDefault();
+      const uid = ui.miraRei, alvo = alvoDeAtaqueEm(ev.target, uid);
+      ui.miraRei = null;
+      ui.atacanteSel = null;
+      if (alvo != null) return adicionarAtaque(uid, alvo);
+      return render();
+    }
     const loc = unidadeEm(ev.target);
     if (!loc) return;
     const declarado = ui.ataques.some(a => a.atacante === loc.u.uid);
@@ -450,9 +460,14 @@ window.SS = window.SS || {};
         }
         return render();
       }
-      // Clique simples: liga/desliga o ataque direto ao oponente.
+      // Clique simples: liga/desliga o ataque direto ao oponente. O Rei (que escolhe onde bater) fica
+      // com a seta presa no mouse até você clicar no alvo.
       if (ui.ataques.some(a => a.atacante === uid)) removerAtaquesDe(uid);
-      else return adicionarAtaque(uid, 'jogador');
+      else if (M.localizar(jogo, uid).u.figura.rank === 'K' && M.alvosPossiveis(jogo, uid).length > 1) {
+        ui.miraRei = uid;
+        ui.atacanteSel = uid;
+        ui.mouse = pontoNoApp(ev.clientX, ev.clientY);
+      } else return adicionarAtaque(uid, 'jogador');
       return render();
     }
     if (humanoBloqueia() && ui.bloqSel != null) {
@@ -480,7 +495,7 @@ window.SS = window.SS || {};
       return ui.aoContinuar();
     }
     if (ev.key !== 'Escape' || !jogo) return;
-    ui.sel = []; ui.pend = null; ui.atacanteSel = null; ui.bloqSel = null; ui.mira = null; ui.destino = null; ui.reflexoModo = null;
+    ui.sel = []; ui.pend = null; ui.atacanteSel = null; ui.bloqSel = null; ui.mira = null; ui.destino = null; ui.reflexoModo = null; ui.miraRei = null;
     render();
   }
 
@@ -641,7 +656,7 @@ window.SS = window.SS || {};
         return render();
       case 'voltar':
         // Clicou em Atacar sem querer (esqueceu de sumonar): volta para as ações passivas.
-        ui.ataques = []; ui.atacanteSel = null; ui.mira = null;
+        ui.ataques = []; ui.atacanteSel = null; ui.mira = null; ui.miraRei = null;
         M.voltarAoPrincipal(jogo);
         return render();
       case 'mais-dado': {
@@ -669,7 +684,7 @@ window.SS = window.SS || {};
       case 'confirmar-ataques':
       case 'sem-ataque': {
         const lista = nome === 'confirmar-ataques' ? ui.ataques : [];
-        ui.ataques = []; ui.atacanteSel = null;
+        ui.ataques = []; ui.atacanteSel = null; ui.miraRei = null;
         enviarJogada({ t: 'declarar', lista });
         M.declararAtaques(jogo, lista);
         return fluxoCombate(partida);
@@ -759,7 +774,7 @@ window.SS = window.SS || {};
   }
 
   const mirandoPoder = () => !!(ui && ui.pend && ui.pend.tipo === 'poder' && passoAtual() === 'alvo');
-  const mirandoSeta = () => !!(ui && ((ui.reflexoModo && ui.reflexoModo.etapa === 'alvo') || mirandoPoder()));
+  const mirandoSeta = () => !!(ui && ((ui.reflexoModo && ui.reflexoModo.etapa === 'alvo') || mirandoPoder() || (ui.miraRei != null && humanoAtaca())));
 
   function desenharSetas() {
     const svg = $('#setas');
@@ -782,7 +797,7 @@ window.SS = window.SS || {};
         if (db && de) setas.push({ de: db, para: de, cor: 'bloqueio', tenue: resolvido, foco: ui.foco === at.n });
       }
     }
-    if (ui.mouse && ((ui.atacanteSel != null && ui.mira && ui.mira.moveu) || ui.bloqSel != null)) {
+    if (ui.mouse && ((ui.atacanteSel != null && ((ui.mira && ui.mira.moveu) || ui.miraRei === ui.atacanteSel)) || ui.bloqSel != null)) {
       const de = centroDe(elUnidade(ui.atacanteSel != null ? ui.atacanteSel : ui.bloqSel));
       if (de) setas.push({ de, para: ui.mouse, cor: ui.atacanteSel != null ? 'mira-ataque' : 'mira-bloqueio', viva: true });
     }
@@ -1727,13 +1742,9 @@ window.SS = window.SS || {};
   // O título vem do idioma (a arte não tem texto, por causa da versão em inglês).
   const ARTE_ACAO = { atacar: 'atacar', espadas: 'dano', paus: 'berserk', escudo: 'defesa', curar: 'cura', comprar: 'comprar', reviver: 'cemiterio', sumonar: 'sumonar', rainha: 'sumonar', as: 'sumonar',
     'par-copas': 'cemiterio', 'par-ouros': 'parouros', 'par-paus': 'parpaus', 'par-espadas': 'parespadas', reflexo: 'reflexo',
-    passar: 'vazia', preparar: 'vazia', naoDefender: 'vazia' };
-  // Cartas ainda sem arte própria (placeholder): moldura vazia + um desenho simples no meio.
-  const DESENHO_PROVISORIO = {
-    passar: '<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="22" fill="none" stroke="#1d2a12" stroke-width="5"/><path d="M24 20l16 12-16 12z" fill="#e9b949" stroke="#1d2a12" stroke-width="3" stroke-linejoin="round"/></svg>',
-    preparar: '<svg viewBox="0 0 64 64"><path d="M14 10l6 0 30 30-6 6L14 16z" fill="#fff" stroke="#1d2a12" stroke-width="3"/><path d="M50 10l-6 0L14 40l6 6L50 16z" fill="#fff" stroke="#1d2a12" stroke-width="3"/><path d="M16 46l-6 6M48 46l6 6" stroke="#d8322f" stroke-width="6" stroke-linecap="round"/><circle cx="32" cy="30" r="5" fill="#d8322f"/></svg>',
-    naoDefender: '<svg viewBox="0 0 64 64"><path d="M32 8l20 7v15c0 13-9 21-20 26C21 51 12 43 12 30V15z" fill="#9fc6e8" stroke="#1d2a12" stroke-width="3" stroke-linejoin="round"/><path d="M14 52L50 12" stroke="#d8322f" stroke-width="7" stroke-linecap="round"/></svg>',
-  };
+    passar: 'passar', preparar: 'preparar', naoDefender: 'naodefender', naoRefletir: 'naodefender' };
+  // Cartas ainda sem arte própria (placeholder): moldura vazia + um desenho simples (SVG) no meio.
+  const DESENHO_PROVISORIO = {};
   const btnGrande = (acao, rotulo, icone, extra) => {
     const arte = ARTE_ACAO[icone] || 'sumonar', titulo = t('carta.' + icone);
     const sub = rotulo.replace(/^[^\p{L}\p{N}+]+/u, '');
@@ -1798,6 +1809,7 @@ window.SS = window.SS || {};
         const extra = [temAs ? t('faixa.dicaAs') : '', temRei ? t('faixa.dicaRei') : ''].filter(Boolean).join('; ');
         if (!M.atacantesAptos(jogo).length) texto = t(jogo.turno === 1 ? 'faixa.primeiroNaoAtaca' : 'faixa.ninguemApto');
         else texto = atacantesRestantes().length ? t('faixa.comoAtacar', { extra }) : t('faixa.ataquesDeclarados');
+        if (ui.miraRei != null) texto = t('faixa.miraRei');
         botoes = btnGrande('passar-turno', t(ui.ataques.length ? 'btn.encerrarSemAtacar' : 'btn.encerrarTurno'), 'passar') + botoes;
         if (ui.ataques.length) botoes += btnGrande('confirmar-ataques', t('btn.confirmarAtaques', { n: ui.ataques.length }), 'atacar', 'perigo');
         extras = btn('voltar', t('btn.voltarAcoes'), 'voltar');
@@ -1811,9 +1823,11 @@ window.SS = window.SS || {};
           : t(ui.bloqSel != null ? 'faixa.solteBloqueio' : 'faixa.comoBloquear')
           + (desafiado ? ' ' + t('faixa.desafio', { u: M.nomeUnidade(desafiado.u) }) : '');
         // Defender só aparece depois que você puxou alguma seta de bloqueio; sem nenhuma, a carta é "Não defender".
+        // Sem ninguém que possa bloquear (você só está aqui por causa do par para Refletir), ela vira "Não refletir".
         const temBloqueio = Object.values(ui.bloqueios).some(l => l.length);
         botoes = temBloqueio ? btnGrande('confirmar-bloqueios', t('btn.confirmarBloqueios'), 'escudo', 'defesa')
-          : btnGrande('confirmar-bloqueios', t('btn.naoDefender'), 'naoDefender');
+          : temOQueBloquear() ? btnGrande('confirmar-bloqueios', t('btn.naoDefender'), 'naoDefender')
+          : btnGrande('confirmar-bloqueios', t('btn.naoDefender'), 'naoRefletir');
         const mirandoReflexo = ui.reflexoModo && ui.reflexoModo.etapa === 'alvo'; // a carta está flutuando no meio
         if (!mirandoReflexo && paresLivres().length && jogo.combate.ataques.some(at => !ui.reflexos.some(r => r.n === at.n))) {
           botoes += btnGrande('refletir', t('refl.titulo'), 'reflexo', 'chamativa' + (ui.reflexoModo ? ' ativa' : ''));
@@ -1826,7 +1840,7 @@ window.SS = window.SS || {};
       if (ui.contra) {
         // Seu ataque foi refletido e você tem par: Refletir de volta ou deixar bater.
         texto = ui.reflexoModo ? t('faixa.reflexoPar') : t('faixa.contraReflexo', { n: ui.contra.n });
-        botoes = btnGrande('nao-refletir', t('carta.naoRefletir'), 'naoDefender')
+        botoes = btnGrande('nao-refletir', t('carta.naoRefletir'), 'naoRefletir')
           + btnGrande('refletir', t('refl.titulo'), 'reflexo', 'chamativa' + (ui.reflexoModo ? ' ativa' : ''));
       } else if (ui.esperaContra) texto = t('faixa.contraEsperando', { j: escapar(j.nome) });
     } else if (jogo.fase === 'descarte') {
