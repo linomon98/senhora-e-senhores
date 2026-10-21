@@ -1308,3 +1308,20 @@ html, body { background: #9de03a url('arte/mesa/grama.webp') center / cover; }
 }
 .arte-passar { --ca-cor: #1f5fd6; } .arte-preparar { --ca-cor: #d8322f; } .arte-naodefender { --ca-cor: #1f5fd6; }
 .arte-sumonar { --ca-cor: #8a10b0; } .arte-comprarletra, .arte-comprarnumero, .arte-dado { --ca-cor: #b98310; }
+
+/* Leque das cartas de ação: inclinação para até 7 cartas; com 5 ou mais elas ficam mais apertadas e,
+   ao passar o mouse (ou clicar), a carta sobe e as da direita abrem espaço para ela aparecer inteira. */
+.carta-acao:nth-child(5) { --r: 14deg; animation-delay: .2s; } .carta-acao:nth-child(6) { --r: 17deg; animation-delay: .25s; } .carta-acao:nth-child(7) { --r: 20deg; animation-delay: .3s; }
+.leque-acoes:has(> .carta-acao:nth-child(5)) .carta-acao { margin-left: -54px; }
+.leque-acoes:has(> .carta-acao:nth-child(5)) .carta-acao:first-child { margin-left: 0; }
+.leque-acoes:has(> .carta-acao:nth-child(5)) .carta-acao:nth-child(1) { --r: -8deg; }
+.leque-acoes:has(> .carta-acao:nth-child(5)) .carta-acao:nth-child(2) { --r: -4deg; }
+.leque-acoes:has(> .carta-acao:nth-child(5)) .carta-acao:nth-child(3) { --r: 0deg; }
+.leque-acoes:has(> .carta-acao:nth-child(5)) .carta-acao:nth-child(4) { --r: 4deg; }
+.leque-acoes:has(> .carta-acao:nth-child(5)) .carta-acao:nth-child(5) { --r: 8deg; }
+.leque-acoes:has(> .carta-acao:nth-child(5)) .carta-acao:nth-child(6) { --r: 12deg; }
+.leque-acoes:has(> .carta-acao:nth-child(5)) .carta-acao:nth-child(7) { --r: 16deg; }
+.leque-acoes:has(> .carta-acao:nth-child(5)) .carta-acao:is(:hover, :active, .mirando) ~ .carta-acao { transform: translateX(48px) rotate(var(--r)); }
+.carta-acao.mirando { z-index: 5; transform: translateY(-22px) rotate(0deg) scale(1.08); filter: drop-shadow(0 0 16px rgba(255, 214, 80, 1)) drop-shadow(0 0 5px #fff); }
+/* Ourinhos: a arte é cortada embaixo; um pouco maior para o corte encostar na borda da tela (o topo não muda). */
+.zona-eu .heroi.heroi-livre[data-pal="ourinhos"] { width: 288px; }

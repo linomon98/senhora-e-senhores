@@ -560,8 +560,9 @@ window.SS = window.SS || {};
   function iniciarDadoAdicional() {
     const id = ui.sel[0];
     if (!id) return;
-    const el = id.startsWith('TOKEN#') ? $('[data-token="' + id.slice(6) + '"]') : $('[data-mao="' + id + '"]');
-    ui.miraDado = { ouro: id.startsWith('TOKEN') ? 'TOKEN' : id, de: centroDe(el) || { x: 800, y: 700 } };
+    // A seta sai da própria carta Dado adicional (que sobe e brilha enquanto você mira).
+    const c = centroDe($('.carta-acao[data-acao="dado-adicional"]'));
+    ui.miraDado = { ouro: id.startsWith('TOKEN') ? 'TOKEN' : id, de: c ? { x: c.x, y: c.y - 40 } : { x: 300, y: 760 } };
     ui.mouse = Object.assign({}, ui.miraDado.de);
     render();
   }
@@ -1885,7 +1886,7 @@ window.SS = window.SS || {};
         // Um Ouros sozinho selecionado (carta ou ficha do Ás): também pode virar 1 dado a mais num ataque.
         const ouroSel = ui.sel.length === 1 && M.ourosDisponiveis(jogo, p).includes(ui.sel[0].startsWith('TOKEN') ? 'TOKEN' : ui.sel[0]);
         if (ouroSel && alguemAtaca) {
-          botoes += btnGrande('dado-adicional', t('acao.dadoAdicional'), 'dado');
+          botoes += btnGrande('dado-adicional', t('acao.dadoAdicional'), 'dado', ui.miraDado ? 'mirando' : '');
           if (!botoes.includes('data-acao="tipo:')) texto = t('faixa.escolhaAcao');
         }
         if (ui.miraDado) texto = t('faixa.miraDado');
