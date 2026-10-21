@@ -738,9 +738,11 @@ window.SS = window.SS || {};
         M.aplicarAcao(jogo, { tipo: 'atacar' });
         return render();
       case 'voltar':
-        // Clicou em Atacar sem querer (esqueceu de sumonar): volta para as ações passivas.
-        ui.ataques = []; ui.atacanteSel = null; ui.mira = null; ui.miraRei = null;
-        M.voltarAoPrincipal(jogo);
+        // Volta para as ações passivas. Os ataques já marcados (e os Ouros dados a eles) ficam guardados
+        // e voltam quando você for de novo para o ataque.
+        ui.atacanteSel = null; ui.mira = null; ui.miraRei = null;
+        if (ui.ataques.length) entrarAcoesNoAtaque();
+        else M.voltarAoPrincipal(jogo);
         return render();
       case 'mais-dado': {
         const livres = ourosLivres();
@@ -3603,32 +3605,41 @@ window.SS = window.SS || {};
     const carregar = src => new Promise(ok => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ok(null); i.src = src; });
     // Quadros da cabeça: x a partir da ponta da língua; o topo fica 26 px (da arte do corpo) acima dele.
     const CAB_TOPO = -26.1, CAB_CORTE = 170; // até onde (px da arte do corpo) a cabeça cobre o corpo
-    // Mordida: fechada → abrindo → bem aberta → abrindo → fechada (rápido), a cada 2,6 s.
-    const MORDIDA = [[0, 1500], [1, 1630], [2, 1900], [1, 1960], [0, 2600]];
+    // Mordida: fechada → abrindo → bem aberta → abrindo → fechada, rápida, a cada 2,6 s; junto com o
+    // bote: a parte da frente do corpo avança até BOTE px e volta (tentando alcançar a cauda da frente).
+    const MORDIDA = [[0, 1560], [1, 1610], [2, 1760], [1, 1800], [0, 2600]], BOTE = 22;
+    const boteEm = ms => {
+      const t = ms % 2600;
+      if (t < 1540 || t > 1900) return 0;
+      if (t < 1720) { const x = (t - 1540) / 180; return BOTE * (1 - (1 - x) * (1 - x)); } // dispara
+      return BOTE * (1 - (t - 1720) / 180); // volta
+    };
     Promise.all(['arte/mesa/cobra.webp', 'arte/mesa/cobra-cabeca-0.webp', 'arte/mesa/cobra-cabeca-1.webp', 'arte/mesa/cobra-cabeca-2.webp'].map(carregar)).then(([corpo, ...cabecas]) => {
       if (!corpo) return;
       const k = ALT / corpo.naturalHeight, comp = corpo.naturalWidth * k, volta = comp + VAO;
       const onda = 2 * Math.PI * Math.max(1, Math.round(volta / 320)) / volta; // ondas inteiras na volta: a emenda não aparece
       const ondaY = (X, xl, fase) => AMP * Math.min(1, 0.35 + xl / 260) * Math.sin(onda * X + fase); // a cabeça balança menos
       const topo = altTela / 2 - ALT / 2;
-      const desenhar = (inicio, fase, quadro) => {
+      const desenhar = (inicio, fase, quadro, bote) => {
         if (inicio > LARG || inicio + comp < 0) return;
         const cab = cabecas[quadro] || cabecas[0];
         const xi = cab ? CAB_CORTE * k : 0; // o corpo começa onde a cabeça acaba
+        // No bote, a cabeça e o pescoço avançam inteiros; o avanço some aos poucos ao longo do corpo.
+        const avanco = xl => (xl <= xi ? bote : bote * Math.max(0, 1 - (xl - xi) / 220));
         for (let xl = xi; xl < comp; xl += FATIA) {
-          const X = inicio + xl;
+          const X = inicio + xl - avanco(xl);
           if (X > LARG || X + FATIA < 0) continue;
           g.drawImage(corpo, xl / k, 0, FATIA / k + 1, corpo.naturalHeight, X, topo + ondaY(X, xl, fase), FATIA + 0.6, ALT);
         }
         // A cabeça sobe e desce junto com o corpo no ponto da emenda (assim não aparece degrau).
-        if (cab) g.drawImage(cab, inicio, topo + CAB_TOPO * k + ondaY(inicio + xi, xi, fase), cab.naturalWidth * k, cab.naturalHeight * k);
+        if (cab) g.drawImage(cab, inicio - bote, topo + CAB_TOPO * k + ondaY(inicio + xi - bote, xi, fase), cab.naturalWidth * k, cab.naturalHeight * k);
       };
       const quadroDe = ms => { const t = ms % 2600; for (const [q, ate] of MORDIDA) if (t < ate) return q; return 0; };
       const passo = agora => {
         const seg = agora / 1000, base = -((seg * VEL) % volta);
         g.clearRect(0, 0, LARG, altTela);
         // Cada cobra morde num tempo um pouco diferente (para não abrirem a boca juntas).
-        for (let m = -1, ini = base - volta; ini < LARG; m++, ini += volta) desenhar(ini, seg * 0.7, quadroDe(agora + m * 900));
+        for (let m = -1, ini = base - volta; ini < LARG; m++, ini += volta) desenhar(ini, seg * 0.7, quadroDe(agora + m * 900), MOVIMENTO_REDUZIDO ? 0 : boteEm(agora + m * 900));
         if (!MOVIMENTO_REDUZIDO) requestAnimationFrame(passo);
       };
       requestAnimationFrame(passo);

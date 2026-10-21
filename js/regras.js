@@ -170,8 +170,8 @@ window.SS = window.SS || {};
           <tr><td>♠ Espadas</td><td><b>+1 de dano para sempre</b> num Senhor(a) seu.</td></tr>
         </table>
         <h3>Par de números iguais: Refletir</h3>
-        <p>Dois números iguais (ex.: dois 7 ou dois Ases, de qualquer naipe) servem na <b>defesa</b>: quando o adversário ataca, a carta <b>Refletir</b> aparece pulsando; o par sobe e o resto da mão escurece; clique nas cartas do par para sacrificá-lo e leve a seta roxa até o ataque que quer <b>refletir</b>. O Senhor(a) adversário bate no <b>próprio dono</b> (o dado ainda decide entre cheio e metade, mas no cheio, de 4 a 6, o golpe refletido tem <b>−2</b>). O par vai para o cemitério.</p>
-        <p><b>Refletir o reflexo:</b> se o seu ataque foi refletido e você tem um par de números iguais, pode sacrificá-lo antes do dado para mandar o golpe <b>de volta</b> no Palhaço do adversário (sem bloqueio, com o mesmo −2 no cheio). Só dá para refletir de volta uma vez por ataque.</p>`,
+        <p>Dois números iguais (ex.: dois 7 ou dois Ases, de qualquer naipe) servem na <b>defesa</b>: quando o adversário ataca, a carta <b>Refletir</b> aparece pulsando; o par sobe e o resto da mão escurece; clique nas cartas do par para sacrificá-lo e leve a seta roxa até o ataque que quer <b>refletir</b>. O Senhor(a) adversário bate no <b>próprio dono</b> (o dado ainda decide entre cheio e metade). O valor do par muda o golpe: par de <b>Ás a 4</b> tira <b>2</b> se acertar cheio (dado 4 a 6); par de <b>5 a 7</b> não muda nada; par de <b>8 a 10</b> dá <b>+2</b> no dano final. O par vai para o cemitério.</p>
+        <p><b>Refletir o reflexo:</b> se o seu ataque foi refletido e você tem um par de números iguais, pode sacrificá-lo antes do dado para mandar o golpe <b>de volta</b> no Palhaço do adversário (sem bloqueio; vale o modificador do par que você usou). Só dá para refletir de volta uma vez por ataque.</p>`,
     },
     {
       id: 'palhacos', titulo: 'Palhaços',
@@ -371,8 +371,8 @@ window.SS = window.SS || {};
           <tr><td>♠ Spades</td><td><b>+1 damage for good</b> on one of your Gentlemen.</td></tr>
         </table>
         <h3>Pair of equal numbers: Reflect</h3>
-        <p>Two equal numbers (e.g. two 7s or two Aces, any suits) work on <b>defense</b>: when the opponent attacks, the <b>Reflect</b> card shows up pulsing; the pair rises and the rest of your hand dims; click the pair to sacrifice it and bring the purple arrow to the attack you want to <b>reflect</b>. The enemy Gentleman hits its <b>own owner</b> (the die still decides full or half, but on a full hit, 4 to 6, the reflected blow gets <b>−2</b>). The pair goes to the graveyard.</p>
-        <p><b>Reflect the reflection:</b> if your attack was reflected and you hold a pair of equal numbers, you may sacrifice it before the roll to send the blow <b>back</b> at the opponent's Jester (no blocking, same −2 on a full hit). An attack can only be reflected back once.</p>`,
+        <p>Two equal numbers (e.g. two 7s or two Aces, any suits) work on <b>defense</b>: when the opponent attacks, the <b>Reflect</b> card shows up pulsing; the pair rises and the rest of your hand dims; click the pair to sacrifice it and bring the purple arrow to the attack you want to <b>reflect</b>. The enemy Gentleman hits its <b>own owner</b> (the die still decides full or half). The pair's value changes the blow: a pair of <b>Ace to 4</b> takes off <b>2</b> on a full hit (die 4 to 6); a pair of <b>5 to 7</b> changes nothing; a pair of <b>8 to 10</b> adds <b>+2</b> to the final damage. The pair goes to the graveyard.</p>
+        <p><b>Reflect the reflection:</b> if your attack was reflected and you hold a pair of equal numbers, you may sacrifice it before the roll to send the blow <b>back</b> at the opponent's Jester (no blocking; the modifier of the pair you used applies). An attack can only be reflected back once.</p>`,
     },
     {
       id: 'palhacos', titulo: 'Jesters',
