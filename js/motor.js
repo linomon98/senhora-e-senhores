@@ -662,30 +662,37 @@ window.SS = window.SS || {};
           const c = op.mao.splice(Math.floor(rng() * op.mao.length), 1)[0];
           j.mao.push(c);
           registrar(e, t('log.roubo', { j: j.nome, o: op.nome, c: nomeCarta(c), n: CUSTO_COBRANCA }));
+          evento(e, { tipo: 'poder', poder: 'roubo', p });
           e.poderUsado = true;
           break;
         }
         const alvo = localizar(e, a.alvo);
         if (!alvo || alvo.u.tipo !== 'senhor') throw new Error('Alvo inválido');
+        // Para a animação: o lugar do alvo no campo (a carta pode morrer com o golpe).
+        const ondeAlvo = { p: alvo.p, i: alvo.i };
         if (pal.poder === 'desafio') {
           if (alvo.p === p || !alvo.u.ativo) throw new Error('Desafie um Senhor(a) inimigo ativo');
           e.desafio = alvo.u.uid;
           registrar(e, t('log.desafio', { j: j.nome, u: nomeUnidade(alvo.u) }));
+          evento(e, { tipo: 'poder', poder: 'desafio', p, alvo: ondeAlvo });
         } else if (pal.poder === 'transfusao' && alvo.p !== p) {
           // Sangria: paga PV e dá 1 hit num Senhor(a) inimigo.
           if (j.pv <= CUSTO_SANGRIA) throw new Error('PV insuficiente');
           j.pv -= CUSTO_SANGRIA;
           registrar(e, t('log.sangria', { j: j.nome, n: CUSTO_SANGRIA, u: nomeUnidade(alvo.u) }));
+          evento(e, { tipo: 'poder', poder: 'sangria', p, alvo: ondeAlvo });
           aplicarHit(e, alvo.p, alvo.i);
         } else if (pal.poder === 'transfusao') {
           if (alvo.u.hits <= 0 || alvo.u.berserk || j.pv <= CUSTO_TRANSFUSAO) throw new Error('Transfusão inválida');
           j.pv -= CUSTO_TRANSFUSAO;
           alvo.u.hits--;
           registrar(e, t('log.transfusao', { j: j.nome, n: CUSTO_TRANSFUSAO, u: nomeUnidade(alvo.u) }));
+          evento(e, { tipo: 'poder', poder: 'transfusao', p, alvo: ondeAlvo });
         } else if (pal.poder === 'vigilia') {
           if (alvo.p !== p) throw new Error('Escolha um Senhor(a) seu');
           alvo.u.vigilia = true;
           registrar(e, t('log.vigilia', { j: j.nome, u: nomeUnidade(alvo.u) }));
+          evento(e, { tipo: 'poder', poder: 'vigilia', p, alvo: ondeAlvo });
         }
         e.poderUsado = true;
         break;

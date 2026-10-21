@@ -1338,20 +1338,48 @@ html, body { background: #9de03a url('arte/mesa/grama.webp') center / cover; }
 
 /* Faixas dos lados da mesa (tela mais larga que 16:9): degradê na cor dos naipes, da borda da tela
    (cor viva) até a mesa (escurecido), com uma sombra suave na borda da mesa no lugar do recorte. */
-html.com-lados {
+html {
   --lado-esq: #3aa335; --lado-dir: #3aa335;
   background:
     linear-gradient(90deg, var(--lado-esq) 0, color-mix(in srgb, var(--lado-esq) 45%, #0d1f08) var(--faixa-lateral, 0px)) left / 50.1% 100% no-repeat,
     linear-gradient(270deg, var(--lado-dir) 0, color-mix(in srgb, var(--lado-dir) 45%, #0d1f08) var(--faixa-lateral, 0px)) right / 50.1% 100% no-repeat,
     #14300c;
 }
-html.com-lados body { background: transparent; }
-html.com-lados #app { box-shadow: 0 0 46px 6px rgba(0, 0, 0, .5); }
+html body { background: transparent; }
+html #app { box-shadow: 0 0 46px 6px rgba(0, 0, 0, .5); }
 
 /* Cobra dividindo o campo (substitui a linha branca) */
 .linha-meio { display: none; }
-#cobra { position: absolute; left: 0; top: 50%; width: 1600px; height: 78px; transform: translateY(-50%); z-index: 1; pointer-events: none; filter: drop-shadow(0 7px 5px rgba(5, 18, 2, .4)); }
+#cobra { position: absolute; left: 0; top: 50%; width: 1600px; height: 92px; transform: translateY(-50%); z-index: 1; pointer-events: none; filter: drop-shadow(0 7px 5px rgba(5, 18, 2, .4)); }
 
 /* Baralhos 30% maiores */
 .pilha .carta { width: 96px; height: 135px; }
 .zona-op .pilha .carta { width: 85px; height: 117px; }
+
+/* Opções: caixa do meio escondida (padrão) */
+html.sem-caixa-meio #faixa .caixa-faixa { display: none; }
+
+/* Paumol: a arte termina reta embaixo; um pouco mais para baixo para o corte nunca aparecer (nem na respiração). */
+.zona-eu .heroi-livre[data-pal="paumol"] .heroi-png { margin-top: 16px; }
+/* Seus baralhos um pouco mais para cima, com respiro para o nome (Letras / Números) embaixo. */
+.zona-eu .pilhas { transform: translateY(-26px); }
+.zona-eu .pilha label { margin-bottom: 4px; }
+
+/* Animações dos poderes dos Palhaços */
+.naipe-subindo { position: absolute; z-index: 60; width: 30px; height: auto; pointer-events: none; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .45)); }
+.corte-sangue {
+  position: absolute; z-index: 61; width: 190px; height: 10px; pointer-events: none; border-radius: 50%;
+  background: linear-gradient(90deg, transparent, #fff 18%, #ff3b3b 45%, #b0001a 70%, transparent);
+  box-shadow: 0 0 12px 3px rgba(220, 20, 40, .8); transform-origin: 0 50%;
+}
+.gota-sangue {
+  position: absolute; z-index: 60; width: 9px; height: 12px; pointer-events: none;
+  background: radial-gradient(circle at 35% 35%, #ff6b6b, #a00012 60%, #5c0009); border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+}
+.selo-poder {
+  position: absolute; top: -12px; right: -10px; z-index: 6; width: 30px; height: auto; pointer-events: none;
+  filter: drop-shadow(0 0 2px #fff) drop-shadow(0 2px 4px rgba(0, 0, 0, .5)); animation: selo-entra .45s cubic-bezier(.3, 1.6, .5, 1) backwards, selo-balanca 1.8s ease-in-out .45s infinite alternate;
+}
+.selo-vigilia { right: auto; left: -10px; }
+@keyframes selo-entra { from { transform: scale(0) rotate(-40deg); } }
+@keyframes selo-balanca { from { transform: rotate(-10deg); } to { transform: rotate(10deg); } }

@@ -1063,6 +1063,78 @@ window.SS = window.SS || {};
     };
   }
 
+  // Animação de cada poder de Palhaço, no lugar do alvo (o lugar fica mesmo se a carta morrer).
+  //   Transfusão (cura): corações subindo. Sangria (dano): corte com gotas de sangue.
+  //   Desafio: espadas azuis + o seloinho de espada que fica preso na carta desafiada (ver htmlUnidade).
+  //   Vigília: paus verdes subindo + selo de paus enquanto valer. Cobrança: moedas de Ouros voando.
+  function animarPoder(ev) {
+    if (MOVIMENTO_REDUZIDO) return;
+    const slot = ev.alvo ? $('[data-slot="' + ev.alvo.p + ':' + ev.alvo.i + '"]') : null;
+    const c = slot ? centroDe(slot) : null;
+    if (ev.poder === 'roubo') {
+      for (let k = 0; k < 4; k++) voarIcone(elRetrato(1 - ev.p), () => elRetrato(ev.p), '<img src="arte/naipes/ouros.webp" alt="">', 'token-ouro', 120 + k * 150);
+      return;
+    }
+    if (!c) return;
+    if (ev.poder === 'transfusao') {
+      naipesSubindo(c, 'copas', 8);
+      ondaEm(c, '235, 60, 75', 2.1);
+    } else if (ev.poder === 'sangria') corteDeSangue(c);
+    else if (ev.poder === 'desafio') {
+      naipesSubindo(c, 'espadas', 4);
+      ondaEm(c, '60, 120, 255', 2.4);
+    } else if (ev.poder === 'vigilia') {
+      naipesSubindo(c, 'paus', 6);
+      ondaEm(c, '60, 190, 80', 2.4);
+    }
+  }
+
+  function naipesSubindo(c, naipe, n) {
+    for (let k = 0; k < n; k++) {
+      const el = document.createElement('img');
+      el.className = 'naipe-subindo';
+      el.src = 'arte/naipes/' + naipe + '.webp';
+      el.alt = '';
+      const dx = (Math.random() * 2 - 1) * 46, sobe = 90 + Math.random() * 70, tam = 0.6 + Math.random() * 0.6, giro = (Math.random() * 2 - 1) * 25;
+      Object.assign(el.style, { left: (c.x + dx) + 'px', top: (c.y + 20) + 'px' });
+      $('#app').appendChild(el);
+      el.animate([
+        { transform: 'translate(-50%, -50%) scale(.2)', opacity: 0 },
+        { transform: `translate(-50%, calc(-50% - ${(sobe * 0.25).toFixed(0)}px)) scale(${tam.toFixed(2)}) rotate(${(giro / 2).toFixed(0)}deg)`, opacity: 1, offset: 0.25 },
+        { transform: `translate(calc(-50% + ${(dx * 0.3).toFixed(0)}px), calc(-50% - ${sobe.toFixed(0)}px)) scale(${(tam * 0.8).toFixed(2)}) rotate(${giro.toFixed(0)}deg)`, opacity: 0 },
+      ], { duration: 1100 + Math.random() * 400, delay: k * 85, easing: 'cubic-bezier(.2, .7, .4, 1)', fill: 'backwards' }).onfinish = () => el.remove();
+    }
+  }
+
+  function corteDeSangue(c) {
+    const corte = document.createElement('div');
+    corte.className = 'corte-sangue';
+    Object.assign(corte.style, { left: c.x + 'px', top: c.y + 'px' });
+    $('#app').appendChild(corte);
+    corte.animate([
+      { transform: 'translate(-50%, -50%) rotate(-38deg) scaleX(0)', opacity: 1 },
+      { transform: 'translate(-50%, -50%) rotate(-38deg) scaleX(1)', opacity: 1, offset: 0.22 },
+      { transform: 'translate(-50%, -50%) rotate(-38deg) scaleX(1.05) scaleY(.4)', opacity: 0 },
+    ], { duration: 650, easing: 'ease-out' }).onfinish = () => corte.remove();
+    setTimeout(() => {
+      tremor(5);
+      particulas(c, 10, false, '190, 15, 30');
+      for (let k = 0; k < 14; k++) {
+        const gota = document.createElement('div');
+        gota.className = 'gota-sangue';
+        const t = Math.random() * 2 - 1, x = c.x + t * 52, y = c.y - t * 40; // ao longo do corte
+        Object.assign(gota.style, { left: x + 'px', top: y + 'px' });
+        $('#app').appendChild(gota);
+        const dx = (Math.random() * 2 - 1) * 40, sobe = 10 + Math.random() * 30, cai = 70 + Math.random() * 60, s = 0.6 + Math.random() * 0.7;
+        gota.animate([
+          { transform: `translate(-50%, -50%) scale(${s.toFixed(2)})`, opacity: 1 },
+          { transform: `translate(calc(-50% + ${(dx * 0.5).toFixed(0)}px), calc(-50% - ${sobe.toFixed(0)}px)) scale(${s.toFixed(2)})`, opacity: 1, offset: 0.3 },
+          { transform: `translate(calc(-50% + ${dx.toFixed(0)}px), calc(-50% + ${cai.toFixed(0)}px)) scale(${(s * 0.7).toFixed(2)}, ${(s * 1.2).toFixed(2)})`, opacity: 0 },
+        ], { duration: 800 + Math.random() * 400, delay: Math.random() * 120, easing: 'cubic-bezier(.4, 0, .8, .6)', fill: 'backwards' }).onfinish = () => gota.remove();
+      }
+    }, 130);
+  }
+
   function ondaEm(c, cor, escalaFinal, atraso) {
     const onda = document.createElement('div');
     onda.className = 'onda-poder';
@@ -1154,6 +1226,7 @@ window.SS = window.SS || {};
         if (ui.magiaFeita && ev.cartas.every(c => ui.magiaFeita.has(c.id))) return; // já animado na hora do clique
         return animarParDestruido(ev.p, ev.cartas);
       }
+      if (ev.tipo === 'poder') return animarPoder(ev);
       const de = ev.de != null ? elUnidade(ev.de) : null;
       if (!de) return;
       if (ev.tipo === 'cura') voarIcone(de, pvDe(ev.p), `<span>+${ev.n}</span>`, 'bola-cura', 250 + k * 180);
@@ -1744,6 +1817,11 @@ window.SS = window.SS || {};
     return { cls: agora ? 'virando' : 'desvirando', atraso: -passou };
   }
 
+  // Seloinhos presos na carta enquanto o poder vale: espada azul (desafiado pelo Lançalotte) e
+  // paus verde (Vigília do Paumol).
+  const selosPoder = u => (jogo.desafio === u.uid ? '<img class="selo-poder selo-desafio" src="arte/naipes/espadas.webp" alt="" draggable="false">' : '')
+    + (u.vigilia ? '<img class="selo-poder selo-vigilia" src="arte/naipes/paus.webp" alt="" draggable="false">' : '');
+
   function htmlUnidade(p, i, u) {
     const foco = emFoco(u) ? ' foco' : '';
     if (u.tipo === 'as') {
@@ -1768,7 +1846,7 @@ window.SS = window.SS || {};
       <div class="pilha-senhor${estiloGiro(u, post)}"><div class="carta numero">${C.frente(u.numero)}</div><div class="carta figura">${C.frente(u.figura)}</div></div>
       <div class="selo-vida">${vida}</div>
       <div class="selo-atk">⚔ ${atk}${atk > base ? `<small>+${atk - base}</small>` : ''}</div>
-      ${nai ? `<div class="selo-naipado">${SIMB[nai]}</div>` : ''}${tagsUnidade(u)}</div>`;
+      ${nai ? `<div class="selo-naipado">${SIMB[nai]}</div>` : ''}${tagsUnidade(u)}${selosPoder(u)}</div>`;
   }
 
   function nomeAlvo(at) {
@@ -2143,11 +2221,25 @@ window.SS = window.SS || {};
   }
 
   // Sem botão Continuar: o pop-up mostra a ação e some sozinho (clique ou Enter adiantam).
-  const botaoContinuar = () => '';
+  // Opções do jogador (menu Opções), guardadas no navegador.
+  //   popupContinuar: os pop-ups de combate esperam o botão Continuar (padrão: somem sozinhos).
+  //   caixaMeio: mostra a caixa de instruções no meio da mesa (padrão: escondida).
+  const OPCOES_PADRAO = { popupContinuar: false, caixaMeio: false };
+  const opcoes = (() => {
+    try { return Object.assign({}, OPCOES_PADRAO, JSON.parse(localStorage.getItem('ss-opcoes') || '{}')); } catch (e) { return Object.assign({}, OPCOES_PADRAO); }
+  })();
+  function aplicarOpcoes() {
+    document.documentElement.classList.toggle('sem-caixa-meio', !opcoes.caixaMeio);
+    try { localStorage.setItem('ss-opcoes', JSON.stringify(opcoes)); } catch (e) { /* sem armazenamento: vale só nesta visita */ }
+  }
+  const botaoContinuar = () => (opcoes.popupContinuar
+    ? `<div class="anuncio-acoes"><button class="btn principal" data-continuar>${t('btn.continuar')}</button><span>${t('op.ouEnter')}</span></div>` : '');
 
   // Espera alguns segundos (o pop-up some com um fade no fim); clique ou Enter adiantam.
   function esperarContinuar(msAuto) {
     const ms = msAuto || 2800;
+    // Com a opção "botão Continuar", o pop-up só sai quando o jogador clica (ou aperta Enter).
+    if (opcoes.popupContinuar) return new Promise(r => { ui.aoContinuar = () => { ui.aoContinuar = null; r(); }; });
     return new Promise(r => {
       const fade = setTimeout(() => {
         for (const el of [$('#combate'), $('#anuncio')]) if (el && !el.hidden) el.classList.add('saindo');
@@ -3219,6 +3311,9 @@ window.SS = window.SS || {};
 
   function telaInicio() {
     const convite = SS.Rede.codigoDoLink();
+    // Fora da partida, as laterais da tela voltam ao verde.
+    document.documentElement.style.removeProperty('--lado-esq');
+    document.documentElement.style.removeProperty('--lado-dir');
     modal(`<div class="menu-tema inicio">
       <div class="opcao idioma">${grupoMenu('idioma', [['en', 'English'], ['pt', 'Português']], SS.Idioma.atual())}</div>
       <div class="leque-inicio">${P.LISTA.map((pal, k) => `<img src="${pal.carta}" alt="" style="--i:${k}" draggable="false">`).join('')}</div>
@@ -3236,6 +3331,7 @@ window.SS = window.SS || {};
         <button class="btn" data-m="decks">🂠 ${t('menu.decks')}</button>
         <button class="btn" data-m="regras">📖 ${t('menu.regras')}</button>
         <button class="btn" data-m="simular">${t('menu.simular')}</button>
+        <button class="btn" data-m="opcoes">⚙ ${t('menu.opcoes')}</button>
       </div></div>`,
     ev => {
       const g = ev.target.closest('[data-grupo="idioma"] [data-v]');
@@ -3258,7 +3354,29 @@ window.SS = window.SS || {};
         fecharModal();
         SS.Regras.abrir(telaInicio);
       } else if (m === 'simular') simulacao(telaInicio);
+      else if (m === 'opcoes') telaOpcoes(telaInicio);
     });
+  }
+
+  function telaOpcoes(voltar) {
+    const desenhar = () => modal(`<div class="menu-tema opcoes-jogo">
+      <h2 class="titulo-etapa">${t('op.titulo')}</h2>
+      <div class="opcao"><label>${t('op.popup')}</label>${grupoMenu('popupContinuar', [['nao', t('op.popupDireto')], ['sim', t('op.popupBotao')]], opcoes.popupContinuar ? 'sim' : 'nao')}
+        <p class="nota">${t('op.popupNota')}</p></div>
+      <div class="opcao"><label>${t('op.caixa')}</label>${grupoMenu('caixaMeio', [['nao', t('op.caixaOculta')], ['sim', t('op.caixaVisivel')]], opcoes.caixaMeio ? 'sim' : 'nao')}
+        <p class="nota">${t('op.caixaNota')}</p></div>
+      <div class="acoes-menu"><button class="btn principal" data-m="voltar">${t('btn.voltar')}</button></div></div>`,
+    ev => {
+      const g = ev.target.closest('[data-grupo] [data-v]');
+      if (g) {
+        opcoes[g.closest('[data-grupo]').dataset.grupo] = g.dataset.v === 'sim';
+        aplicarOpcoes();
+        if (jogo) render();
+        return desenhar();
+      }
+      if (ev.target.closest('[data-m="voltar"]')) voltar();
+    });
+    desenhar();
   }
 
   // modo: 'bot' (segue para o VS), 'online' (criar/entrar numa sala) ou 'convite' (entrar pelo link recebido).
@@ -3469,43 +3587,52 @@ window.SS = window.SS || {};
   // Graminhas soltas pela mesa, balançando num vento leve (cada uma no seu ritmo).
   // Cobra no meio do campo (no lugar da linha branca): rasteja da direita para a esquerda sem parar.
   // O corpo é cortado em fatias finas que sobem e descem numa onda parada no chão, então cada pedaço
-  // passa pelas mesmas curvas que a cabeça fez (o rastejar de cobra). A volta tem a largura da mesa:
-  // conforme a cauda some pela esquerda, a cabeça já está voltando pela direita.
+  // passa pelas mesmas curvas que a cabeça fez (o rastejar de cobra). Uma cobra vem logo atrás da outra,
+  // com 40 px entre a cauda e a cabeça: de vez em quando a cabeça abre a boca e tenta morder a cauda da
+  // frente (os quadros da cabeça são recortes da mesma arte, na mesma escala do corpo).
   function animarCobra() {
     const tela = $('#cobra');
     if (!tela || tela.dataset.pronta) return;
     tela.dataset.pronta = '1';
-    const LARG = 1600, ALT = 46, AMP = 11, ONDAS = 5, VEL = 55, FATIA = 4; // px da mesa; VEL em px/s
-    const k = 2 * Math.PI * ONDAS / LARG; // ondas inteiras na volta: a emenda não aparece
-    const altTela = ALT + AMP * 2 + 10, dpr = 2;
+    const LARG = 1600, ALT = 46, AMP = 11, VEL = 95, FATIA = 4, VAO = 40; // px da mesa; VEL em px/s
+    const altTela = ALT + AMP * 2 + 24, dpr = 2;
     tela.width = LARG * dpr; tela.height = altTela * dpr;
     const g = tela.getContext('2d');
     g.scale(dpr, dpr);
     g.imageSmoothingQuality = 'high';
-    const img = new Image();
-    let comp = 0;
-    const desenhar = (inicio, fase) => {
-      const esc = img.naturalWidth / comp;
-      for (let xl = 0; xl < comp; xl += FATIA) {
-        const X = inicio + xl;
-        if (X > LARG || X + FATIA < 0) continue;
-        const amp = AMP * Math.min(1, 0.35 + xl / 260); // a cabeça balança menos que o corpo
-        const y = altTela / 2 - ALT / 2 + amp * Math.sin(k * X + fase);
-        g.drawImage(img, xl * esc, 0, FATIA * esc + 1, img.naturalHeight, X, y, FATIA + 0.6, ALT);
-      }
-    };
-    const quadro = agora => {
-      const s = agora / 1000, x0 = LARG - ((s * VEL) % LARG);
-      g.clearRect(0, 0, LARG, altTela);
-      desenhar(x0, s * 0.7);
-      desenhar(x0 - LARG, s * 0.7);
-      if (!MOVIMENTO_REDUZIDO) requestAnimationFrame(quadro);
-    };
-    img.onload = () => {
-      comp = ALT * img.naturalWidth / img.naturalHeight;
-      requestAnimationFrame(quadro);
-    };
-    img.src = 'arte/mesa/cobra.webp';
+    const carregar = src => new Promise(ok => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ok(null); i.src = src; });
+    // Quadros da cabeça: x a partir da ponta da língua; o topo fica 26 px (da arte do corpo) acima dele.
+    const CAB_TOPO = -26.1, CAB_CORTE = 170; // até onde (px da arte do corpo) a cabeça cobre o corpo
+    // Mordida: fechada → abrindo → bem aberta → abrindo → fechada (rápido), a cada 2,6 s.
+    const MORDIDA = [[0, 1500], [1, 1630], [2, 1900], [1, 1960], [0, 2600]];
+    Promise.all(['arte/mesa/cobra.webp', 'arte/mesa/cobra-cabeca-0.webp', 'arte/mesa/cobra-cabeca-1.webp', 'arte/mesa/cobra-cabeca-2.webp'].map(carregar)).then(([corpo, ...cabecas]) => {
+      if (!corpo) return;
+      const k = ALT / corpo.naturalHeight, comp = corpo.naturalWidth * k, volta = comp + VAO;
+      const onda = 2 * Math.PI * Math.max(1, Math.round(volta / 320)) / volta; // ondas inteiras na volta: a emenda não aparece
+      const ondaY = (X, xl, fase) => AMP * Math.min(1, 0.35 + xl / 260) * Math.sin(onda * X + fase); // a cabeça balança menos
+      const topo = altTela / 2 - ALT / 2;
+      const desenhar = (inicio, fase, quadro) => {
+        if (inicio > LARG || inicio + comp < 0) return;
+        const cab = cabecas[quadro] || cabecas[0];
+        const xi = cab ? CAB_CORTE * k : 0; // o corpo começa onde a cabeça acaba
+        for (let xl = xi; xl < comp; xl += FATIA) {
+          const X = inicio + xl;
+          if (X > LARG || X + FATIA < 0) continue;
+          g.drawImage(corpo, xl / k, 0, FATIA / k + 1, corpo.naturalHeight, X, topo + ondaY(X, xl, fase), FATIA + 0.6, ALT);
+        }
+        // A cabeça sobe e desce junto com o corpo no ponto da emenda (assim não aparece degrau).
+        if (cab) g.drawImage(cab, inicio, topo + CAB_TOPO * k + ondaY(inicio + xi, xi, fase), cab.naturalWidth * k, cab.naturalHeight * k);
+      };
+      const quadroDe = ms => { const t = ms % 2600; for (const [q, ate] of MORDIDA) if (t < ate) return q; return 0; };
+      const passo = agora => {
+        const seg = agora / 1000, base = -((seg * VEL) % volta);
+        g.clearRect(0, 0, LARG, altTela);
+        // Cada cobra morde num tempo um pouco diferente (para não abrirem a boca juntas).
+        for (let m = -1, ini = base - volta; ini < LARG; m++, ini += volta) desenhar(ini, seg * 0.7, quadroDe(agora + m * 900));
+        if (!MOVIMENTO_REDUZIDO) requestAnimationFrame(passo);
+      };
+      requestAnimationFrame(passo);
+    });
   }
 
   function plantarGraminhas() {
@@ -3536,6 +3663,7 @@ window.SS = window.SS || {};
   C.aplicarTexturas();
   plantarGraminhas();
   animarCobra();
+  aplicarOpcoes();
   ajustarEscala();
   addEventListener('resize', ajustarEscala);
   document.addEventListener('click', aoClicar);
