@@ -1347,3 +1347,11 @@ html.com-lados {
 }
 html.com-lados body { background: transparent; }
 html.com-lados #app { box-shadow: 0 0 46px 6px rgba(0, 0, 0, .5); }
+
+/* Cobra dividindo o campo (substitui a linha branca) */
+.linha-meio { display: none; }
+#cobra { position: absolute; left: 0; top: 50%; width: 1600px; height: 78px; transform: translateY(-50%); z-index: 1; pointer-events: none; filter: drop-shadow(0 7px 5px rgba(5, 18, 2, .4)); }
+
+/* Baralhos 30% maiores */
+.pilha .carta { width: 96px; height: 135px; }
+.zona-op .pilha .carta { width: 85px; height: 117px; }

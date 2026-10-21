@@ -3467,6 +3467,47 @@ window.SS = window.SS || {};
   // ---------- Início ----------
 
   // Graminhas soltas pela mesa, balançando num vento leve (cada uma no seu ritmo).
+  // Cobra no meio do campo (no lugar da linha branca): rasteja da direita para a esquerda sem parar.
+  // O corpo é cortado em fatias finas que sobem e descem numa onda parada no chão, então cada pedaço
+  // passa pelas mesmas curvas que a cabeça fez (o rastejar de cobra). A volta tem a largura da mesa:
+  // conforme a cauda some pela esquerda, a cabeça já está voltando pela direita.
+  function animarCobra() {
+    const tela = $('#cobra');
+    if (!tela || tela.dataset.pronta) return;
+    tela.dataset.pronta = '1';
+    const LARG = 1600, ALT = 46, AMP = 11, ONDAS = 5, VEL = 55, FATIA = 4; // px da mesa; VEL em px/s
+    const k = 2 * Math.PI * ONDAS / LARG; // ondas inteiras na volta: a emenda não aparece
+    const altTela = ALT + AMP * 2 + 10, dpr = 2;
+    tela.width = LARG * dpr; tela.height = altTela * dpr;
+    const g = tela.getContext('2d');
+    g.scale(dpr, dpr);
+    g.imageSmoothingQuality = 'high';
+    const img = new Image();
+    let comp = 0;
+    const desenhar = (inicio, fase) => {
+      const esc = img.naturalWidth / comp;
+      for (let xl = 0; xl < comp; xl += FATIA) {
+        const X = inicio + xl;
+        if (X > LARG || X + FATIA < 0) continue;
+        const amp = AMP * Math.min(1, 0.35 + xl / 260); // a cabeça balança menos que o corpo
+        const y = altTela / 2 - ALT / 2 + amp * Math.sin(k * X + fase);
+        g.drawImage(img, xl * esc, 0, FATIA * esc + 1, img.naturalHeight, X, y, FATIA + 0.6, ALT);
+      }
+    };
+    const quadro = agora => {
+      const s = agora / 1000, x0 = LARG - ((s * VEL) % LARG);
+      g.clearRect(0, 0, LARG, altTela);
+      desenhar(x0, s * 0.7);
+      desenhar(x0 - LARG, s * 0.7);
+      if (!MOVIMENTO_REDUZIDO) requestAnimationFrame(quadro);
+    };
+    img.onload = () => {
+      comp = ALT * img.naturalWidth / img.naturalHeight;
+      requestAnimationFrame(quadro);
+    };
+    img.src = 'arte/mesa/cobra.webp';
+  }
+
   function plantarGraminhas() {
     const campo = $('#graminhas');
     if (!campo || campo.childElementCount) return;
@@ -3494,6 +3535,7 @@ window.SS = window.SS || {};
   SS.Idioma.aplicarEstaticos();
   C.aplicarTexturas();
   plantarGraminhas();
+  animarCobra();
   ajustarEscala();
   addEventListener('resize', ajustarEscala);
   document.addEventListener('click', aoClicar);
