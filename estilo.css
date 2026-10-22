@@ -63,7 +63,7 @@ html, body {
 /* ---------- Cartas ---------- */
 .carta {
   position: relative; flex: none; width: var(--cw); height: var(--ch);
-  border-radius: 7px; background: #fdfbf3; box-shadow: 0 2px 5px rgba(0, 0, 0, .45);
+  border-radius: 7px; background: #fdfbf3; box-shadow: 0 7px 11px rgba(5, 18, 2, .42), 0 1px 3px rgba(0, 0, 0, .5);
 }
 .carta .svg-carta { display: block; width: 100%; height: 100%; }
 .carta.dorso { background-size: 100% 100%; }
@@ -1327,7 +1327,7 @@ html, body { background: #9de03a url('arte/mesa/grama.webp') center / cover; }
 .zona-eu .heroi.heroi-livre[data-pal="ourinhos"] { width: 288px; }
 
 /* Palcos atrás dos Palhaços (por cima da grama, por baixo de todo o resto) */
-.palco { position: absolute; left: 50%; z-index: 0; pointer-events: none; user-select: none; filter: drop-shadow(0 10px 14px rgba(20, 50, 5, .35)); }
+.palco { position: absolute; left: 50%; z-index: 0; pointer-events: none; user-select: none; filter: drop-shadow(0 14px 14px rgba(5, 18, 2, .5)); }
 .palco[hidden] { display: none; }
 .palco-op { top: -8px; width: 470px; transform: translateX(-50%); }
 .palco-eu { bottom: -26px; width: 680px; transform: translateX(-50%); }
@@ -1360,7 +1360,7 @@ html #app { box-shadow: 0 0 46px 6px rgba(0, 0, 0, .5); }
 html.sem-caixa-meio #faixa .caixa-faixa { display: none; }
 
 /* Paumol: a arte termina reta embaixo; um pouco mais para baixo para o corte nunca aparecer (nem na respiração). */
-.zona-eu .heroi-livre[data-pal="paumol"] .heroi-png { margin-top: 16px; }
+.zona-eu .heroi-livre[data-pal="paumol"] .heroi-png { position: relative; top: 16px; } /* (margem desceria o Palhaço inteiro, com o PV) */
 /* Seus baralhos um pouco mais para cima, com respiro para o nome (Letras / Números) embaixo. */
 .zona-eu .pilhas { transform: translateY(-26px); }
 .zona-eu .pilha label { margin-bottom: 4px; }
@@ -1388,7 +1388,7 @@ html.sem-caixa-meio #faixa .caixa-faixa { display: none; }
 .decoracoes { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
 .deco { position: absolute; }
 /* a sombra fica só na imagem parada (no container ela seria recalculada a cada quadro das partes animadas) */
-.deco-base { filter: drop-shadow(0 6px 6px rgba(5, 18, 2, .3)); }
+.deco-base { filter: drop-shadow(0 12px 10px rgba(5, 18, 2, .48)); }
 .deco-parte { will-change: transform; }
 .deco-base, .deco-parte { position: absolute; display: block; user-select: none; pointer-events: none; }
 .deco-base { inset: 0; width: 100%; height: 100%; }
@@ -1475,3 +1475,12 @@ html.sem-caixa-meio #faixa .caixa-faixa { display: none; }
 
 /* Desempenho: o que fica animando o tempo todo ganha camada própria na placa de vídeo */
 .heroi-png, #cobra, .deco-barata { will-change: transform; }
+
+/* Palhaços com contorno preto (2 px em volta da arte) + a sombra no chão, para destacar do cenário */
+.heroi-png { --contorno: drop-shadow(2px 0 0 #0b0b0b) drop-shadow(-2px 0 0 #0b0b0b) drop-shadow(0 2px 0 #0b0b0b) drop-shadow(0 -2px 0 #0b0b0b); }
+.heroi-png { filter: var(--contorno) drop-shadow(0 14px 14px rgba(5, 18, 2, .5)); }
+.heroi.heroi-livre.da-vez .heroi-png { filter: var(--contorno) drop-shadow(0 0 10px rgba(255, 240, 160, .95)) drop-shadow(0 14px 14px rgba(5, 18, 2, .5)); }
+.heroi.heroi-livre.clicavel .heroi-png, .heroi.heroi-livre.destino-alvo .heroi-png { filter: var(--contorno) drop-shadow(0 0 12px rgba(255, 60, 60, 1)) drop-shadow(0 0 4px rgba(255, 255, 255, .9)); }
+/* PV do seu Palhaço um pouco mais alto (não encosta na borda de baixo) */
+.zona-eu .heroi-livre .heroi-pv { top: 104px; }
+.zona-eu .heroi-livre .heroi-ferida { top: 112px; }
