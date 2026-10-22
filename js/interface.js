@@ -916,6 +916,13 @@ window.SS = window.SS || {};
 
   function clicarEspaco(p, i) {
     const u = jogo.jogadores[p].campo[i], alvos = alvosClicaveis();
+    // Clicar na figura que flutua no campo: ela volta para a mão.
+    if (!ui.pend && !u && ui.destino === i && p === jogo.vez && ui.sel.length === 1) {
+      ui.sel = []; ui.destino = null; ui.vooDe = null;
+      Som.tocar('clique');
+      if (ui.voltarAoAtaque) return voltarAoAtaque();
+      return render();
+    }
     if (!ui.pend) return;
     const passo = passoAtual();
     if (passo === 'slot' && alvos.has(`slot:${p}:${i}`)) return escolherParametro(i);
@@ -1929,7 +1936,9 @@ window.SS = window.SS || {};
     const escolhendo = defendo && rm && rm.etapa === 'par';
     const candidatas = new Set(escolhendo ? paresLivres().flat() : []);
     const classePar = c => (usadas.has(c.id) ? ' par-usado' : candidatas.has(c.id) ? (rm.par.includes(c.id) ? ' par-escolhido' : ' par-candidato') : escolhendo ? ' par-apagada' : '');
-    $('#mao-' + p).innerHTML = j.mao.map(c => (visivel
+    // Figura (ou Ás) solta no campo esperando o número: sai da mão e fica só flutuando no lugar escolhido.
+    const noCampo = ui.destino != null && jogo.vez === p && ui.sel.length === 1 ? ui.sel[0] : null;
+    $('#mao-' + p).innerHTML = j.mao.filter(c => c.id !== noCampo).map(c => (visivel
       ? `<div class="carta${ui.sel.includes(c.id) ? ' selecionada' : ''}${podeJogar ? ' jogavel' : ''}${estilo(c)}${classePar(c)}"${podeJogar ? ` data-mao="${c.id}"` : ` data-carta="${c.id}"`}${candidatas.has(c.id) ? ` data-par="${c.id}"` : ''} data-voo="${c.id}"${oculta(c.id)}>${C.frente(c)}</div>`
       : `<div class="carta dorso ${cor}" data-voo="${c.id}"${oculta(c.id)}></div>`)).join('');
     ajustarSobreposicao($('#mao-' + p));

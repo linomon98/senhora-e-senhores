@@ -684,7 +684,7 @@ html, body {
 .zona-eu .mao .carta.jogavel { cursor: grab; }
 
 /* Figura ou Ás esperando o número no campo */
-.carta-preparo { animation: flutuar 1.1s ease-in-out infinite alternate; }
+.carta-preparo { animation: flutuar 1.1s ease-in-out infinite alternate; cursor: pointer; }
 .carta-preparo .carta { opacity: .82; box-shadow: 0 0 0 2px var(--ouro), 0 14px 22px rgba(0, 0, 0, .45), 0 0 22px rgba(233, 196, 106, .7); }
 @keyframes flutuar { from { transform: translateY(-4px); } to { transform: translateY(-12px); } }
 
@@ -820,12 +820,12 @@ button.cb-item { cursor: default; }
 #mesa { width: 1224px; }
 #painel { width: 186px; padding: 12px; }
 .barra-partida .btn { font-size: 11px; padding: 6px 3px; }
-/* As cartas do campo (e as cópias que voam ou atacam) usam o mesmo tamanho. Deitada (horizontal) a carta
-   mantém o tamanho: o espaço dela alarga para caber, em vez de a carta encolher. */
-.fileira, .unidade-voando { --cw: 72px; --ch: 101px; --esc-diagonal: .72; --esc-horizontal: 1; }
+/* As cartas do campo (e as cópias que voam ou atacam) usam o mesmo tamanho. Deitada (horizontal)
+   e inclinada (diagonal) a carta mantém o tamanho: o espaço dela alarga para caber, em vez de a carta encolher. */
+.fileira, .unidade-voando { --cw: 72px; --ch: 101px; --esc-diagonal: 1; --esc-horizontal: 1; }
 .fileira { gap: 5px; height: 148px; padding: 0; }
 .fileira .espaco { width: 96px; height: 146px; }
-.fileira .espaco:has(> .postura-horizontal) { width: 128px; }
+.fileira .espaco:has(> .postura-horizontal), .fileira .espaco:has(> .postura-diagonal) { width: 128px; }
 #faixa { height: 104px; padding: 0 210px; }
 #combate { right: 16px; width: 180px; }
 
@@ -1219,7 +1219,7 @@ html, body { background: #9de03a url('arte/mesa/grama.webp') center / cover; }
 .refl-titulo { margin: 0; font: 400 40px var(--fonte-titulo); color: #fff; letter-spacing: .5px; text-shadow: 0 3px 0 rgba(0, 0, 0, .5); }
 .refl-titulo span { color: #ffc93c; }
 .refl-pergunta { margin: 0 0 8px; font: 800 22px var(--fonte-ui); color: #fff; text-shadow: 0 2px 4px rgba(0, 0, 0, .6); }
-.refl-atacantes { display: flex; flex-wrap: wrap; gap: 14px; --cw: 72px; --ch: 101px; --esc-diagonal: .72; --esc-horizontal: 1; }
+.refl-atacantes { display: flex; flex-wrap: wrap; gap: 14px; --cw: 72px; --ch: 101px; --esc-diagonal: 1; --esc-horizontal: 1; }
 .refl-unidade {
   position: relative; width: 98px; height: 148px; padding: 0; border: 0; border-radius: 12px; background: none; cursor: pointer;
   transition: transform .18s cubic-bezier(.3, 1.4, .5, 1), filter .18s; animation: carta-entra .45s cubic-bezier(.3, 1.2, .5, 1) backwards;
