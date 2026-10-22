@@ -44,15 +44,16 @@ window.SS = window.SS || {};
     // cobra (do jeito que estava)
     'cobra-mordida': 0.3, 'cobra-chiado': 0.15,
   };
-  const MUSICAS = ['musica-menu', 'musica-partida'];
-  const VOLUME_MUSICA = 0.45;
+  // Música: um loop só (sons/musica.wav, cortado no compasso para emendar sem pulo), tocado pelo Web Audio
+  // com loop exato. Menu e partida usam a mesma faixa por enquanto; trocar de tela não reinicia a música.
+  const ARQ_MUSICA = 'musica.wav', VOLUME_MUSICA = 0.42;
 
   let ligado = { efeitos: true, musica: true }, volume = 0.8;
-  let ctx = null, mestre = null, carregado = false, musicaPedida = null, musicaAtual = null;
+  let ctx = null, mestre = null, carregado = false, musicaPedida = null;
+  let bufMusica = null, fonteMusica = null, ganhoMusica = null;
   const buffers = {}; // nome → lista de AudioBuffer (as variações que carregaram)
   const ultimo = {}; // nome → índice da última variação tocada
   const canais = {}; // canal → { fonte, ganho } que está tocando (ex.: o dado rolando, para parar quando ele para)
-  const faixas = {}; // música → <audio> em loop
 
   const arquivosDe = nome => (EFEITOS[nome] ? Array.from({ length: EFEITOS[nome] }, (_, k) => `${nome}-${k + 1}.wav`) : [nome + '.wav']);
 
@@ -85,14 +86,13 @@ window.SS = window.SS || {};
           .catch(() => { /* arquivo faltando ou estragado: fica em silêncio */ });
       }
     }
-    MUSICAS.forEach(nome => {
-      const a = new Audio(PASTA + nome + '.mp3');
-      a.loop = true;
-      a.volume = VOLUME_MUSICA * volume;
-      a.addEventListener('canplaythrough', () => { if (musicaPedida === nome) tocarMusica(); }, { once: true });
-      a.addEventListener('error', () => { delete faixas[nome]; }, { once: true });
-      faixas[nome] = a;
-    });
+    ganhoMusica = ctx.createGain();
+    ganhoMusica.gain.value = VOLUME_MUSICA * volume;
+    ganhoMusica.connect(ctx.destination); // fora do compressor dos efeitos (para a música não "bombear")
+    fetch(PASTA + ARQ_MUSICA + VERSAO).then(r => (r.ok ? r.arrayBuffer() : null))
+      .then(b => (b ? new Promise((ok, erro) => ctx.decodeAudioData(b, ok, erro)) : null))
+      .then(buf => { bufMusica = buf; tocarMusica(); })
+      .catch(() => { /* sem música */ });
   }
 
   // o: { vol (0–1, multiplica o volume do som), canal (um som por canal: o novo corta o anterior), atraso (ms) }
@@ -130,20 +130,31 @@ window.SS = window.SS || {};
   }
 
   function tocarMusica() {
-    const nova = ligado.musica && musicaPedida ? faixas[musicaPedida] : null;
-    if (musicaAtual && musicaAtual !== nova) musicaAtual.pause();
-    musicaAtual = nova && nova.readyState >= 3 ? nova : null;
-    if (!musicaAtual) return;
-    musicaAtual.volume = VOLUME_MUSICA * volume;
-    if (musicaAtual.paused) {
-      musicaAtual.currentTime = 0;
-      musicaAtual.play().catch(() => {});
+    if (!ctx || !ganhoMusica) return;
+    ganhoMusica.gain.setTargetAtTime(VOLUME_MUSICA * volume, ctx.currentTime, 0.05);
+    const querTocar = ligado.musica && musicaPedida && bufMusica;
+    if (querTocar && !fonteMusica) {
+      if (ctx.state === 'suspended') ctx.resume();
+      fonteMusica = ctx.createBufferSource();
+      fonteMusica.buffer = bufMusica;
+      fonteMusica.loop = true;
+      fonteMusica.connect(ganhoMusica);
+      // entra com um fade curtinho
+      ganhoMusica.gain.setValueAtTime(0, ctx.currentTime);
+      ganhoMusica.gain.linearRampToValueAtTime(VOLUME_MUSICA * volume, ctx.currentTime + 0.8);
+      fonteMusica.start();
+    } else if (!querTocar && fonteMusica) {
+      const f = fonteMusica;
+      fonteMusica = null;
+      ganhoMusica.gain.setTargetAtTime(0, ctx.currentTime, 0.15);
+      try { f.stop(ctx.currentTime + 0.8); } catch (e) { /* já parou */ }
+      setTimeout(() => { if (!fonteMusica) ganhoMusica.gain.value = VOLUME_MUSICA * volume; }, 900);
     }
   }
 
   // nome: 'menu', 'partida' ou null (silêncio).
   function musica(nome) {
-    musicaPedida = nome ? 'musica-' + nome : null;
+    musicaPedida = nome || null;
     tocarMusica();
   }
 
@@ -164,6 +175,6 @@ window.SS = window.SS || {};
   SS.Som = {
     tocar, parar, musica, configurar,
     // Para conferir pelo console quais arquivos o jogo achou e o que está tocando.
-    depurar: () => ({ efeitos: Object.keys(EFEITOS).filter(n => buffers[n] && buffers[n].length).map(n => n + ' ×' + buffers[n].length), faltando: Object.keys(EFEITOS).filter(n => !buffers[n] || !buffers[n].length), musica: musicaAtual && !musicaAtual.paused ? musicaPedida : null }),
+    depurar: () => ({ efeitos: Object.keys(EFEITOS).filter(n => buffers[n] && buffers[n].length).map(n => n + ' ×' + buffers[n].length), faltando: Object.keys(EFEITOS).filter(n => !buffers[n] || !buffers[n].length), musica: fonteMusica ? musicaPedida : null }),
   };
 })(window.SS);
