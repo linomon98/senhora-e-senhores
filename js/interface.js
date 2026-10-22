@@ -119,6 +119,14 @@ window.SS = window.SS || {};
     const tem = (a, ps) => (ps === 'sacrificios' ? a.sacrificio != null : a[ps] != null);
     ui.destino = null;
     ui.pend = { tipo, cands, passos: PASSOS[tipo].filter(ps => cands.some(a => tem(a, ps))), k: 0, esc: {}, destino };
+    // Carta que escolhe um Senhor(a): fica brilhando roxo e a seta sai dela até o alvo.
+    const botao = ui.ultimoBotao && ui.ultimoBotao.isConnected && ui.ultimoBotao.matches('.carta-acao') ? ui.ultimoBotao : null;
+    if (botao && ui.pend.passos[0] === 'alvo') {
+      const c = centroDe(botao);
+      ui.pend.seta = { de: { x: c.x, y: c.y - 46 }, chave, rotulo: rotuloTipo(cands[0].tipo, cands[0]), icone: iconeDaAcao(cands[0]) };
+      ui.mouse = Object.assign({}, ui.pend.seta.de);
+      Som.tocar('mira-seta');
+    }
     avancarPendente();
   }
 
@@ -393,7 +401,7 @@ window.SS = window.SS || {};
     }
     if (ds.cemiterio !== undefined) return verCemiterio(Number(ds.cemiterio));
     if (ui.ocupado || jogo.vencedor != null) return;
-    if (ds.acao) return clicarBotao(ds.acao);
+    if (ds.acao) { ui.ultimoBotao = el; return clicarBotao(ds.acao); }
     if (ds.mao) return clicarMao(ds.mao);
     if (ds.token !== undefined) return clicarMao('TOKEN#' + ds.token);
     // No ataque e no bloqueio, cartas e alvos são tratados pelo mouse (setas).
@@ -865,7 +873,8 @@ window.SS = window.SS || {};
   }
 
   const mirandoPoder = () => !!(ui && ui.pend && ui.pend.tipo === 'poder' && passoAtual() === 'alvo');
-  const mirandoSeta = () => !!(ui && ((ui.reflexoModo && ui.reflexoModo.etapa === 'alvo') || mirandoPoder() || ui.miraDado || (ui.miraRei != null && humanoAtaca())));
+  const mirandoCarta = () => !!(ui && ui.pend && ui.pend.seta && passoAtual() === 'alvo');
+  const mirandoSeta = () => !!(ui && ((ui.reflexoModo && ui.reflexoModo.etapa === 'alvo') || mirandoPoder() || mirandoCarta() || ui.miraDado || (ui.miraRei != null && humanoAtaca())));
 
   function desenharSetas() {
     const svg = $('#setas');
@@ -895,6 +904,7 @@ window.SS = window.SS || {};
     // Seta presa no mouse: roxa ao escolher o ataque a refletir; na cor do poder ao escolher o alvo do Palhaço.
     if (ui.mouse && ui.reflexoModo && ui.reflexoModo.etapa === 'alvo') setas.push({ de: ORIGEM_REFLEXO, para: ui.mouse, cor: 'mira-reflexo', viva: true });
     if (ui.mouse && ui.miraDado) setas.push({ de: ui.miraDado.de, para: ui.mouse, cor: 'mira-ataque', viva: true });
+    if (ui.mouse && mirandoCarta()) setas.push({ de: ui.pend.seta.de, para: ui.mouse, cor: 'mira-reflexo', viva: true });
     if (ui.mouse && mirandoPoder()) {
       const de = centroDe($(`#info-${jogo.vez} .poder-naipe`));
       if (de) setas.push({ de, para: ui.mouse, cor: 'mira-poder', viva: true });
@@ -1985,6 +1995,7 @@ window.SS = window.SS || {};
       else if (ui.pend) {
         texto = textoPasso();
         extras = btn('cancelar', t('btn.cancelar'));
+        if (ui.pend.seta) botoes = btnGrande('cancelar', ui.pend.seta.rotulo, ui.pend.seta.icone, 'mirando mirando-roxo');
       } else if (ui.destino != null && ui.sel.length === 1) {
         // Figura ou Ás esperando no campo: falta o número.
         texto = t('faixa.preparo');

@@ -166,8 +166,8 @@ window.SS = window.SS || {};
           <tr><th>Par</th><th>Magia</th></tr>
           <tr><td>♥ Copas</td><td><b>Reviver:</b> um Senhor(a) seu do cemitério volta <b>direto para o campo</b>, com o mesmo número que tinha.</td></tr>
           <tr><td>♦ Ouros</td><td><b>Buscar Ás:</b> escolha um Ás do seu baralho de Números e ponha <b>direto no campo</b>.</td></tr>
-          <tr><td>♣ Paus</td><td><b>+1 de defesa para sempre</b> num Senhor(a) seu.</td></tr>
-          <tr><td>♠ Espadas</td><td><b>+1 de dano para sempre</b> num Senhor(a) seu.</td></tr>
+          <tr><td>♣ Paus</td><td><b>+1 de defesa para sempre</b> num Senhor(a) seu, ou <b>-1 de defesa</b> num inimigo (que ainda tenha 2 ou mais de vida sobrando).</td></tr>
+          <tr><td>♠ Espadas</td><td><b>+1 de dano para sempre</b> num Senhor(a) seu, ou <b>-1 de ataque</b> num inimigo (com ataque 2 ou mais).</td></tr>
         </table>
         <h3>Par de números iguais: Refletir</h3>
         <p>Dois números iguais (ex.: dois 7 ou dois Ases, de qualquer naipe) servem na <b>defesa</b>: quando o adversário ataca, a carta <b>Refletir</b> aparece pulsando; o par sobe e o resto da mão escurece; clique nas cartas do par para sacrificá-lo e leve a seta roxa até o ataque que quer <b>refletir</b>. O Senhor(a) adversário bate no <b>próprio dono</b> (o dado ainda decide entre cheio e metade). O valor do par muda o golpe: par de <b>Ás a 4</b> tira <b>2</b> se acertar cheio (dado 4 a 6); par de <b>5 a 7</b> não muda nada; par de <b>8 a 10</b> dá <b>+2</b> no dano final. O par vai para o cemitério.</p>
@@ -367,8 +367,8 @@ window.SS = window.SS || {};
           <tr><th>Pair</th><th>Spell</th></tr>
           <tr><td>♥ Hearts</td><td><b>Revive:</b> one of your Gentlemen in the graveyard comes back <b>straight to the field</b>, with the same number it had.</td></tr>
           <tr><td>♦ Diamonds</td><td><b>Fetch Ace:</b> pick an Ace from your Numbers deck and put it <b>straight onto the field</b>.</td></tr>
-          <tr><td>♣ Clubs</td><td><b>+1 defense for good</b> on one of your Gentlemen.</td></tr>
-          <tr><td>♠ Spades</td><td><b>+1 damage for good</b> on one of your Gentlemen.</td></tr>
+          <tr><td>♣ Clubs</td><td><b>+1 defense for good</b> on one of your Gentlemen, or <b>-1 defense</b> on an enemy (that still has 2 or more life left).</td></tr>
+          <tr><td>♠ Spades</td><td><b>+1 damage for good</b> on one of your Gentlemen, or <b>-1 attack</b> on an enemy (with attack 2 or more).</td></tr>
         </table>
         <h3>Pair of equal numbers: Reflect</h3>
         <p>Two equal numbers (e.g. two 7s or two Aces, any suits) work on <b>defense</b>: when the opponent attacks, the <b>Reflect</b> card shows up pulsing; the pair rises and the rest of your hand dims; click the pair to sacrifice it and bring the purple arrow to the attack you want to <b>reflect</b>. The enemy Gentleman hits its <b>own owner</b> (the die still decides full or half). The pair's value changes the blow: a pair of <b>Ace to 4</b> takes off <b>2</b> on a full hit (die 4 to 6); a pair of <b>5 to 7</b> changes nothing; a pair of <b>8 to 10</b> adds <b>+2</b> to the final damage. The pair goes to the graveyard.</p>

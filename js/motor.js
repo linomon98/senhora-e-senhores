@@ -511,7 +511,16 @@ window.SS = window.SS || {};
         if (vazios.length) j.mortos.forEach((m, k) => { if (noCemiterio(j, m)) r.push(Object.assign({ morto: k }, base)); });
       } else if (par.naipe === 'ouros') {
         if (vazios.length) for (const c of j.numeros) if (ehAs(c)) r.push(Object.assign({ as: c.id }, base));
-      } else for (const s of senhores) r.push(Object.assign({ alvo: j.campo[s].uid }, base));
+      } else {
+        for (const s of senhores) r.push(Object.assign({ alvo: j.campo[s].uid }, base));
+        // Contra um inimigo a magia enfraquece: Paus tira 1 de defesa, Espadas tira 1 de ataque
+        // (Paus só em quem ainda tem 2 ou mais defesinhas sobrando, para não matar; Espadas, ataque 2 ou mais).
+        const op = e.jogadores[1 - p];
+        op.campo.forEach((u, i) => {
+          if (!u || u.tipo !== 'senhor') return;
+          if (par.naipe === 'paus' ? !u.berserk && resistencia(e, 1 - p, i) - u.hits >= 2 : ataqueBase(e, 1 - p, i) >= 2) r.push(Object.assign({ alvo: u.uid }, base));
+        });
+      }
     }
     return r;
   }
@@ -757,10 +766,14 @@ window.SS = window.SS || {};
           verificarMortes(e);
         } else {
           const l = localizar(e, a.alvo);
-          if (!l || l.p !== p || l.u.tipo !== 'senhor') throw new Error('Alvo inválido');
-          if (a.naipe === 'paus') l.u.resExtra = (l.u.resExtra || 0) + 1;
-          else l.u.atkExtra = (l.u.atkExtra || 0) + 1;
-          registrar(e, t(a.naipe === 'paus' ? 'log.magiaPaus' : 'log.magiaEspadas', { j: j.nome, u: nomeUnidade(l.u) }));
+          if (!l || l.u.tipo !== 'senhor') throw new Error('Alvo inválido');
+          const inimigo = l.p !== p;
+          if (inimigo && (a.naipe === 'paus' ? resistencia(e, l.p, l.i) - l.u.hits < 2 : ataqueBase(e, l.p, l.i) < 2)) throw new Error('Esse Senhor(a) já está no mínimo');
+          const d = inimigo ? -1 : 1;
+          if (a.naipe === 'paus') l.u.resExtra = (l.u.resExtra || 0) + d;
+          else l.u.atkExtra = (l.u.atkExtra || 0) + d;
+          registrar(e, t((a.naipe === 'paus' ? 'log.magiaPaus' : 'log.magiaEspadas') + (inimigo ? 'Inimigo' : ''), { j: j.nome, u: nomeUnidade(l.u) }));
+          if (inimigo) verificarMortes(e); // com menos defesa, os hits que ele já tinha podem bastar
         }
         evento(e, { tipo: 'magia', p, cartas: cs.map(c => Object.assign({}, c)) });
         for (const c of cs) j.cemiterio.push(tirarDaMao(j, c.id));

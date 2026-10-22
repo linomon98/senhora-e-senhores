@@ -1490,3 +1490,4 @@ html.sem-caixa-meio #faixa .caixa-faixa { display: none; }
 .deco-formigas::before, .deco-barata::before { content: ''; position: absolute; border-radius: 50%; background: rgba(5, 18, 2, .28); pointer-events: none; }
 .deco-formigas::before { left: 4%; top: 30%; width: 94%; height: 68%; }
 .deco-barata::before { left: 8%; top: 86%; width: 88%; height: 13%; }
+.carta-acao.mirando-roxo { z-index: 5; transform: translateY(-22px) rotate(0deg) scale(1.08); filter: drop-shadow(0 0 16px rgba(214, 60, 255, 1)) drop-shadow(0 0 5px #fff); }
