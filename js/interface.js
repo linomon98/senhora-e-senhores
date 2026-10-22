@@ -1222,6 +1222,7 @@ window.SS = window.SS || {};
     desenharSetas();
     animarEntradas();
     processarEventos();
+    if (cfg.modo === 'tutorial' && SS.Tutorial) SS.Tutorial.aposRender();
     sincronizarRefletirFlutuante();
     // Coração acelerado quando o seu PV cai para 5 ou menos (só na hora em que cruza).
     if (cfg.modo !== 'bots') {
@@ -3014,6 +3015,12 @@ window.SS = window.SS || {};
   // o amigo manda o resultado dele pela rede, o bot rola sozinho.
   async function dadoDe(p, n, id) {
     const deCima = p !== eu;
+    // Tutorial: a aula pode combinar o resultado do dado de antes (o oponente "tira 5").
+    if (cfg.modo === 'tutorial' && ui.tutDado) {
+      const v = ui.tutDado;
+      ui.tutDado = null;
+      return SS.Dados.mostrar(Array(n).fill(v), corDe(p), deCima);
+    }
     if (controle(p) === 'humano') {
       const r = await SS.Dados.jogar(n, corDe(p));
       if (cfg.modo === 'online') SS.Rede.enviar({ t: 'dados', v: r });
@@ -3135,6 +3142,7 @@ window.SS = window.SS || {};
   }
 
   async function turnoBot(id) {
+    if (cfg.modo === 'tutorial') return turnoBotTutorial(id);
     const p = jogo.vez;
     ui.ocupado = true;
     render();
@@ -3261,6 +3269,8 @@ window.SS = window.SS || {};
         ui.reflexos = [];
         ui.bloqSel = null;
         render();
+        await tutGancho('bloqueio');
+        if (id !== partida) return;
         await new Promise(r => { ui.aoConfirmarBloqueio = r; });
         if (id !== partida) return;
         ui.ocupado = true;
@@ -3310,6 +3320,8 @@ window.SS = window.SS || {};
       // O duelo aparece no painel da direita (dentro do tabuleiro); os dados rolam soltos pela mesa.
       if (temDuelo) mostrarDuelo(foto, total, null);
       SS.Dados.definirArena($('#mesa'));
+      await tutGancho('antesDado', { at, p: jogo.vez });
+      if (id !== partida) return;
       // Quem ataca joga o dado: você arremessa, o amigo manda o resultado, o bot rola.
       const rolagens = await dadoDe(jogo.vez, at.dados, id);
       if (id !== partida) return;
@@ -3328,6 +3340,8 @@ window.SS = window.SS || {};
       if (cena.errou) await queVergonha();
       if (id !== partida) return;
       render();
+      await tutGancho('depoisGolpe', { at, p: jogo.vez, rolagens });
+      if (id !== partida) return;
       if (temDuelo) {
         mostrarDuelo(foto, total, linhas);
         animarPV();
@@ -3358,7 +3372,65 @@ window.SS = window.SS || {};
       }
     }
     ui.ocupado = false;
+    await tutGancho('fimDoTurno', { p: 1 - jogo.vez });
+    if (id !== partida) return;
     proximoTurno(id);
+  }
+
+  // ---------- Tutorial ----------
+  // Pontos em que a aula do tutorial pode segurar o jogo (fora do tutorial, segue direto).
+  const tutGancho = (nome, dados) => (cfg.modo === 'tutorial' && SS.Tutorial ? SS.Tutorial.gancho(nome, dados) : Promise.resolve());
+
+  // Partida montada para uma aula: mãos e Palhaços definidos pela aula, sem sorteio nem abertura.
+  function iniciarTutorial(n) {
+    const aula = SS.Tutorial && SS.Tutorial.aula(n);
+    if (!aula) return;
+    cfg.modo = 'tutorial';
+    cfg.aula = n;
+    partida++;
+    Som.musica('partida');
+    fecharModal();
+    esconderAnuncio();
+    SS.Dados.cancelar();
+    posturaAnterior = {};
+    viradoAnterior = {};
+    maoVista = [null, null];
+    campoVisto = [null, null];
+    cemVisto = [new Set(), new Set()];
+    eu = 0;
+    definirLados(0);
+    $('[data-acao="reiniciar"]').hidden = false;
+    M.definirRng(Math.random);
+    revanche = { minha: false, dele: false };
+    palhacos = aula.palhacos.slice();
+    const nomes = palhacos.map(x => P.get(x).nome);
+    const decks = [0, 1].map(k => M.cartasDoDeck(M.contagemPadrao(), k));
+    jogo = M.criarJogo({ nomes, primeiro: 0, decks, palhacos });
+    ui = novoUi();
+    aula.montar(jogo);
+    M.registrar(jogo, `${nomes[0]} × ${nomes[1]}.`);
+    render();
+    SS.Tutorial.comecar(n, {
+      jogo: () => jogo, ui: () => ui, render,
+      aplicar: a => { M.aplicarAcao(jogo, a); render(); },
+      sair: () => { cfg.modo = 'bot'; menu(); },
+    });
+  }
+
+  // Turno do oponente no tutorial: a aula faz as jogadas dele; depois ele ataca com quem puder.
+  async function turnoBotTutorial(id) {
+    ui.ocupado = true;
+    render();
+    await esperar(600);
+    if (id !== partida) return;
+    await tutGancho('turnoOponente', { p: jogo.vez });
+    if (id !== partida) return;
+    if (jogo.fase === 'principal') M.aplicarAcao(jogo, { tipo: 'atacar' });
+    const lista = M.atacantesAptos(jogo).map(uid => ({ atacante: uid, alvo: 'jogador' }));
+    M.declararAtaques(jogo, lista);
+    await mostrarDeclaracao(lista);
+    if (id !== partida) return;
+    fluxoCombate(id);
   }
 
   function fimDeJogo() {
@@ -3412,7 +3484,7 @@ window.SS = window.SS || {};
     ev => {
       const b = ev.target.closest('[data-m]');
       if (!b) return;
-      if (b.dataset.m === 'sim') iniciarPartida(cfg.modo);
+      if (b.dataset.m === 'sim') { if (cfg.modo === 'tutorial') iniciarTutorial(cfg.aula); else iniciarPartida(cfg.modo); }
       else fecharModal();
     });
   }
@@ -3579,6 +3651,8 @@ window.SS = window.SS || {};
   SS.Rede.ao('caiu', () => amigoSaiu('on.caiu'));
 
   function menu() {
+    if (SS.Tutorial) SS.Tutorial.parar();
+    if (cfg.modo === 'tutorial') cfg.modo = 'bot';
     if (cfg.modo === 'online') {
       SS.Rede.enviar({ t: 'tchau' });
       SS.Rede.sair();
@@ -3642,6 +3716,7 @@ window.SS = window.SS || {};
         <button class="btn-menu principal" data-m="jogar"><span>⚔</span>${t('menu.jogar')}</button>
         <button class="btn-menu" data-m="online"><span>🌐</span>${t('menu.online')}</button>
         <button class="btn-menu" data-m="assistir"><span>🎭</span>${t('menu.assistir')}</button>
+        <button class="btn-menu" data-m="tutorial"><span>🎓</span>${t('menu.tutorial')}${SS.Tutorial && SS.Tutorial.feita(1) ? ' ✓' : ''}</button>
       </div>
       <div class="acoes-menu secundario">
         <button class="btn" data-m="decks">🂠 ${t('menu.decks')}</button>
@@ -3663,6 +3738,7 @@ window.SS = window.SS || {};
       else if (m === 'online') telaPalhacos('online');
       else if (m === 'entrar-convite') telaPalhacos('convite');
       else if (m === 'assistir') iniciarPartida('bots');
+      else if (m === 'tutorial') iniciarTutorial(1);
       else if (m === 'decks') {
         fecharModal();
         SS.Decks.abrir(telaInicio);

@@ -1564,3 +1564,51 @@ html.sem-caixa-meio #faixa .caixa-faixa { display: none; }
 #caixa-custo b { color: #8a10b0; margin-right: 4px; }
 #caixa-custo[hidden] { display: none; }
 @keyframes custo-entra { from { opacity: 0; transform: translateY(4px); } }
+
+/* ---------- Tutorial: balão que conversa, foco que escurece o resto e setinha que pula ---------- */
+#tut { position: fixed; inset: 0; z-index: 400; pointer-events: none; }
+#tut:not(.mostrando) > * { display: none; }
+#tut .tut-veu { position: fixed; inset: 0; background: rgba(8, 14, 4, .55); }
+#tut .tut-foco {
+  position: fixed; border-radius: 16px; box-shadow: 0 0 0 4px #ffd84d, 0 0 26px 6px rgba(255, 216, 77, .8);
+  transition: left .25s, top .25s, width .25s, height .25s;
+}
+#tut.livre .tut-veu { background: rgba(8, 14, 4, .15); }
+#tut .tut-seta {
+  position: fixed; transform: translateX(-50%); font-size: 34px; color: #ffd84d; text-shadow: 0 3px 0 #1d2a12, 0 0 12px rgba(0, 0, 0, .6);
+  animation: tut-pula .6s ease-in-out infinite alternate;
+}
+@keyframes tut-pula { to { transform: translate(-50%, 10px); } }
+#tut .tut-balao {
+  position: fixed; width: min(440px, calc(100vw - 24px)); pointer-events: auto; padding: 14px 18px 12px;
+  background: #fffdf4; color: #1d2a12; border: 3px solid #1d2a12; border-radius: 16px; box-shadow: 5px 7px 0 #1d2a12;
+  font: 500 17px/1.45 var(--fonte-ui); transition: left .25s, top .25s;
+}
+#tut .tut-balao.entra { animation: tut-entra .28s cubic-bezier(.3, 1.4, .5, 1); }
+@keyframes tut-entra { from { transform: scale(.85) translateY(10px); opacity: 0; } }
+#tut .tut-topo { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+#tut .tut-titulo { font: 400 15px var(--fonte-titulo); color: #8a10b0; letter-spacing: .4px; }
+#tut .tut-pular { font: 600 12px var(--fonte-ui); color: #6b6b5a; background: none; border: 0; cursor: pointer; text-decoration: underline; padding: 2px; }
+#tut .tut-texto b { color: #b0101e; }
+#tut .tut-texto i { color: #4a4a3a; }
+#tut .tut-botoes { display: flex; justify-content: flex-end; margin-top: 10px; }
+#tut .tut-proximo {
+  font: 400 19px var(--fonte-titulo); padding: 6px 18px; border-radius: 999px; cursor: pointer;
+  color: #1d2a12; background: #ffc21a; border: 3px solid #1d2a12; box-shadow: 3px 4px 0 #1d2a12;
+}
+#tut .tut-proximo:hover { transform: translateY(-2px); }
+#tut .tut-proximo[hidden] { display: none; }
+/* Tabela do dado e a conta da metade */
+#tut .tut-dados { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 4px 0 10px; }
+#tut .tut-dados > div { display: flex; flex-direction: column; align-items: center; padding: 8px 4px; border: 2px solid #1d2a12; border-radius: 10px; background: #e8f7d2; text-align: center; font-size: 13px; line-height: 1.25; }
+#tut .tut-dados > div:nth-child(2) { background: #fff2c2; }
+#tut .tut-dados > div.ruim { background: #ffd6d6; }
+#tut .tut-dados i { font-style: normal; font-size: 26px; line-height: 1; color: #1d2a12 !important; }
+#tut .tut-dados b { font-size: 15px; color: #1d2a12 !important; }
+#tut .tut-conta { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 10px 0 4px; }
+#tut .tut-conta > div { display: flex; flex-direction: column; align-items: center; padding: 8px 12px; border: 2px solid #1d2a12; border-radius: 10px; background: #fff2c2; line-height: 1.2; }
+#tut .tut-conta > div:last-child { background: #dcecff; }
+#tut .tut-conta b { font: 400 24px var(--fonte-titulo); color: #1d2a12 !important; }
+#tut .tut-conta small { font-size: 11px; color: #4a4a3a; }
+#tut .tut-conta > span { font: 400 34px var(--fonte-titulo); color: #b0101e; }
+#tut .tut-ok { margin: 6px 0 0; text-align: center; font-weight: 800; color: #1b7a1b; }
