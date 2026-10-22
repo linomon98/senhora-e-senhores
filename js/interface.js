@@ -613,7 +613,9 @@ window.SS = window.SS || {};
   // Com a opção ligada (e nada selecionado), aparece uma carta para cada ação que a sua mão permite. Clicando
   // numa delas, as cartas da mão que servem para ela pulsam (o resto escurece) e você escolhe quais usar;
   // quando a escolha fecha uma jogada, segue o caminho normal (alvo, sacrifícios, lugar no campo…).
-  const grupoDaAcao = a => (a.tipo === 'magia' ? 'magia:' + a.naipe : iconeDaAcao(a) + '|' + chaveAcao(a));
+  // Invocar Senhor e invocar Ás dividem a mesma carta "Invocar" (a Rainha, com sacrifícios, tem a dela).
+  const GRUPO_INVOCAR = 'sumonar|sumonar';
+  const grupoDaAcao = a => (a.tipo === 'magia' ? 'magia:' + a.naipe : a.tipo === 'invocarAs' ? GRUPO_INVOCAR : iconeDaAcao(a) + '|' + chaveAcao(a));
   function acoesDoGrupo(grupo) {
     if (grupo === 'dado') return [];
     return M.acoesLegais(jogo).filter(a => a.tipo !== 'atacar' && a.tipo !== 'poder' && grupoDaAcao(a) === grupo);
@@ -2147,6 +2149,7 @@ window.SS = window.SS || {};
   // Carta de ação da opção "todas as ações" (dado adicional tem a própria arte)
   const btnGuiada = ([grupo, a], extra) => (grupo === 'dado'
     ? btnGrande('guiada:dado', t('acao.dadoAdicional'), 'dado', extra)
+    : grupo === GRUPO_INVOCAR ? btnGrande('guiada:' + grupo, t('acao.sumonar'), 'sumonar', extra)
     : btnGrande('guiada:' + grupo, rotuloTipo(a.tipo, a), iconeDaAcao(a), extra));
 
   function renderFaixa() {

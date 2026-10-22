@@ -415,7 +415,7 @@ window.SS = window.SS || {};
     'acao.dadoAdicional': ['+1 dado num ataque deste turno', '+1 die on an attack this turn'],
     'carta.tempoTurno': ['1 turno', '1 turn'],
     'custo.titulo': ['Custo', 'Cost'],
-    'custo.sumonar': ['1 ação + 1 figura (Valete ou Rei) e 1 carta numérica da mão.', '1 action + 1 face card (Jack or King) and 1 number card from your hand.'],
+    'custo.sumonar': ['1 ação + 1 figura (Valete ou Rei) e 1 carta numérica da mão. Ou um Ás e 1 número do mesmo naipe.', '1 action + 1 face card (Jack or King) and 1 number card from your hand. Or an Ace and 1 number of the same suit.'],
     'custo.rainha': ['1 ação + a Rainha e 1 carta numérica da mão + sacrificar 2 Senhores seus que já estavam em campo.', '1 action + the Queen and 1 number card from your hand + sacrifice 2 of your Gentlemen already on the field.'],
     'custo.as': ['1 ação + o Ás e 1 carta numérica do mesmo naipe (que vai para o cemitério).', '1 action + the Ace and 1 number card of the same suit (which goes to the graveyard).'],
     'custo.espadas': ['1 ação + 1 carta de Espadas da mão.', '1 action + 1 Spades card from your hand.'],
