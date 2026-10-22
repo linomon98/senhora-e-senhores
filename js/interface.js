@@ -2052,7 +2052,10 @@ window.SS = window.SS || {};
     const classeTitulo = titulo.length > 10 && titulo.includes(' ') ? ' duas-linhas' : titulo.length > 7 ? ' longo' : '';
     // Efeitos que só duram um tempo ganham um selo (⏳ 1 turno / 1 rodada) na própria carta.
     const tempo = { espadas: 'carta.tempoTurno', dado: 'carta.tempoTurno', paus: 'carta.tempoRodada' }[icone];
-    return `<button class="carta-acao arte-${arte} ${extra || ''}" data-acao="${acao}" title="${escapar(sub)}">
+    // Custo (aparece numa caixinha quando o mouse para meio segundo em cima da carta)
+    const ck = { sumonar: 'sumonar', rainha: 'rainha', as: 'as', espadas: 'espadas', paus: 'paus', curar: 'curar', comprarLetra: 'comprar', comprarNumero: 'comprar',
+      'par-copas': 'magia', 'par-ouros': 'magia', 'par-paus': 'magia', 'par-espadas': 'magia', dado: 'dado', reflexo: 'reflexo' }[icone];
+    return `<button class="carta-acao arte-${arte} ${extra || ''}" data-acao="${acao}"${ck ? ` data-custo="${escapar(t('custo.' + ck))}"` : ` title="${escapar(sub)}"`}>
       <img src="arte/acoes/${arte}.webp" alt="" draggable="false">${tempo ? `<span class="ca-tempo">⏳ ${t(tempo)}</span>` : ''}${DESENHO_PROVISORIO[icone] ? `<span class="ca-desenho">${DESENHO_PROVISORIO[icone]}</span>` : ''}<b class="ca-titulo${classeTitulo}">${titulo}</b><small class="ca-sub">${sub}</small></button>`;
   };
 
@@ -3857,6 +3860,32 @@ window.SS = window.SS || {};
     embrulhar('contraRefletir', () => Som.tocar('refletir-de-volta', { atraso: 300 }));
     embrulhar('descartar', ids => { if (ids && ids.length) Som.tocar('descartar'); });
   }
+
+  // Mouse parado meio segundo numa carta de ação com custo: caixinha dizendo quanto ela custa.
+  let custoTimer = null, custoCarta = null;
+  const caixaCusto = () => {
+    let el = $('#caixa-custo');
+    if (!el) { el = document.createElement('div'); el.id = 'caixa-custo'; el.hidden = true; document.body.appendChild(el); }
+    return el;
+  };
+  const esconderCusto = () => { clearTimeout(custoTimer); custoTimer = null; custoCarta = null; caixaCusto().hidden = true; };
+  document.addEventListener('mouseover', ev => {
+    const carta = ev.target.closest && ev.target.closest('.carta-acao[data-custo]');
+    if (carta === custoCarta) return;
+    esconderCusto();
+    if (!carta) return;
+    custoCarta = carta;
+    custoTimer = setTimeout(() => {
+      if (!carta.isConnected) return;
+      const caixa = caixaCusto(), r = carta.getBoundingClientRect();
+      caixa.innerHTML = `<b>${t('custo.titulo')}</b> ${escapar(carta.dataset.custo)}`;
+      caixa.hidden = false;
+      const cw = caixa.offsetWidth, ch = caixa.offsetHeight;
+      caixa.style.left = Math.max(8, Math.min(innerWidth - cw - 8, r.left + r.width / 2 - cw / 2)) + 'px';
+      caixa.style.top = Math.max(8, r.top - ch - 10) + 'px';
+    }, 500);
+  });
+  document.addEventListener('mousedown', esconderCusto, true);
 
   // Passar o mouse numa carta de ação ou da sua mão: um "fff" baixinho (uma vez por carta).
   let hoverAntes = null;

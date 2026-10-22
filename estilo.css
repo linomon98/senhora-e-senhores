@@ -1528,3 +1528,13 @@ html.sem-caixa-meio #faixa .caixa-faixa { display: none; }
 .leque-acoes:has(> .carta-acao:nth-child(7)) .carta-acao:is(:hover, :active, .mirando, .mirando-roxo) ~ .carta-acao { transform: translateX(70px) rotate(var(--r)); }
 .leque-acoes:has(> .carta-acao:nth-child(9)) .carta-acao { margin-left: -88px; }
 .leque-acoes:has(> .carta-acao:nth-child(9)) .carta-acao:first-child { margin-left: 0; }
+
+/* Caixinha de custo das cartas de ação */
+#caixa-custo {
+  position: fixed; z-index: 200; max-width: 260px; pointer-events: none; padding: 8px 11px; border-radius: 10px;
+  font: 600 13px/1.35 var(--fonte-ui); color: var(--tinta); background: #fffdf6; border: 2px solid var(--tinta);
+  box-shadow: 3px 4px 0 rgba(5, 18, 2, .45); animation: custo-entra .12s ease-out;
+}
+#caixa-custo b { color: #8a10b0; margin-right: 4px; }
+#caixa-custo[hidden] { display: none; }
+@keyframes custo-entra { from { opacity: 0; transform: translateY(4px); } }

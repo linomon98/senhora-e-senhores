@@ -76,7 +76,7 @@ window.SS = window.SS || {};
     'log.comprou': ['{j} comprou do baralho de {b}.', '{j} drew from the {b} deck.'],
     'log.sacrifica': ['{j} sacrifica {us} para a Rainha.', '{j} sacrifices {us} for the Queen.'],
     'log.sumonou': [
-      p => `${p.j} sumonou ${p.u} com ataque ${p.a}${p.nai ? ` — Naipado de ${p.nai}!` : '.'}`,
+      p => `${p.j} invocou ${p.u} com ataque ${p.a}${p.nai ? ` — Naipado de ${p.nai}!` : '.'}`,
       p => `${p.j} summoned ${p.u} with attack ${p.a}${p.nai ? ` — Suited ${p.nai}!` : '.'}`,
     ],
     'log.invocouAs': [
@@ -199,8 +199,8 @@ window.SS = window.SS || {};
 
   // ---------- Interface: ações da mão e instruções ----------
   adicionar({
-    'acao.rainha': ['♛ Sumonar Rainha ({n} sacrifícios)', '♛ Summon Queen ({n} sacrifices)'],
-    'acao.sumonar': ['⚔ Sumonar', '⚔ Summon'],
+    'acao.rainha': ['♛ Invocar Rainha ({n} sacrifícios)', '♛ Summon Queen ({n} sacrifices)'],
+    'acao.sumonar': ['⚔ Invocar', '⚔ Summon'],
     'acao.as': ['✦ Invocar Ás', '✦ Summon Ace'],
     'acao.curar': ['♥ Curar {n} PV', '♥ Heal {n} HP'],
     'acao.espadas': ['♠ +1 de ataque só neste turno', '♠ +1 attack this turn only'],
@@ -208,7 +208,7 @@ window.SS = window.SS || {};
     'acao.comprarLetra': ['♦ Comprar uma Letra', '♦ Draw a Face'],
     'acao.comprarNumero': ['♦ Comprar um Número', '♦ Draw a Number'],
     'acao.reviver': ['♦♦ Reviver do cemitério', '♦♦ Revive from graveyard'],
-    'dica.umSenhor': ['Você já sumonou um Senhor(a) neste turno (só 1 por turno).', 'You already summoned a Gentleman this turn (only 1 per turn).'],
+    'dica.umSenhor': ['Você já invocou um Senhor(a) neste turno (só 1 por turno).', 'You already summoned a Gentleman this turn (only 1 per turn).'],
     'dica.umAs': ['Você já invocou um Ás neste turno (só 1 por turno).', 'You already summoned an Ace this turn (only 1 per turn).'],
     'dica.semAcoes': ['Suas ações deste turno acabaram.', 'You have no actions left this turn.'],
     'dica.limiteFigura': ['{c} só pode ser equipado(a) com cartas de 2 a {n}.', '{c} can only equip cards from 2 to {n}.'],
@@ -216,7 +216,7 @@ window.SS = window.SS || {};
     'dica.rainhaSemSenhores': ['A Rainha precisa de {n} Senhores seus em campo desde o turno anterior para sacrificar.', 'The Queen needs {n} of your Gentlemen on the field since last turn to sacrifice.'],
     'dica.fileiraCheia': ['Sua fileira está cheia.', 'Your row is full.'],
     'dica.asMesmoNaipe': ['Para invocar o Ás, sacrifique uma carta numérica do mesmo naipe.', 'To summon the Ace, sacrifice a number card of the same suit.'],
-    'dica.selecioneNumero': ['Selecione também uma carta numérica (2 a 10) para sumonar.', 'Also select a number card (2 to 10) to summon.'],
+    'dica.selecioneNumero': ['Selecione também uma carta numérica (2 a 10) para invocar.', 'Also select a number card (2 to 10) to summon.'],
     'dica.selecioneNumeroAs': ['Selecione também uma carta numérica do mesmo naipe para invocar o Ás.', 'Also select a number card of the same suit to summon the Ace.'],
     'dica.nenhumaAcao': ['Nenhuma ação com essa seleção.', 'No action with this selection.'],
     'passo.slot': ['Clique num espaço livre da sua fileira.', 'Click an empty slot in your row.'],
@@ -230,7 +230,7 @@ window.SS = window.SS || {};
   // ---------- Interface: caixas de dica ----------
   adicionar({
     'dc.figura': ['Figura', 'Face card'],
-    'dc.figuraComo': ['Junte com 1 carta numérica para sumonar um Senhor(a). O número define o ataque.', 'Pair it with 1 number card to summon a Gentleman. The number sets the attack.'],
+    'dc.figuraComo': ['Junte com 1 carta numérica para invocar um Senhor(a). O número define o ataque.', 'Pair it with 1 number card to summon a Gentleman. The number sets the attack.'],
     'dc.figuraNaipado': ['Com um número de {n}, vira Naipado(a) de {n}: {poder}', 'With a {n} number, it becomes a Suited {n} Gentleman: {poder}'],
     'dc.totem': ['Totem de suporte', 'Support totem'],
     'dc.asInvocar': ['Para invocar (1 ação): sacrifique 1 carta numérica de {n}.', 'To summon (1 action): sacrifice 1 {n} number card.'],
@@ -393,7 +393,7 @@ window.SS = window.SS || {};
     'btn.voltarAcoes': ['↩ Voltar', '↩ Back'],
     'carta.atacar': ['Atacar!', 'Attack!'],
     'carta.escudo': ['Defender', 'Defend'],
-    'carta.sumonar': ['Sumonar', 'Summon'],
+    'carta.sumonar': ['Invocar', 'Summon'],
     'carta.rainha': ['Rainha', 'Queen'],
     'carta.as': ['Ás', 'Ace'],
     'carta.curar': ['Curar', 'Heal'],
@@ -405,6 +405,17 @@ window.SS = window.SS || {};
     'carta.dado': ['Dado adicional', 'Extra die'],
     'acao.dadoAdicional': ['+1 dado num ataque deste turno', '+1 die on an attack this turn'],
     'carta.tempoTurno': ['1 turno', '1 turn'],
+    'custo.titulo': ['Custo', 'Cost'],
+    'custo.sumonar': ['1 ação passiva + 1 figura (Valete ou Rei) e 1 carta numérica da mão.', '1 passive action + 1 face card (Jack or King) and 1 number card from your hand.'],
+    'custo.rainha': ['1 ação passiva + a Rainha e 1 carta numérica da mão + sacrificar 2 Senhores seus que já estavam em campo.', '1 passive action + the Queen and 1 number card from your hand + sacrifice 2 of your Gentlemen already on the field.'],
+    'custo.as': ['1 ação passiva + o Ás e 1 carta numérica do mesmo naipe (que vai para o cemitério).', '1 passive action + the Ace and 1 number card of the same suit (which goes to the graveyard).'],
+    'custo.espadas': ['1 ação passiva + 1 carta de Espadas da mão.', '1 passive action + 1 Spades card from your hand.'],
+    'custo.paus': ['1 ação passiva + 1 carta de Paus da mão.', '1 passive action + 1 Clubs card from your hand.'],
+    'custo.curar': ['1 ação passiva + 1 carta de Copas da mão.', '1 passive action + 1 Hearts card from your hand.'],
+    'custo.comprar': ['1 ação passiva + 1 carta de Ouros (ou a ficha do Ás de Ouros).', '1 passive action + 1 Diamonds card (or the Ace of Diamonds token).'],
+    'custo.magia': ['1 ação passiva + 2 cartas do mesmo naipe da mão (Ás conta).', '1 passive action + 2 cards of the same suit from your hand (Aces count).'],
+    'custo.dado': ['1 carta de Ouros (ou a ficha do Ás de Ouros). Não gasta ação passiva.', '1 Diamonds card (or the Ace of Diamonds token). Uses no passive action.'],
+    'custo.reflexo': ['Um par de Ases, de 2 ou de 3 da mão. Não gasta ação passiva.', 'A pair of Aces, 2s or 3s from your hand. Uses no passive action.'],
     'carta.tempoRodada': ['1 rodada', '1 round'],
     'carta.reviver': ['Reviver', 'Revive'],
     'carta.poder': ['Poder', 'Power'],
