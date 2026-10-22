@@ -9,7 +9,7 @@ window.SS = window.SS || {};
   const VERSAO = (() => { const s = document.currentScript && document.currentScript.src.match(/[?&]v=(\d+)/); return s ? '?v=' + s[1] : ''; })();
   // nome → quantas variações (0 = um arquivo só, sem número no nome)
   const EFEITOS = {
-    'abrir-popup': 0, 'as-copas': 0, 'as-espadas': 0, 'as-ouros': 0, 'as-paus': 0, 'berserk': 0, 'bloquear': 2, 'buscar-as': 0,
+    'abrir-popup': 0, 'as-copas': 0, 'as-espadas': 0, 'as-ouros': 0, 'as-paus': 0, 'berserk': 0, 'bloquear': 1, 'buscar-as': 0,
     'clique': 3, 'cobra-chiado': 0, 'cobra-mordida': 3, 'comprar-carta': 3, 'cura': 2, 'dado-6': 0, 'dado-adicional': 0, 'dado-parou': 2,
     'dado-rolando': 3, 'dano-extra': 0, 'declarar-ataque': 2, 'defesa': 0, 'derrota': 0, 'descartar': 2, 'desistir': 0, 'embaralhar': 0,
     'escolher-palhaco': 0, 'fechar-popup': 0, 'golpe-ignorado': 2, 'golpe-no-vento': 0, 'hover-carta': 2, 'impacto-forte': 3,
