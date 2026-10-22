@@ -169,6 +169,23 @@ html, body {
 }
 .token.selecionada { background: #c41e2a; color: #fff; }
 .token:disabled { cursor: default; opacity: .6; }
+/* Ficha do Ás de Ouros: botão amarelo bem visível, encostado no lado esquerdo do Palhaço */
+.info > .tokens { position: absolute; right: calc(100% + 4px); z-index: 6; align-items: flex-end; gap: 6px; }
+.zona-eu .info > .tokens { top: 122px; }
+.zona-op .info > .tokens { top: 34%; }
+.token.token-extra {
+  display: flex; align-items: center; gap: 6px; padding: 5px 14px 5px 9px; border-radius: 999px;
+  font: 400 24px var(--fonte-titulo); letter-spacing: .5px; text-transform: uppercase; color: var(--tinta);
+  background: #ffc21a; border: 3px solid var(--tinta); box-shadow: 3px 4px 0 var(--tinta);
+  transition: transform .15s cubic-bezier(.3, 1.4, .5, 1), opacity .2s;
+}
+.token.token-extra img { width: 22px; height: 22px; filter: drop-shadow(1px 1px 0 var(--tinta)); }
+.token.token-extra:not(:disabled):hover { transform: translateY(-2px) scale(1.05); }
+.token.token-extra.selecionada { background: #fff1b8; transform: translateY(-3px); box-shadow: 0 0 0 3px #fff, 3px 6px 0 var(--tinta); }
+.token.token-extra:disabled { opacity: .75; }
+.token.token-extra.chegando { opacity: 0; pointer-events: none; }
+.zona-op .token.token-extra { font-size: 16px; padding: 3px 10px 3px 7px; }
+.zona-op .token.token-extra img { width: 16px; height: 16px; }
 
 .mao { display: flex; justify-content: center; align-items: flex-end; height: 100%; }
 .zona-eu .mao .carta { width: 86px; height: 120px; margin: 0; transition: transform .15s, box-shadow .15s, filter .15s; }

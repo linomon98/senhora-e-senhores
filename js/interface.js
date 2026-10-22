@@ -60,6 +60,7 @@ window.SS = window.SS || {};
     // Arrastar da mão: carta sendo arrastada, espaço onde uma figura/Ás espera o número,
     // e de onde a carta voa até o campo.
     arrasto: null, destino: null, vooDe: null, mostrarFila: false, duelo: false,
+    tokensChegando: [0, 0], // fichas do Ás de Ouros ainda voando até o botão "♦ EXTRA"
   });
   // eu: o jogador desta tela (0 contra o bot; no online, 0 para quem criou a sala e 1 para o amigo).
   let eu = 0, revanche = { minha: false, dele: false };
@@ -546,7 +547,7 @@ window.SS = window.SS || {};
   }
 
   // Cartas de ação também valem depois do "Preparar ataque" (antes de confirmar): o jogo volta por um
-  // instante às ações passivas (no online o amigo ainda nem soube do ataque) e, feita a jogada ou
+  // instante às ações (no online o amigo ainda nem soube do ataque) e, feita a jogada ou
   // desfeita a seleção, retorna ao ataque com os ataques que você já tinha marcado.
   function entrarAcoesNoAtaque() {
     if (jogo.fase !== 'ataque') return;
@@ -839,7 +840,7 @@ window.SS = window.SS || {};
         M.aplicarAcao(jogo, { tipo: 'atacar' });
         return render();
       case 'voltar':
-        // Volta para as ações passivas. Os ataques já marcados (e os Ouros dados a eles) ficam guardados
+        // Volta para as ações. Os ataques já marcados (e os Ouros dados a eles) ficam guardados
         // e voltam quando você for de novo para o ataque.
         ui.atacanteSel = null; ui.mira = null; ui.miraRei = null;
         if (ui.ataques.length) entrarAcoesNoAtaque();
@@ -991,8 +992,22 @@ window.SS = window.SS || {};
     }
     // Seta presa no mouse: roxa ao escolher o ataque a refletir; na cor do poder ao escolher o alvo do Palhaço.
     if (ui.mouse && ui.reflexoModo && ui.reflexoModo.etapa === 'alvo') setas.push({ de: ORIGEM_REFLEXO, para: ui.mouse, cor: 'mira-reflexo', viva: true });
-    if (ui.mouse && ui.miraDado) setas.push({ de: ui.miraDado.de, para: ui.mouse, cor: 'mira-ataque', viva: true });
-    if (ui.mouse && mirandoCarta()) setas.push({ de: ui.pend.seta.de, para: ui.mouse, cor: 'mira-reflexo', viva: true });
+    // A seta sai de onde a carta de ação está agora (a faixa se rearruma depois do clique e a carta muda de lugar).
+    const origemCarta = (sel, mira, sobe) => {
+      const c = centroDe($(sel));
+      if (!c) return;
+      const de = { x: c.x, y: c.y - sobe };
+      if (ui.mouse && ui.mouse.x === mira.de.x && ui.mouse.y === mira.de.y) ui.mouse = Object.assign({}, de); // mouse ainda não mexeu
+      mira.de = de;
+    };
+    if (ui.mouse && ui.miraDado) {
+      origemCarta('.carta-acao[data-acao="dado-adicional"]', ui.miraDado, 40);
+      setas.push({ de: ui.miraDado.de, para: ui.mouse, cor: 'mira-ataque', viva: true });
+    }
+    if (ui.mouse && mirandoCarta()) {
+      origemCarta('.carta-acao.mirando-roxo', ui.pend.seta, 46);
+      setas.push({ de: ui.pend.seta.de, para: ui.mouse, cor: 'mira-reflexo', viva: true });
+    }
     if (ui.mouse && mirandoPoder()) {
       const de = centroDe($(`#info-${jogo.vez} .poder-naipe`));
       if (de) setas.push({ de, para: ui.mouse, cor: 'mira-poder', viva: true });
@@ -1157,9 +1172,9 @@ window.SS = window.SS || {};
 
   // Ícone que voa num arco de um elemento até outro (o destino é procurado de novo no fim do voo,
   // porque a mesa pode ter sido redesenhada no meio do caminho).
-  function voarIcone(deEl, paraFn, html, classe, atraso) {
+  function voarIcone(deEl, paraFn, html, classe, atraso, aoChegar) {
     const a = centroDe(deEl), alvo0 = paraFn(), b = centroDe(alvo0);
-    if (!a || !b || MOVIMENTO_REDUZIDO) return;
+    if (!a || !b || MOVIMENTO_REDUZIDO) return false;
     const el = document.createElement('div');
     el.className = 'icone-voando ' + classe;
     el.innerHTML = html;
@@ -1170,9 +1185,38 @@ window.SS = window.SS || {};
     el.animate([pos(0, .3, 0), Object.assign(pos(.2, 1.2, 1), { offset: .2 }), Object.assign(pos(.6, 1, 1), { offset: .6 }), pos(1, .7, .95)],
       { duration: 950, delay: atraso || 0, easing: 'ease-in-out', fill: 'backwards' }).onfinish = () => {
       el.remove();
+      if (aoChegar) aoChegar();
       const alvo = paraFn();
       if (alvo) alvo.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.22)', offset: .4 }, { transform: 'scale(1)' }], { duration: 380, easing: 'ease-out' });
     };
+    return true;
+  }
+
+  // Ficha "♦ EXTRA" do Ás de Ouros: o naipezinho voa do totem até o botão, que só aparece quando ele chega.
+  // reservarToken esconde já o último botão ainda visível (ele reaparece quando o naipe pousa, ou em 3 s
+  // se a animação não acontecer); voarToken faz o naipe voar até ele.
+  function reservarToken(p) {
+    const botoes = [...document.querySelectorAll(`#info-${p} .token-extra`)];
+    ui.tokensChegando[p]++;
+    const alvo = botoes[botoes.length - ui.tokensChegando[p]];
+    if (alvo) alvo.classList.add('chegando');
+    const k = alvo ? alvo.dataset.token : null;
+    let feito = false;
+    const soltar = () => {
+      if (feito) return;
+      feito = true;
+      ui.tokensChegando[p] = Math.max(0, ui.tokensChegando[p] - 1);
+      const b = botao();
+      if (b) b.classList.remove('chegando'); // a classe foi posta direto no botão (o HTML guardado não muda)
+      if (jogo) render();
+    };
+    const botao = () => (k == null ? null : $(`#info-${p} .token-extra[data-token="${k}"]`));
+    setTimeout(soltar, 3000);
+    return { k, soltar, botao };
+  }
+  function voarToken(deEl, p, atraso, reserva) {
+    const r = reserva || reservarToken(p);
+    if (r.k == null || !voarIcone(deEl, r.botao, '<img src="arte/naipes/ouros.webp" alt="">', 'token-ouro', atraso, r.soltar)) r.soltar();
   }
 
   // Animação de cada poder de Palhaço, no lugar do alvo (o lugar fica mesmo se a carta morrer).
@@ -1267,10 +1311,9 @@ window.SS = window.SS || {};
 
   // Logo depois que uma carta pousa no campo: o Ás aparece com brilho e solta o efeito do naipe;
   // um Senhor(a) que cai do lado de um Ás de Espadas/Paus recebe a espadinha/o escudinho.
-  function efeitoEntrada(p, uid) {
-    if (!jogo || MOVIMENTO_REDUZIDO) return;
-    const l = M.localizar(jogo, uid), esp = elUnidade(uid);
-    if (!l || !esp) return;
+  function efeitoEntrada(p, uid, reserva) {
+    const l = jogo && !MOVIMENTO_REDUZIDO ? M.localizar(jogo, uid) : null, esp = l ? elUnidade(uid) : null;
+    if (!l || !esp) return reserva && reserva.soltar();
     const campo = jogo.jogadores[p].campo, vizinhos = [l.i - 1, l.i + 1].map(k => campo[k]).filter(Boolean);
     // Entrada: cada figura tem o seu som (Valete, Rainha, Rei); se ainda não foi gravado, toca o "sumonar" geral.
     const somFigura = l.u.tipo === 'as' ? 'as-' + l.u.naipe : { J: 'sumonar-valete', Q: 'sumonar-rainha', K: 'sumonar-rei' }[l.u.figura.rank];
@@ -1289,7 +1332,7 @@ window.SS = window.SS || {};
       if (naipe === 'espadas' || naipe === 'paus') {
         vizinhos.filter(u => u.tipo === 'senhor').forEach((u, k) => voarIcone(esp, () => elUnidade(u.uid), iconeBonus(naipe), 'bonus-' + naipe, 420 + k * 140));
       } else if (naipe === 'ouros') {
-        voarIcone(esp, poderDe(p), '<img src="arte/naipes/ouros.webp" alt="">', 'token-ouro', 420);
+        voarToken(esp, p, 420, reserva);
       } else if (naipe === 'copas') {
         voarIcone(esp, pvDe(p), '<span>♥</span>', 'bola-cura', 420);
       }
@@ -1349,7 +1392,7 @@ window.SS = window.SS || {};
       if (!de) return;
       if (ev.tipo === 'cura' || ev.tipo === 'token') setTimeout(() => Som.tocar(ev.tipo === 'cura' ? 'cura' : 'as-ouros'), 250 + k * 180);
       if (ev.tipo === 'cura') voarIcone(de, pvDe(ev.p), `<span>+${ev.n}</span>`, 'bola-cura', 250 + k * 180);
-      else if (ev.tipo === 'token') voarIcone(de, poderDe(ev.p), '<img src="arte/naipes/ouros.webp" alt="">', 'token-ouro', 250 + k * 180);
+      else if (ev.tipo === 'token') voarToken(de, ev.p, 250 + k * 180);
     });
   }
 
@@ -1366,7 +1409,9 @@ window.SS = window.SS || {};
       const noCampo = j.campo.filter(Boolean);
       if (campoVisto[p]) noCampo.filter(u => !campoVisto[p].has(u.uid)).forEach(u => {
         voarParaCampo(p, u.uid);
-        setTimeout(() => { Som.tocar('soltar-carta'); efeitoEntrada(p, u.uid); }, 660); // depois que ela pousa
+        // Ás de Ouros: o botão da ficha nova fica escondido até o naipe voar do totem até ele.
+        const reserva = u.tipo === 'as' && u.naipe === 'ouros' && !MOVIMENTO_REDUZIDO ? reservarToken(p) : null;
+        setTimeout(() => { Som.tocar('soltar-carta'); efeitoEntrada(p, u.uid, reserva); }, 660); // depois que ela pousa
       });
       campoVisto[p] = new Set(noCampo.map(u => u.uid));
       const atual = j.mao.map(c => c.id);
@@ -1755,7 +1800,7 @@ window.SS = window.SS || {};
 
   // O símbolo do poder é criado uma vez só e depois só tem as classes/atributos atualizados: recriar o
   // elemento a cada redesenho (clicar numa carta já redesenha a mesa) reiniciava a animação dele.
-  function atualizarLadoHeroi(lado, poderHTML, tokensHTML) {
+  function atualizarLadoHeroi(lado, poderHTML) {
     const novo = document.createElement('div');
     novo.innerHTML = poderHTML;
     const n = novo.firstElementChild;
@@ -1771,9 +1816,6 @@ window.SS = window.SS || {};
       }
       if ('disabled' in atual) atual.disabled = n.disabled;
     }
-    let tk = lado.querySelector('.tokens');
-    if (!tk) { tk = document.createElement('div'); tk.className = 'tokens'; lado.appendChild(tk); }
-    definirHTML(tk, tokensHTML);
   }
 
   // Poder usado: o símbolo do naipe cresce e brilha na cor do naipe, e uma onda sai dele.
@@ -1804,9 +1846,12 @@ window.SS = window.SS || {};
     const j = jogo.jogadores[p], cor = corDe(p), teto = M.tetoCura(j), pal = palhacoDe(p);
     const quem = controle(p) === 'humano' ? t('ui.voce') : controle(p) === 'remoto' ? t('ui.amigo') : `bot · ${NOME_NIVEL[cfg.nivel]}`;
     const podeJogar = controle(p) === 'humano' && jogo.vez === p && (jogo.fase === 'principal' || jogo.fase === 'ataque') && !ui.ocupado;
+    // Fichas do Ás de Ouros: botões amarelos "♦ EXTRA" do lado esquerdo do Palhaço (os que ainda estão
+    // chegando voando do totem ficam invisíveis até o naipe pousar).
     let tokens = '';
     for (let k = 0; k < j.tokens; k++) {
-      tokens += `<button class="token${ui.sel.includes('TOKEN#' + k) ? ' selecionada' : ''}" data-token="${k}"${podeJogar ? '' : ' disabled'}>♦ extra</button>`;
+      const chegando = k >= j.tokens - ui.tokensChegando[p];
+      tokens += `<button class="token token-extra${ui.sel.includes('TOKEN#' + k) ? ' selecionada' : ''}${chegando ? ' chegando' : ''}" data-token="${k}"${podeJogar ? '' : ' disabled'}><img src="arte/naipes/ouros.webp" alt="">${t('ui.extra')}</button>`;
     }
     // Botão do poder: o próprio símbolo do naipe do Palhaço (pulsa enquanto dá para usar).
     let poder;
@@ -1855,7 +1900,10 @@ window.SS = window.SS || {};
     const ferida = heroi.querySelector('.heroi-ferida');
     ferida.hidden = !isFinite(teto);
     if (isFinite(teto)) ferida.textContent = t('ui.curaAte', { n: teto });
-    atualizarLadoHeroi(info.querySelector('.lado-heroi'), poder, tokens);
+    atualizarLadoHeroi(info.querySelector('.lado-heroi'), poder);
+    let tk = info.querySelector(':scope > .tokens');
+    if (!tk) { tk = document.createElement('div'); tk.className = 'tokens'; info.appendChild(tk); }
+    definirHTML(tk, tokens);
     // Brilho na cor do naipe quando o poder é usado (vale para os dois Palhaços).
     if (jogo.vez === p && jogo.poderUsado && poderAnimado !== `${partida}:${jogo.turno}`) {
       poderAnimado = `${partida}:${jogo.turno}`;
@@ -2242,7 +2290,7 @@ window.SS = window.SS || {};
     el.hidden = false;
   }
 
-  // Caixa com as ações passivas restantes, na cor de quem está jogando.
+  // Caixa com as ações restantes, na cor de quem está jogando.
   function renderAcoes() {
     const caixa = $('#acoes');
     if (jogo.vencedor != null || jogo.fase === 'abertura') {
