@@ -577,7 +577,7 @@ window.SS = window.SS || {};
     const id = ui.sel[0];
     if (!id) return;
     // A seta sai da própria carta Dado adicional (que sobe e brilha enquanto você mira).
-    const c = centroDe($('.carta-acao[data-acao="dado-adicional"]'));
+    const c = centroDe($('.carta-acao[data-acao="dado-adicional"]') || (ui.ultimoBotao && ui.ultimoBotao.isConnected && ui.ultimoBotao.matches('.carta-acao') ? ui.ultimoBotao : null));
     Som.tocar('mira-seta');
     ui.miraDado = { ouro: id.startsWith('TOKEN') ? 'TOKEN' : id, de: c ? { x: c.x, y: c.y - 40 } : { x: 300, y: 760 } };
     ui.mouse = Object.assign({}, ui.miraDado.de);
@@ -641,9 +641,35 @@ window.SS = window.SS || {};
     return r;
   }
   function escolherAcaoGuiada(grupo) {
-    ui.acaoGuiada = ui.acaoGuiada === grupo ? null : grupo; // clicar de novo desiste
+    if (ui.acaoGuiada === grupo) return usarAcaoGuiada(grupo); // segundo clique: joga direto
+    ui.acaoGuiada = grupo;
     ui.sel = []; ui.pend = null; ui.destino = null;
     render();
+  }
+  // Segundo clique na mesma carta de ação: usa sozinho as cartas da mão que servem (respeitando as que você
+  // já tinha escolhido) e segue a jogada (alvo com a setinha, lugar no campo…). Para invocar vai o número
+  // mais forte; para gastar (magia, cura, compra…) vão as cartas mais baixas, e a ficha do Ás de Ouros antes.
+  function usarAcaoGuiada(grupo) {
+    const sel = ui.sel.map(s => (s.startsWith('TOKEN') ? 'TOKEN' : s));
+    const valorDe = id => (id === 'TOKEN' ? 0 : (c => (c ? M.valor(c) : 0))(cartaDaMao(id)));
+    let escolha;
+    if (grupo === 'dado') {
+      const ouros = M.ourosDisponiveis(jogo, jogo.vez).filter(o => sel.length ? sel.includes(o) : true);
+      if (!ouros.length) return;
+      escolha = [ouros.sort((x, y) => valorDe(x) - valorDe(y))[0]];
+    } else {
+      const acoes = acoesDoGrupo(grupo).filter(a => sel.every(s => chaveCartas(a).includes(s)));
+      if (!acoes.length) return;
+      const custo = a => (a.tipo === 'sumonar' ? -valorDe(a.numero) : chaveCartas(a).reduce((s, id) => s + valorDe(id), 0));
+      escolha = chaveCartas(acoes.sort((x, y) => custo(x) - custo(y))[0]);
+    }
+    ui.acaoGuiada = null; ui.pend = null; ui.destino = null;
+    ui.sel = escolha.map(id => (id === 'TOKEN' ? 'TOKEN#0' : id));
+    Som.tocar('selecionar-carta');
+    if (grupo === 'dado') return iniciarDadoAdicional();
+    const cands = candidatosSelecao().filter(a => grupoDaAcao(a) === grupo);
+    if (!cands.length) return render();
+    return iniciarPendente(chaveAcao(cands[0]));
   }
   function clicarMaoGuiada(id) {
     const k = ui.sel.indexOf(id);
@@ -2118,7 +2144,10 @@ window.SS = window.SS || {};
           }
         } else {
           texto = t(jogo.acoes > 0 ? 'faixa.comoJogar' : 'faixa.semAcoes');
-          if (opcoes.todasAcoes && jogo.acoes > 0) botoes = gruposDisponiveis().map(g => btnGuiada(g, '')).join('');
+          if (opcoes.todasAcoes && jogo.acoes > 0) {
+            botoes = gruposDisponiveis().map(g => btnGuiada(g, '')).join('');
+            if (botoes) texto = t('faixa.cliqueDuplo') + ' ' + texto;
+          }
         }
         // Passar turno sempre na ponta esquerda; Preparar ataque só se alguém puder atacar neste turno.
         const alguemAtaca = jogo.jogadores[p].campo.some((u, i) => u && M.podeAtacar(jogo, p, i));
@@ -2489,8 +2518,8 @@ window.SS = window.SS || {};
         const carta = ev.target.closest('[data-pc]');
         if (carta && o.qtd) {
           const id = carta.dataset.pc, k = esc.indexOf(id);
-          if (k >= 0) esc.splice(k, 1);
-          else if (esc.length < o.qtd) esc.push(id);
+          if (k >= 0) { esc.splice(k, 1); Som.tocar('clique'); }
+          else if (esc.length < o.qtd) { esc.push(id); Som.tocar('selecionar-carta'); }
           carta.classList.toggle('selecionada', esc.includes(id));
           const ok = $('#modal [data-m="ok"]');
           ok.textContent = o.botao(esc.length);
