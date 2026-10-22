@@ -2050,8 +2050,10 @@ window.SS = window.SS || {};
     const arte = ARTE_ACAO[icone] || 'sumonar', titulo = t('carta.' + icone);
     const sub = rotulo.replace(/^[^\p{L}\p{N}+]+/u, '');
     const classeTitulo = titulo.length > 10 && titulo.includes(' ') ? ' duas-linhas' : titulo.length > 7 ? ' longo' : '';
+    // Efeitos que só duram um tempo ganham um selo (⏳ 1 turno / 1 rodada) na própria carta.
+    const tempo = { espadas: 'carta.tempoTurno', dado: 'carta.tempoTurno', paus: 'carta.tempoRodada' }[icone];
     return `<button class="carta-acao arte-${arte} ${extra || ''}" data-acao="${acao}" title="${escapar(sub)}">
-      <img src="arte/acoes/${arte}.webp" alt="" draggable="false">${DESENHO_PROVISORIO[icone] ? `<span class="ca-desenho">${DESENHO_PROVISORIO[icone]}</span>` : ''}<b class="ca-titulo${classeTitulo}">${titulo}</b><small class="ca-sub">${sub}</small></button>`;
+      <img src="arte/acoes/${arte}.webp" alt="" draggable="false">${tempo ? `<span class="ca-tempo">⏳ ${t(tempo)}</span>` : ''}${DESENHO_PROVISORIO[icone] ? `<span class="ca-desenho">${DESENHO_PROVISORIO[icone]}</span>` : ''}<b class="ca-titulo${classeTitulo}">${titulo}</b><small class="ca-sub">${sub}</small></button>`;
   };
 
   // Carta de ação da opção "todas as ações" (dado adicional tem a própria arte)
