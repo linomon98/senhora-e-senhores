@@ -5,6 +5,8 @@ window.SS = window.SS || {};
 (function (SS) {
   'use strict';
   const PASTA = 'sons/';
+  // Mesma versão do script (?v=…): quando um som é trocado e o jogo publicado de novo, o navegador baixa o novo.
+  const VERSAO = (() => { const s = document.currentScript && document.currentScript.src.match(/[?&]v=(\d+)/); return s ? '?v=' + s[1] : ''; })();
   // nome → quantas variações (0 = um arquivo só, sem número no nome)
   const EFEITOS = {
     'abrir-popup': 0, 'as-copas': 0, 'as-espadas': 0, 'as-ouros': 0, 'as-paus': 0, 'berserk': 0, 'bloquear': 2, 'buscar-as': 0,
@@ -77,7 +79,7 @@ window.SS = window.SS || {};
     for (const nome of Object.keys(EFEITOS)) {
       buffers[nome] = [];
       for (const arq of arquivosDe(nome)) {
-        fetch(PASTA + arq).then(r => (r.ok ? r.arrayBuffer() : null))
+        fetch(PASTA + arq + VERSAO).then(r => (r.ok ? r.arrayBuffer() : null))
           .then(b => (b ? new Promise((ok, erro) => ctx.decodeAudioData(b, ok, erro)) : null))
           .then(buf => { if (buf) buffers[nome].push(buf); })
           .catch(() => { /* arquivo faltando ou estragado: fica em silêncio */ });
