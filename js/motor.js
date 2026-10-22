@@ -11,7 +11,7 @@ window.SS = window.SS || {};
   const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
   // Textos no idioma escolhido (idioma.js); sem ele, devolve a própria chave.
   const t = (k, p) => (SS.Idioma ? SS.Idioma.t(k, p) : k);
-  const LIMITE_FIGURA = { J: 5, Q: 10, K: 7 };
+  const LIMITE_FIGURA = { J: 4, Q: 10, K: 7 };
   const PV_INICIAL = 20; // não há máximo: Copas pode curar acima disso
   const ESPACOS = 8;
   const ACOES_POR_TURNO = 3;
@@ -40,10 +40,6 @@ window.SS = window.SS || {};
   const CUSTO_COBRANCA = 2; // PV pagos pelo Ourinhos para roubar 1 carta (Cobrança)
   const CURA_AS_COPAS = 1; // Ás de Copas em campo: cura o dono no começo de cada turno dele
   const CURA_NAIPADO_COPAS = 2; // Naipado de Copas que acerta o Palhaço inimigo cura o dono
-  // Ataque refletido: o valor do par usado muda o golpe. Par de A a 4: 2 a menos se acertar cheio
-  // (dado 4–6); par de 5 a 7: nada muda; par de 8 a 10: +2 no dano final.
-  const REDUCAO_REFLEXO = 2, BONUS_REFLEXO = 2;
-  const modReflexo = (valorPar, cheio) => (valorPar <= 4 ? (cheio ? -REDUCAO_REFLEXO : 0) : valorPar >= 8 ? BONUS_REFLEXO : 0);
   const palhacoDe = j => (j && PALHACOS[j.palhaco]) || null;
   const temPalhaco = (j, id) => !!j && j.palhaco === id;
   const limiteMao = j => (palhacoDe(j) ? palhacoDe(j).limiteMao : LIMITE_MAO);
@@ -557,8 +553,10 @@ window.SS = window.SS || {};
 
   // Par de números iguais (ex.: dois 7, de qualquer naipe): na hora de bloquear, o defensor faz um
   // ataque do adversário bater no próprio dono.
+  // Refletir só com pares baixos (Ás, 2 ou 3): incentiva a ter cartas baixas no deck.
+  const VALOR_MAX_REFLEXO = 3;
   function paresIguais(e, p) {
-    const nums = e.jogadores[p].mao.filter(ehSacrificavel), r = [];
+    const nums = e.jogadores[p].mao.filter(c => ehSacrificavel(c) && valor(c) <= VALOR_MAX_REFLEXO), r = [];
     for (let a = 0; a < nums.length; a++) {
       for (let b = a + 1; b < nums.length; b++) if (nums[a].rank === nums[b].rank) r.push([nums[a].id, nums[b].id].sort());
     }
@@ -571,7 +569,7 @@ window.SS = window.SS || {};
     const at = e.combate.ataques.find(x => x.n === n);
     if (!at || at.refletido) throw new Error('Ataque inválido para refletir');
     const cs = Array.isArray(cartas) && cartas.length === 2 ? cartas.map(id => j.mao.find(c => c.id === id)) : [];
-    if (cs.length !== 2 || !cs[0] || !cs[1] || cs[0] === cs[1] || !ehSacrificavel(cs[0]) || !ehSacrificavel(cs[1]) || cs[0].rank !== cs[1].rank) {
+    if (cs.length !== 2 || !cs[0] || !cs[1] || cs[0] === cs[1] || !ehSacrificavel(cs[0]) || !ehSacrificavel(cs[1]) || cs[0].rank !== cs[1].rank || valor(cs[0]) > VALOR_MAX_REFLEXO) {
       throw new Error('Par de números inválido');
     }
     evento(e, { tipo: 'magia', p: d, cartas: cs.map(c => Object.assign({}, c)) });
@@ -594,7 +592,7 @@ window.SS = window.SS || {};
     const p = e.vez, j = e.jogadores[p];
     const at = e.combate.ataques[e.combate.indice];
     const cs = Array.isArray(cartas) && cartas.length === 2 ? cartas.map(id => j.mao.find(c => c.id === id)) : [];
-    if (cs.length !== 2 || !cs[0] || !cs[1] || cs[0] === cs[1] || !ehSacrificavel(cs[0]) || !ehSacrificavel(cs[1]) || cs[0].rank !== cs[1].rank) {
+    if (cs.length !== 2 || !cs[0] || !cs[1] || cs[0] === cs[1] || !ehSacrificavel(cs[0]) || !ehSacrificavel(cs[1]) || cs[0].rank !== cs[1].rank || valor(cs[0]) > VALOR_MAX_REFLEXO) {
       throw new Error('Par de números inválido');
     }
     evento(e, { tipo: 'magia', p, cartas: cs.map(c => Object.assign({}, c)) });
@@ -973,9 +971,8 @@ window.SS = window.SS || {};
     // Ataque direto no Palhaço, sem ninguém defendendo, com o dado em 1: erra o golpe (que vergonha!).
     const errou = !at.refletido && !defensores.length && at.alvo === 'jogador' && maior === 1;
     const cheio = maior >= DADO_ATAQUE_TOTAL;
-    // Refletido (ou refletido de volta): vale o par usado por último.
-    const mod = at.refletido ? modReflexo(at.contra ? at.contraValor : at.parValor, cheio) : 0;
-    const dano = errou ? 0 : Math.max(0, (cheio ? total : Math.floor(total / 2)) + mod);
+    // (o golpe refletido bate normal: o Refletir já é limitado aos pares baixos)
+    const dano = errou ? 0 : cheio ? total : Math.floor(total / 2);
     const numeroAtacante = base + u.bonus.length;
     res.dano = dano;
     if (reducaoGrupo) registrar(e, t('log.grupo', { n: vivos, r: reducaoGrupo, u: nomeUnidade(u) }));
@@ -1180,7 +1177,7 @@ window.SS = window.SS || {};
     desistir, REGRAS_DECK, RANKS, contagemPadrao, resumoDeck, validarDeck, cartasDoDeck,
     PALHACOS, CUSTO_TRANSFUSAO, CUSTO_SANGRIA, SACRIFICIOS_RAINHA, SENHORES_POR_TURNO, ASES_POR_TURNO, REDUCAO_POR_DEFENSOR, palhacoDe, limiteMao, ataqueDirecionado,
     NAIPES, SIMBOLO, LIMITE_FIGURA, PV_INICIAL, ESPACOS, ACOES_POR_TURNO, CUSTO_RAINHA, DADO_ATAQUE_TOTAL, LIMITE_MAO,
-    definirRng: f => { rng = f; }, rngAtual: () => rng, voltarAoPrincipal, refletir, paresIguais, contraRefletir, podeContraRefletir, REDUCAO_REFLEXO, BONUS_REFLEXO, modReflexo, CURA_AS_COPAS, CURA_NAIPADO_COPAS,
+    definirRng: f => { rng = f; }, rngAtual: () => rng, voltarAoPrincipal, refletir, paresIguais, contraRefletir, podeContraRefletir, CURA_AS_COPAS, CURA_NAIPADO_COPAS,
     ehFigura, ehAs, ehNumero, ehSacrificavel, valor, nomeCarta, nomeNaipe, nomeUnidade, curaDe, curaPara, naipado,
     BARALHOS, NOME_BARALHO, baralhosDisponiveis, comprarDoTurno,
     criarJogo, registrar, figurasNoBaralho, escolherFiguras, mulligan, confirmarAbertura,

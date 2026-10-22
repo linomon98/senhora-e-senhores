@@ -8,7 +8,7 @@ window.SS = window.SS || {};
   // Calibrados com o simulador (558 partidas: todos os Palhaços entre 45% e 54% de vitórias).
   const LISTA = [
     {
-      // Duelista: Valetes de Espadas (entram atacando) com Espadas de 2 a 5 (Naipados, +1 de ataque),
+      // Duelista: Valetes de Espadas (entram atacando) com Espadas de 2 a 4 (Naipados, +1 de ataque),
       // Reis de Espadas para mirar Senhores, Ases de Espadas (+1 aos vizinhos) e Espadas altas para o bônus de +1.
       id: 'lancalotte', nome: 'Lançalotte', naipe: 'espadas', cor: 'azul',
       deck: {

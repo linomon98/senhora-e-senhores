@@ -48,7 +48,7 @@ window.SS = window.SS || {};
         <p>Junte 1 figura + 1 número (2 a 10) num espaço vazio. O <b>número é o ataque</b>.</p>
         <table class="tabela-regras">
           <tr><th>Figura</th><th>Equipa</th><th>Custo</th><th>Habilidade</th></tr>
-          <tr><td><b>Valete</b></td><td>2 a 5</td><td>1 ação</td><td><b>Ímpeto:</b> ataca no mesmo turno em que entra.</td></tr>
+          <tr><td><b>Valete</b></td><td>2 a 4</td><td>1 ação</td><td><b>Ímpeto:</b> ataca no mesmo turno em que entra.</td></tr>
           <tr><td><b>Rainha</b></td><td>2 a 10</td><td>${M.CUSTO_RAINHA} ação + sacrifício de ${M.SACRIFICIOS_RAINHA} Senhores seus que já estavam em campo antes deste turno</td><td><b>Atropelar:</b> se matar quem bloqueou, o dano que sobra vai para o PV.</td></tr>
           <tr><td><b>Rei</b></td><td>2 a 7</td><td>1 ação</td><td><b>Ordem real:</b> ao atacar, pode escolher como alvo um Senhor(a) inimigo. O alvo é obrigado a defender, e outros Senhores ativos do dono podem entrar junto para ajudar.</td></tr>
         </table>
@@ -169,9 +169,9 @@ window.SS = window.SS || {};
           <tr><td>♣ Paus</td><td><b>+1 de defesa para sempre</b> num Senhor(a) seu, ou <b>-1 de defesa</b> num inimigo (que ainda tenha 2 ou mais de vida sobrando).</td></tr>
           <tr><td>♠ Espadas</td><td><b>+1 de dano para sempre</b> num Senhor(a) seu, ou <b>-1 de ataque</b> num inimigo (com ataque 2 ou mais).</td></tr>
         </table>
-        <h3>Par de números iguais: Refletir</h3>
-        <p>Dois números iguais (ex.: dois 7 ou dois Ases, de qualquer naipe) servem na <b>defesa</b>: quando o adversário ataca, a carta <b>Refletir</b> aparece pulsando; o par sobe e o resto da mão escurece; clique nas cartas do par para sacrificá-lo e leve a seta roxa até o ataque que quer <b>refletir</b>. O Senhor(a) adversário bate no <b>próprio dono</b> (o dado ainda decide entre cheio e metade). O valor do par muda o golpe: par de <b>Ás a 4</b> tira <b>2</b> se acertar cheio (dado 4 a 6); par de <b>5 a 7</b> não muda nada; par de <b>8 a 10</b> dá <b>+2</b> no dano final. O par vai para o cemitério.</p>
-        <p><b>Refletir o reflexo:</b> se o seu ataque foi refletido e você tem um par de números iguais, pode sacrificá-lo antes do dado para mandar o golpe <b>de volta</b> no Palhaço do adversário (sem bloqueio; vale o modificador do par que você usou). Só dá para refletir de volta uma vez por ataque.</p>`,
+        <h3>Par de Ases, 2 ou 3: Refletir</h3>
+        <p>Duas cartas baixas iguais (<b>dois Ases, dois 2 ou dois 3</b>, de qualquer naipe) servem na <b>defesa</b>: quando o adversário ataca, a carta <b>Refletir</b> aparece pulsando; o par sobe e o resto da mão escurece; clique nas cartas do par para sacrificá-lo e leve a seta roxa até o ataque que quer <b>refletir</b>. O Senhor(a) adversário bate no <b>próprio dono</b> (o dado ainda decide entre cheio e metade). O golpe refletido bate normal (sem bônus nem redução). O par vai para o cemitério.</p>
+        <p><b>Refletir o reflexo:</b> se o seu ataque foi refletido e você tem um par de Ases, 2 ou 3, pode sacrificá-lo antes do dado para mandar o golpe <b>de volta</b> no Palhaço do adversário (sem bloqueio). Só dá para refletir de volta uma vez por ataque.</p>`,
     },
     {
       id: 'palhacos', titulo: 'Palhaços',
@@ -249,7 +249,7 @@ window.SS = window.SS || {};
         <p>Put 1 face card + 1 number (2 to 10) into an empty slot. The <b>number is the attack</b>.</p>
         <table class="tabela-regras">
           <tr><th>Face card</th><th>Equips</th><th>Cost</th><th>Ability</th></tr>
-          <tr><td><b>Jack</b></td><td>2 to 5</td><td>1 action</td><td><b>Haste:</b> attacks the same turn it enters.</td></tr>
+          <tr><td><b>Jack</b></td><td>2 to 4</td><td>1 action</td><td><b>Haste:</b> attacks the same turn it enters.</td></tr>
           <tr><td><b>Queen</b></td><td>2 to 10</td><td>${M.CUSTO_RAINHA} action + sacrifice ${M.SACRIFICIOS_RAINHA} of your Gentlemen that were already on the field before this turn</td><td><b>Trample:</b> if it kills its blocker, the leftover damage goes to HP.</td></tr>
           <tr><td><b>King</b></td><td>2 to 7</td><td>1 action</td><td><b>Royal Order:</b> when attacking, may target an enemy Gentleman. The target must defend, and its owner's other ready Gentlemen can join to help.</td></tr>
         </table>
@@ -370,9 +370,9 @@ window.SS = window.SS || {};
           <tr><td>♣ Clubs</td><td><b>+1 defense for good</b> on one of your Gentlemen, or <b>-1 defense</b> on an enemy (that still has 2 or more life left).</td></tr>
           <tr><td>♠ Spades</td><td><b>+1 damage for good</b> on one of your Gentlemen, or <b>-1 attack</b> on an enemy (with attack 2 or more).</td></tr>
         </table>
-        <h3>Pair of equal numbers: Reflect</h3>
-        <p>Two equal numbers (e.g. two 7s or two Aces, any suits) work on <b>defense</b>: when the opponent attacks, the <b>Reflect</b> card shows up pulsing; the pair rises and the rest of your hand dims; click the pair to sacrifice it and bring the purple arrow to the attack you want to <b>reflect</b>. The enemy Gentleman hits its <b>own owner</b> (the die still decides full or half). The pair's value changes the blow: a pair of <b>Ace to 4</b> takes off <b>2</b> on a full hit (die 4 to 6); a pair of <b>5 to 7</b> changes nothing; a pair of <b>8 to 10</b> adds <b>+2</b> to the final damage. The pair goes to the graveyard.</p>
-        <p><b>Reflect the reflection:</b> if your attack was reflected and you hold a pair of equal numbers, you may sacrifice it before the roll to send the blow <b>back</b> at the opponent's Jester (no blocking; the modifier of the pair you used applies). An attack can only be reflected back once.</p>`,
+        <h3>Pair of Aces, 2s or 3s: Reflect</h3>
+        <p>Two equal low cards (<b>two Aces, two 2s or two 3s</b>, any suits) work on <b>defense</b>: when the opponent attacks, the <b>Reflect</b> card shows up pulsing; the pair rises and the rest of your hand dims; click the pair to sacrifice it and bring the purple arrow to the attack you want to <b>reflect</b>. The enemy Gentleman hits its <b>own owner</b> (the die still decides full or half). The reflected blow hits normally (no bonus or reduction). The pair goes to the graveyard.</p>
+        <p><b>Reflect the reflection:</b> if your attack was reflected and you hold a pair of Aces, 2s or 3s, you may sacrifice it before the roll to send the blow <b>back</b> at the opponent's Jester (no blocking). An attack can only be reflected back once.</p>`,
     },
     {
       id: 'palhacos', titulo: 'Jesters',

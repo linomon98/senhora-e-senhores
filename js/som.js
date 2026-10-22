@@ -17,7 +17,7 @@ window.SS = window.SS || {};
     'palhaco-dano': 3, 'palhaco-dano-forte': 2, 'passar-turno': 0, 'poder-cobranca': 0, 'poder-desafio': 0, 'poder-pronto': 0,
     'poder-sangria': 0, 'poder-transfusao': 0, 'poder-vigilia': 0, 'preparar-ataque': 0, 'pv-baixo': 0, 'que-vergonha': 2,
     'refletido': 0, 'refletir-de-volta': 0, 'refletir': 0, 'reviver': 0, 'selecionar-carta': 3, 'senhor-morre': 3, 'seu-turno': 0,
-    'soltar-carta': 3, 'sumonar': 2, 'sumonar-rainha': 0, 'turno-oponente': 0, 'versus': 0, 'vitoria': 0,
+    'soltar-carta': 3, 'sumonar': 2, 'sumonar-rainha': 3, 'sumonar-valete': 3, 'sumonar-rei': 3, 'turno-oponente': 0, 'versus': 0, 'vitoria': 0,
   };
   // Mixagem: os arquivos já estão masterizados no mesmo loudness (-20 dB); aqui fica o volume de cada som
   // em relação ao geral. Interface e sons que tocam toda hora ficam no fundo; o combate fica na frente;
@@ -29,7 +29,7 @@ window.SS = window.SS || {};
     'poder-pronto': 0.45, 'escolher-palhaco': 0.6, 'versus': 0.75, 'desistir': 0.6,
     // cartas
     'comprar-carta': 0.5, 'soltar-carta': 0.6, 'descartar': 0.5, 'embaralhar': 0.5, 'palco-entra': 0.45, 'palco-sai': 0.4,
-    'sumonar': 0.75, 'sumonar-rainha': 0.8, 'as-espadas': 0.7, 'as-paus': 0.7, 'as-ouros': 0.7, 'as-copas': 0.7,
+    'sumonar': 0.75, 'sumonar-rainha': 0.8, 'sumonar-valete': 0.75, 'sumonar-rei': 0.8, 'as-espadas': 0.7, 'as-paus': 0.7, 'as-ouros': 0.7, 'as-copas': 0.7,
     // ações e magias
     'dano-extra': 0.7, 'berserk': 0.75, 'defesa': 0.7, 'cura': 0.65, 'dado-adicional': 0.6,
     'magia-par': 0.7, 'reviver': 0.75, 'buscar-as': 0.7, 'refletir': 0.8, 'refletido': 0.8, 'refletir-de-volta': 0.85,
@@ -198,6 +198,7 @@ window.SS = window.SS || {};
 
   SS.Som = {
     tocar, parar, musica, configurar,
+    tem: nome => !!(buffers[nome] && buffers[nome].length), // o som já carregou (existe o arquivo)?
     // Para conferir pelo console quais arquivos o jogo achou e o que está tocando.
     depurar: () => ({ efeitos: Object.keys(EFEITOS).filter(n => buffers[n] && buffers[n].length).map(n => n + ' ×' + buffers[n].length), faltando: Object.keys(EFEITOS).filter(n => !buffers[n] || !buffers[n].length), musica: fonteMusica ? musicaPedida : null }),
   };

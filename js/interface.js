@@ -377,8 +377,8 @@ window.SS = window.SS || {};
     const el = ev.target.closest('[data-acao],[data-mao],[data-token],[data-slot],[data-alvo],[data-ataque],[data-cemiterio],[data-pilha]');
     if (!el) {
       // Clique num lugar vazio do tabuleiro: desfaz a seleção de cartas da mão.
-      if (jogo && !ui.pend && (ui.sel.length || ui.destino != null) && ev.target.closest('#mesa') && !ev.target.closest('#cartas-acao, #painel')) {
-        ui.sel = []; ui.destino = null;
+      if (jogo && !ui.pend && (ui.sel.length || ui.destino != null || ui.acaoGuiada) && ev.target.closest('#mesa') && !ev.target.closest('#cartas-acao, #painel')) {
+        ui.sel = []; ui.destino = null; ui.acaoGuiada = null;
         if (ui.voltarAoAtaque) return voltarAoAtaque();
         render();
       }
@@ -389,6 +389,7 @@ window.SS = window.SS || {};
     if (ds.acao === 'menu') return confirmarMenu();
     if (ds.acao === 'desistir') return confirmarDesistir();
     if (ds.acao === 'reiniciar') return confirmarReiniciar();
+    if (ds.acao === 'opcoes-mesa') return telaOpcoes(() => { fecharModal(); if (jogo) render(); });
     if (!jogo) return;
     if (ds.pilha && ui.aoComprar) {
       const [p, b] = ds.pilha.split(':');
@@ -520,7 +521,7 @@ window.SS = window.SS || {};
       return ui.aoContinuar();
     }
     if (ev.key !== 'Escape' || !jogo) return;
-    ui.sel = []; ui.pend = null; ui.atacanteSel = null; ui.bloqSel = null; ui.mira = null; ui.destino = null; ui.reflexoModo = null; ui.miraRei = null; ui.miraDado = null;
+    ui.sel = []; ui.pend = null; ui.atacanteSel = null; ui.bloqSel = null; ui.mira = null; ui.destino = null; ui.reflexoModo = null; ui.miraRei = null; ui.miraDado = null; ui.acaoGuiada = null;
     if (ui.voltarAoAtaque) return voltarAoAtaque();
     render();
   }
@@ -528,6 +529,7 @@ window.SS = window.SS || {};
   function clicarMao(id) {
     if (jogo.fase === 'ataque' && humanoAtaca() && ui.miraRei == null) entrarAcoesNoAtaque();
     if (jogo.fase !== 'principal' || controle(jogo.vez) !== 'humano') return;
+    if (ui.acaoGuiada) return clicarMaoGuiada(id);
     ui.pend = null;
     const k = ui.sel.indexOf(id);
     if (k >= 0) ui.sel.splice(k, 1);
@@ -599,6 +601,59 @@ window.SS = window.SS || {};
     if (!ui.ataques.some(a => a.atacante === uid)) adicionarAtaque(uid, 'jogador');
     const at = ui.ataques.find(a => a.atacante === uid);
     if (at && ourosLivres().includes(ouro)) at.ouros.push(ouro);
+    render();
+  }
+
+  // ---------- Opção "todas as cartas de ação": primeiro a ação, depois as cartas ----------
+  // Com a opção ligada (e nada selecionado), aparece uma carta para cada ação que a sua mão permite. Clicando
+  // numa delas, as cartas da mão que servem para ela pulsam (o resto escurece) e você escolhe quais usar;
+  // quando a escolha fecha uma jogada, segue o caminho normal (alvo, sacrifícios, lugar no campo…).
+  const grupoDaAcao = a => (a.tipo === 'magia' ? 'magia:' + a.naipe : iconeDaAcao(a) + '|' + chaveAcao(a));
+  function acoesDoGrupo(grupo) {
+    if (grupo === 'dado') return [];
+    return M.acoesLegais(jogo).filter(a => a.tipo !== 'atacar' && a.tipo !== 'poder' && grupoDaAcao(a) === grupo);
+  }
+  function gruposDisponiveis() {
+    const vistos = new Map();
+    for (const a of M.acoesLegais(jogo)) {
+      if (a.tipo === 'atacar' || a.tipo === 'poder' || !chaveCartas(a).length) continue;
+      const g = grupoDaAcao(a);
+      if (!vistos.has(g)) vistos.set(g, a);
+    }
+    const p = jogo.vez, alguemAtaca = jogo.jogadores[p].campo.some((u, i) => u && M.podeAtacar(jogo, p, i));
+    const ouros = M.ourosDisponiveis(jogo, p);
+    if (ouros.length && alguemAtaca) vistos.set('dado', null);
+    return [...vistos.entries()];
+  }
+  // cartas da mão que ainda servem para a ação escolhida, junto com as já selecionadas
+  function cartasDaGuiada() {
+    const sel = ui.sel.map(s => (s.startsWith('TOKEN') ? 'TOKEN' : s));
+    const r = new Set();
+    if (ui.acaoGuiada === 'dado') { for (const o of M.ourosDisponiveis(jogo, jogo.vez)) if (o !== 'TOKEN') r.add(o); return r; }
+    for (const a of acoesDoGrupo(ui.acaoGuiada)) {
+      const cs = chaveCartas(a);
+      if (sel.every(s => cs.includes(s))) cs.forEach(c => r.add(c));
+    }
+    return r;
+  }
+  function escolherAcaoGuiada(grupo) {
+    ui.acaoGuiada = ui.acaoGuiada === grupo ? null : grupo; // clicar de novo desiste
+    ui.sel = []; ui.pend = null; ui.destino = null;
+    render();
+  }
+  function clicarMaoGuiada(id) {
+    const k = ui.sel.indexOf(id);
+    if (k >= 0) ui.sel.splice(k, 1);
+    else if (cartasDaGuiada().has(id)) { ui.sel.push(id); Som.tocar('selecionar-carta'); }
+    else return;
+    const grupo = ui.acaoGuiada;
+    if (grupo === 'dado') { ui.acaoGuiada = null; render(); return iniciarDadoAdicional(); }
+    const cands = candidatosSelecao().filter(a => grupoDaAcao(a) === grupo);
+    if (cands.length) {
+      ui.acaoGuiada = null;
+      ui.ultimoBotao = null;
+      return iniciarPendente(chaveAcao(cands[0]));
+    }
     render();
   }
 
@@ -734,7 +789,10 @@ window.SS = window.SS || {};
   function clicarBotao(acao) {
     const [nome, arg, arg2] = acao.split(':');
     switch (nome) {
+      case 'guiada':
+        return escolherAcaoGuiada(acao.slice('guiada:'.length));
       case 'cancelar':
+        ui.acaoGuiada = null;
         ui.sel = []; ui.pend = null; ui.atacanteSel = null; ui.bloqSel = null; ui.destino = null;
         if (ui.voltarAoAtaque) return voltarAoAtaque();
         return render();
@@ -1184,7 +1242,9 @@ window.SS = window.SS || {};
     const l = M.localizar(jogo, uid), esp = elUnidade(uid);
     if (!l || !esp) return;
     const campo = jogo.jogadores[p].campo, vizinhos = [l.i - 1, l.i + 1].map(k => campo[k]).filter(Boolean);
-    Som.tocar(l.u.tipo === 'as' ? 'as-' + l.u.naipe : l.u.figura.rank === 'Q' ? 'sumonar-rainha' : 'sumonar', { atraso: 90 });
+    // Entrada: cada figura tem o seu som (Valete, Rainha, Rei); se ainda não foi gravado, toca o "sumonar" geral.
+    const somFigura = l.u.tipo === 'as' ? 'as-' + l.u.naipe : { J: 'sumonar-valete', Q: 'sumonar-rainha', K: 'sumonar-rei' }[l.u.figura.rank];
+    Som.tocar(somFigura && Som.tem(somFigura) ? somFigura : 'sumonar', { atraso: 90 });
     if (l.u.tipo === 'as') {
       const naipe = l.u.naipe, cor = COR_NAIPE[naipe], un = esp.querySelector('.unidade');
       if (un) {
@@ -1663,6 +1723,29 @@ window.SS = window.SS || {};
   const COR_NAIPE = { espadas: '90, 140, 255', copas: '255, 77, 90', paus: '77, 220, 122', ouros: '255, 207, 77' };
   let poderAnimado = null;
 
+  // O símbolo do poder é criado uma vez só e depois só tem as classes/atributos atualizados: recriar o
+  // elemento a cada redesenho (clicar numa carta já redesenha a mesa) reiniciava a animação dele.
+  function atualizarLadoHeroi(lado, poderHTML, tokensHTML) {
+    const novo = document.createElement('div');
+    novo.innerHTML = poderHTML;
+    const n = novo.firstElementChild;
+    let atual = lado.querySelector('.poder-naipe');
+    if (!atual || atual.tagName !== n.tagName || atual.dataset.poder !== n.dataset.poder) {
+      lado.innerHTML = '';
+      lado.appendChild(n);
+      atual = n;
+    } else {
+      atual.className = n.className;
+      for (const at of ['title', 'aria-label', 'data-acao']) {
+        if (n.hasAttribute(at)) atual.setAttribute(at, n.getAttribute(at)); else atual.removeAttribute(at);
+      }
+      if ('disabled' in atual) atual.disabled = n.disabled;
+    }
+    let tk = lado.querySelector('.tokens');
+    if (!tk) { tk = document.createElement('div'); tk.className = 'tokens'; lado.appendChild(tk); }
+    definirHTML(tk, tokensHTML);
+  }
+
   // Poder usado: o símbolo do naipe cresce e brilha na cor do naipe, e uma onda sai dele.
   function brilhoPoder(p, naipe) {
     requestAnimationFrame(() => {
@@ -1742,7 +1825,7 @@ window.SS = window.SS || {};
     const ferida = heroi.querySelector('.heroi-ferida');
     ferida.hidden = !isFinite(teto);
     if (isFinite(teto)) ferida.textContent = t('ui.curaAte', { n: teto });
-    definirHTML(info.querySelector('.lado-heroi'), `${poder}<div class="tokens">${tokens}</div>`);
+    atualizarLadoHeroi(info.querySelector('.lado-heroi'), poder, tokens);
     // Brilho na cor do naipe quando o poder é usado (vale para os dois Palhaços).
     if (jogo.vez === p && jogo.poderUsado && poderAnimado !== `${partida}:${jogo.turno}`) {
       poderAnimado = `${partida}:${jogo.turno}`;
@@ -1754,7 +1837,9 @@ window.SS = window.SS || {};
     const selUnica = podeJogar && !ui.pend && ui.sel.length === 1 ? j.mao.find(c => c.id === ui.sel[0]) : null;
     const filtrar = !!selUnica && (M.ehFigura(selUnica) || M.ehAs(selUnica));
     const parceiros = filtrar ? candidatosParceiros() : new Set();
+    const guiadas = podeJogar && ui.acaoGuiada ? cartasDaGuiada() : null;
     const estilo = c => {
+      if (guiadas) return ui.sel.includes(c.id) ? '' : guiadas.has(c.id) ? ' combina' : ' apagada';
       if (!filtrar || c.id === selUnica.id) return '';
       return parceiros.has(c.id) ? ' combina' : ' apagada';
     };
@@ -1969,6 +2054,11 @@ window.SS = window.SS || {};
       <img src="arte/acoes/${arte}.webp" alt="" draggable="false">${DESENHO_PROVISORIO[icone] ? `<span class="ca-desenho">${DESENHO_PROVISORIO[icone]}</span>` : ''}<b class="ca-titulo${classeTitulo}">${titulo}</b><small class="ca-sub">${sub}</small></button>`;
   };
 
+  // Carta de ação da opção "todas as ações" (dado adicional tem a própria arte)
+  const btnGuiada = ([grupo, a], extra) => (grupo === 'dado'
+    ? btnGrande('guiada:dado', t('acao.dadoAdicional'), 'dado', extra)
+    : btnGrande('guiada:' + grupo, rotuloTipo(a.tipo, a), iconeDaAcao(a), extra));
+
   function renderFaixa() {
     const p = jogo.vez, j = jogo.jogadores[p], d = 1 - p;
     const btn = (acao, rotulo, extra) => `<button class="btn ${extra || ''}" data-acao="${acao}">${rotulo}</button>`;
@@ -2011,7 +2101,18 @@ window.SS = window.SS || {};
             return btnGrande('tipo:' + k, rotuloTipo(a.tipo, a), iconeDaAcao(a));
           }).join('');
           texto = chaves.length ? t('faixa.escolhaAcao') : dicaSelecao();
-        } else texto = t(jogo.acoes > 0 ? 'faixa.comoJogar' : 'faixa.semAcoes');
+        } else if (ui.acaoGuiada) {
+          const g = gruposDisponiveis().find(([k]) => k === ui.acaoGuiada);
+          if (!g) ui.acaoGuiada = null;
+          else {
+            botoes = btnGuiada(g, 'mirando');
+            texto = t('faixa.guiada');
+            extras = btn('cancelar', t('btn.cancelar'));
+          }
+        } else {
+          texto = t(jogo.acoes > 0 ? 'faixa.comoJogar' : 'faixa.semAcoes');
+          if (opcoes.todasAcoes && jogo.acoes > 0) botoes = gruposDisponiveis().map(g => btnGuiada(g, '')).join('');
+        }
         // Passar turno sempre na ponta esquerda; Preparar ataque só se alguém puder atacar neste turno.
         const alguemAtaca = jogo.jogadores[p].campo.some((u, i) => u && M.podeAtacar(jogo, p, i));
         // Um Ouros sozinho selecionado (carta ou ficha do Ás): também pode virar 1 dado a mais num ataque.
@@ -2267,7 +2368,7 @@ window.SS = window.SS || {};
   //   popupContinuar: os pop-ups de combate esperam o botão Continuar (padrão: somem sozinhos).
   //   caixaMeio: mostra a caixa de instruções no meio da mesa (padrão: escondida).
   //   efeitos / musica: liga os sons e a música de fundo (padrão: ligados).
-  const OPCOES_PADRAO = { popupContinuar: false, caixaMeio: false, efeitos: true, musica: true, volume: 80, volumeMusica: 60 };
+  const OPCOES_PADRAO = { popupContinuar: false, caixaMeio: false, efeitos: true, musica: true, volume: 80, volumeMusica: 60, todasAcoes: false };
   const opcoes = (() => {
     try { return Object.assign({}, OPCOES_PADRAO, JSON.parse(localStorage.getItem('ss-opcoes') || '{}')); } catch (e) { return Object.assign({}, OPCOES_PADRAO); }
   })();
@@ -3420,6 +3521,8 @@ window.SS = window.SS || {};
       <h2 class="titulo-etapa">${t('op.titulo')}</h2>
       <div class="opcao"><label>${t('op.popup')}</label>${grupoMenu('popupContinuar', [['nao', t('op.popupDireto')], ['sim', t('op.popupBotao')]], opcoes.popupContinuar ? 'sim' : 'nao')}
         <p class="nota">${t('op.popupNota')}</p></div>
+      <div class="opcao"><label>${t('op.todasAcoes')}</label>${grupoMenu('todasAcoes', [['nao', t('op.todasNao')], ['sim', t('op.todasSim')]], opcoes.todasAcoes ? 'sim' : 'nao')}
+        <p class="nota">${t('op.todasNota')}</p></div>
       <div class="opcao"><label>${t('op.caixa')}</label>${grupoMenu('caixaMeio', [['nao', t('op.caixaOculta')], ['sim', t('op.caixaVisivel')]], opcoes.caixaMeio ? 'sim' : 'nao')}
         <p class="nota">${t('op.caixaNota')}</p></div>
       <div class="opcao"><label>${t('op.efeitos')}</label>${grupoMenu('efeitos', [['sim', t('op.ligado')], ['nao', t('op.desligado')]], opcoes.efeitos ? 'sim' : 'nao')}</div>

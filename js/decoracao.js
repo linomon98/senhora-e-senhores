@@ -29,8 +29,8 @@ window.SS = window.SS || {};
     barata: {
       x: 1319, y: 463, w: 138, prop: 1514 / 2564, chama: [10, 20.4],
       partes: {
-        antenaesq: { l: 8.06, t: -1.25, w: 22.46, h: 13.26, ox: 86.8, oy: 100 },
-        antenadir: { l: 56.94, t: 2.26, w: 43.33, h: 19.19, ox: 1.2, oy: 100 },
+        antenaesq: { l: 8.06, t: -1.25, w: 25.76, h: 13.26, ox: 89.5, oy: 100 },
+        antenadir: { l: 56.94, t: 2.26, w: 43.33, h: 19.19, ox: 35.5, oy: 100 },
       },
       isqueiro: { l: 0, t: 12.8, w: 41, h: 73 },
     },

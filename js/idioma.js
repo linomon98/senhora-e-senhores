@@ -170,8 +170,8 @@ window.SS = window.SS || {};
 
   // ---------- Interface: poderes, efeitos e estados das cartas ----------
   adicionar({
-    'fig.J': ['Valete — Ímpeto: ataca no mesmo turno em que entra. Só equipa números de 2 a 5.',
-      'Jack — Haste: attacks on the same turn it enters. Only equips numbers 2 to 5.'],
+    'fig.J': ['Valete — Ímpeto: ataca no mesmo turno em que entra. Só equipa números de 2 a 4.',
+      'Jack — Haste: attacks on the same turn it enters. Only equips numbers 2 to 4.'],
     'fig.Q': ['Rainha — Atropelar: se matar quem bloqueou, o dano que sobra (dano − ataque do bloqueador) vai para o PV do oponente. Para entrar: 1 ação e o sacrifício de 2 Senhores seus que já estavam em campo antes deste turno.',
       "Queen — Trample: if she kills the blocker, the leftover damage (damage − blocker's attack) goes to the opponent's HP. To enter: 1 action and sacrifice 2 of your Gentlemen that were already on the field before this turn."],
     'fig.K': ['Rei — Ordem real: ao atacar, pode escolher como alvo um Senhor(a) inimigo. O alvo é obrigado a defender, e outros Senhores ativos dele podem entrar para ajudar. Só equipa números de 2 a 7.',
@@ -459,6 +459,11 @@ window.SS = window.SS || {};
     'op.popupDireto': ['Direto (somem sozinhos)', 'Auto (fade out)'],
     'op.popupBotao': ['Com botão Continuar', 'With Continue button'],
     'op.popupNota': ['Direto: o resultado de cada ataque aparece e some sozinho (clique para pular). Com botão: espera você clicar em Continuar.', 'Auto: each attack result shows and fades by itself (click to skip). With button: waits for you to click Continue.'],
+    'op.todasAcoes': ['Cartas de ação', 'Action cards'],
+    'op.todasNao': ['Só ao selecionar cartas', 'Only when cards are selected'],
+    'op.todasSim': ['Mostrar todas as possíveis', 'Show every possible one'],
+    'op.todasNota': ['Mostrando todas: aparece uma carta para cada ação que a sua mão permite; clique nela e depois escolha as cartas da mão que vai usar.', 'Showing all: there is a card for every action your hand allows; click it, then pick the hand cards to use.'],
+    'faixa.guiada': ['Escolha na mão as cartas para essa ação (as que servem estão brilhando). Clique de novo na carta para desistir.', 'Pick the hand cards for this action (the ones that fit are glowing). Click the card again to back out.'],
     'op.caixa': ['Caixa de instruções no meio da mesa', 'Instructions box in the middle of the table'],
     'op.caixaOculta': ['Escondida', 'Hidden'],
     'op.caixaVisivel': ['Visível', 'Visible'],

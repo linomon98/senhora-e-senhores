@@ -1489,5 +1489,17 @@ html.sem-caixa-meio #faixa .caixa-faixa { display: none; }
 .deco-formigas .deco-base, .deco-barata .deco-base { filter: none; }
 .deco-formigas::before, .deco-barata::before { content: ''; position: absolute; border-radius: 50%; background: rgba(5, 18, 2, .28); pointer-events: none; }
 .deco-formigas::before { left: 4%; top: 30%; width: 94%; height: 68%; }
-.deco-barata::before { left: 8%; top: 86%; width: 88%; height: 13%; }
+.deco-barata::before { left: calc(8% + 25px); top: 86%; width: 88%; height: 13%; }
 .carta-acao.mirando-roxo { z-index: 5; transform: translateY(-22px) rotate(0deg) scale(1.08); filter: drop-shadow(0 0 16px rgba(214, 60, 255, 1)) drop-shadow(0 0 5px #fff); }
+
+/* Botões principais (antes dourados) no mesmo estilo branco dos botões da mesa (Desistir, Reiniciar…) */
+.btn.principal, .btn-menu.principal {
+  color: var(--tinta); background: #fffdf6; border: 2px solid var(--tinta); font-weight: 700;
+  box-shadow: 0 3px 0 var(--tinta), 0 6px 14px rgba(20, 50, 5, .25); transition: transform .12s, box-shadow .12s, background .12s;
+}
+.btn.principal:hover:not(:disabled), .btn-menu.principal:hover { background: #fff; transform: translateY(-2px); box-shadow: 0 5px 0 var(--tinta), 0 10px 18px rgba(20, 50, 5, .3); }
+.btn.principal:active, .btn-menu.principal:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--tinta); }
+
+/* Botão redondo de opções (engrenagem) ao lado do Registro */
+.btn.btn-topo.btn-opcoes-mesa { position: absolute; top: 14px; right: 18px; z-index: 30; width: 42px; height: 42px; padding: 0; border-radius: 50%; font-size: 22px; line-height: 1; display: grid; place-items: center; }
+.btn-log { right: 70px; }
