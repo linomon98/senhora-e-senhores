@@ -1383,3 +1383,89 @@ html.sem-caixa-meio #faixa .caixa-faixa { display: none; }
 .selo-vigilia { right: auto; left: -10px; }
 @keyframes selo-entra { from { transform: scale(0) rotate(-40deg); } }
 @keyframes selo-balanca { from { transform: rotate(-10deg); } to { transform: rotate(10deg); } }
+
+/* ---------- Decorações do cenário (js/decoracao.js) ---------- */
+.decoracoes { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+.deco { position: absolute; filter: drop-shadow(0 6px 6px rgba(5, 18, 2, .3)); }
+.deco-base, .deco-parte { position: absolute; display: block; user-select: none; pointer-events: none; }
+.deco-base { inset: 0; width: 100%; height: 100%; }
+.deco-clique { position: absolute; padding: 0; border: 0; background: transparent; cursor: pointer; pointer-events: auto; border-radius: 12px; }
+.deco-clique:focus-visible { outline: 2px dashed rgba(255, 255, 255, .7); }
+.deco-clique-img { pointer-events: auto; cursor: pointer; }
+
+/* Ratinhos: espasmo de orelha (rapidinho) */
+.deco-ratos-orelhaa.espasmo, .deco-ratos-orelhab.espasmo, .deco-ratos-orelhac.espasmo, .deco-ratos-orelhad.espasmo { animation: orelha-espasmo .26s ease-out; }
+.deco-ratos-orelhaa.espasmo2, .deco-ratos-orelhab.espasmo2, .deco-ratos-orelhac.espasmo2, .deco-ratos-orelhad.espasmo2 { animation: orelha-espasmo .2s ease-out 2; }
+@keyframes orelha-espasmo { 0% { transform: rotate(0); } 25% { transform: rotate(-11deg) scale(.96, 1.03); } 55% { transform: rotate(5deg); } 100% { transform: rotate(0); } }
+.deco-ratos-orelhab.espasmo, .deco-ratos-orelhad.espasmo, .deco-ratos-orelhab.espasmo2, .deco-ratos-orelhad.espasmo2 { animation-name: orelha-espasmo-dir; }
+@keyframes orelha-espasmo-dir { 0% { transform: rotate(0); } 25% { transform: rotate(11deg) scale(.96, 1.03); } 55% { transform: rotate(-5deg); } 100% { transform: rotate(0); } }
+/* TV: brilho tremulando na tela e luz de contorno nos ratos, na cor escolhida */
+.tv-brilho {
+  position: absolute; pointer-events: none; mix-blend-mode: screen;
+  background: radial-gradient(ellipse at 50% 50%, color-mix(in srgb, var(--tv) 45%, #fff) 0%, var(--tv) 60%, color-mix(in srgb, var(--tv) 70%, #000) 100%);
+  opacity: .78; animation: tv-pisca 2.6s steps(1) infinite, tv-respira 1.3s ease-in-out infinite alternate;
+  transition: background .25s;
+}
+.tv-luz {
+  position: absolute; pointer-events: none; mix-blend-mode: screen; border-radius: 50%;
+  background: radial-gradient(ellipse at 22% 52%, color-mix(in srgb, var(--tv) 55%, transparent) 0%, color-mix(in srgb, var(--tv) 22%, transparent) 38%, transparent 70%);
+  filter: blur(6px); opacity: .9; animation: tv-pisca 2.6s steps(1) infinite; transition: background .25s;
+}
+.tv-luz.troca { animation: tv-troca .35s ease-out, tv-pisca 2.6s steps(1) .35s infinite; }
+.tv-brilho.troca { animation: tv-troca .35s ease-out, tv-pisca 2.6s steps(1) .35s infinite; }
+@keyframes tv-pisca { 0%, 100% { opacity: .75; } 37% { opacity: .55; } 39% { opacity: .85; } 71% { opacity: .62; } 73% { opacity: .8; } }
+@keyframes tv-respira { from { filter: brightness(.95); } to { filter: brightness(1.12); } }
+@keyframes tv-troca { 0% { opacity: 1; filter: brightness(2); } 100% { opacity: .75; filter: none; } }
+.deco-ratos-silhueta { filter: drop-shadow(-2px -1px 1.5px var(--tv)) drop-shadow(-1px 0 4px color-mix(in srgb, var(--tv) 75%, transparent)); transition: filter .25s; }
+.tv-botao { border-radius: 18px; }
+
+/* Cinzeiro: fumaça subindo e se espalhando */
+.fumaca { position: absolute; width: 0; height: 0; pointer-events: none; }
+.fumaca-puff {
+  position: absolute; left: 0; top: 0; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(246, 246, 246, .95) 0%, rgba(215, 215, 220, .7) 40%, rgba(190, 190, 200, .25) 62%, transparent 74%);
+  filter: blur(1.2px) drop-shadow(0 0 1px rgba(90, 90, 100, .35)); animation: fumaca-sobe 3.8s ease-out forwards;
+}
+@keyframes fumaca-sobe {
+  0% { transform: translate(0, 0) scale(.4); opacity: 0; }
+  10% { opacity: 1; }
+  35% { transform: translate(var(--dx1), -34px) scale(1.1); }
+  65% { transform: translate(var(--dx2), -72px) scale(1.9); opacity: .7; }
+  100% { transform: translate(var(--dx3), -118px) scale(2.8); opacity: 0; }
+}
+
+/* Barata: corpo respirando, antenas balançando; isqueiro com chama ou faíscas */
+.deco-barata { animation: barata-respira 2.6s ease-in-out infinite; transform-origin: 70% 100%; }
+@keyframes barata-respira { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.012, .992) translateY(.5px); } }
+.deco-barata-antenaesq { animation: antena-barata 2.1s ease-in-out infinite alternate; }
+.deco-barata-antenadir { animation: antena-barata 1.7s ease-in-out -.6s infinite alternate-reverse; }
+@keyframes antena-barata { from { transform: rotate(-4deg); } to { transform: rotate(5deg); } }
+.isqueiro-botao { border-radius: 30px; }
+.isqueiro-ponto { position: absolute; width: 0; height: 0; pointer-events: none; }
+.isqueiro-chama { position: absolute; left: -9px; bottom: 0; width: 18px; height: 34px; animation: chama-acende .18s ease-out; transform-origin: 50% 100%; }
+.isqueiro-chama i {
+  position: absolute; inset: 0; border-radius: 50% 50% 45% 45% / 70% 70% 30% 30%;
+  background: radial-gradient(ellipse at 50% 78%, #fff 0%, #ffe680 22%, #ffab2e 50%, rgba(255, 90, 20, .8) 72%, transparent 76%);
+  box-shadow: 0 0 14px 6px rgba(255, 170, 60, .55); animation: chama-tremula .12s ease-in-out infinite alternate; transform-origin: 50% 100%;
+}
+.isqueiro-chama.apagando { animation: chama-apaga .45s ease-in forwards; }
+@keyframes chama-acende { from { transform: scale(.2, .1); opacity: 0; } }
+@keyframes chama-tremula { from { transform: scale(1, 1) skewX(-3deg); } to { transform: scale(.92, 1.08) skewX(4deg); } }
+@keyframes chama-apaga { to { transform: scale(.2, .1); opacity: 0; } }
+.faisca-isqueiro {
+  position: absolute; left: -2px; top: -2px; width: 4px; height: 4px; border-radius: 50%; background: #fff3a0;
+  box-shadow: 0 0 6px 2px rgba(255, 190, 60, .9); animation: faisca-voa .38s ease-out forwards;
+}
+@keyframes faisca-voa { from { transform: translate(0, 0) scale(1); opacity: 1; } to { transform: translate(var(--fx), var(--fy)) scale(.3); opacity: 0; } }
+.faisca-flash { position: absolute; left: -10px; top: -10px; width: 20px; height: 20px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 250, 200, .95), transparent 70%); animation: faisca-flash .22s ease-out forwards; }
+@keyframes faisca-flash { from { transform: scale(.4); opacity: 1; } to { transform: scale(1.6); opacity: 0; } }
+
+/* Formigas: anteninhas e a espada que treme */
+.antena-formiga { animation: antena-formiga 1s ease-in-out infinite alternate; }
+@keyframes antena-formiga { from { transform: rotate(-9deg); } to { transform: rotate(8deg); } }
+.deco-formigas-espada.treme { animation: espada-treme .55s cubic-bezier(.3, 0, .4, 1); }
+@keyframes espada-treme {
+  0% { transform: rotate(0); } 12% { transform: rotate(-3.5deg); } 26% { transform: rotate(3deg); } 40% { transform: rotate(-2.4deg); }
+  54% { transform: rotate(1.8deg); } 68% { transform: rotate(-1.1deg); } 82% { transform: rotate(.6deg); } 100% { transform: rotate(0); }
+}
+@media (prefers-reduced-motion: reduce) { .deco *, .deco { animation: none !important; } }

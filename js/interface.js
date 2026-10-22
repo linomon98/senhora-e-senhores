@@ -3774,6 +3774,7 @@ window.SS = window.SS || {};
   C.aplicarTexturas();
   plantarGraminhas();
   animarCobra();
+  if (SS.Decoracao) SS.Decoracao.montar($('#mesa'));
   sonsDasJogadas();
   aplicarOpcoes();
   ajustarEscala();
