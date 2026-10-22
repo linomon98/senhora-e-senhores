@@ -11,7 +11,7 @@ window.SS = window.SS || {};
       id: 'visao', titulo: 'Visão geral',
       html: () => `
         <h3>Objetivo</h3>
-        <p>Reduzir os Pontos de Vida (PV) do oponente a <b>0</b>. Cada jogador começa com <b>${M.PV_INICIAL} PV</b> (alguns Palhaços mudam isso), e não existe máximo: a cura de Copas pode passar disso.</p>
+        <p>Reduzir os Pontos de Vida (PV) do oponente a <b>0</b>. Cada jogador começa com <b>${M.PV_INICIAL} PV</b> (alguns Palhaços mudam isso), e a cura vai no máximo até <b>${M.PV_MAX_CURA} PV</b>.</p>
         <h3>Componentes</h3>
         <ul>
           <li><b>Baralho de Letras</b> (${R.letras} cartas): Valetes, Rainhas e Reis. São as <b>figuras</b>.</li>
@@ -120,7 +120,7 @@ window.SS = window.SS || {};
           <tr><th>Dano</th><th>Resultado</th></tr>
           <tr><td>0 a 2 (menos da metade)</td><td>Golpe <b>ignorado</b></td></tr>
           <tr><td>3 a 6</td><td>Leva <b>1 hit</b></td></tr>
-          <tr><td>7 ou mais (passou do ataque dele)</td><td><b>Morre na hora</b></td></tr>
+          <tr><td>7 ou mais (passou do ataque dele)</td><td>Leva <b>2 hits</b> (quem aguenta 3 ou mais sobrevive)</td></tr>
         </table>
         <h3>Contra-ataque (não usa dado)</h3>
         <p>Se o <b>número do atacante for menor</b> que o do bloqueador (ou a soma dos bloqueadores), o atacante leva <b>1 hit</b>. Bônus fixos e Espadas contam.</p>
@@ -135,7 +135,7 @@ window.SS = window.SS || {};
         <p>Uma carta numérica usada sozinha gasta <b>1 ação</b> e vai para o cemitério. O <b>Ás</b> também serve como carta de sacrifício (vale 1): nos efeitos de naipe, no Ouros e nas magias dos pares.</p>
         <table class="tabela-regras">
           <tr><th>Naipe</th><th>Efeito</th></tr>
-          <tr><td>♥ Copas</td><td>Cura PV: 2–3 cura 1, 4–7 cura 2, 8–10 cura 3. Pode passar de ${M.PV_INICIAL}.</td></tr>
+          <tr><td>♥ Copas</td><td>Cura PV: Ás a 5 cura 3, 6 a 10 cura 4. No máximo até ${M.PV_MAX_CURA} PV.</td></tr>
           <tr><td>♦ Ouros</td><td>Descarte 1 para comprar 1 carta (do baralho que escolher). No ataque, +1 dado.</td></tr>
           <tr><td>♠ Espadas</td><td>+1 de ataque a um Senhor(a) até o fim do turno; no 6, vira metade do valor da carta.</td></tr>
           <tr><td>♣ Paus</td><td><b>Berserk:</b> um Senhor(a) ferido(a) volta à vertical até o fim do próximo turno do oponente. Se levar 1 hit nesse tempo, morre quando o efeito acabar; com 2 hits, morre na hora.</td></tr>
@@ -212,7 +212,7 @@ window.SS = window.SS || {};
       id: 'visao', titulo: 'Overview',
       html: () => `
         <h3>Goal</h3>
-        <p>Reduce your opponent's Hit Points (HP) to <b>0</b>. Each player starts with <b>${M.PV_INICIAL} HP</b> (some Jesters change this), and there is no maximum: Hearts healing can go above it.</p>
+        <p>Reduce your opponent's Hit Points (HP) to <b>0</b>. Each player starts with <b>${M.PV_INICIAL} HP</b> (some Jesters change this), and there healing goes up to <b>${M.PV_MAX_CURA} HP</b> at most.</p>
         <h3>Components</h3>
         <ul>
           <li><b>Faces deck</b> (${R.letras} cards): Jacks, Queens and Kings. These are the <b>face cards</b>.</li>
@@ -321,7 +321,7 @@ window.SS = window.SS || {};
           <tr><th>Damage</th><th>Result</th></tr>
           <tr><td>0 to 2 (less than half)</td><td>Blow <b>ignored</b></td></tr>
           <tr><td>3 to 6</td><td>Takes <b>1 hit</b></td></tr>
-          <tr><td>7 or more (more than its attack)</td><td><b>Dies instantly</b></td></tr>
+          <tr><td>7 or more (more than its attack)</td><td>Takes <b>2 hits</b> (those that take 3 or more survive)</td></tr>
         </table>
         <h3>Counterattack (no die)</h3>
         <p>If the <b>attacker's number is lower</b> than the blocker's (or the blockers' sum), the attacker takes <b>1 hit</b>. Permanent bonuses and Spades count.</p>
@@ -336,7 +336,7 @@ window.SS = window.SS || {};
         <p>A number card played alone costs <b>1 action</b> and goes to the graveyard. An <b>Ace</b> also works as a sacrifice card (worth 1): in suit effects, Diamonds and pair magic.</p>
         <table class="tabela-regras">
           <tr><th>Suit</th><th>Effect</th></tr>
-          <tr><td>♥ Hearts</td><td>Heals HP: 2–3 heals 1, 4–7 heals 2, 8–10 heals 3. Can go above ${M.PV_INICIAL}.</td></tr>
+          <tr><td>♥ Hearts</td><td>Heals HP: Ace to 5 heals 3, 6 to 10 heals 4. Up to ${M.PV_MAX_CURA} HP at most.</td></tr>
           <tr><td>♦ Diamonds</td><td>Discard 1 to draw 1 card (from the deck of your choice). On attack, +1 die.</td></tr>
           <tr><td>♠ Spades</td><td>+1 attack to a Gentleman until end of turn; on a 6, it becomes half the card's value.</td></tr>
           <tr><td>♣ Clubs</td><td><b>Berserk:</b> a wounded Gentleman returns upright until the end of the opponent's next turn. If it takes 1 hit in that time, it dies when the effect ends; with 2 hits, it dies instantly.</td></tr>

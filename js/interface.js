@@ -27,7 +27,7 @@ window.SS = window.SS || {};
   const PODER_AS = tabela('as.');
   const NOME_POSTURA = tabela('postura.');
   const EFEITO_NUMERO = new Proxy({}, {
-    get: (_, naipe) => c => t('efeito.' + String(naipe), { cura: M.curaDe(c), pv: M.PV_INICIAL, crit: Math.floor(M.valor(c) / 2) }),
+    get: (_, naipe) => c => t('efeito.' + String(naipe), { cura: M.curaDe(c), max: M.PV_MAX_CURA, crit: Math.floor(M.valor(c) / 2) }),
   });
   const ANGULO = { vertical: 0, diagonal: 45, horizontal: 90 };
   // Parâmetros que o jogador escolhe clicando na mesa, em ordem, para cada tipo de ação.

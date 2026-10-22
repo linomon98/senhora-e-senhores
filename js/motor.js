@@ -12,7 +12,8 @@ window.SS = window.SS || {};
   // Textos no idioma escolhido (idioma.js); sem ele, devolve a própria chave.
   const t = (k, p) => (SS.Idioma ? SS.Idioma.t(k, p) : k);
   const LIMITE_FIGURA = { J: 4, Q: 10, K: 7 };
-  const PV_INICIAL = 20; // não há máximo: Copas pode curar acima disso
+  const PV_INICIAL = 20;
+  const PV_MAX_CURA = 25; // a cura (de qualquer fonte) não passa disso
   const ESPACOS = 8;
   const ACOES_POR_TURNO = 3;
   const CUSTO_RAINHA = 1; // ações passivas para sumonar uma Rainha
@@ -54,7 +55,7 @@ window.SS = window.SS || {};
   const valor = c => (ehAs(c) ? 1 : parseInt(c.rank, 10));
   const nomeCarta = c => (['A', 'J', 'Q', 'K'].includes(c.rank) ? t('carta.' + c.rank) + ' ' : c.rank) + SIMBOLO[c.naipe];
   const nomeNaipe = n => t('naipe.' + n);
-  const curaDe = c => (valor(c) <= 3 ? 1 : valor(c) <= 7 ? 2 : 3);
+  const curaDe = c => (valor(c) <= 5 ? 3 : 4); // Copas sozinha: Ás a 5 cura 3, 6 a 10 cura 4
   // Cura de uma carta de Copas para este jogador (Infartitte, Coração forte: +1).
   const curaPara = (j, c) => curaDe(c) + (j && j.palhaco === 'infartitte' ? PALHACOS.infartitte.curaExtra : 0);
 
@@ -197,10 +198,10 @@ window.SS = window.SS || {};
     return perdido;
   }
 
-  // Sem feridas, a cura não tem limite. Com ferida de Copas, não dá para curar
+  // A cura vai no máximo até PV_MAX_CURA. Com ferida de Copas, não dá para curar
   // acima do PV que sobrou depois do golpe, enquanto o Naipado de Copas viver.
   function tetoCura(j) {
-    let t = Infinity;
+    let t = PV_MAX_CURA;
     for (const k in j.feridas) t = Math.min(t, j.feridas[k]);
     return t;
   }
@@ -1019,7 +1020,13 @@ window.SS = window.SS || {};
       const danoDefesa = danoPara(b);
       if (danoDefesa < dano) registrar(e, t('log.casca', { u: nomeUnidade(loc.u), n: danoDefesa }));
       if (danoDefesa * 2 < atkBloq[k]) registrar(e, t('log.ignorou', { u: nomeUnidade(loc.u) }));
-      else if (danoDefesa > atkBloq[k]) morrer(e, loc.p, loc.i, 'fatal');
+      else if (danoDefesa > atkBloq[k]) {
+        // Golpe pesado (dano acima do ataque dele): 2 hits. Quem aguenta 3 ou mais sobrevive.
+        registrar(e, t('log.golpePesado', { u: nomeUnidade(loc.u) }));
+        aplicarHit(e, loc.p, loc.i);
+        const l2 = localizar(e, uid);
+        if (l2) aplicarHit(e, l2.p, l2.i);
+      }
       else aplicarHit(e, loc.p, loc.i);
       if (localizar(e, uid)) todosMorreram = false;
     });
@@ -1176,7 +1183,7 @@ window.SS = window.SS || {};
   SS.Motor = {
     desistir, REGRAS_DECK, RANKS, contagemPadrao, resumoDeck, validarDeck, cartasDoDeck,
     PALHACOS, CUSTO_TRANSFUSAO, CUSTO_SANGRIA, SACRIFICIOS_RAINHA, SENHORES_POR_TURNO, ASES_POR_TURNO, REDUCAO_POR_DEFENSOR, palhacoDe, limiteMao, ataqueDirecionado,
-    NAIPES, SIMBOLO, LIMITE_FIGURA, PV_INICIAL, ESPACOS, ACOES_POR_TURNO, CUSTO_RAINHA, DADO_ATAQUE_TOTAL, LIMITE_MAO,
+    NAIPES, SIMBOLO, LIMITE_FIGURA, PV_INICIAL, PV_MAX_CURA, ESPACOS, ACOES_POR_TURNO, CUSTO_RAINHA, DADO_ATAQUE_TOTAL, LIMITE_MAO,
     definirRng: f => { rng = f; }, rngAtual: () => rng, voltarAoPrincipal, refletir, paresIguais, contraRefletir, podeContraRefletir, CURA_AS_COPAS, CURA_NAIPADO_COPAS,
     ehFigura, ehAs, ehNumero, ehSacrificavel, valor, nomeCarta, nomeNaipe, nomeUnidade, curaDe, curaPara, naipado,
     BARALHOS, NOME_BARALHO, baralhosDisponiveis, comprarDoTurno,
