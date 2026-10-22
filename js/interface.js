@@ -737,6 +737,7 @@ window.SS = window.SS || {};
       case 'ir-ataque':
         // No online o amigo só fica sabendo do ataque quando ele é confirmado (a mensagem "declarar"
         // já leva para a fase de ataque), então dá para voltar atrás sem desencontrar as duas telas.
+        Som.tocar('preparar-ataque');
         if (ui.voltarAoAtaque) return voltarAoAtaque(); // já estava no ataque: mantém os ataques marcados
         ui.sel = []; ui.pend = null; ui.ataques = [];
         M.aplicarAcao(jogo, { tipo: 'atacar' });
@@ -3728,7 +3729,7 @@ window.SS = window.SS || {};
       else if (a.tipo === 'paus') Som.tocar('berserk');
       else if (a.tipo === 'curar') Som.tocar('cura', { atraso: 200 });
       else if (a.tipo === 'magia') Som.tocar(MAGIA[a.naipe], { atraso: 450 });
-      else if (a.tipo === 'atacar') Som.tocar('preparar-ataque');
+      // ('atacar' não toca aqui: o jogo passa por ele também ao passar o turno; o som fica no clique)
     });
     embrulhar('declararAtaques', lista => { if (lista && lista.length) Som.tocar('declarar-ataque'); });
     embrulhar('definirBloqueios', mapa => { if (mapa && Object.values(mapa).some(l => l && l.length) && controle(1 - jogo.vez) !== 'humano') Som.tocar('bloquear'); });
