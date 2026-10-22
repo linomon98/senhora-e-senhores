@@ -1504,12 +1504,6 @@ html.sem-caixa-meio #faixa .caixa-faixa { display: none; }
 .btn.btn-topo.btn-opcoes-mesa { position: absolute; top: 14px; right: 18px; z-index: 30; width: 42px; height: 42px; padding: 0; border-radius: 50%; font-size: 22px; line-height: 1; display: grid; place-items: center; }
 .btn-log { right: 70px; }
 
-/* Selo de duração nas cartas de efeito temporário (+1 ataque, berserk, dado adicional) */
-.ca-tempo {
-  position: absolute; right: 9%; top: 31%; z-index: 1; pointer-events: none; white-space: nowrap;
-  font: 800 10px var(--fonte-ui); color: #fff; background: #1d2a12; padding: 3px 6px; border-radius: 9px;
-  box-shadow: 0 2px 0 rgba(0, 0, 0, .35); transform: rotate(9deg);
-}
 
 /* Leque com 7 ou mais cartas de ação: ainda mais espremido, e todas inclinadas (até a 10ª) */
 .carta-acao:nth-child(8) { --r: 23deg; animation-delay: .35s; } .carta-acao:nth-child(9) { --r: 26deg; } .carta-acao:nth-child(10) { --r: 29deg; }
