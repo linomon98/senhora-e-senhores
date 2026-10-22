@@ -1547,6 +1547,15 @@ html.sem-caixa-meio #faixa .caixa-faixa { display: none; }
 .leque-acoes:has(> .carta-acao:nth-child(9)) .carta-acao:first-child { margin-left: 0; }
 
 /* Caixinha de custo das cartas de ação */
+/* Carta de cura com o PV já no limite: meio apagada (clicar nela mostra o "não") */
+.carta-acao.cura-no-limite { filter: grayscale(.7) brightness(.92); }
+/* Aviso "o limite é 4 de defesa" (ou de PV) em cima do Senhor(a) ou do Palhaço */
+.aviso-limite {
+  position: absolute; z-index: 60; pointer-events: none; white-space: nowrap; transform: translate(-50%, 0);
+  padding: 6px 14px; border-radius: 999px; font: 400 20px var(--fonte-titulo); color: #fff;
+  background: #c41e2a; border: 3px solid var(--tinta); box-shadow: 3px 4px 0 var(--tinta);
+}
+
 #caixa-custo {
   position: fixed; z-index: 200; max-width: 260px; pointer-events: none; padding: 8px 11px; border-radius: 10px;
   font: 600 13px/1.35 var(--fonte-ui); color: var(--tinta); background: #fffdf6; border: 2px solid var(--tinta);

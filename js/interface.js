@@ -781,11 +781,12 @@ window.SS = window.SS || {};
     a.el.remove();
     marcarDestino(null);
     $('#campo-' + jogo.vez).classList.remove('soltando');
-    const ef = efeitoDoDestino(a.id, destinoEm(ev.clientX, ev.clientY));
+    const destSolto = destinoEm(ev.clientX, ev.clientY), ef = efeitoDoDestino(a.id, destSolto);
     ui.vooDe = { x: voo.left + voo.width / 2, y: voo.top + voo.height / 2, w: voo.width };
     if (!ef) {
       ui.vooDe = null;
       render();
+      if (destSolto && destSolto.tipo === 'heroi' && curaNoLimite(a.id)) negarLimiteCura([document.querySelector(`#mao-${jogo.vez} [data-mao="${a.id}"]`)]);
       return true;
     }
     if (ef.acao) {
@@ -829,6 +830,12 @@ window.SS = window.SS || {};
         ui.sel = []; ui.pend = null; ui.atacanteSel = null; ui.bloqSel = null; ui.destino = null;
         if (ui.voltarAoAtaque) return voltarAoAtaque();
         return render();
+      case 'negar-defesa': {
+        const p = jogo.vez, i = jogo.jogadores[p].campo.findIndex((u, k) => u && u.tipo === 'senhor' && M.resistencia(jogo, p, k) >= M.RESISTENCIA_MAX);
+        return negar(document.querySelector(`[data-slot="${p}:${i}"]`), t('aviso.limiteDefesa', { n: M.RESISTENCIA_MAX }), [$('.carta-acao[data-acao="negar-defesa"]')]);
+      }
+      case 'negar-cura':
+        return negarLimiteCura([$('.carta-acao[data-acao="negar-cura"]')]);
       case 'dado-adicional':
         return iniciarDadoAdicional();
       case 'tipo':
@@ -929,6 +936,48 @@ window.SS = window.SS || {};
     const passo = passoAtual();
     if (passo === 'slot' && alvos.has(`slot:${p}:${i}`)) return escolherParametro(i);
     if ((passo === 'sacrificios' || passo === 'alvo') && u && alvos.has('uid:' + u.uid)) return escolherParametro(u.uid);
+    // Par de Paus num Senhor(a) seu que já está no limite de defesa: as cartas dizem "não".
+    if (passo === 'alvo' && u && u.tipo === 'senhor' && p === jogo.vez && ui.pend.tipo === 'magia' && ui.pend.cands.some(a => a.naipe === 'paus')
+      && M.resistencia(jogo, p, i) >= M.RESISTENCIA_MAX) negarLimiteDefesa(u.uid);
+  }
+
+  // "Não" com as cartas: o Senhor(a) e a carta de ação balançam de um lado para o outro, e uma frase
+  // em cima dele avisa que a defesa já está no limite.
+  // Carta de Copas que curaria, mas o PV já está no teto (e ainda há ação para gastar).
+  function curaNoLimite(id) {
+    const j = jogo.jogadores[jogo.vez], c = cartaDaMao(id);
+    return !!c && c.naipe === 'copas' && M.ehSacrificavel(c) && jogo.acoes > 0 && j.pv >= M.tetoCura(j);
+  }
+  function defesaNoLimite() {
+    if (ui.sel.length !== 2 || jogo.acoes <= 0) return false;
+    const cs = ui.sel.map(cartaDaMao);
+    if (!cs.every(c => c && c.naipe === 'paus' && M.ehSacrificavel(c))) return false;
+    const p = jogo.vez;
+    return jogo.jogadores[p].campo.some((u, k) => u && u.tipo === 'senhor' && M.resistencia(jogo, p, k) >= M.RESISTENCIA_MAX);
+  }
+  const negarLimiteDefesa = uid => negar(elUnidade(uid), t('aviso.limiteDefesa', { n: M.RESISTENCIA_MAX }), [$('.carta-acao.mirando-roxo')]);
+  // Cura com o PV já no limite: o Palhaço (e a carta de Copas) dizem "não".
+  const negarLimiteCura = outros => negar(elRetrato(jogo.vez), t('aviso.limiteCura', { n: M.PV_MAX_CURA }), outros || []);
+  function negar(alvo, texto, outros) {
+    Som.tocar('golpe-ignorado');
+    const balancar = el => el && el.animate([
+      { transform: 'translateX(0) rotate(0)' }, { transform: 'translateX(-10px) rotate(-4deg)' }, { transform: 'translateX(9px) rotate(4deg)' },
+      { transform: 'translateX(-7px) rotate(-3deg)' }, { transform: 'translateX(5px) rotate(2deg)' }, { transform: 'translateX(0) rotate(0)' },
+    ], { duration: 520, easing: 'ease-in-out', composite: 'add' });
+    balancar(alvo);
+    outros.forEach(balancar);
+    const c = centroDe(alvo);
+    if (!c) return;
+    $('#app .aviso-limite')?.remove();
+    const aviso = document.createElement('div');
+    aviso.className = 'aviso-limite';
+    aviso.textContent = texto;
+    Object.assign(aviso.style, { left: c.x + 'px', top: (c.y - 70) + 'px' });
+    $('#app').appendChild(aviso);
+    aviso.animate([
+      { opacity: 0, transform: 'translate(-50%, 8px) scale(.8)' }, { opacity: 1, transform: 'translate(-50%, 0) scale(1.05)', offset: .12 },
+      { opacity: 1, transform: 'translate(-50%, 0) scale(1)', offset: .8 }, { opacity: 0, transform: 'translate(-50%, -10px) scale(1)' },
+    ], { duration: 2200, easing: 'ease-out', fill: 'forwards' }).onfinish = () => aviso.remove();
   }
 
   // ---------- Setas ----------
@@ -1116,6 +1165,11 @@ window.SS = window.SS || {};
       if (!pal.poder) return { titulo: pal.passiva.nome, sub: t('dp.passivaDe', { n: pal.nome }), linhas: [pal.passiva.texto, `<b>${pal.custo.nome}:</b> ${pal.custo.texto}`, t('dp.semPoder')] };
       return { titulo: pal.poder.nome, sub: t('dp.poderDe', { n: pal.nome }), linhas: [pal.poder.texto] };
     }
+    const pv = el.closest('.heroi-pv');
+    if (pv) {
+      const p = Number(pv.closest('[data-alvo]').dataset.alvo.split(':')[1]), j = jogo.jogadores[p];
+      return { titulo: t('ui.pontosVida'), sub: `${j.pv} PV`, linhas: [t('dp.limiteCura', { n: M.PV_MAX_CURA })] };
+    }
     const ret = el.closest('[data-alvo]');
     if (ret) {
       const p = Number(ret.dataset.alvo.split(':')[1]), j = jogo.jogadores[p], teto = M.tetoCura(j), pal = palhacoDe(p);
@@ -1123,7 +1177,7 @@ window.SS = window.SS || {};
       if (pal.poder) linhas.push(t('dp.poder', { nome: pal.poder.nome, texto: pal.poder.texto }));
       if (pal.custo) linhas.push(`<b>${pal.custo.nome}:</b> ${pal.custo.texto}`);
       linhas.push(t('dp.estado', { pv: j.pv, mao: j.mao.length, l: j.letras.length, n: j.numeros.length, c: j.cemiterio.length }));
-      if (isFinite(teto)) linhas.push(t('dp.ferida', { n: teto }));
+      if (teto < M.PV_MAX_CURA) linhas.push(t('dp.ferida', { n: teto }));
       return { titulo: t('dp.palhaco', { n: pal.nome }), sub: `${pal.titulo} · ${NOME_NAIPE[pal.naipe]}`, linhas };
     }
     const pilha = el.closest('[data-pilha]');
@@ -1883,7 +1937,7 @@ window.SS = window.SS || {};
     if (!heroi || heroi.dataset.pal !== pal.id) {
       info.innerHTML = `<div class="heroi heroi-livre" data-alvo="jogador:${p}" data-pal="${pal.id}">
           <img class="heroi-png" src="${pal.corpo}" alt="${escapar(pal.nome)}" draggable="false">
-          <div class="heroi-pv" title="${t('ui.pontosVida')}"><span></span></div>
+          <div class="heroi-pv"><span></span></div>
           <div class="heroi-ferida" title="${t('ui.feridaCopas')}" hidden></div>
         </div>
         <div class="lado-heroi"></div>`;
@@ -1907,8 +1961,9 @@ window.SS = window.SS || {};
     heroi.title = `${pal.nome} · ${quem}`;
     heroi.querySelector('.heroi-pv span').textContent = j.pv;
     const ferida = heroi.querySelector('.heroi-ferida');
-    ferida.hidden = !isFinite(teto);
-    if (isFinite(teto)) ferida.textContent = t('ui.curaAte', { n: teto });
+    // (o teto geral de cura fica na dica do PV; o selo só aparece com uma ferida de Copas abaixo dele)
+    ferida.hidden = !(teto < M.PV_MAX_CURA);
+    if (teto < M.PV_MAX_CURA) ferida.textContent = t('ui.curaAte', { n: teto });
     atualizarLadoHeroi(info.querySelector('.lado-heroi'), poder);
     let tk = info.querySelector(':scope > .tokens');
     if (!tk) { tk = document.createElement('div'); tk.className = 'tokens'; info.appendChild(tk); }
@@ -2216,6 +2271,13 @@ window.SS = window.SS || {};
         if (ouroSel && alguemAtaca) {
           botoes += btnGrande('dado-adicional', t('acao.dadoAdicional'), 'dado', ui.miraDado ? 'mirando' : '');
           if (!botoes.includes('data-acao="tipo:')) texto = t('faixa.escolhaAcao');
+        }
+        // Par de Paus selecionado e todos os seus Senhores já no limite de defesa (sem inimigo para enfraquecer):
+        // a carta aparece apagada e, clicada, diz "não".
+        if (defesaNoLimite() && !botoes.includes('data-acao="tipo:magia')) botoes += btnGrande('negar-defesa', t('acao.magia.paus'), 'par-paus', 'cura-no-limite');
+        if (ui.sel.length === 1 && curaNoLimite(ui.sel[0]) && !botoes.includes('data-acao="tipo:curar')) {
+          const c = cartaDaMao(ui.sel[0]);
+          botoes += btnGrande('negar-cura', t('acao.curar', { n: M.curaPara(j, c) }), 'curar', 'cura-no-limite');
         }
         if (ui.miraDado) texto = t('faixa.miraDado');
         botoes = btnGrande('passar-turno', t('btn.encerrarTurno'), 'passar')

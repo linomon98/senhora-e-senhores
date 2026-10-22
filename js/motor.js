@@ -264,6 +264,7 @@ window.SS = window.SS || {};
   const ataque = (e, p, i) => ataqueBase(e, p, i) + e.jogadores[p].campo[i].bonus.length;
 
   // Quantos hits matam esta unidade.
+  const RESISTENCIA_MAX = 4; // nenhum Senhor(a) aguenta mais que 4 hits, some o que somar
   function resistencia(e, p, i) {
     const u = e.jogadores[p].campo[i];
     if (u.tipo === 'as') return 1;
@@ -271,7 +272,7 @@ window.SS = window.SS || {};
     r += u.resExtra || 0; // Par de Paus: +1 de defesa permanente
     if (naipado(u) === 'paus') r++;
     if (asesVizinhos(e, p, i).includes('paus')) r++;
-    return r;
+    return Math.min(r, RESISTENCIA_MAX);
   }
 
   function postura(e, p, i) {
@@ -509,7 +510,8 @@ window.SS = window.SS || {};
       } else if (par.naipe === 'ouros') {
         if (vazios.length) for (const c of j.numeros) if (ehAs(c)) r.push(Object.assign({ as: c.id }, base));
       } else {
-        for (const s of senhores) r.push(Object.assign({ alvo: j.campo[s].uid }, base));
+        // (Paus no seu Senhor(a) só se ele ainda não estiver no limite de defesa)
+        for (const s of senhores) if (par.naipe !== 'paus' || resistencia(e, p, s) < RESISTENCIA_MAX) r.push(Object.assign({ alvo: j.campo[s].uid }, base));
         // Contra um inimigo a magia enfraquece: Paus tira 1 de defesa, Espadas tira 1 de ataque
         // (Paus só em quem ainda tem 2 ou mais defesinhas sobrando, para não matar; Espadas, ataque 2 ou mais).
         const op = e.jogadores[1 - p];
@@ -768,6 +770,7 @@ window.SS = window.SS || {};
           if (!l || l.u.tipo !== 'senhor') throw new Error('Alvo inválido');
           const inimigo = l.p !== p;
           if (inimigo && (a.naipe === 'paus' ? resistencia(e, l.p, l.i) - l.u.hits < 2 : ataqueBase(e, l.p, l.i) < 2)) throw new Error('Esse Senhor(a) já está no mínimo');
+          if (!inimigo && a.naipe === 'paus' && resistencia(e, l.p, l.i) >= RESISTENCIA_MAX) throw new Error('Esse Senhor(a) já está no limite de defesa');
           const d = inimigo ? -1 : 1;
           if (a.naipe === 'paus') l.u.resExtra = (l.u.resExtra || 0) + d;
           else l.u.atkExtra = (l.u.atkExtra || 0) + d;
@@ -1183,7 +1186,7 @@ window.SS = window.SS || {};
   SS.Motor = {
     desistir, REGRAS_DECK, RANKS, contagemPadrao, resumoDeck, validarDeck, cartasDoDeck,
     PALHACOS, CUSTO_TRANSFUSAO, CUSTO_SANGRIA, SACRIFICIOS_RAINHA, SENHORES_POR_TURNO, ASES_POR_TURNO, REDUCAO_POR_DEFENSOR, palhacoDe, limiteMao, ataqueDirecionado,
-    NAIPES, SIMBOLO, LIMITE_FIGURA, PV_INICIAL, PV_MAX_CURA, ESPACOS, ACOES_POR_TURNO, CUSTO_RAINHA, DADO_ATAQUE_TOTAL, LIMITE_MAO,
+    NAIPES, SIMBOLO, LIMITE_FIGURA, PV_INICIAL, PV_MAX_CURA, RESISTENCIA_MAX, ESPACOS, ACOES_POR_TURNO, CUSTO_RAINHA, DADO_ATAQUE_TOTAL, LIMITE_MAO,
     definirRng: f => { rng = f; }, rngAtual: () => rng, voltarAoPrincipal, refletir, paresIguais, contraRefletir, podeContraRefletir, CURA_AS_COPAS, CURA_NAIPADO_COPAS,
     ehFigura, ehAs, ehNumero, ehSacrificavel, valor, nomeCarta, nomeNaipe, nomeUnidade, curaDe, curaPara, naipado,
     BARALHOS, NOME_BARALHO, baralhosDisponiveis, comprarDoTurno,

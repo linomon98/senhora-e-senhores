@@ -166,7 +166,7 @@ window.SS = window.SS || {};
           <tr><th>Par</th><th>Magia</th></tr>
           <tr><td>♥ Copas</td><td><b>Reviver:</b> um Senhor(a) seu do cemitério volta <b>direto para o campo</b>, com o mesmo número que tinha.</td></tr>
           <tr><td>♦ Ouros</td><td><b>Buscar Ás:</b> escolha um Ás do seu baralho de Números e ponha <b>direto no campo</b>.</td></tr>
-          <tr><td>♣ Paus</td><td><b>+1 de defesa para sempre</b> num Senhor(a) seu, ou <b>-1 de defesa</b> num inimigo (que ainda tenha 2 ou mais de vida sobrando).</td></tr>
+          <tr><td>♣ Paus</td><td><b>+1 de defesa para sempre</b> num Senhor(a) seu (nenhum Senhor passa de <b>${M.RESISTENCIA_MAX} de defesa</b>), ou <b>-1 de defesa</b> num inimigo (que ainda tenha 2 ou mais de vida sobrando).</td></tr>
           <tr><td>♠ Espadas</td><td><b>+1 de dano para sempre</b> num Senhor(a) seu, ou <b>-1 de ataque</b> num inimigo (com ataque 2 ou mais).</td></tr>
         </table>
         <h3>Par de Ases, 2 ou 3: Refletir</h3>
@@ -367,7 +367,7 @@ window.SS = window.SS || {};
           <tr><th>Pair</th><th>Spell</th></tr>
           <tr><td>♥ Hearts</td><td><b>Revive:</b> one of your Gentlemen in the graveyard comes back <b>straight to the field</b>, with the same number it had.</td></tr>
           <tr><td>♦ Diamonds</td><td><b>Fetch Ace:</b> pick an Ace from your Numbers deck and put it <b>straight onto the field</b>.</td></tr>
-          <tr><td>♣ Clubs</td><td><b>+1 defense for good</b> on one of your Gentlemen, or <b>-1 defense</b> on an enemy (that still has 2 or more life left).</td></tr>
+          <tr><td>♣ Clubs</td><td><b>+1 defense for good</b> on one of your Gentlemen (no Gentleman goes above <b>${M.RESISTENCIA_MAX} defense</b>), or <b>-1 defense</b> on an enemy (that still has 2 or more life left).</td></tr>
           <tr><td>♠ Spades</td><td><b>+1 damage for good</b> on one of your Gentlemen, or <b>-1 attack</b> on an enemy (with attack 2 or more).</td></tr>
         </table>
         <h3>Pair of Aces, 2s or 3s: Reflect</h3>
