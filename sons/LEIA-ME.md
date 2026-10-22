@@ -8,4 +8,4 @@ que é 6x menor. Som que não existe fica em silêncio.
   e muda o tom um tiquinho para soar menos repetido. Quantas variações cada som tem fica em `js/som.js` (`EFEITOS`).
 - **Volume de cada som:** a mixagem fica em `VOLUME`, em `js/som.js` (`hover-carta` está mudo por enquanto).
 - **Atraso do MP3:** o codificador põe ~46 ms de silêncio no começo; o jogo corta esse silêncio ao carregar.
-- **Música:** desligada por enquanto (`ARQ_MUSICA` em `js/som.js`).
+- **Música:** `musica.mp3` (96 kbps estéreo), em loop sem emenda; volume próprio nas Opções. Para trocar, salve outra com o mesmo nome.

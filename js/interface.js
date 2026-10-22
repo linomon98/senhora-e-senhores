@@ -2267,7 +2267,7 @@ window.SS = window.SS || {};
   //   popupContinuar: os pop-ups de combate esperam o botão Continuar (padrão: somem sozinhos).
   //   caixaMeio: mostra a caixa de instruções no meio da mesa (padrão: escondida).
   //   efeitos / musica: liga os sons e a música de fundo (padrão: ligados).
-  const OPCOES_PADRAO = { popupContinuar: false, caixaMeio: false, efeitos: true, musica: true, volume: 80 };
+  const OPCOES_PADRAO = { popupContinuar: false, caixaMeio: false, efeitos: true, musica: true, volume: 80, volumeMusica: 60 };
   const opcoes = (() => {
     try { return Object.assign({}, OPCOES_PADRAO, JSON.parse(localStorage.getItem('ss-opcoes') || '{}')); } catch (e) { return Object.assign({}, OPCOES_PADRAO); }
   })();
@@ -3424,6 +3424,7 @@ window.SS = window.SS || {};
         <p class="nota">${t('op.caixaNota')}</p></div>
       <div class="opcao"><label>${t('op.efeitos')}</label>${grupoMenu('efeitos', [['sim', t('op.ligado')], ['nao', t('op.desligado')]], opcoes.efeitos ? 'sim' : 'nao')}</div>
       <div class="opcao"><label>${t('op.volume')} <b class="vol-v">${opcoes.volume}%</b></label><input type="range" class="vol-geral" min="0" max="100" step="5" value="${opcoes.volume}"></div>
+      <div class="opcao"><label>${t('op.volumeMusica')} <b class="vol-m">${opcoes.volumeMusica}%</b></label><input type="range" class="vol-musica" min="0" max="100" step="5" value="${opcoes.volumeMusica}"></div>
       <div class="acoes-menu"><button class="btn principal" data-m="voltar">${t('btn.voltar')}</button></div></div>`,
     ev => {
       const g = ev.target.closest('[data-grupo] [data-v]');
@@ -3441,6 +3442,8 @@ window.SS = window.SS || {};
       if (!v) return;
       v.oninput = () => { opcoes.volume = Number(v.value); $('#modal .vol-v').textContent = v.value + '%'; aplicarOpcoes(); };
       v.onchange = () => Som.tocar('clique');
+      const vm = $('#modal .vol-musica');
+      if (vm) vm.oninput = () => { opcoes.volumeMusica = Number(vm.value); $('#modal .vol-m').textContent = vm.value + '%'; aplicarOpcoes(); };
     };
     const desenharTudo = desenhar;
     desenhar = () => { desenharTudo(); ligarVolume(); };

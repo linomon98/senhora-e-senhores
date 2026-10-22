@@ -46,7 +46,8 @@ window.SS = window.SS || {};
   };
   // Música: um loop só (sons/musica.wav, cortado no compasso para emendar sem pulo), tocado pelo Web Audio
   // com loop exato. Menu e partida usam a mesma faixa por enquanto; trocar de tela não reinicia a música.
-  const ARQ_MUSICA = '', VOLUME_MUSICA = 0.42; // sem música por enquanto (para voltar: 'musica.wav' na pasta sons)
+  const ARQ_MUSICA = 'musica.mp3', VOLUME_MUSICA = 0.7; // volume máximo da música (o slider das Opções vai de 0 a isso)
+  let volumeMusica = 0.6; // slider "Música" das Opções (0–1), separado do volume dos efeitos
 
   let ligado = { efeitos: true, musica: true }, volume = 0.8;
   let ctx = null, mestre = null, carregado = false, musicaPedida = null;
@@ -58,6 +59,16 @@ window.SS = window.SS || {};
   // Os sons vão em MP3 (6x menores que o WAV do gravador). O MP3 começa com ~46 ms de silêncio do codificador:
   // ao carregar, esse silêncio do começo é cortado (até 70 ms), para os sons não saírem atrasados.
   const arquivosDe = nome => (EFEITOS[nome] ? Array.from({ length: EFEITOS[nome] }, (_, k) => `${nome}-${k + 1}.mp3`) : [nome + '.mp3']);
+  // Para o loop da música emendar sem pausa: corta também o enchimento que o MP3 deixa no fim.
+  function semSilencioNoFim(buf) {
+    const d = buf.getChannelData(0), min = Math.max(0, d.length - Math.round(buf.sampleRate * 0.1));
+    let f = d.length;
+    while (f > min && Math.abs(d[f - 1]) < 0.0005) f--;
+    if (d.length - f < 8) return buf;
+    const novo = ctx.createBuffer(buf.numberOfChannels, f, buf.sampleRate);
+    for (let c = 0; c < buf.numberOfChannels; c++) novo.copyToChannel(buf.getChannelData(c).subarray(0, f), c);
+    return novo;
+  }
   function semSilencioInicial(buf) {
     const d = buf.getChannelData(0), max = Math.min(d.length - 1, Math.round(buf.sampleRate * 0.07));
     let i = 0;
@@ -99,11 +110,11 @@ window.SS = window.SS || {};
       }
     }
     ganhoMusica = ctx.createGain();
-    ganhoMusica.gain.value = VOLUME_MUSICA * volume;
+    ganhoMusica.gain.value = VOLUME_MUSICA * volumeMusica;
     ganhoMusica.connect(ctx.destination); // fora do compressor dos efeitos (para a música não "bombear")
     if (ARQ_MUSICA) fetch(PASTA + ARQ_MUSICA + VERSAO).then(r => (r.ok ? r.arrayBuffer() : null))
       .then(b => (b ? new Promise((ok, erro) => ctx.decodeAudioData(b, ok, erro)) : null))
-      .then(buf => { bufMusica = buf; tocarMusica(); })
+      .then(buf => { if (buf) { bufMusica = semSilencioNoFim(semSilencioInicial(buf)); tocarMusica(); } })
       .catch(() => { /* sem música */ });
   }
 
@@ -143,7 +154,7 @@ window.SS = window.SS || {};
 
   function tocarMusica() {
     if (!ctx || !ganhoMusica) return;
-    ganhoMusica.gain.setTargetAtTime(VOLUME_MUSICA * volume, ctx.currentTime, 0.05);
+    ganhoMusica.gain.setTargetAtTime(VOLUME_MUSICA * volumeMusica, ctx.currentTime, 0.05);
     const querTocar = ligado.musica && musicaPedida && bufMusica;
     if (querTocar && !fonteMusica) {
       if (ctx.state === 'suspended') ctx.resume();
@@ -153,14 +164,14 @@ window.SS = window.SS || {};
       fonteMusica.connect(ganhoMusica);
       // entra com um fade curtinho
       ganhoMusica.gain.setValueAtTime(0, ctx.currentTime);
-      ganhoMusica.gain.linearRampToValueAtTime(VOLUME_MUSICA * volume, ctx.currentTime + 0.8);
+      ganhoMusica.gain.linearRampToValueAtTime(VOLUME_MUSICA * volumeMusica, ctx.currentTime + 0.8);
       fonteMusica.start();
     } else if (!querTocar && fonteMusica) {
       const f = fonteMusica;
       fonteMusica = null;
       ganhoMusica.gain.setTargetAtTime(0, ctx.currentTime, 0.15);
       try { f.stop(ctx.currentTime + 0.8); } catch (e) { /* já parou */ }
-      setTimeout(() => { if (!fonteMusica) ganhoMusica.gain.value = VOLUME_MUSICA * volume; }, 900);
+      setTimeout(() => { if (!fonteMusica) ganhoMusica.gain.value = VOLUME_MUSICA * volumeMusica; }, 900);
     }
   }
 
@@ -170,9 +181,10 @@ window.SS = window.SS || {};
     tocarMusica();
   }
 
-  // o: { efeitos, musica (liga/desliga), volume (0–100) }
+  // o: { efeitos, musica (liga/desliga), volume (0–100, efeitos), volumeMusica (0–100; 0 desliga a música) }
   function configurar(o) {
-    ligado = { efeitos: o.efeitos !== false, musica: o.musica !== false };
+    volumeMusica = o.volumeMusica == null ? 0.6 : Math.max(0, Math.min(1, o.volumeMusica / 100));
+    ligado = { efeitos: o.efeitos !== false, musica: o.musica !== false && volumeMusica > 0 };
     volume = o.volume == null ? 0.8 : Math.max(0, Math.min(1, o.volume / 100));
     if (mestre) mestre.gain.value = volume;
     if (!ligado.efeitos) Object.keys(canais).forEach(parar);
