@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gravador de Sons</title>
+<style>
+  :root {
+    --fundo: #12230c; --painel: #1c3413; --painel2: #24421a; --linha: #3a5f2a; --texto: #eef5e6; --suave: #a9c39a;
+    --ouro: #f2c14e; --verde: #7fd34e; --vermelho: #ff5a4e; --azul: #6bb6ff;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fundo); color: var(--texto); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 14px 18px; background: var(--painel); border-bottom: 2px solid var(--linha); }
+  header h1 { margin: 0 12px 0 0; font-size: 20px; }
+  .progresso { flex: 1; min-width: 180px; height: 12px; background: #0b1607; border-radius: 8px; overflow: hidden; }
+  .progresso i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--verde), var(--ouro)); transition: width .3s; }
+  .cont { color: var(--suave); font-size: 13px; white-space: nowrap; }
+  button, select, input[type=range] { font: inherit; }
+  button { cursor: pointer; border: 2px solid var(--linha); background: var(--painel2); color: var(--texto); border-radius: 10px; padding: 7px 13px; }
+  button:hover { border-color: var(--suave); }
+  button.forte { background: var(--ouro); color: #2a1d00; border-color: var(--ouro); font-weight: 700; }
+  button.perigo { border-color: #7a2a24; }
+  button:disabled { opacity: .45; cursor: default; }
+  select { background: var(--painel2); color: var(--texto); border: 2px solid var(--linha); border-radius: 10px; padding: 6px 8px; max-width: 260px; }
+  main { display: grid; grid-template-columns: 340px 1fr; gap: 0; min-height: calc(100vh - 62px); }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; } aside { max-height: 40vh; } }
+  aside { border-right: 2px solid var(--linha); overflow: auto; max-height: calc(100vh - 62px); background: #172c10; }
+  .filtros { position: sticky; top: 0; background: #172c10; padding: 10px 12px; border-bottom: 1px solid var(--linha); display: flex; gap: 10px; align-items: center; font-size: 13px; z-index: 1; }
+  .grupo { padding: 10px 12px 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--ouro); }
+  .item { display: flex; align-items: center; gap: 8px; padding: 6px 12px; cursor: pointer; border-left: 4px solid transparent; }
+  .item:hover { background: #1f3a16; }
+  .item.atual { background: #2a4d1d; border-left-color: var(--ouro); }
+  .item .nome { flex: 1; font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
+  .item .estrela { color: var(--ouro); font-size: 11px; }
+  .bolinhas { display: flex; gap: 3px; }
+  .bolinhas b { width: 9px; height: 9px; border-radius: 50%; background: #0b1607; border: 1px solid var(--linha); }
+  .bolinhas b.ok { background: var(--verde); border-color: var(--verde); }
+  section.palco { padding: 22px 26px; display: flex; flex-direction: column; gap: 18px; }
+  .cartao { background: var(--painel); border: 2px solid var(--linha); border-radius: 18px; padding: 20px 22px; }
+  .cartao .grp { color: var(--ouro); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+  .cartao h2 { margin: 4px 0 6px; font: 700 34px/1.1 ui-monospace, Consolas, monospace; }
+  .cartao .quando { color: var(--suave); }
+  .cartao .ideia { margin-top: 10px; font-size: 22px; }
+  .cartao .meta { margin-top: 10px; font-size: 13px; color: var(--suave); }
+  .controles { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .gravar { width: 74px; height: 74px; border-radius: 50%; border: 4px solid #5a1a14; background: var(--vermelho); color: #fff; font-weight: 800; font-size: 12px; }
+  .gravar.ativo { animation: pulsa 1s infinite; background: #ff2e1f; }
+  .gravar.escuta { background: #c1442f; box-shadow: 0 0 0 6px rgba(255, 90, 78, .25); }
+  @keyframes pulsa { 50% { box-shadow: 0 0 0 12px rgba(255, 60, 40, .25); } }
+  .medidor { width: 220px; height: 16px; background: #0b1607; border-radius: 8px; position: relative; overflow: hidden; border: 1px solid var(--linha); }
+  .medidor i { position: absolute; inset: 0 auto 0 0; width: 0; background: linear-gradient(90deg, var(--verde), var(--ouro) 70%, var(--vermelho)); }
+  .medidor s { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; opacity: .8; }
+  .estado { font-size: 14px; color: var(--suave); min-height: 20px; }
+  .estado b { color: var(--texto); }
+  .ajustes { display: flex; flex-wrap: wrap; gap: 16px 22px; font-size: 13px; color: var(--suave); align-items: center; }
+  .ajustes label { display: flex; gap: 8px; align-items: center; }
+  .takes { display: flex; flex-direction: column; gap: 8px; }
+  .take { display: flex; align-items: center; gap: 10px; background: var(--painel2); border: 2px solid var(--linha); border-radius: 12px; padding: 6px 10px; }
+  .take.usar { border-color: var(--verde); }
+  .take canvas { flex: 1; height: 40px; width: 100%; min-width: 80px; }
+  .take .dur { font-size: 12px; color: var(--suave); width: 46px; text-align: right; }
+  .take label { font-size: 13px; display: flex; gap: 5px; align-items: center; white-space: nowrap; }
+  .atalhos { font-size: 12px; color: var(--suave); }
+  kbd { background: #0b1607; border: 1px solid var(--linha); border-radius: 5px; padding: 1px 6px; font-size: 12px; color: var(--texto); }
+  .modal { position: fixed; inset: 0; background: rgba(0, 0, 0, .6); display: grid; place-items: center; padding: 16px; z-index: 10; }
+  .modal[hidden] { display: none; }
+  .modal .caixa { background: var(--painel); border: 2px solid var(--linha); border-radius: 18px; padding: 20px; width: min(760px, 100%); max-height: 86vh; overflow: auto; }
+  .seg { display: flex; align-items: center; gap: 10px; padding: 5px 0; border-bottom: 1px solid #2b4a20; }
+  .seg.pulado { opacity: .4; }
+  .seg .alvo { flex: 1; font-family: ui-monospace, Consolas, monospace; }
+  .aviso { color: var(--ouro); font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎙 Gravador de Sons</h1>
+  <div class="progresso"><i id="barra"></i></div>
+  <span class="cont" id="contagem"></span>
+  <label class="cont" for="mic">🎤 Microfone:</label>
+  <select id="mic" title="Escolha o microfone (ex.: o de lapela)"><option value="">Padrão do sistema</option></select>
+  <button id="btn-testar-mic" title="Libera o acesso, mostra a lista de microfones e liga o medidor">Testar mic</button>
+  <button id="btn-importar" title="Cortar uma gravação longa feita em outro programa">📂 Importar gravação longa</button>
+  <button id="btn-pasta" class="forte" title="Salvar os arquivos escolhidos numa pasta">💾 Salvar na pasta</button>
+  <button id="btn-zip" title="Baixar tudo num arquivo .zip">⬇ Baixar ZIP</button>
+</header>
+<main>
+  <aside>
+    <div class="filtros">
+      <label><input type="checkbox" id="so-essenciais"> só os essenciais ★</label>
+      <label><input type="checkbox" id="so-faltando"> só os que faltam</label>
+    </div>
+    <div id="lista"></div>
+  </aside>
+  <section class="palco">
+    <div class="cartao" id="cartao"></div>
+    <div class="controles">
+      <button class="gravar" id="btn-gravar" title="Espaço">GRAVAR</button>
+      <div>
+        <div class="medidor" title="Volume do microfone (a linha branca é o ponto em que o modo automático começa a gravar)"><i id="nivel"></i><s id="marca"></s></div>
+        <div class="estado" id="estado">Clique em GRAVAR (ou aperte Espaço) para começar.</div>
+      </div>
+      <button id="btn-anterior" title="←">◀ Anterior</button>
+      <button id="btn-proximo" title="→">Próximo ▶</button>
+    </div>
+    <div class="ajustes">
+      <label><input type="checkbox" id="auto" checked> <b>Mãos livres</b>: grava sozinho quando você faz o som e corta na pausa</label>
+      <label><input type="checkbox" id="avancar" checked> Avançar sozinho quando completar o som</label>
+      <label>Sensibilidade <input type="range" id="limiar" min="-60" max="-15" value="-38"> <span id="limiar-v"></span></label>
+      <label>Pausa que corta <input type="range" id="pausa" min="250" max="1600" step="50" value="650"> <span id="pausa-v"></span></label>
+    </div>
+    <div class="atalhos">Atalhos: <kbd>Espaço</kbd> gravar/parar · <kbd>Enter</kbd> ouvir o último · <kbd>←</kbd> <kbd>→</kbd> trocar de som · <kbd>Del</kbd> apagar o último take</div>
+    <div class="takes" id="takes"></div>
+  </section>
+</main>
+
+<div class="modal" id="modal-importar" hidden>
+  <div class="caixa">
+    <h2 style="margin-top:0">📂 Cortar gravação longa</h2>
+    <p>Grave vários sons seguidos (no Premiere ou no celular), <b>na ordem da lista</b>, com uma pausa de meio segundo entre eles. Exporte em WAV ou MP3 e escolha o arquivo aqui: ele é cortado nas pausas e cada pedaço recebe o nome do próximo som que falta, a partir do som selecionado agora.</p>
+    <p><input type="file" id="arquivo" accept="audio/*"></p>
+    <div id="segmentos"></div>
+    <p class="aviso" id="aviso-import"></p>
+    <div class="controles"><button class="forte" id="btn-confirmar-import" disabled>Usar esses cortes</button><button id="btn-fechar-import">Cancelar</button></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+'use strict';
+// ---------------- Lista de sons (nome do arquivo, quando toca, ideia, variações, essencial) ----------------
+const GRUPOS = [
+  ['Interface e menu', [
+    ['clique', 'Botões (Menu, Opções, Desistir…)', '"tsk", estalo de língua', 3, 1],
+    ['hover-carta', 'Mouse passando por uma carta', '"fff" curtinho, tipo papel', 2, 0],
+    ['escolher-palhaco', 'Escolher o Palhaço no menu', '"tchan!"', 1, 0],
+    ['versus', 'Tela de VS', '"VUSH… BOM!"', 1, 0],
+    ['abrir-popup', 'Pop-up de combate aparecendo', '"fwup"', 1, 0],
+    ['fechar-popup', 'Pop-up sumindo', '"fwip" ao contrário', 1, 0],
+  ]],
+  ['Cartas', [
+    ['comprar-carta', 'Comprar Letra ou Número', '"shhk", carta deslizando', 3, 1],
+    ['embaralhar', 'Mulligan', '"trrrrr" rápido', 1, 0],
+    ['selecionar-carta', 'Selecionar carta na mão', '"tic"', 3, 0],
+    ['soltar-carta', 'Carta pousando no campo', '"plac"', 3, 1],
+    ['descartar', 'Carta indo para o cemitério', '"fssst" para baixo', 2, 0],
+    ['palco-entra', 'Cartas voando para o meio', '"vuuu" subindo', 1, 0],
+    ['palco-sai', 'Cartas voltando para o baralho', '"vuuu" descendo', 1, 0],
+  ]],
+  ['Invocação e Ases', [
+    ['sumonar', 'Senhor ou Senhora entrando', '"TCHANAN!" de trombeta', 2, 1],
+    ['sumonar-rainha', 'Rainha com sacrifícios', '"TAAA-RAAA" nobre', 1, 0],
+    ['as-espadas', 'Ás de Espadas entrando (+1 espada)', '"shing!"', 1, 0],
+    ['as-paus', 'Ás de Paus entrando (+1 escudo)', '"tunc!" grave', 1, 0],
+    ['as-ouros', 'Ás de Ouros (ouro indo ao Palhaço)', '"plim-plim"', 1, 0],
+    ['as-copas', 'Ás de Copas (bola de cura)', '"tum-tum", coração', 1, 0],
+  ]],
+  ['Efeitos de naipe', [
+    ['dano-extra', '+1 de dano (Espadas)', '"zing"', 1, 0],
+    ['berserk', 'Berserk (Paus)', '"grrrrah!"', 1, 0],
+    ['defesa', 'Ganhar defesa', '"klong"', 1, 0],
+    ['cura', 'Cura chegando no PV', '"aaah~" ou "bling"', 2, 0],
+    ['dado-adicional', 'Usar a carta Dado adicional', 'dados chacoalhando, "tchk-tchk"', 1, 0],
+  ]],
+  ['Ataque e dados', [
+    ['preparar-ataque', 'Clicar em Preparar ataque', '"hmpf!"', 1, 0],
+    ['mira-seta', 'Puxar uma seta', '"fiiiu" subindo', 2, 0],
+    ['declarar-ataque', 'Confirmar os ataques', '"HA!"', 2, 0],
+    ['dado-rolando', 'Dado rolando', '"tr-tr-tr-tr"', 3, 1],
+    ['dado-parou', 'Dado parando', '"tok"', 2, 1],
+    ['dado-6', 'Tirou 6', '"OHHH!" de plateia', 1, 0],
+    ['investida', 'Senhor indo no alvo', '"vuuush"', 3, 1],
+    ['impacto-fraco', 'Golpe de ataque 1 a 5', '"pá"', 3, 1],
+    ['impacto-medio', 'Golpe de ataque 6 a 8', '"PÁÁ"', 3, 1],
+    ['impacto-forte', 'Golpe de ataque 9 ou mais', '"KABUM"', 3, 1],
+    ['golpe-no-vento', 'Errou no 1', '"fuuuuuiiin" girando', 1, 0],
+    ['que-vergonha', 'QUE VERGONHA / SHAME ON YOU', 'vaia "buuuu" ou "aaahh…"', 1, 1],
+  ]],
+  ['Defesa e dano', [
+    ['bloquear', 'Senhor entrando na frente', '"tchum!"', 2, 0],
+    ['golpe-ignorado', 'Dano ignorado', '"tink", ricochete', 2, 0],
+    ['senhor-morre', 'Senhor morrendo', '"blerg…" ou "aaargh"', 3, 1],
+    ['palhaco-dano', 'Palhaço perdendo PV', '"ai!" ou "uff!"', 3, 1],
+    ['palhaco-dano-forte', 'Perda grande de PV', '"AAAI!"', 2, 0],
+    ['pv-baixo', 'Pouco PV (opcional)', '"tum-tum-tum" acelerado', 1, 0],
+  ]],
+  ['Magias (roxo)', [
+    ['magia-par', 'Par destruído no brilho roxo', '"uuuuoooo" místico', 2, 1],
+    ['reviver', 'Par de Copas trazendo um Senhor', 'coral "aaaah"', 1, 0],
+    ['buscar-as', 'Par de Ouros buscando um Ás', '"plim" com eco', 1, 0],
+    ['refletir', 'Ativar o Refletir', '"BWOOM" invertido', 1, 0],
+    ['refletido', 'Golpe voltando no próprio dono', '"boing!"', 1, 0],
+    ['refletir-de-volta', 'Contra-reflexo', '"BOING-BOING!"', 1, 0],
+  ]],
+  ['Poderes dos Palhaços', [
+    ['poder-desafio', 'Lançalotte: Desafio', '"EN GARDE!" ou "hey hey hey!"', 1, 0],
+    ['poder-transfusao', 'Infartitte cura um Senhor', '"tum-tum… aaah"', 1, 0],
+    ['poder-sangria', 'Infartitte dá dano (corte e sangue)', '"ZÁS!" + "splash"', 1, 0],
+    ['poder-vigilia', 'Paumol: Vigília', '"HUNF" de gigante', 1, 0],
+    ['poder-cobranca', 'Ourinhos rouba carta (moedas)', '"ehehehe" + "plim plim"', 1, 0],
+    ['poder-pronto', 'Símbolo do poder pulsando (opcional)', '"ding" baixinho', 1, 0],
+  ]],
+  ['Cobra', [
+    ['cobra-mordida', 'Bote da cobra tentando morder a cauda', '"SSSS-NHAC!"', 3, 0],
+    ['cobra-chiado', 'Chiado de fundo, bem baixinho (opcional)', '"ssssssss"', 1, 0],
+  ]],
+  ['Turno e fim de jogo', [
+    ['seu-turno', 'Começo do seu turno', '"tan-dan!"', 1, 0],
+    ['turno-oponente', 'Começo do turno do oponente', '"hmm…" desconfiado', 1, 0],
+    ['passar-turno', 'Passar turno', 'porta rangendo, "nhééc… plof"', 1, 0],
+    ['vitoria', 'Vencer', '"TÃ-TÃ-TÃ-TÃÃÃ!"', 1, 1],
+    ['derrota', 'Perder', 'trombone triste, "uóóó-uóóó…"', 1, 1],
+    ['desistir', 'Desistir', '"pffff"', 1, 0],
+  ]],
+];
+const ITENS = [];
+for (const [grupo, lista] of GRUPOS) for (const [id, quando, ideia, varia, ess] of lista) ITENS.push({ id, grupo, quando, ideia, varia, ess: !!ess });
+
+// ---------------- Armazenamento (IndexedDB: os takes ficam salvos neste navegador) ----------------
+let db = null;
+const abrirBanco = () => new Promise((ok, erro) => {
+  const r = indexedDB.open('gravador-sons', 1);
+  r.onupgradeneeded = () => r.result.createObjectStore('takes', { keyPath: 'chave', autoIncrement: true });
+  r.onsuccess = () => ok(r.result);
+  r.onerror = () => erro(r.error);
+});
+const tx = (modo, fn) => new Promise((ok, erro) => {
+  const t = db.transaction('takes', modo), s = t.objectStore('takes');
+  const res = fn(s);
+  t.oncomplete = () => ok(res && res.result !== undefined ? res.result : res);
+  t.onerror = () => erro(t.error);
+});
+let TAKES = []; // { chave, item, usar, amostras (Float32Array), taxa, t }
+async function carregarTakes() {
+  try {
+    db = await abrirBanco();
+    TAKES = await new Promise((ok, erro) => { const r = db.transaction('takes').objectStore('takes').getAll(); r.onsuccess = () => ok(r.result); r.onerror = () => erro(r.error); });
+  } catch (e) { db = null; TAKES = []; aviso('Sem armazenamento no navegador: os takes valem só enquanto esta página estiver aberta.'); }
+}
+async function salvarTake(take) {
+  if (db) take.chave = await tx('readwrite', s => s.add(take));
+  else take.chave = Date.now() + Math.random();
+  TAKES.push(take);
+}
+async function atualizarTake(take) { if (db) await tx('readwrite', s => s.put(take)); }
+async function apagarTake(take) {
+  if (db) await tx('readwrite', s => s.delete(take.chave));
+  TAKES = TAKES.filter(t => t !== take);
+}
+const takesDe = id => TAKES.filter(t => t.item === id).sort((a, b) => a.t - b.t);
+const usadosDe = id => takesDe(id).filter(t => t.usar);
+const completo = it => usadosDe(it.id).length >= it.varia;
+
+// ---------------- Áudio: microfone, medidor, gravação manual e mãos livres ----------------
+let ctx = null, fonte = null, proc = null, stream = null, taxa = 48000;
+let ligado = false, manual = null, auto = null;
+const PRE_ROLL = 0.18, POS_ROLL = 0.12; // segundos guardados antes do som começar e depois que acaba
+let anel = new Float32Array(0), anelPos = 0;
+const $ = s => document.querySelector(s);
+const limiarDb = () => Number($('#limiar').value);
+const pausaMs = () => Number($('#pausa').value);
+
+// Lista os microfones. Os nomes só aparecem depois que o navegador libera o acesso (botão Testar mic).
+// A escolha fica guardada para a próxima vez.
+async function listarMics() {
+  try {
+    const dev = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audioinput' && d.deviceId !== 'default' && d.deviceId !== 'communications');
+    const sel = $('#mic'), guardado = sel.value || lerGuardado('mic');
+    const semNome = dev.some(d => !d.label);
+    sel.innerHTML = '<option value="">Padrão do sistema</option>' + dev.map((d, k) => `<option value="${d.deviceId}">${d.label || 'Microfone ' + (k + 1)}</option>`).join('');
+    if (guardado && dev.some(d => d.deviceId === guardado)) sel.value = guardado;
+    $('#btn-testar-mic').textContent = semNome ? 'Liberar e listar mics' : 'Testar mic';
+  } catch (e) { /* navegador sem lista de dispositivos */ }
+}
+function lerGuardado(k) { try { return localStorage.getItem('gravador-' + k) || ''; } catch (e) { return ''; } }
+function guardar(k, v) { try { localStorage.setItem('gravador-' + k, v); } catch (e) {} }
+const nomeMic = () => { const o = $('#mic').selectedOptions[0]; return o ? o.textContent : 'microfone'; };
+
+async function ligarMic() {
+  if (ligado) return true;
+  try {
+    const id = $('#mic').value;
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: id ? { exact: id } : undefined, echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+  } catch (e) {
+    estado('❌ Não consegui usar o microfone. Libere o acesso no cadeado da barra de endereço e tente de novo.');
+    return false;
+  }
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  taxa = ctx.sampleRate;
+  fonte = ctx.createMediaStreamSource(stream);
+  proc = ctx.createScriptProcessor(2048, 1, 1);
+  anel = new Float32Array(Math.ceil(taxa * PRE_ROLL));
+  proc.onaudioprocess = ev => processarBloco(ev.inputBuffer.getChannelData(0));
+  fonte.connect(proc);
+  proc.connect(ctx.destination); // (sai silêncio: o processador só roda conectado)
+  ligado = true;
+  await listarMics();
+  const trilha = stream.getAudioTracks()[0];
+  if (trilha && trilha.getSettings().deviceId && !$('#mic').value) $('#mic').value = trilha.getSettings().deviceId; // mostra qual o padrão escolheu
+  return true;
+}
+
+function desligarMic() {
+  if (!ligado) return;
+  proc.disconnect(); fonte.disconnect();
+  stream.getTracks().forEach(t => t.stop());
+  ctx.close();
+  ligado = false; manual = null; auto = null;
+  atualizarBotao();
+}
+
+let picoMostrado = -100;
+function processarBloco(bloco) {
+  let soma = 0, pico = 0;
+  for (let k = 0; k < bloco.length; k++) { const v = bloco[k]; soma += v * v; const a = Math.abs(v); if (a > pico) pico = a; }
+  const rms = Math.sqrt(soma / bloco.length), db = 20 * Math.log10(rms + 1e-9);
+  picoMostrado = Math.max(db, picoMostrado - 2.5);
+  if (manual) manual.partes.push(bloco.slice());
+  else if (modoAuto() && auto) {
+    const alto = db > limiarDb();
+    if (!auto.gravando) {
+      if (alto) { auto.gravando = true; auto.partes = [copiarAnel()]; auto.silencio = 0; }
+    } else {
+      auto.partes.push(bloco.slice());
+      auto.silencio = alto ? 0 : auto.silencio + bloco.length / taxa * 1000;
+      if (auto.silencio >= pausaMs()) { const partes = auto.partes; auto.gravando = false; auto.partes = []; terminarCaptura(partes); }
+    }
+  }
+  // anel com o comecinho (para não cortar o ataque do som)
+  for (let k = 0; k < bloco.length; k++) { anel[anelPos] = bloco[k]; anelPos = (anelPos + 1) % anel.length; }
+}
+function copiarAnel() { const r = new Float32Array(anel.length); for (let k = 0; k < anel.length; k++) r[k] = anel[(anelPos + k) % anel.length]; return r; }
+const modoAuto = () => $('#auto').checked;
+
+function juntar(partes) {
+  const n = partes.reduce((s, p) => s + p.length, 0), r = new Float32Array(n);
+  let o = 0; for (const p of partes) { r.set(p, o); o += p.length; }
+  return r;
+}
+
+// Limpeza automática: corta o silêncio das pontas, normaliza o volume (pico em -1 dB) e suaviza as bordas.
+function tratar(am, tx) {
+  const jan = Math.round(tx * 0.01), lim = Math.pow(10, (limiarDb() - 6) / 20);
+  let ini = 0, fim = am.length;
+  const energia = (a, b) => { let s = 0; for (let k = a; k < b; k++) s += am[k] * am[k]; return Math.sqrt(s / Math.max(1, b - a)); };
+  while (ini + jan < am.length && energia(ini, ini + jan) < lim) ini += jan;
+  while (fim - jan > ini && energia(fim - jan, fim) < lim) fim -= jan;
+  ini = Math.max(0, ini - Math.round(tx * 0.03));
+  fim = Math.min(am.length, fim + Math.round(tx * POS_ROLL));
+  const r = am.slice(ini, fim);
+  if (r.length < tx * 0.06) return null; // curto demais: barulho, não som
+  let pico = 0; for (const v of r) pico = Math.max(pico, Math.abs(v));
+  const ganho = pico > 0 ? Math.min(20, 0.89 / pico) : 1;
+  const fade = Math.min(r.length / 4, Math.round(tx * 0.008));
+  for (let k = 0; k < r.length; k++) {
+    let g = ganho;
+    if (k < fade) g *= k / fade;
+    if (k > r.length - fade) g *= (r.length - k) / fade;
+    r[k] *= g;
+  }
+  return r;
+}
+
+async function terminarCaptura(partes) {
+  const am = tratar(juntar(partes), taxa);
+  if (!am) { estado('Som muito curto, ignorei. Tente de novo.'); return; }
+  await adicionarTake(atual, am, taxa);
+}
+
+async function adicionarTake(it, am, tx) {
+  const usar = usadosDe(it.id).length < it.varia;
+  const take = { item: it.id, usar, amostras: am, taxa: tx, t: Date.now() };
+  await salvarTake(take);
+  tocar(take);
+  const faltam = it.varia - usadosDe(it.id).length;
+  estado(faltam > 0 ? `✔ Gravado <b>${it.id}</b>. Falta${faltam > 1 ? 'm' : ''} ${faltam} variação${faltam > 1 ? 'ões' : ''}.` : `✔ <b>${it.id}</b> completo!`);
+  if (faltam <= 0 && $('#avancar').checked) setTimeout(() => irPara(proximoFaltando(ITENS.indexOf(it))), 450);
+  desenhar();
+}
+
+// ---------------- Botão de gravar ----------------
+async function apertarGravar() {
+  if (modoAuto()) {
+    if (auto) { auto = null; desligarMic(); estado('Mãos livres pausado.'); return atualizarBotao(); }
+    if (!(await ligarMic())) return;
+    auto = { gravando: false, partes: [], silencio: 0 };
+    estado('🎧 Escutando… faça o som de <b>' + atual.id + '</b>. Cada pausa corta e salva.');
+  } else {
+    if (manual) {
+      const partes = manual.partes; manual = null;
+      atualizarBotao();
+      return terminarCaptura(partes);
+    }
+    if (!(await ligarMic())) return;
+    manual = { partes: [copiarAnel()] };
+    estado('⏺ Gravando <b>' + atual.id + '</b>… aperte Espaço para parar.');
+  }
+  atualizarBotao();
+}
+function atualizarBotao() {
+  const b = $('#btn-gravar');
+  b.classList.toggle('ativo', !!manual || !!(auto && auto.gravando));
+  b.classList.toggle('escuta', !!auto);
+  b.textContent = manual ? 'PARAR' : auto ? 'PAUSAR' : 'GRAVAR';
+}
+
+// ---------------- Tocar e desenhar a onda ----------------
+let ctxTocar = null, tocando = null;
+function tocar(take) {
+  ctxTocar = ctxTocar || new (window.AudioContext || window.webkitAudioContext)();
+  if (tocando) try { tocando.stop(); } catch (e) {}
+  const buf = ctxTocar.createBuffer(1, take.amostras.length, take.taxa);
+  buf.copyToChannel(take.amostras, 0);
+  const s = ctxTocar.createBufferSource(); s.buffer = buf; s.connect(ctxTocar.destination); s.start();
+  tocando = s;
+}
+function onda(canvas, am) {
+  const w = canvas.width = canvas.clientWidth * 2 || 400, h = canvas.height = 80, g = canvas.getContext('2d');
+  g.clearRect(0, 0, w, h); g.fillStyle = '#7fd34e';
+  const passo = am.length / w;
+  for (let x = 0; x < w; x++) {
+    let mx = 0; const a = Math.floor(x * passo), b = Math.floor((x + 1) * passo);
+    for (let k = a; k < b; k++) mx = Math.max(mx, Math.abs(am[k]));
+    const y = mx * h / 2; g.fillRect(x, h / 2 - y, 1, Math.max(1, y * 2));
+  }
+}
+
+// ---------------- Tela ----------------
+let atual = ITENS[0];
+const filtrados = () => ITENS.filter(it => (!$('#so-essenciais').checked || it.ess) && (!$('#so-faltando').checked || !completo(it) || it === atual));
+function proximoFaltando(de) {
+  const lista = filtrados();
+  for (let k = 1; k <= ITENS.length; k++) { const it = ITENS[(de + k) % ITENS.length]; if (!completo(it) && lista.includes(it)) return it; }
+  return ITENS[(de + 1) % ITENS.length];
+}
+function irPara(it) {
+  if (!it) return;
+  atual = it;
+  if (auto) estado('🎧 Escutando… faça o som de <b>' + atual.id + '</b>.');
+  desenhar();
+  const el = document.querySelector('.item.atual'); if (el) el.scrollIntoView({ block: 'nearest' });
+}
+function mover(d) { const lista = filtrados(); const i = lista.indexOf(atual); irPara(lista[(i + d + lista.length) % lista.length]); }
+
+function desenhar() {
+  const lista = filtrados();
+  let html = '', grupo = null;
+  for (const it of lista) {
+    if (it.grupo !== grupo) { grupo = it.grupo; html += `<div class="grupo">${grupo}</div>`; }
+    const n = usadosDe(it.id).length;
+    html += `<div class="item${it === atual ? ' atual' : ''}" data-id="${it.id}"><span class="nome">${it.id}</span>${it.ess ? '<span class="estrela">★</span>' : ''}<span class="bolinhas">${Array.from({ length: it.varia }, (_, k) => `<b class="${k < n ? 'ok' : ''}"></b>`).join('')}</span></div>`;
+  }
+  $('#lista').innerHTML = html;
+  const feitos = ITENS.filter(completo).length;
+  $('#barra').style.width = (feitos / ITENS.length * 100).toFixed(1) + '%';
+  $('#contagem').textContent = `${feitos} de ${ITENS.length} sons prontos`;
+  const it = atual, n = usadosDe(it.id).length;
+  $('#cartao').innerHTML = `<div class="grp">${it.grupo}${it.ess ? ' · ★ essencial' : ''}</div><h2>${it.id}</h2>
+    <div class="quando">Toca: ${it.quando}</div><div class="ideia">💡 ${it.ideia}</div>
+    <div class="meta">${it.varia > 1 ? `Grave <b>${it.varia} variações</b> (um pouco diferentes entre si) · ` : ''}${n} de ${it.varia} escolhida${it.varia > 1 ? 's' : ''} · arquivo: <code>${it.varia > 1 ? it.id + '-1.wav …' : it.id + '.wav'}</code></div>`;
+  const tks = takesDe(it.id);
+  $('#takes').innerHTML = tks.length ? tks.map((tk, k) => `<div class="take${tk.usar ? ' usar' : ''}" data-k="${k}">
+      <button data-a="tocar" title="Ouvir">▶</button><canvas></canvas><span class="dur">${(tk.amostras.length / tk.taxa).toFixed(2)}s</span>
+      <label><input type="checkbox" data-a="usar"${tk.usar ? ' checked' : ''}> usar</label><button class="perigo" data-a="apagar" title="Apagar">🗑</button></div>`).join('')
+    : '<div class="estado">Nenhum take ainda.</div>';
+  document.querySelectorAll('#takes .take').forEach((el, k) => onda(el.querySelector('canvas'), tks[k].amostras));
+}
+
+function estado(html) { $('#estado').innerHTML = html; }
+function aviso(txt) { estado('⚠ ' + txt); }
+
+// ---------------- WAV e exportação ----------------
+function wav(am, tx) {
+  const n = am.length, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+  const str = (o, s) => { for (let k = 0; k < s.length; k++) v.setUint8(o + k, s.charCodeAt(k)); };
+  str(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); str(8, 'WAVE'); str(12, 'fmt ');
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, tx, true);
+  v.setUint32(28, tx * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); str(36, 'data'); v.setUint32(40, n * 2, true);
+  for (let k = 0; k < n; k++) { const s = Math.max(-1, Math.min(1, am[k])); v.setInt16(44 + k * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true); }
+  return new Blob([buf], { type: 'audio/wav' });
+}
+function arquivosParaSalvar() {
+  const r = [];
+  for (const it of ITENS) {
+    const us = usadosDe(it.id);
+    us.forEach((tk, k) => r.push({ nome: us.length > 1 || it.varia > 1 ? `${it.id}-${k + 1}.wav` : `${it.id}.wav`, blob: wav(tk.amostras, tk.taxa) }));
+  }
+  return r;
+}
+async function salvarNaPasta() {
+  const arqs = arquivosParaSalvar();
+  if (!arqs.length) return aviso('Nada para salvar ainda.');
+  if (!window.showDirectoryPicker) { aviso('Este navegador não salva direto em pasta (use Chrome ou Edge). Baixando o ZIP…'); return baixarZip(); }
+  try {
+    const pasta = await window.showDirectoryPicker({ mode: 'readwrite' });
+    for (const a of arqs) { const f = await pasta.getFileHandle(a.nome, { create: true }); const w = await f.createWritable(); await w.write(a.blob); await w.close(); }
+    estado(`💾 ${arqs.length} arquivos salvos na pasta <b>${pasta.name}</b>.`);
+  } catch (e) { if (e.name !== 'AbortError') aviso('Não consegui salvar: ' + e.message); }
+}
+async function baixarZip() {
+  const arqs = arquivosParaSalvar();
+  if (!arqs.length) return aviso('Nada para salvar ainda.');
+  if (!window.JSZip) return aviso('Não consegui carregar o ZIP (sem internet?). Use “Salvar na pasta”.');
+  const zip = new JSZip();
+  for (const a of arqs) zip.file(a.nome, a.blob);
+  const blob = await zip.generateAsync({ type: 'blob' });
+  const url = URL.createObjectURL(blob), link = document.createElement('a');
+  link.href = url; link.download = 'sons.zip'; link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+  estado(`⬇ ZIP com ${arqs.length} arquivos baixado.`);
+}
+
+// ---------------- Importar uma gravação longa e cortar nas pausas ----------------
+let cortes = [];
+function vagasAPartir(it) {
+  const r = [], i0 = ITENS.indexOf(it);
+  for (let k = 0; k < ITENS.length; k++) {
+    const x = ITENS[(i0 + k) % ITENS.length], falta = x.varia - usadosDe(x.id).length;
+    for (let v = 0; v < falta; v++) r.push(x);
+  }
+  return r;
+}
+async function lerArquivo(file) {
+  $('#aviso-import').textContent = 'Lendo…';
+  const ac = new (window.AudioContext || window.webkitAudioContext)();
+  let buf;
+  try { buf = await ac.decodeAudioData(await file.arrayBuffer()); } catch (e) { $('#aviso-import').textContent = 'Não consegui ler esse arquivo. Exporte em WAV ou MP3.'; return; }
+  const tx = buf.sampleRate, n = buf.length, am = new Float32Array(n);
+  for (let c = 0; c < buf.numberOfChannels; c++) { const d = buf.getChannelData(c); for (let k = 0; k < n; k++) am[k] += d[k] / buf.numberOfChannels; }
+  ac.close();
+  // Detecta trechos com som separados por pausas.
+  const jan = Math.round(tx * 0.01), lim = Math.pow(10, limiarDb() / 20), pausa = pausaMs() / 1000;
+  const trechos = []; let ini = -1, silencio = 0;
+  for (let k = 0; k + jan <= n; k += jan) {
+    let s = 0; for (let q = k; q < k + jan; q++) s += am[q] * am[q];
+    const alto = Math.sqrt(s / jan) > lim;
+    if (alto) { if (ini < 0) ini = Math.max(0, k - Math.round(tx * PRE_ROLL)); silencio = 0; }
+    else if (ini >= 0) { silencio += jan / tx; if (silencio >= pausa) { trechos.push([ini, k]); ini = -1; silencio = 0; } }
+  }
+  if (ini >= 0) trechos.push([ini, n]);
+  cortes = trechos.map(([a, b]) => ({ amostras: tratar(am.slice(a, b), tx), taxa: tx, pular: false })).filter(c => c.amostras);
+  mostrarCortes();
+}
+function mostrarCortes() {
+  const vagas = vagasAPartir(atual);
+  let v = 0;
+  $('#segmentos').innerHTML = cortes.map((c, k) => {
+    const alvo = c.pular ? '— pulado —' : (vagas[v++] || { id: '(sobrando)' }).id;
+    return `<div class="seg${c.pular ? ' pulado' : ''}" data-k="${k}"><button data-a="ouvir">▶</button><span>${k + 1}.</span><span class="alvo">${alvo}</span><span class="dur">${(c.amostras.length / c.taxa).toFixed(2)}s</span><button data-a="pular">${c.pular ? 'usar' : 'pular'}</button></div>`;
+  }).join('');
+  $('#aviso-import').textContent = cortes.length ? `${cortes.length} sons encontrados. Ouça e pule os que forem barulho; os nomes andam sozinhos.` : 'Nenhum som encontrado: diminua a sensibilidade ou a pausa.';
+  $('#btn-confirmar-import').disabled = !cortes.length;
+}
+async function confirmarCortes() {
+  const vagas = vagasAPartir(atual); let v = 0;
+  for (const c of cortes) { if (c.pular) continue; const it = vagas[v++]; if (!it) break; await salvarTake({ item: it.id, usar: true, amostras: c.amostras, taxa: c.taxa, t: Date.now() + v }); }
+  $('#modal-importar').hidden = true;
+  estado(`📂 ${v} sons importados e nomeados.`);
+  desenhar();
+}
+
+// ---------------- Eventos ----------------
+$('#btn-gravar').onclick = apertarGravar;
+$('#btn-anterior').onclick = () => mover(-1);
+$('#btn-proximo').onclick = () => mover(1);
+$('#btn-pasta').onclick = salvarNaPasta;
+$('#btn-zip').onclick = baixarZip;
+$('#btn-importar').onclick = () => { cortes = []; $('#segmentos').innerHTML = ''; $('#aviso-import').textContent = `Os cortes começam em: ${atual.id}`; $('#btn-confirmar-import').disabled = true; $('#arquivo').value = ''; $('#modal-importar').hidden = false; };
+$('#btn-fechar-import').onclick = () => { $('#modal-importar').hidden = true; };
+$('#btn-confirmar-import').onclick = confirmarCortes;
+$('#arquivo').onchange = e => e.target.files[0] && lerArquivo(e.target.files[0]);
+$('#segmentos').onclick = e => {
+  const b = e.target.closest('[data-a]'); if (!b) return;
+  const c = cortes[Number(b.closest('.seg').dataset.k)];
+  if (b.dataset.a === 'ouvir') tocar(c); else { c.pular = !c.pular; mostrarCortes(); }
+};
+$('#lista').onclick = e => { const el = e.target.closest('.item'); if (el) irPara(ITENS.find(it => it.id === el.dataset.id)); };
+$('#takes').onclick = async e => {
+  const b = e.target.closest('[data-a]'); if (!b) return;
+  const tk = takesDe(atual.id)[Number(b.closest('.take').dataset.k)];
+  if (b.dataset.a === 'tocar') tocar(tk);
+  else if (b.dataset.a === 'apagar') { await apagarTake(tk); desenhar(); }
+  else if (b.dataset.a === 'usar') { tk.usar = b.checked; await atualizarTake(tk); desenhar(); }
+};
+['#so-essenciais', '#so-faltando'].forEach(s => { $(s).onchange = desenhar; });
+$('#auto').onchange = () => { if (manual || auto) { desligarMic(); estado('Modo trocado. Aperte GRAVAR de novo.'); } };
+$('#mic').onchange = async () => {
+  guardar('mic', $('#mic').value);
+  const gravava = !!(manual || auto);
+  if (ligado) desligarMic();
+  // Liga o microfone novo só para o medidor: fale e veja a barra se mexer.
+  if (await ligarMic()) estado(`🎤 Usando <b>${nomeMic()}</b>. Fale e veja o medidor se mexer${gravava ? '; aperte GRAVAR para continuar' : ''}.`);
+};
+$('#btn-testar-mic').onclick = async () => {
+  if (ligado && !manual && !auto) desligarMic();
+  if (await ligarMic()) estado(`🎤 Usando <b>${nomeMic()}</b>. Fale e veja o medidor se mexer. Se não for o de lapela, troque na lista ao lado.`);
+};
+if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) navigator.mediaDevices.addEventListener('devicechange', listarMics); // plugou/desplugou o lapela
+const mostrarAjustes = () => { $('#limiar-v').textContent = limiarDb() + ' dB'; $('#pausa-v').textContent = pausaMs() + ' ms'; $('#marca').style.left = ((limiarDb() + 70) / 70 * 100).toFixed(1) + '%'; };
+$('#limiar').oninput = mostrarAjustes; $('#pausa').oninput = mostrarAjustes;
+addEventListener('keydown', e => {
+  if (e.target.closest('input[type=file], select') || !$('#modal-importar').hidden) return;
+  if (e.code === 'Space') { e.preventDefault(); apertarGravar(); }
+  else if (e.key === 'ArrowRight') mover(1);
+  else if (e.key === 'ArrowLeft') mover(-1);
+  else if (e.key === 'Enter') { const t = takesDe(atual.id); if (t.length) tocar(t[t.length - 1]); }
+  else if (e.key === 'Delete') { const t = takesDe(atual.id); if (t.length) apagarTake(t[t.length - 1]).then(desenhar); }
+});
+(function medir() { if (!ligado) picoMostrado = -100; $('#nivel').style.width = Math.max(0, Math.min(100, (picoMostrado + 70) / 70 * 100)).toFixed(1) + '%'; atualizarBotao(); requestAnimationFrame(medir); })();
+
+(async () => {
+  mostrarAjustes();
+  await carregarTakes();
+  atual = proximoFaltando(-1 + ITENS.length) || ITENS[0];
+  if (completo(atual)) atual = ITENS[0];
+  desenhar();
+  listarMics();
+})();
+</script>
+</body>
+</html>
