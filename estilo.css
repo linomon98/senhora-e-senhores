@@ -340,6 +340,12 @@ html, body {
 #dica .dica-sub { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--ouro); margin-bottom: 4px; }
 #dica p { margin: 5px 0 0; }
 #dica .dica-regra { opacity: .65; font-size: 12px; }
+/* Hierarquia nas dicas de Senhor: limite em amarelo, habilidades com título em caixa alta */
+#dica .dica-limite { font-weight: 800; color: #ffd84d; }
+#dica p:has(> .dica-hab) { margin-top: 9px; }
+#dica .dica-hab { display: block; font-weight: 800; font-size: 12px; letter-spacing: .6px; text-transform: uppercase; color: #fff; }
+#dica .dica-hab.naipe-copas, #dica .dica-hab.naipe-ouros { color: #ff7b7b; }
+#dica .dica-hab.naipe-paus, #dica .dica-hab.naipe-espadas { color: #c9d3dc; }
 
 /* Resultado do golpe dentro do pop-up */
 .anuncio-carta { position: relative; }

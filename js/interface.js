@@ -19,7 +19,11 @@ window.SS = window.SS || {};
   const NIVEIS_BOT = ['facil', 'medio', 'dificil', 'profissional'];
   const NOME_NAIPE = tabela('naipe.');
   const PODER_FIGURA = tabela('fig.');
-  const PODER_NAIPADO = tabela('naipado.');
+  // Dicas de Senhor: cada habilidade ganha um título em caixa alta (o do naipado, na cor do naipe).
+  const blocoHab = (titulo, texto, cls = '') => `<span class="dica-hab ${cls}">${titulo}</span>${texto}`;
+  const habFigura = rank => blocoHab(t('figHab.' + rank), PODER_FIGURA[rank]);
+  const habNaipado = (naipe, comNumero) => blocoHab(t('dc.naipadoTitulo', { n: NOME_NAIPE[naipe], hab: t('naiHab.' + naipe) }),
+    (txt => comNumero ? t('dc.naipadoCom', { n: NOME_NAIPE[naipe] }) + txt[0].toLowerCase() + txt.slice(1) : txt)(t('naipado.' + naipe, { n: M.CURA_NAIPADO_COPAS })), 'naipe-' + naipe);
   const PODER_AS = tabela('as.');
   const NOME_POSTURA = tabela('postura.');
   const EFEITO_NUMERO = new Proxy({}, {
@@ -999,7 +1003,7 @@ window.SS = window.SS || {};
     if (M.ehFigura(c)) {
       return {
         titulo: nome, sub: t('dc.figura'),
-        linhas: [t('dc.figuraComo'), PODER_FIGURA[c.rank], t('dc.figuraNaipado', { n: NOME_NAIPE[c.naipe], poder: PODER_NAIPADO[c.naipe] })],
+        linhas: [t('dc.figuraComo'), `<span class="dica-limite">${t('figLim.' + c.rank)}</span>`, habFigura(c.rank), habNaipado(c.naipe, true)],
       };
     }
     if (M.ehAs(c)) {
@@ -1026,9 +1030,9 @@ window.SS = window.SS || {};
       u.berserk
         ? t('du.berserk', { levou: u.berserk.hits > 0 })
         : t('du.vida', { v: res - u.hits, r: res, fontes: fontesRes.length ? ` (${fontesRes.join(' + ')})` : '', estado: NOME_POSTURA[post] }),
-      PODER_FIGURA[u.figura.rank],
+      habFigura(u.figura.rank),
     ];
-    if (nai) linhas.push(t('du.naipado', { n: NOME_NAIPE[nai], poder: PODER_NAIPADO[nai] }));
+    if (nai) linhas.push(habNaipado(nai));
     if (vizinhos.includes('copas')) linhas.push(t('du.asCopas'));
     if (u.vigilia) linhas.push(t('du.vigilia'));
     if (jogo.desafio === u.uid) linhas.push(t('du.desafiado'));
