@@ -1386,7 +1386,10 @@ html.sem-caixa-meio #faixa .caixa-faixa { display: none; }
 
 /* ---------- Decorações do cenário (js/decoracao.js) ---------- */
 .decoracoes { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
-.deco { position: absolute; filter: drop-shadow(0 6px 6px rgba(5, 18, 2, .3)); }
+.deco { position: absolute; }
+/* a sombra fica só na imagem parada (no container ela seria recalculada a cada quadro das partes animadas) */
+.deco-base { filter: drop-shadow(0 6px 6px rgba(5, 18, 2, .3)); }
+.deco-parte { will-change: transform; }
 .deco-base, .deco-parte { position: absolute; display: block; user-select: none; pointer-events: none; }
 .deco-base { inset: 0; width: 100%; height: 100%; }
 .deco-clique { position: absolute; padding: 0; border: 0; background: transparent; cursor: pointer; pointer-events: auto; border-radius: 12px; }
@@ -1403,7 +1406,7 @@ html.sem-caixa-meio #faixa .caixa-faixa { display: none; }
 .tv-brilho {
   position: absolute; pointer-events: none; mix-blend-mode: screen;
   background: radial-gradient(ellipse at 50% 50%, color-mix(in srgb, var(--tv) 45%, #fff) 0%, var(--tv) 60%, color-mix(in srgb, var(--tv) 70%, #000) 100%);
-  opacity: .78; animation: tv-pisca 2.6s steps(1) infinite, tv-respira 1.3s ease-in-out infinite alternate;
+  opacity: .78; animation: tv-pisca 2.6s steps(1) infinite;
   transition: background .25s;
 }
 .tv-luz {
@@ -1424,7 +1427,7 @@ html.sem-caixa-meio #faixa .caixa-faixa { display: none; }
 .fumaca-puff {
   position: absolute; left: 0; top: 0; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%;
   background: radial-gradient(circle, rgba(246, 246, 246, .95) 0%, rgba(215, 215, 220, .7) 40%, rgba(190, 190, 200, .25) 62%, transparent 74%);
-  filter: blur(1.2px) drop-shadow(0 0 1px rgba(90, 90, 100, .35)); animation: fumaca-sobe 3.8s ease-out forwards;
+  will-change: transform, opacity; animation: fumaca-sobe 3.8s ease-out forwards;
 }
 @keyframes fumaca-sobe {
   0% { transform: translate(0, 0) scale(.4); opacity: 0; }
@@ -1469,3 +1472,6 @@ html.sem-caixa-meio #faixa .caixa-faixa { display: none; }
   54% { transform: rotate(1.8deg); } 68% { transform: rotate(-1.1deg); } 82% { transform: rotate(.6deg); } 100% { transform: rotate(0); }
 }
 @media (prefers-reduced-motion: reduce) { .deco *, .deco { animation: none !important; } }
+
+/* Desempenho: o que fica animando o tempo todo ganha camada própria na placa de vídeo */
+.heroi-png, #cobra, .deco-barata { will-change: transform; }

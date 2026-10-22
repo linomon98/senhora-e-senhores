@@ -3413,7 +3413,6 @@ window.SS = window.SS || {};
         <p class="nota">${t('op.caixaNota')}</p></div>
       <div class="opcao"><label>${t('op.efeitos')}</label>${grupoMenu('efeitos', [['sim', t('op.ligado')], ['nao', t('op.desligado')]], opcoes.efeitos ? 'sim' : 'nao')}</div>
       <div class="opcao"><label>${t('op.volume')} <b class="vol-v">${opcoes.volume}%</b></label><input type="range" class="vol-geral" min="0" max="100" step="5" value="${opcoes.volume}"></div>
-      <div class="opcao"><label>${t('op.musica')}</label>${grupoMenu('musica', [['sim', t('op.ligado')], ['nao', t('op.desligado')]], opcoes.musica ? 'sim' : 'nao')}</div>
       <div class="acoes-menu"><button class="btn principal" data-m="voltar">${t('btn.voltar')}</button></div></div>`,
     ev => {
       const g = ev.target.closest('[data-grupo] [data-v]');
@@ -3654,9 +3653,11 @@ window.SS = window.SS || {};
     const tela = $('#cobra');
     if (!tela || tela.dataset.pronta) return;
     tela.dataset.pronta = '1';
-    const LARG = 1600, ALT = 46, AMP = 11, VEL = 95, FATIA = 4, VAO = 25; // px da mesa; VEL em px/s
-    const altTela = ALT + AMP * 2 + 24, dpr = 2;
-    tela.width = LARG * dpr; tela.height = altTela * dpr;
+    const LARG = 1600, ALT = 46, AMP = 11, VEL = 95, FATIA = 5, VAO = 25; // px da mesa; VEL em px/s
+    // Resolução do canvas = a da tela de verdade (a mesa é escalada para caber): nem borrada, nem pixels sobrando.
+    const altTela = ALT + AMP * 2 + 24;
+    const dpr = Math.max(0.75, Math.min(2, (window.devicePixelRatio || 1) * Math.min(innerWidth / 1600, innerHeight / 900)));
+    tela.width = Math.round(LARG * dpr); tela.height = Math.round(altTela * dpr);
     const g = tela.getContext('2d');
     g.scale(dpr, dpr);
     g.imageSmoothingQuality = 'high';

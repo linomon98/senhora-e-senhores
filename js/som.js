@@ -46,7 +46,7 @@ window.SS = window.SS || {};
   };
   // Música: um loop só (sons/musica.wav, cortado no compasso para emendar sem pulo), tocado pelo Web Audio
   // com loop exato. Menu e partida usam a mesma faixa por enquanto; trocar de tela não reinicia a música.
-  const ARQ_MUSICA = 'musica.wav', VOLUME_MUSICA = 0.42;
+  const ARQ_MUSICA = '', VOLUME_MUSICA = 0.42; // sem música por enquanto (para voltar: 'musica.wav' na pasta sons)
 
   let ligado = { efeitos: true, musica: true }, volume = 0.8;
   let ctx = null, mestre = null, carregado = false, musicaPedida = null;
@@ -55,7 +55,19 @@ window.SS = window.SS || {};
   const ultimo = {}; // nome → índice da última variação tocada
   const canais = {}; // canal → { fonte, ganho } que está tocando (ex.: o dado rolando, para parar quando ele para)
 
-  const arquivosDe = nome => (EFEITOS[nome] ? Array.from({ length: EFEITOS[nome] }, (_, k) => `${nome}-${k + 1}.wav`) : [nome + '.wav']);
+  // Os sons vão em MP3 (6x menores que o WAV do gravador). O MP3 começa com ~46 ms de silêncio do codificador:
+  // ao carregar, esse silêncio do começo é cortado (até 70 ms), para os sons não saírem atrasados.
+  const arquivosDe = nome => (EFEITOS[nome] ? Array.from({ length: EFEITOS[nome] }, (_, k) => `${nome}-${k + 1}.mp3`) : [nome + '.mp3']);
+  function semSilencioInicial(buf) {
+    const d = buf.getChannelData(0), max = Math.min(d.length - 1, Math.round(buf.sampleRate * 0.07));
+    let i = 0;
+    while (i < max && Math.abs(d[i]) < 0.001) i++;
+    i = Math.max(0, i - Math.round(buf.sampleRate * 0.002));
+    if (i < 8) return buf;
+    const novo = ctx.createBuffer(buf.numberOfChannels, buf.length - i, buf.sampleRate);
+    for (let c = 0; c < buf.numberOfChannels; c++) novo.copyToChannel(buf.getChannelData(c).subarray(i), c);
+    return novo;
+  }
 
   // Só carrega depois do primeiro clique ou tecla: o navegador não deixa tocar nada antes disso.
   function carregar() {
@@ -82,14 +94,14 @@ window.SS = window.SS || {};
       for (const arq of arquivosDe(nome)) {
         fetch(PASTA + arq + VERSAO).then(r => (r.ok ? r.arrayBuffer() : null))
           .then(b => (b ? new Promise((ok, erro) => ctx.decodeAudioData(b, ok, erro)) : null))
-          .then(buf => { if (buf) buffers[nome].push(buf); })
+          .then(buf => { if (buf) buffers[nome].push(semSilencioInicial(buf)); })
           .catch(() => { /* arquivo faltando ou estragado: fica em silêncio */ });
       }
     }
     ganhoMusica = ctx.createGain();
     ganhoMusica.gain.value = VOLUME_MUSICA * volume;
     ganhoMusica.connect(ctx.destination); // fora do compressor dos efeitos (para a música não "bombear")
-    fetch(PASTA + ARQ_MUSICA + VERSAO).then(r => (r.ok ? r.arrayBuffer() : null))
+    if (ARQ_MUSICA) fetch(PASTA + ARQ_MUSICA + VERSAO).then(r => (r.ok ? r.arrayBuffer() : null))
       .then(b => (b ? new Promise((ok, erro) => ctx.decodeAudioData(b, ok, erro)) : null))
       .then(buf => { bufMusica = buf; tocarMusica(); })
       .catch(() => { /* sem música */ });
