@@ -17,8 +17,31 @@ window.SS = window.SS || {};
     'refletido': 0, 'refletir-de-volta': 0, 'refletir': 0, 'reviver': 0, 'selecionar-carta': 3, 'senhor-morre': 3, 'seu-turno': 0,
     'soltar-carta': 3, 'sumonar': 2, 'sumonar-rainha': 0, 'turno-oponente': 0, 'versus': 0, 'vitoria': 0,
   };
-  // Volume de cada som em relação ao geral (os que tocam muito ficam mais baixinhos).
-  const VOLUME = { 'hover-carta': 0.35, 'selecionar-carta': 0.6, 'clique': 0.6, 'mira-seta': 0.6, 'cobra-mordida': 0.3, 'cobra-chiado': 0.15, 'dado-rolando': 0.8, 'pv-baixo': 0.7 };
+  // Mixagem: os arquivos já estão masterizados no mesmo loudness (-20 dB); aqui fica o volume de cada som
+  // em relação ao geral. Interface e sons que tocam toda hora ficam no fundo; o combate fica na frente;
+  // os momentos grandes (vitória, derrota, "que vergonha") por cima de tudo.
+  const VOLUME = {
+    // interface (no fundo)
+    'hover-carta': 0, // mudo por enquanto (estava irritante); para voltar, ponha uns 0.15
+    'clique': 0.4, 'selecionar-carta': 0.4, 'mira-seta': 0.35, 'abrir-popup': 0.35, 'fechar-popup': 0.3,
+    'poder-pronto': 0.45, 'escolher-palhaco': 0.6, 'versus': 0.75, 'desistir': 0.6,
+    // cartas
+    'comprar-carta': 0.5, 'soltar-carta': 0.6, 'descartar': 0.5, 'embaralhar': 0.5, 'palco-entra': 0.45, 'palco-sai': 0.4,
+    'sumonar': 0.75, 'sumonar-rainha': 0.8, 'as-espadas': 0.7, 'as-paus': 0.7, 'as-ouros': 0.7, 'as-copas': 0.7,
+    // ações e magias
+    'dano-extra': 0.7, 'berserk': 0.75, 'defesa': 0.7, 'cura': 0.65, 'dado-adicional': 0.6,
+    'magia-par': 0.7, 'reviver': 0.75, 'buscar-as': 0.7, 'refletir': 0.8, 'refletido': 0.8, 'refletir-de-volta': 0.85,
+    'poder-desafio': 0.8, 'poder-transfusao': 0.75, 'poder-sangria': 0.8, 'poder-vigilia': 0.75, 'poder-cobranca': 0.75,
+    // combate (na frente)
+    'preparar-ataque': 0.6, 'declarar-ataque': 0.75, 'bloquear': 0.7, 'investida': 0.55,
+    'dado-rolando': 0.5, 'dado-parou': 0.55, 'dado-6': 0.75,
+    'impacto-fraco': 0.75, 'impacto-medio': 0.88, 'impacto-forte': 1, 'golpe-ignorado': 0.65, 'golpe-no-vento': 0.7,
+    'palhaco-dano': 0.8, 'palhaco-dano-forte': 0.95, 'senhor-morre': 0.8, 'pv-baixo': 0.5,
+    // turno e momentos grandes
+    'seu-turno': 0.55, 'turno-oponente': 0.45, 'passar-turno': 0.55, 'que-vergonha': 0.95, 'vitoria': 1, 'derrota': 1,
+    // cobra (do jeito que estava)
+    'cobra-mordida': 0.3, 'cobra-chiado': 0.15,
+  };
   const MUSICAS = ['musica-menu', 'musica-partida'];
   const VOLUME_MUSICA = 0.45;
 
@@ -38,9 +61,19 @@ window.SS = window.SS || {};
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
     ctx = new AC();
+    // Saída: volume geral → compressor (segura quando muitos sons tocam juntos) → limitador (nunca estoura).
     mestre = ctx.createGain();
     mestre.gain.value = volume;
-    mestre.connect(ctx.destination);
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -16; comp.knee.value = 10; comp.ratio.value = 3.5; comp.attack.value = 0.005; comp.release.value = 0.18;
+    const limite = ctx.createDynamicsCompressor();
+    limite.threshold.value = -2; limite.knee.value = 0; limite.ratio.value = 20; limite.attack.value = 0.001; limite.release.value = 0.08;
+    const ganhoFinal = ctx.createGain();
+    ganhoFinal.gain.value = 1.25; // repõe o que o compressor tirou
+    mestre.connect(comp);
+    comp.connect(ganhoFinal);
+    ganhoFinal.connect(limite);
+    limite.connect(ctx.destination);
     for (const nome of Object.keys(EFEITOS)) {
       buffers[nome] = [];
       for (const arq of arquivosDe(nome)) {
@@ -63,7 +96,7 @@ window.SS = window.SS || {};
   // o: { vol (0–1, multiplica o volume do som), canal (um som por canal: o novo corta o anterior), atraso (ms) }
   function tocar(nome, o) {
     o = o || {};
-    if (!ligado.efeitos || !ctx || !buffers[nome] || !buffers[nome].length) return;
+    if (!ligado.efeitos || !ctx || !buffers[nome] || !buffers[nome].length || VOLUME[nome] === 0) return;
     if (o.atraso) return void setTimeout(() => tocar(nome, Object.assign({}, o, { atraso: 0 })), o.atraso);
     if (ctx.state === 'suspended') ctx.resume();
     const lista = buffers[nome];
@@ -73,7 +106,7 @@ window.SS = window.SS || {};
     const fonte = ctx.createBufferSource(), ganho = ctx.createGain();
     fonte.buffer = lista[k];
     fonte.playbackRate.value = 0.96 + Math.random() * 0.08; // leve variação de tom: soa menos repetido
-    ganho.gain.value = (VOLUME[nome] || 1) * (o.vol == null ? 1 : o.vol);
+    ganho.gain.value = (VOLUME[nome] == null ? 1 : VOLUME[nome]) * (o.vol == null ? 1 : o.vol);
     fonte.connect(ganho);
     ganho.connect(mestre);
     if (o.canal) {
