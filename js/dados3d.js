@@ -221,6 +221,7 @@ window.SS = window.SS || {};
         const resultado = dados.map(d => faceDeCima(d.corpo));
         const resolver = estado.resolver;
         estado = { fase: 'mostrando', inicio: t };
+        SS.Som.parar('dado');
         resolver(resultado);
       }
     } else if (estado && estado.fase === 'mostrando') {
@@ -245,6 +246,7 @@ window.SS = window.SS || {};
   }
 
   function rolar3D(n, cor, deCima) {
+    SS.Som.tocar('dado-rolando', { canal: 'dado' });
     limpar();
     montarParedes();
     const mats = materiais(cor);
@@ -414,6 +416,7 @@ window.SS = window.SS || {};
           mundo.addBody(d.corpo);
         }
         estado = { fase: 'rolando', tempo: 0, quieto: 0, resolver };
+        SS.Som.tocar('dado-rolando', { canal: 'dado' });
       };
       cv.addEventListener('pointerdown', pegar);
       addEventListener('pointermove', mover);
@@ -437,6 +440,7 @@ window.SS = window.SS || {};
 
   // Alternativa sem 3D: dados 2D sorteando números por um instante.
   function rolar2D(n, cor) {
+    SS.Som.tocar('dado-rolando', { canal: 'dado' });
     const caixa = document.createElement('div');
     caixa.className = 'dados2d ' + cor;
     caixa.innerHTML = Array.from({ length: n }, () => '<span>?</span>').join('');
@@ -452,6 +456,7 @@ window.SS = window.SS || {};
         });
         if (performance.now() < fim) setTimeout(tique, 70);
         else {
+          SS.Som.parar('dado');
           resolver(valores);
           setTimeout(() => caixa.remove(), 1500);
         }
@@ -463,6 +468,7 @@ window.SS = window.SS || {};
   // Dado de um jogador remoto: o resultado já veio pela rede, então o dado rola (sem física,
   // numa trajetória animada) e cai mostrando exatamente aqueles valores.
   function rolarPara(valores, cor, deCima) {
+    SS.Som.tocar('dado-rolando', { canal: 'dado' });
     limpar();
     montarParedes();
     const mats = materiais(cor);
@@ -509,6 +515,7 @@ window.SS = window.SS || {};
           ultimo = performance.now();
           requestAnimationFrame(quadro);
         }
+        SS.Som.parar('dado');
         resolver(valores.slice());
       };
       requestAnimationFrame(passo);
@@ -517,6 +524,7 @@ window.SS = window.SS || {};
 
   // Sem 3D: mostra os números sorteando e para nos valores recebidos.
   function rolarPara2D(valores, cor) {
+    SS.Som.tocar('dado-rolando', { canal: 'dado' });
     const caixa = document.createElement('div');
     caixa.className = 'dados2d ' + cor;
     caixa.innerHTML = valores.map(() => '<span>?</span>').join('');
@@ -529,6 +537,7 @@ window.SS = window.SS || {};
         faces.forEach((f, k) => { f.textContent = '⚀⚁⚂⚃⚄⚅'[(parar ? valores[k] : 1 + Math.floor(Math.random() * 6)) - 1]; });
         if (!parar) setTimeout(tique, 70);
         else {
+          SS.Som.parar('dado');
           resolver(valores.slice());
           setTimeout(() => caixa.remove(), 1500);
         }

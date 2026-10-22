@@ -3,7 +3,7 @@
 window.SS = window.SS || {};
 (function (SS) {
   'use strict';
-  const M = SS.Motor, Bot = SS.Bot, C = SS.Cartas;
+  const M = SS.Motor, Bot = SS.Bot, C = SS.Cartas, Som = SS.Som;
   // Se rede.js não carregou, o resto do jogo funciona e o online só avisa que está indisponível.
   if (!SS.Rede) {
     const nada = () => {};
@@ -280,7 +280,7 @@ window.SS = window.SS || {};
     const lista = ui.bloqueios[n] || (ui.bloqueios[n] = []);
     const k = lista.indexOf(ui.bloqSel);
     if (k >= 0) lista.splice(k, 1);
-    else if (bloqueadoresComCapacidade().includes(ui.bloqSel)) lista.push(ui.bloqSel);
+    else if (bloqueadoresComCapacidade().includes(ui.bloqSel)) { lista.push(ui.bloqSel); Som.tocar('bloquear'); }
     ui.bloqSel = null;
     render();
   }
@@ -439,11 +439,13 @@ window.SS = window.SS || {};
     if (humanoAtaca() && loc.p === jogo.vez && (declarado || atacantesRestantes().includes(loc.u.uid))) {
       ui.mira = { uid: loc.u.uid, x: ev.clientX, y: ev.clientY, moveu: false };
       ui.atacanteSel = loc.u.uid;
+      Som.tocar('mira-seta');
     } else if (humanoBloqueia() && loc.p === 1 - jogo.vez && loc.u.tipo === 'senhor') {
       if (loc.u.uid === jogo.desafio) return; // desafiado pelo Lançalotte: o bloqueio é obrigatório
       if (bloqueadoresComCapacidade().includes(loc.u.uid) || ui.bloqSel === loc.u.uid) {
         ui.mira = { uid: loc.u.uid, x: ev.clientX, y: ev.clientY, jaSelecionado: ui.bloqSel === loc.u.uid };
         ui.bloqSel = loc.u.uid;
+        Som.tocar('mira-seta');
       } else if (usosBloqueio(loc.u.uid)) {
         // Já está bloqueando no limite: clicar de novo desfaz os bloqueios dele.
         for (const k in ui.bloqueios) ui.bloqueios[k] = ui.bloqueios[k].filter(x => x !== loc.u.uid);
@@ -521,7 +523,7 @@ window.SS = window.SS || {};
     ui.pend = null;
     const k = ui.sel.indexOf(id);
     if (k >= 0) ui.sel.splice(k, 1);
-    else ui.sel.push(id);
+    else { ui.sel.push(id); Som.tocar('selecionar-carta'); }
     if (!ui.sel.length) ui.destino = null;
     if (!ui.sel.length && ui.voltarAoAtaque) return voltarAoAtaque();
     // Uma figura (ou Ás) já está esperando no campo: o número clicado completa a jogada.
@@ -562,6 +564,7 @@ window.SS = window.SS || {};
     if (!id) return;
     // A seta sai da própria carta Dado adicional (que sobe e brilha enquanto você mira).
     const c = centroDe($('.carta-acao[data-acao="dado-adicional"]'));
+    Som.tocar('mira-seta');
     ui.miraDado = { ouro: id.startsWith('TOKEN') ? 'TOKEN' : id, de: c ? { x: c.x, y: c.y - 40 } : { x: 300, y: 760 } };
     ui.mouse = Object.assign({}, ui.miraDado.de);
     render();
@@ -574,6 +577,7 @@ window.SS = window.SS || {};
 
   function darDado(uid) {
     const ouro = ui.miraDado.ouro;
+    Som.tocar('dado-adicional');
     ui.miraDado = null;
     if (jogo.fase === 'principal') {
       if (ui.voltarAoAtaque) voltarAoAtaque();
@@ -762,6 +766,7 @@ window.SS = window.SS || {};
         ui.ataques.splice(Number(arg), 1);
         return render();
       case 'passar-turno':
+        Som.tocar('passar-turno');
         // Passa o turno de qualquer ponto (na fase de ações ou no preparo do ataque), sem atacar.
         ui.sel = []; ui.pend = null; ui.destino = null;
         if (jogo.fase === 'principal') M.aplicarAcao(jogo, { tipo: 'atacar' });
@@ -1041,6 +1046,12 @@ window.SS = window.SS || {};
     animarEntradas();
     processarEventos();
     sincronizarRefletirFlutuante();
+    // Coração acelerado quando o seu PV cai para 5 ou menos (só na hora em que cruza).
+    if (cfg.modo !== 'bots') {
+      const pv = jogo.jogadores[eu].pv;
+      if (pv <= 5 && pv > 0 && ui.pvAntes != null && ui.pvAntes > 5) Som.tocar('pv-baixo', { atraso: 700 });
+      ui.pvAntes = pv;
+    }
   }
 
   // ---------- Efeitos dos Ases e das curas ----------
@@ -1069,7 +1080,9 @@ window.SS = window.SS || {};
   //   Transfusão (cura): corações subindo. Sangria (dano): corte com gotas de sangue.
   //   Desafio: espadas azuis + o seloinho de espada que fica preso na carta desafiada (ver htmlUnidade).
   //   Vigília: paus verdes subindo + selo de paus enquanto valer. Cobrança: moedas de Ouros voando.
+  const SOM_PODER = { roubo: 'poder-cobranca', desafio: 'poder-desafio', transfusao: 'poder-transfusao', sangria: 'poder-sangria', vigilia: 'poder-vigilia' };
   function animarPoder(ev) {
+    Som.tocar(SOM_PODER[ev.poder]);
     if (MOVIMENTO_REDUZIDO) return;
     const slot = ev.alvo ? $('[data-slot="' + ev.alvo.p + ':' + ev.alvo.i + '"]') : null;
     const c = slot ? centroDe(slot) : null;
@@ -1160,6 +1173,7 @@ window.SS = window.SS || {};
     const l = M.localizar(jogo, uid), esp = elUnidade(uid);
     if (!l || !esp) return;
     const campo = jogo.jogadores[p].campo, vizinhos = [l.i - 1, l.i + 1].map(k => campo[k]).filter(Boolean);
+    Som.tocar(l.u.tipo === 'as' ? 'as-' + l.u.naipe : l.u.figura.rank === 'Q' ? 'sumonar-rainha' : 'sumonar', { atraso: 90 });
     if (l.u.tipo === 'as') {
       const naipe = l.u.naipe, cor = COR_NAIPE[naipe], un = esp.querySelector('.unidade');
       if (un) {
@@ -1190,6 +1204,7 @@ window.SS = window.SS || {};
   // brilham roxo, tremem e se desfazem numa explosão de faíscas roxas.
   const ROXO = '200, 90, 255';
   function animarParDestruido(p, cartas) {
+    if (cartas && cartas.length) Som.tocar('magia-par');
     if (MOVIMENTO_REDUZIDO || !cartas || !cartas.length) return;
     const app = $('#app'), centro = { x: 800, y: 450 };
     const mao = centroDe($('#mao-' + p)) || { x: 800, y: p === eu ? 760 : 140 };
@@ -1231,6 +1246,7 @@ window.SS = window.SS || {};
       if (ev.tipo === 'poder') return animarPoder(ev);
       const de = ev.de != null ? elUnidade(ev.de) : null;
       if (!de) return;
+      if (ev.tipo === 'cura' || ev.tipo === 'token') setTimeout(() => Som.tocar(ev.tipo === 'cura' ? 'cura' : 'as-ouros'), 250 + k * 180);
       if (ev.tipo === 'cura') voarIcone(de, pvDe(ev.p), `<span>+${ev.n}</span>`, 'bola-cura', 250 + k * 180);
       else if (ev.tipo === 'token') voarIcone(de, poderDe(ev.p), '<img src="arte/naipes/ouros.webp" alt="">', 'token-ouro', 250 + k * 180);
     });
@@ -1249,7 +1265,7 @@ window.SS = window.SS || {};
       const noCampo = j.campo.filter(Boolean);
       if (campoVisto[p]) noCampo.filter(u => !campoVisto[p].has(u.uid)).forEach(u => {
         voarParaCampo(p, u.uid);
-        setTimeout(() => efeitoEntrada(p, u.uid), 660); // depois que ela pousa
+        setTimeout(() => { Som.tocar('soltar-carta'); efeitoEntrada(p, u.uid); }, 660); // depois que ela pousa
       });
       campoVisto[p] = new Set(noCampo.map(u => u.uid));
       const atual = j.mao.map(c => c.id);
@@ -1279,6 +1295,7 @@ window.SS = window.SS || {};
     document.body.appendChild(voo);
     const dx = para.left - de.left, dy = para.top - de.top, sx = para.width / de.width, sy = para.height / de.height;
     const atraso = ordem * 140, dur = 560;
+    setTimeout(() => Som.tocar('comprar-carta'), atraso);
     voo.animate([
       { transform: 'translate(0, 0) scale(1) rotateY(0deg)', opacity: 1 },
       { transform: `translate(${dx * 0.5}px, ${dy * 0.5 - 40}px) scale(${(1 + sx) / 2 * 1.08}, ${(1 + sy) / 2 * 1.08}) rotateY(${visivel ? 90 : 0}deg)`, opacity: 1, offset: 0.5 },
@@ -1457,7 +1474,9 @@ window.SS = window.SS || {};
     setas.style.opacity = '.2';
     const copia = copiaFlutuante(fa);
     const giro = (n.x >= 0 ? -1 : 1) * 7;
+    Som.tocar('investida', { atraso: 180 });
     if (cena.errou) {
+      Som.tocar('golpe-no-vento', { atraso: 350 });
       await golpeNoVento(copia, n, k, giro);
       soltarCopia(fa, copia);
       setas.style.opacity = '';
@@ -1492,6 +1511,11 @@ window.SS = window.SS || {};
     await esperar(IMPACTO_MS);
     const contato = { x: cena.de.x + n.x * (k + 34), y: cena.de.y + n.y * (k + 34) };
     const forte = cena.forca >= 9;
+    Som.tocar(forte ? 'impacto-forte' : cena.forca >= 6 ? 'impacto-medio' : 'impacto-fraco');
+    if (!danos.length) Som.tocar('golpe-ignorado', { atraso: 120 }); // ninguém se machucou
+    const perdas = [0, 1].map(p => cena.pv[p] - jogo.jogadores[p].pv).filter(x => x > 0);
+    if (perdas.length) Som.tocar(Math.max(...perdas) >= 5 ? 'palhaco-dano-forte' : 'palhaco-dano', { atraso: 140 });
+    if (atacanteMorreu || alvos.some(a => a.morreu)) Som.tocar('senhor-morre', { atraso: 250 });
     particulas(contato, forte ? 26 : cena.forca >= 6 ? 18 : 12, forte);
     for (const d of danos) {
       if (d.heroi != null) {
@@ -1550,6 +1574,7 @@ window.SS = window.SS || {};
     const el = document.createElement('div');
     el.className = 'que-vergonha';
     el.textContent = t('vergonha');
+    Som.tocar('que-vergonha');
     $('#app').appendChild(el);
     await el.animate([
       { opacity: 0, transform: 'translate(-50%, -50%) scale(2.6) rotate(-14deg)' },
@@ -1664,6 +1689,8 @@ window.SS = window.SS || {};
     if (pal.poder) {
       const usado = jogo.vez === p && jogo.poderUsado;
       const pode = podeJogar && !ui.pend && M.acoesLegais(jogo).some(a => a.tipo === 'poder');
+      // "ding" quando o seu poder fica disponível (uma vez por turno).
+      if (pode && ui.somPoder !== jogo.turno) { ui.somPoder = jogo.turno; Som.tocar('poder-pronto', { atraso: 400 }); }
       const dica = `${t('menu.poder')} ${pal.poder.nome} ${pal.poder.texto} (${t(usado ? 'ui.usado' : 'ui.umaAcao')})`;
       poder = `<button class="poder-naipe naipe-${pal.naipe}${pode ? ' pronto' : ''}${usado ? ' usado' : ''}${ui.pend && ui.pend.tipo === 'poder' && jogo.vez === p ? ' ativo' : ''}"
         data-poder="${p}"${pode ? ' data-acao="poder"' : ' disabled'} title="${escapar(dica)}" aria-label="${escapar(pal.poder.nome)}">
@@ -2190,6 +2217,7 @@ window.SS = window.SS || {};
   // Duelo no painel de combate: quem ataca × quem defende e o resultado.
   // linhas = null: antes do dado; com as linhas do registro: mostra o resultado (selos e PV animado).
   function mostrarDuelo(foto, total, linhas) {
+    if (!linhas) Som.tocar('abrir-popup');
     ui.duelo = true;
     const el = $('#combate');
     const depois = linhas != null;
@@ -2226,12 +2254,14 @@ window.SS = window.SS || {};
   // Opções do jogador (menu Opções), guardadas no navegador.
   //   popupContinuar: os pop-ups de combate esperam o botão Continuar (padrão: somem sozinhos).
   //   caixaMeio: mostra a caixa de instruções no meio da mesa (padrão: escondida).
-  const OPCOES_PADRAO = { popupContinuar: false, caixaMeio: false };
+  //   efeitos / musica: liga os sons e a música de fundo (padrão: ligados).
+  const OPCOES_PADRAO = { popupContinuar: false, caixaMeio: false, efeitos: true, musica: true, volume: 80 };
   const opcoes = (() => {
     try { return Object.assign({}, OPCOES_PADRAO, JSON.parse(localStorage.getItem('ss-opcoes') || '{}')); } catch (e) { return Object.assign({}, OPCOES_PADRAO); }
   })();
   function aplicarOpcoes() {
     document.documentElement.classList.toggle('sem-caixa-meio', !opcoes.caixaMeio);
+    Som.configurar(opcoes);
     try { localStorage.setItem('ss-opcoes', JSON.stringify(opcoes)); } catch (e) { /* sem armazenamento: vale só nesta visita */ }
   }
   const botaoContinuar = () => (opcoes.popupContinuar
@@ -2245,6 +2275,7 @@ window.SS = window.SS || {};
     return new Promise(r => {
       const fade = setTimeout(() => {
         for (const el of [$('#combate'), $('#anuncio')]) if (el && !el.hidden) el.classList.add('saindo');
+        Som.tocar('fechar-popup', { vol: 0.6 });
       }, ms - 420);
       ui.aoContinuar = () => {
         ui.aoContinuar = null;
@@ -2362,6 +2393,7 @@ window.SS = window.SS || {};
 
   // As cartas saem de "origem" (em leque, uma de cada vez) e pousam no meio da tela.
   function entrarPalco(origem) {
+    Som.tocar('palco-entra');
     $('#modal').querySelectorAll('.palco-carta').forEach((el, k) => {
       const s = caixaDe(origem(el.dataset.pc));
       if (!s || MOVIMENTO_REDUZIDO) return;
@@ -2377,6 +2409,7 @@ window.SS = window.SS || {};
 
   // Cada carta voa para o seu destino; o resto do palco some junto.
   function sairPalco(o, esc, m) {
+    Som.tocar(m === 'mulligan' ? 'embaralhar' : 'palco-sai');
     const els = [...$('#modal').querySelectorAll('.palco-carta')];
     for (const sel of ['.palco-titulo', '.palco-sub', '.palco-botoes']) {
       const el = $('#modal ' + sel);
@@ -2633,6 +2666,7 @@ window.SS = window.SS || {};
     cfg.modo = modo;
     partida++;
     const id = partida;
+    Som.musica('partida');
     fecharModal();
     esconderAnuncio();
     SS.Dados.cancelar();
@@ -2763,6 +2797,7 @@ window.SS = window.SS || {};
   async function proximoTurno(id) {
     if (id !== partida) return;
     if (jogo.vencedor != null) return fimDeJogo();
+    if (cfg.modo !== 'bots') Som.tocar(jogo.vez === eu ? 'seu-turno' : 'turno-oponente');
     render();
     // Repete enquanto houver compras a fazer neste turno (nunca fica parado na fase de compra).
     while (jogo.fase === 'compra') {
@@ -3007,6 +3042,10 @@ window.SS = window.SS || {};
       // Quem ataca joga o dado: você arremessa, o amigo manda o resultado, o bot rola.
       const rolagens = await dadoDe(jogo.vez, at.dados, id);
       if (id !== partida) return;
+      Som.parar('dado');
+      Som.tocar('dado-parou');
+      if (Math.max(...rolagens) === 6) Som.tocar('dado-6', { atraso: 150 });
+      if (at.refletido) Som.tocar('refletido', { atraso: 900 });
       await esperar(600); // tempo para ver a face do dado
       if (id !== partida) return;
       const antes = jogo.log.length;
@@ -3057,6 +3096,8 @@ window.SS = window.SS || {};
     render();
     const v = jogo.vencedor;
     const venceu = cfg.modo === 'bots' ? null : v === eu;
+    Som.musica(null);
+    Som.tocar(venceu === false ? 'derrota' : 'vitoria');
     const titulo = cfg.modo === 'bots' ? t('faixa.venceu', { j: escapar(jogo.jogadores[v].nome) }) : t(venceu ? 'fim.vitoria' : 'fim.derrota');
     const online = cfg.modo === 'online';
     modal(`<h2 class="titulo-fim${venceu === false ? ' derrota' : ''}">${titulo}</h2>
@@ -3084,6 +3125,7 @@ window.SS = window.SS || {};
       if (!b) return;
       if (b.dataset.m === 'nao') return fecharModal();
       if (assistindo) return menu();
+      Som.tocar('desistir');
       partida++; // interrompe o turno em andamento
       SS.Dados.cancelar();
       if (cfg.modo === 'online') SS.Rede.enviar({ t: 'desistir' });
@@ -3313,6 +3355,7 @@ window.SS = window.SS || {};
 
   function telaInicio() {
     const convite = SS.Rede.codigoDoLink();
+    Som.musica('menu');
     // Fora da partida, as laterais da tela voltam ao verde.
     document.documentElement.style.removeProperty('--lado-esq');
     document.documentElement.style.removeProperty('--lado-dir');
@@ -3361,12 +3404,15 @@ window.SS = window.SS || {};
   }
 
   function telaOpcoes(voltar) {
-    const desenhar = () => modal(`<div class="menu-tema opcoes-jogo">
+    let desenhar = () => modal(`<div class="menu-tema opcoes-jogo">
       <h2 class="titulo-etapa">${t('op.titulo')}</h2>
       <div class="opcao"><label>${t('op.popup')}</label>${grupoMenu('popupContinuar', [['nao', t('op.popupDireto')], ['sim', t('op.popupBotao')]], opcoes.popupContinuar ? 'sim' : 'nao')}
         <p class="nota">${t('op.popupNota')}</p></div>
       <div class="opcao"><label>${t('op.caixa')}</label>${grupoMenu('caixaMeio', [['nao', t('op.caixaOculta')], ['sim', t('op.caixaVisivel')]], opcoes.caixaMeio ? 'sim' : 'nao')}
         <p class="nota">${t('op.caixaNota')}</p></div>
+      <div class="opcao"><label>${t('op.efeitos')}</label>${grupoMenu('efeitos', [['sim', t('op.ligado')], ['nao', t('op.desligado')]], opcoes.efeitos ? 'sim' : 'nao')}</div>
+      <div class="opcao"><label>${t('op.volume')} <b class="vol-v">${opcoes.volume}%</b></label><input type="range" class="vol-geral" min="0" max="100" step="5" value="${opcoes.volume}"></div>
+      <div class="opcao"><label>${t('op.musica')}</label>${grupoMenu('musica', [['sim', t('op.ligado')], ['nao', t('op.desligado')]], opcoes.musica ? 'sim' : 'nao')}</div>
       <div class="acoes-menu"><button class="btn principal" data-m="voltar">${t('btn.voltar')}</button></div></div>`,
     ev => {
       const g = ev.target.closest('[data-grupo] [data-v]');
@@ -3378,6 +3424,15 @@ window.SS = window.SS || {};
       }
       if (ev.target.closest('[data-m="voltar"]')) voltar();
     });
+    // Volume: muda enquanto arrasta; ao soltar, toca um clique de amostra no volume novo.
+    const ligarVolume = () => {
+      const v = $('#modal .vol-geral');
+      if (!v) return;
+      v.oninput = () => { opcoes.volume = Number(v.value); $('#modal .vol-v').textContent = v.value + '%'; aplicarOpcoes(); };
+      v.onchange = () => Som.tocar('clique');
+    };
+    const desenharTudo = desenhar;
+    desenhar = () => { desenharTudo(); ligarVolume(); };
     desenhar();
   }
 
@@ -3399,6 +3454,7 @@ window.SS = window.SS || {};
       </div></div>`,
     ev => {
       const carta = ev.target.closest('[data-palhaco]');
+      if (carta) Som.tocar('escolher-palhaco');
       if (carta) {
         sel = carta.dataset.palhaco;
         for (const c of document.querySelectorAll('#modal .carta-joker')) c.classList.toggle('ativo', c === carta);
@@ -3422,6 +3478,7 @@ window.SS = window.SS || {};
       const voltar = () => telaPalhacos(modo, sel);
       if (modo === 'bot') {
         const img = $(`#modal .carta-joker[data-palhaco="${sel}"]`);
+        Som.tocar('versus');
         telaVersus(img ? img.getBoundingClientRect() : null);
       } else if (modo === 'online') telaOnline(voltar);
       else entrarNaSala(SS.Rede.codigoDoLink(), voltar);
@@ -3635,16 +3692,58 @@ window.SS = window.SS || {};
         if (cab) g.drawImage(cab, inicio - bote, topo + CAB_TOPO * k + ondaY(inicio + xi - bote, xi, fase), cab.naturalWidth * k, cab.naturalHeight * k);
       };
       const quadroDe = ms => { const t = ms % 2600; for (const [q, ate] of MORDIDA) if (t < ate) return q; return 0; };
+      let quadroAntes = 0, proximoChiado = performance.now() + 20000;
+      const somDaCobra = (agora, q) => {
+        if (q === 2 && quadroAntes !== 2 && Math.random() < 0.12) Som.tocar('cobra-mordida');
+        quadroAntes = q;
+        if (agora > proximoChiado) { Som.tocar('cobra-chiado'); proximoChiado = agora + 25000 + Math.random() * 25000; }
+      };
       const passo = agora => {
         const seg = agora / 1000, base = -((seg * VEL) % volta);
         g.clearRect(0, 0, LARG, altTela);
         // Cada cobra morde num tempo um pouco diferente (para não abrirem a boca juntas).
         for (let m = -1, ini = base - volta; ini < LARG; m++, ini += volta) desenhar(ini, seg * 0.7, quadroDe(agora + m * 900), MOVIMENTO_REDUZIDO ? 0 : boteEm(agora + m * 900));
+        if (jogo) somDaCobra(agora, quadroDe(agora)); // só durante a partida
         if (!MOVIMENTO_REDUZIDO) requestAnimationFrame(passo);
       };
       requestAnimationFrame(passo);
     });
   }
+
+  // Sons das jogadas: o motor não sabe de som, então as funções dele que mudam a partida são
+  // "embrulhadas" aqui. Só a partida da tela toca (o bot simula jogadas em cópias do jogo, em silêncio).
+  function sonsDasJogadas() {
+    const embrulhar = (nome, depois) => {
+      const original = M[nome];
+      M[nome] = function (e, ...args) {
+        const r = original.call(this, e, ...args);
+        if (e === jogo) { try { depois(...args); } catch (err) { /* som nunca atrapalha o jogo */ } }
+        return r;
+      };
+    };
+    const MAGIA = { copas: 'reviver', ouros: 'buscar-as', paus: 'defesa', espadas: 'dano-extra' };
+    embrulhar('aplicarAcao', a => {
+      if (!a) return;
+      if (a.tipo === 'espadas') Som.tocar('dano-extra');
+      else if (a.tipo === 'paus') Som.tocar('berserk');
+      else if (a.tipo === 'curar') Som.tocar('cura', { atraso: 200 });
+      else if (a.tipo === 'magia') Som.tocar(MAGIA[a.naipe], { atraso: 450 });
+      else if (a.tipo === 'atacar') Som.tocar('preparar-ataque');
+    });
+    embrulhar('declararAtaques', lista => { if (lista && lista.length) Som.tocar('declarar-ataque'); });
+    embrulhar('definirBloqueios', mapa => { if (mapa && Object.values(mapa).some(l => l && l.length) && controle(1 - jogo.vez) !== 'humano') Som.tocar('bloquear'); });
+    embrulhar('refletir', () => Som.tocar('refletir', { atraso: 300 }));
+    embrulhar('contraRefletir', () => Som.tocar('refletir-de-volta', { atraso: 300 }));
+    embrulhar('descartar', ids => { if (ids && ids.length) Som.tocar('descartar'); });
+  }
+
+  // Passar o mouse numa carta de ação ou da sua mão: um "fff" baixinho (uma vez por carta).
+  let hoverAntes = null;
+  document.addEventListener('mouseover', ev => {
+    const el = ev.target.closest && ev.target.closest('.carta-acao, .zona-eu .mao .carta.jogavel');
+    if (el && el !== hoverAntes) Som.tocar('hover-carta');
+    hoverAntes = el;
+  });
 
   function plantarGraminhas() {
     const campo = $('#graminhas');
@@ -3674,6 +3773,7 @@ window.SS = window.SS || {};
   C.aplicarTexturas();
   plantarGraminhas();
   animarCobra();
+  sonsDasJogadas();
   aplicarOpcoes();
   ajustarEscala();
   addEventListener('resize', ajustarEscala);

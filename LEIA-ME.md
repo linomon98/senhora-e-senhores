@@ -32,6 +32,7 @@ No menu:
 | `arte/` | Artes: `corpo/` (Palhaços inteiros na mesa), `palhacos/` (retratos quadrados), `cartas/` (cartas do menu), `naipes/` (botões de poder), `acoes/` (cartas de ação), `mesa/` (grama). |
 | `fontes/` | Fonte dos títulos (Seventy Money). |
 | `js/dados3d.js` | Dado 3D com física (arremessado com o mouse). |
+| `js/som.js` | Efeitos sonoros e músicas. Os arquivos ficam em `sons/` (nomes em `sons/LEIA-ME.md`; grave com `ferramentas/gravador.html`). |
 | `js/decks.js` | Montagem de decks: 4 espaços salvos no navegador e checagem das regras de limite. |
 | `js/regras.js` | Tela "Regras do jogo", dividida por temas. |
 | `js/rede.js` | Multiplayer: cria e entra em salas, manda as jogadas para o amigo. As duas telas rodam a mesma partida com a mesma semente de sorteio. |
