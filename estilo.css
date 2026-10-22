@@ -1484,3 +1484,9 @@ html.sem-caixa-meio #faixa .caixa-faixa { display: none; }
 /* PV do seu Palhaço um pouco mais alto (não encosta na borda de baixo) */
 .zona-eu .heroi-livre .heroi-pv { top: 104px; }
 .zona-eu .heroi-livre .heroi-ferida { top: 112px; }
+
+/* Formigas e barata: em vez da sombra copiando a arte, uma sombra redonda e dura no chão, embaixo do enfeite */
+.deco-formigas .deco-base, .deco-barata .deco-base { filter: none; }
+.deco-formigas::before, .deco-barata::before { content: ''; position: absolute; border-radius: 50%; background: rgba(5, 18, 2, .28); pointer-events: none; }
+.deco-formigas::before { left: 4%; top: 30%; width: 94%; height: 68%; }
+.deco-barata::before { left: 8%; top: 86%; width: 88%; height: 13%; }
