@@ -24,6 +24,16 @@
   // Senhor(a) em campo pela figura (e naipe da figura, se precisar) e o espaço dele.
   const unidadeFig = (e, p, rank, naipe) => e.jogadores[p].campo.find(u => u && u.tipo === 'senhor' && u.figura.rank === rank && (!naipe || u.figura.naipe === naipe));
   const slotFig = (p, rank, naipe) => api => { const e = api.jogo(), u = unidadeFig(e, p, rank, naipe); return u ? `[data-slot="${p}:${e.jogadores[p].campo.indexOf(u)}"]` : null; };
+  // Ás (totem) em campo e o espaço dele.
+  const slotAs = p => api => { const i = api.jogo().jogadores[p].campo.findIndex(u => u && u.tipo === 'as'); return i >= 0 ? `[data-slot="${p}:${i}"]` : null; };
+  // Ataque declarado por um Senhor(a) (pela figura).
+  const ataqueDe = (e, p, rank, naipe) => { const u = unidadeFig(e, p, rank, naipe); return u && e.combate ? e.combate.ataques.find(a => a.atacante === u.uid) : null; };
+  // Jogada do oponente feita pela aula: entre as jogadas que servem, a do espaço mais perto do meio da fileira.
+  function aplicarPerto(api, filtro) {
+    const meio = (M.ESPACOS - 1) / 2;
+    const a = M.acoesLegais(api.jogo()).filter(filtro).sort((x, y) => Math.abs((x.slot == null ? meio : x.slot) - meio) - Math.abs((y.slot == null ? meio : y.slot) - meio))[0];
+    if (a) api.aplicar(a);
+  }
   // Seleciona uma carta da mão só para mostrar as cartas de ação dela.
   const selecionar = (api, rank, naipe) => { const ui = api.ui(); ui.sel = [idNaMao(api.jogo().jogadores[0], rank, naipe)].filter(Boolean); ui.destino = null; api.render(); };
 
@@ -237,7 +247,163 @@
         { gancho: 'depoisGolpe', passos: [
           { foco: '#info-1 .heroi', fala: d => (Math.max(...d.rolagens) >= 4 ? ['<b>BOUAAA!!!!</b>', '<b>BOOYAAH!!!!</b>'] : Math.max(...d.rolagens) >= 2 ? ['É... tá bom, né?', 'Well... okay, I guess?'] : ['<b>HAHAHAHAHAHAH</b>', '<b>HAHAHAHAHAHAH</b>']) },
         ] },
-        { fala: ['Por enquanto é isso! O tutorial continua em breve. 🎓', 'That is it for now! The tutorial continues soon. 🎓'], botao: ['Continuar', 'Continue'], fim: true },
+        // ---------- Terceiro turno do oponente: outro Valete, cura e ataque com os dois ----------
+        { gancho: 'turnoOponente', passos: [
+          { foco: '#info-1 .heroi', fala: ['Agora vamos ver o que esse <b>Palhaço</b> vai fazer...', "Now let's see what this <b>Jester</b> is going to do..."] },
+          { acao: api => {
+            const e = api.jogo(), j = e.jogadores[1];
+            for (const [r, n] of [['J', 'paus'], ['4', 'ouros']]) if (!idNaMao(j, r, n)) darNaMao(j, r, n);
+            aplicarPerto(api, x => x.tipo === 'sumonar' && x.figura === idNaMao(j, 'J', 'paus') && x.numero === idNaMao(j, '4', 'ouros'));
+          } },
+          { espera: 1200 },
+          { foco: slotFig(1, 'J', 'paus'), fala: ['Outro <b>Valete</b>... ok.', 'Another <b>Jack</b>... okay.'] },
+          { acao: api => { const j = api.jogo().jogadores[1]; aplicarPerto(api, x => x.tipo === 'curar' && x.carta === idNaMao(j, '6', 'copas')); } },
+          { espera: 1300 },
+          { foco: '#info-1 .heroi', fala: ['Ele usou uma carta de <b>Copas</b> para se curar. Interessante...', 'He used a <b>Hearts</b> card to heal. Interesting...'] },
+          { foco: '#campo-1', fala: ['Agora ele vai <b>atacar</b>...', 'Now he is going to <b>attack</b>...'] },
+        ] },
+        { gancho: 'bloqueio', passos: [
+          { foco: slotFig(1, 'J', 'paus'), fala: ['<i>“Peraí!! Mas como ele vai atacar com os 2 Valetes, se ele acabou de invocar esse segundo Valete nesse turno???”</i>',
+            '<i>“Wait!! How can he attack with both Jacks if he just summoned this second Jack this turn???”</i>'] },
+          { acao: api => api.fixarDica(slotFig(1, 'J', 'paus')(api) + ' .unidade') },
+          { foco: ['#dica', slotFig(1, 'J', 'paus')], circular: '#dica p:has(> .dica-hab)', fala: ['O <b>Valete</b> tem a propriedade de <b>atacar no mesmo turno</b> em que é invocado.', 'The <b>Jack</b> can <b>attack on the same turn</b> it is summoned.'] },
+          { acao: api => api.soltarDica() },
+        ] },
+        { foco: [slotFig(0, 'K'), slotFig(1, 'J', 'paus')], alvo: api => (api.ui().bloqSel == null ? slotFig(0, 'K')(api) : slotFig(1, 'J', 'paus')(api)),
+          permitir: [slotFig(0, 'K'), slotFig(1, 'J', 'paus')],
+          fala: ['Use o seu <b>Rei</b> para defender o ataque desse <b>Valete</b> de 4, o vacilão. É melhor defender esse aqui do que o outro, porque você só pode defender 1. E, bom, o outro já tá deitado: no próximo turno a gente derruba ele.',
+            'Use your <b>King</b> to defend against this 4-attack <b>Jack</b>, the sucker. Better to defend this one than the other, since you can only defend 1. And, well, the other one is already lying down: next turn we take it out.'],
+          esperar: api => { const e = api.jogo(), at = ataqueDe(e, 1, 'J', 'paus'), k = unidadeFig(e, 0, 'K'); return !!at && !!k && (api.ui().bloqueios[at.n] || []).includes(k.uid); } },
+        // (o Valete de 4 tira 3 no dado; o outro, 2)
+        { acao: api => { const u = unidadeFig(api.jogo(), 1, 'J', 'paus'); api.ui().tutDadoPor = at => (u && at.atacante === u.uid ? 3 : 2); } },
+        { foco: '[data-acao="confirmar-bloqueios"]', alvo: '[data-acao="confirmar-bloqueios"]', permitir: ['[data-acao="confirmar-bloqueios"]'],
+          fala: ['Agora clique em <b>Defender</b>!', 'Now click <b>Defend</b>!'],
+          esperar: api => api.jogo().fase !== 'bloqueio' },
+        { ate: 'depoisGolpe', esconder: true, quando: d => d.p === 1 && d.at.atacante === (unidadeFig(T.api.jogo(), 1, 'J', 'paus') || {}).uid },
+        { gancho: 'depoisGolpe', quando: d => d.p === 1 && d.at.atacante === (unidadeFig(T.api.jogo(), 1, 'J', 'paus') || {}).uid, passos: [
+          { acao: api => { api.ui().tutDadoPor = null; } },
+          { espera: 400 },
+          { foco: slotFig(0, 'K'), semSetas: true, fala: ['<b>BOUAAA!</b> Defendido com sucesso!!', '<b>BOOYAAH!</b> Defended successfully!!'] },
+          { foco: [slotFig(0, 'K'), slotFig(1, 'J', 'paus')], semSetas: true, pulsar: [api => slotFig(1, 'J', 'paus')(api) && slotFig(1, 'J', 'paus')(api) + ' .selo-vida'],
+            fala: ['Você percebeu que o seu <b>Rei</b> não levou dano, mas o <b>Valete</b> levou o hit de <b>contra-ataque</b>??', 'Did you notice your <b>King</b> took no damage, but the <b>Jack</b> took the <b>counterattack</b> hit??'] },
+          { foco: [slotFig(0, 'K'), slotFig(1, 'J', 'paus')], semSetas: true, fala: ['O <b>contra-ataque</b> você já tá ligado, né? O 7 do seu Rei é maior que o 4 do Valete, então o contra-ataque rola...',
+            'You already know the <b>counterattack</b>, right? Your King\'s 7 is higher than the Jack\'s 4, so the counterattack happens...'] },
+          { semSetas: true, fala: ['E você não levou dano porque, se o ataque defendido for <b>menor que a METADE</b> do ataque do Senhor(a) que defendeu, você <b>não leva HIT</b>.',
+            'And you took no damage because, if the blocked attack is <b>lower than HALF</b> of the defending Gentleman\'s attack, you <b>take no HIT</b>.'] },
+          { semSetas: true, fala: [`Ele tirou 3 no dado e atacou só com a <b>metade</b> do dano: 2, no caso. E o seu Rei tem 7 de ataque: a metade de 7 é 3,5, mas aqui no jogo a gente sempre arredonda pra baixo :(
+            <div class="tut-conta"><div><small>ele tirou 3: metade</small><b>4 ÷ 2 = 2</b><small>dano dele</small></div><span>&lt;</span><div><small>o seu Rei</small><b>7 ÷ 2 = 3</b><small>metade do seu ataque</small></div></div>
+            <p class="tut-ok">2 é menor que 3, certo??</p>`,
+            `He rolled a 3 and attacked with only <b>half</b> the damage: 2, in this case. And your King has 7 attack: half of 7 is 3.5, but in this game we always round down :(
+            <div class="tut-conta"><div><small>he rolled 3: half</small><b>4 ÷ 2 = 2</b><small>his damage</small></div><span>&lt;</span><div><small>your King</small><b>7 ÷ 2 = 3</b><small>half your attack</small></div></div>
+            <p class="tut-ok">2 is lower than 3, right??</p>`] },
+          { semSetas: true, fala: ['Por isso você <b>não levou dano</b> defendendo esse ataque, e ainda deu um <b>contra-ataque</b>!', 'That is why you <b>took no damage</b> blocking this attack, and even landed a <b>counterattack</b>!'] },
+          { fala: ['Parece meio complicado, mas eu juro que não é tão difícil de aprender (a não ser que você seja um bebezinho, hehehehe).', 'Looks a bit complicated, but I swear it is not that hard to learn (unless you are a little baby, hehehehe).'] },
+        ] },
+        // ---------- Seu terceiro turno: a Rainha na mão, o poder para derrubar um Valete, o Rei escolhendo o alvo ----------
+        { esperar: api => { const e = api.jogo(); return e.vez === 0 && e.fase === 'compra' && !!api.ui().aoComprar; } },
+        { acao: api => { const j = api.jogo().jogadores[0], k = j.letras.findIndex(c => c.rank === 'Q' && c.naipe === 'paus'); if (k >= 0) j.letras.push(j.letras.splice(k, 1)[0]); } },
+        { foco: '#info-0 .heroi', fala: ['Seu <b>turno</b> novamente!', 'Your <b>turn</b> again!'] },
+        { foco: '#pilhas-0', alvo: '[data-pilha="0:letras"]', permitir: ['[data-pilha="0:letras"]'], compra: true,
+          fala: ['Agora vamos comprar uma carta de <b>Letra</b>.', 'Now let\'s draw a <b>Face</b> card.'],
+          esperar: api => api.jogo().fase !== 'compra' },
+        { espera: 800 },
+        { foco: maoSel(0, 'Q', 'paus'), alvo: maoSel(0, 'Q', 'paus'), fala: ['Olha!! Uma <b>Rainha</b>!!! A Rainha pode ser invocada com cartas de <b>2 até o 10</b>. A SENHORA Rainha é a mais forte do jogo!!',
+          'Look!! A <b>Queen</b>!!! The Queen can be summoned with cards from <b>2 to 10</b>. MADAM Queen is the strongest in the game!!'] },
+        { foco: maoSel(0, 'Q', 'paus'), fala: ['Mas vamos deixar para invocar ela no próximo turno.', 'But let\'s leave summoning her for the next turn.'] },
+        { foco: ['#info-0 .poder-naipe', '#campo-1'], fala: ['Vamos usar a habilidade do <b>Infartitte</b> para matar um dos <b>Valetes</b> do oponente.', 'Let\'s use <b>Infartitte</b>\'s ability to kill one of the opponent\'s <b>Jacks</b>.'] },
+        { foco: ['#info-0 .poder-naipe', '#campo-1'], permitir: ['#info-0 .poder-naipe', slotFig(1, 'J', 'copas'), slotFig(1, 'J', 'paus')],
+          alvo: api => (api.ui().pend && api.ui().pend.tipo === 'poder' ? null : '#info-0 .poder-naipe'),
+          fala: ['Clique no <b>naipe de Copas</b> e escolha qual dos 2 <b>Valetes</b> você quer derrubar.', 'Click the <b>Hearts suit</b> and choose which of the 2 <b>Jacks</b> you want to take down.'],
+          esperar: api => api.jogo().jogadores[1].campo.filter(u => u && u.tipo === 'senhor').length < 2 },
+        { espera: 1300 },
+        { foco: '#info-0 .heroi-pv', fala: ['Perceba que você <b>perde 4 de PV</b> quando dá um <b>HIT</b> num <b>Senhor(a)</b> adversário. Mas calma, que a gente tá com uma carta de <b>Copas</b> na mão: se cure usando ela!',
+          'Notice that you <b>lose 4 HP</b> when you deal a <b>HIT</b> to an enemy <b>Gentleman</b>. But relax, we have a <b>Hearts</b> card in hand: heal yourself with it!'] },
+        { semVeu: true, permitir: [maoSel(0, '6', 'copas'), '[data-acao^="tipo:curar"]', '#info-0'],
+          fala: ['Use a carta de <b>Copas</b> para se curar.', 'Use the <b>Hearts</b> card to heal.'],
+          esperar: api => !idNaMao(api.jogo().jogadores[0], '6', 'copas') },
+        { espera: 1000 },
+        { foco: '#acoes', fala: ['Tá sobrando uma <b>ação</b>, mas tá tudo bem: você tá com vantagem nessa situação. Vamos nos preparar para <b>atacar</b>!!', 'One <b>action</b> is left over, but that is fine: you have the upper hand here. Let\'s get ready to <b>attack</b>!!'] },
+        { foco: '[data-acao="ir-ataque"]', alvo: '[data-acao="ir-ataque"]', permitir: ['[data-acao="ir-ataque"]'], fala: ['Clique em <b>Preparar ataque</b>.', 'Click <b>Prepare attack</b>.'],
+          esperar: api => api.jogo().fase === 'ataque' },
+        { foco: slotFig(0, 'K'), fala: ['Assim como o <b>Valete</b> tem a sua habilidade única, o <b>Rei</b> também tem! Ele pode escolher <b>onde</b> vai atacar.', 'Just like the <b>Jack</b> has its unique ability, the <b>King</b> has one too! He can choose <b>where</b> to attack.'] },
+        { foco: [slotFig(0, 'K'), slotFig(1, 'J')], permitir: [slotFig(0, 'K'), slotFig(1, 'J')],
+          alvo: api => (api.ui().miraRei != null ? slotFig(1, 'J')(api) : slotFig(0, 'K')(api)),
+          fala: ['Vamos derrubar esse <b>Valete</b>, coitado do inimigo: clique no seu <b>Rei</b> e mire o ataque nele.', 'Let\'s take down that <b>Jack</b>, poor enemy: click your <b>King</b> and aim the attack at it.'],
+          esperar: api => { const k = unidadeFig(api.jogo(), 0, 'K'), v = unidadeFig(api.jogo(), 1, 'J'); return !!k && !!v && api.ui().ataques.some(a => a.atacante === k.uid && a.alvo === v.uid); } },
+        { foco: slotFig(0, 'J', 'espadas'), alvo: slotFig(0, 'J', 'espadas'), permitir: [slotFig(0, 'J', 'espadas')],
+          fala: ['E ataque livre com o seu <b>Valete</b>!', 'And attack freely with your <b>Jack</b>!'],
+          esperar: api => { const v = unidadeFig(api.jogo(), 0, 'J', 'espadas'); return !!v && api.ui().ataques.some(a => a.atacante === v.uid); } },
+        { acao: api => { api.ui().tutSemUm = true; } },
+        { foco: '[data-acao="confirmar-ataques"]', alvo: '[data-acao="confirmar-ataques"]', permitir: ['[data-acao="confirmar-ataques"]'],
+          fala: ['Confirme o <b>ataque</b>!', 'Confirm the <b>attack</b>!'], esperar: api => api.jogo().fase !== 'ataque' },
+        { ate: 'fimDoTurno', quando: () => T.api.jogo().turno >= 7, permitir: '*', dado: true, fala: ['Joga os <b>dados</b>!', 'Roll the <b>dice</b>!'] },
+        { gancho: 'fimDoTurno', quando: () => T.api.jogo().turno >= 7, passos: [
+          { acao: api => { api.ui().tutSemUm = false; api.render(); } },
+          { foco: '#campo-1', fala: ['<b>LEGAL!!!</b>', '<b>AWESOME!!!</b>'] },
+        ] },
+        // ---------- Turno do oponente: um Rei naipado de Espadas ----------
+        { gancho: 'turnoOponente', passos: [
+          { acao: api => {
+            const j = api.jogo().jogadores[1];
+            for (const [r, n] of [['K', 'espadas'], ['7', 'espadas']]) if (!idNaMao(j, r, n)) darNaMao(j, r, n);
+            aplicarPerto(api, x => x.tipo === 'sumonar' && x.figura === idNaMao(j, 'K', 'espadas') && x.numero === idNaMao(j, '7', 'espadas'));
+          } },
+          { espera: 1300 },
+          { foco: slotFig(1, 'K', 'espadas'), fala: ['Olha, um <b>Rei</b>, que bonitinho! Você reparou que ele tem 7 de ataque, mas está mostrando que tem <b>8</b>?', 'Look, a <b>King</b>, how cute! Did you notice he has 7 attack, but it shows <b>8</b>?'] },
+          { acao: api => api.fixarDica(slotFig(1, 'K', 'espadas')(api) + ' .unidade') },
+          { foco: ['#dica', slotFig(1, 'K', 'espadas')], circular: '#dica p:has(> .naipe-espadas)',
+            fala: ['Isso acontece porque esse é um <b>Rei naipado</b> de <b>Espadas</b>: quando a Letra e o Número do Senhor(a) são do mesmo naipe, ele ganha uma <b>passiva</b> de acordo com o naipe.',
+              'That is because this is a <b>suited King</b> of <b>Spades</b>: when the Face and the Number of a Gentleman share a suit, it gets a <b>passive</b> based on that suit.'] },
+          { foco: ['#dica', slotFig(1, 'K', 'espadas')], circular: '#dica p:has(> .naipe-espadas)',
+            fala: ['No caso dos naipados de <b>Espadas</b>, ele ganha <b>+1 de ataque</b> bônus por ser naipado.', 'For <b>Spades</b>-suited ones, it gets a <b>+1 attack</b> bonus for being suited.'] },
+          { acao: api => api.soltarDica() },
+          { foco: '#campo-0', fala: ['Ainda bem que o <b>Rei</b> não ataca no turno em que entra em campo, porque senão você ia se ferrar: os seus dois <b>Senhores</b> estão virados para baixo.',
+            'Good thing the <b>King</b> can\'t attack on the turn he enters, otherwise you would be in trouble: your two <b>Gentlemen</b> are face down.'] },
+        ] },
+        // ---------- Seu quarto turno: o Ás totem e a Rainha ----------
+        { esperar: api => { const e = api.jogo(); return e.vez === 0 && e.fase === 'compra' && !!api.ui().aoComprar; } },
+        { acao: api => { const j = api.jogo().jogadores[0], k = j.numeros.findIndex(c => c.rank === 'A' && c.naipe === 'espadas'); if (k >= 0) j.numeros.push(j.numeros.splice(k, 1)[0]); } },
+        { foco: '#pilhas-0', alvo: '[data-pilha="0:numeros"]', permitir: ['[data-pilha="0:numeros"]'], compra: true,
+          fala: ['Seu <b>turno</b>! Compre uma carta de <b>Número</b> dessa vez.', 'Your <b>turn</b>! Draw a <b>Number</b> card this time.'],
+          esperar: api => api.jogo().fase !== 'compra' },
+        { espera: 800 },
+        { foco: maoSel(0, 'A', 'espadas'), alvo: maoSel(0, 'A', 'espadas'), fala: ['<i>“Mas peraí, o Ás não é um número??”</i>', '<i>“But wait, isn\'t the Ace a number??”</i>'] },
+        { foco: maoSel(0, 'A', 'espadas'), fala: ['Sim! Mas não dá para invocar ele como <b>Senhor(a)</b>: ele funciona como um <b>TOTEM</b>.', 'Yes! But you can\'t summon it as a <b>Gentleman</b>: it works as a <b>TOTEM</b>.'] },
+        { foco: [maoSel(0, 'A', 'espadas'), maoSel(0, '8', 'espadas')], fala: ['Para invocar ele, você precisa <b>sacrificar uma carta de número do mesmo naipe</b> dele.', 'To summon it, you have to <b>sacrifice a number card of the same suit</b>.'] },
+        { foco: ['#campo-0', '#mao-0'], permitir: [maoSel(0, 'A', 'espadas'), maoSel(0, '8', 'espadas'), '#campo-0', '[data-acao^="tipo:invocarAs"]'],
+          alvo: api => (api.ui().sel.includes(idNaMao(api.jogo().jogadores[0], 'A', 'espadas')) ? maoSel(0, '8', 'espadas')(api) : maoSel(0, 'A', 'espadas')(api)),
+          fala: ['Arraste o <b>Ás</b> para o meio dos seus dois <b>Senhores</b> e depois junte a carta de <b>Espadas</b> com ele.', 'Drag the <b>Ace</b> between your two <b>Gentlemen</b>, then add the <b>Spades</b> card to it.'],
+          esperar: api => api.jogo().jogadores[0].campo.some(u => u && u.tipo === 'as') },
+        { espera: 900 },
+        { foco: slotAs(0), fala: ['Cada totem <b>Ás</b> tem uma habilidade única, dependendo do naipe.', 'Each <b>Ace</b> totem has a unique ability, depending on its suit.'] },
+        { foco: '#campo-0', fala: ['No caso de <b>Espadas</b>, ele dá <b>+1 de ataque</b> para os <b>Senhores</b> do lado dele.', 'For <b>Spades</b>, it gives <b>+1 attack</b> to the <b>Gentlemen</b> next to it.'] },
+        { foco: [maoSel(0, 'Q', 'paus'), maoSel(0, '10', 'paus')], fala: ['Tá na hora de invocar uma <b>Rainha</b> naipada de <b>Paus</b>!', 'Time to summon a <b>Clubs</b>-suited <b>Queen</b>!'] },
+        { foco: '#campo-0', fala: ['Para invocar a <b>Rainha</b> é preciso fazer <b>sacrifícios</b>, porque ela é bem forte: ou você sacrifica <b>2 Valetes</b> em campo, ou sacrifica <b>1 Rei</b>.',
+          'To summon the <b>Queen</b> you have to make <b>sacrifices</b>, because she is very strong: either you sacrifice <b>2 Jacks</b> on the field, or <b>1 King</b>.'] },
+        { foco: ['#campo-0', '#mao-0'], permitir: [maoSel(0, 'Q', 'paus'), maoSel(0, '10', 'paus'), '[data-acao^="tipo:sumonar"]'],
+          alvo: api => { const ui = api.ui(), j = api.jogo().jogadores[0]; return ui.sel.length > 1 ? '[data-acao^="tipo:sumonar"]' : ui.sel.includes(idNaMao(j, 'Q', 'paus')) ? maoSel(0, '10', 'paus')(api) : maoSel(0, 'Q', 'paus')(api); },
+          fala: ['Selecione o <b>10</b> e a <b>Rainha de Paus</b>, e depois a carta <b>Invocar Rainha</b>.', 'Select the <b>10</b> and the <b>Queen of Clubs</b>, then the <b>Summon Queen</b> card.'],
+          esperar: api => !!(api.ui().pend && api.ui().pend.passos.includes('sacrificios')) || !!unidadeFig(api.jogo(), 0, 'Q') },
+        { foco: slotFig(0, 'K'), alvo: slotFig(0, 'K'), permitir: [slotFig(0, 'K')],
+          fala: ['Clique no <b>Rei</b> para sacrificá-lo.', 'Click the <b>King</b> to sacrifice him.'],
+          esperar: api => !!unidadeFig(api.jogo(), 0, 'Q') },
+        { espera: 1100 },
+        { foco: slotFig(0, 'Q'), fala: ['<b>Pronto!</b>', '<b>Done!</b>'] },
+        { acao: api => api.fixarDica(slotFig(0, 'Q')(api) + ' .unidade') },
+        { foco: ['#dica', slotFig(0, 'Q')], circular: '#dica p:has(> .dica-hab)',
+          fala: ['A <b>Rainha</b> tem como habilidade <b>ATROPELAR</b>: se alguém tentar defender o ataque dela, leva <b>HIT</b>, e o dano que sobrar vai direto pro <b>Palhaço</b> oponente.',
+            'The <b>Queen</b>\'s ability is <b>TRAMPLE</b>: if someone tries to block her attack, they take a <b>HIT</b>, and the leftover damage goes straight to the enemy <b>Jester</b>.'] },
+        { foco: ['#dica', slotFig(0, 'Q')], circular: '#dica p:has(> .naipe-paus)', pulsar: [api => slotFig(0, 'Q')(api) && slotFig(0, 'Q')(api) + ' .selo-vida'],
+          fala: ['A passiva dos naipados de <b>Paus</b> é ter <b>3 defesas</b> ao invés de 2. A bicha tá bruta!', 'The <b>Clubs</b>-suited passive is having <b>3 defense</b> instead of 2. She is a beast!'] },
+        { acao: api => api.soltarDica() },
+        { foco: '#acoes', permitir: '*', fala: ['Você tem mais uma <b>ação</b> para fazer nesse turno: escolhe aí o que você quer fazer...', 'You have one more <b>action</b> this turn: pick whatever you want to do...'] },
+        { fala: ['TEM MUITA COISA PRA EXPLICAR AINDA, MAS POR ENQUANTO É ISSO: VOCÊ VAI ENTENDER AS COISAS JOGANDO O JOGO!', 'THERE IS A LOT MORE TO EXPLAIN, BUT THAT IS IT FOR NOW: YOU WILL GET THE HANG OF IT BY PLAYING!'] },
+        { foco: '[data-acao="opcoes-mesa"]', alvo: '[data-acao="opcoes-mesa"]', permitir: ['[data-acao="opcoes-mesa"]'],
+          fala: ['Clique em <b>Opções</b>.', 'Click <b>Options</b>.'], esperar: () => !!document.querySelector('#modal [data-grupo="todasAcoes"]') },
+        { foco: '#modal [data-grupo="todasAcoes"]', fala: ['Aqui você pode ativar este botão, e deixar <b>todas as cartas de ação</b> aparecendo direto.', 'Here you can turn on this button and keep <b>all the action cards</b> showing all the time.'] },
+        { foco: '#modal [data-grupo="todasAcoes"]', fala: ['Pra quem tá começando, é uma mão na roda: em vez de lembrar qual combinação de cartas faz o quê, o jogo já mostra <b>todas as jogadas que a sua mão permite</b>. Você clica na ação que quer, as cartas certas brilham na mão, e clicando <b>2 vezes</b> ele joga sozinho. Assim você aprende as combinações vendo elas na tela!',
+          'For beginners it is a lifesaver: instead of remembering which card combo does what, the game shows <b>every play your hand allows</b>. You click the action you want, the right cards glow in your hand, and with a <b>double click</b> it plays them for you. That way you learn the combos by seeing them on screen!'] },
+        { fala: ['Agora é com você! Boa sorte, e não deixe o <b>Palhaço</b> te fazer de palhaço. 🎓', 'Now it is up to you! Good luck, and don\'t let the <b>Jester</b> make a clown out of you. 🎓'], botao: ['Continuar', 'Continue'], fim: true },
       ],
     },
   };
@@ -350,7 +516,8 @@
     const folga = 10;
     // Véu escuro com um furo arredondado em volta do foco (clip-path com evenodd).
     veu.style.clipPath = r ? furo(r.left - folga, r.top - folga, r.width + folga * 2, r.height + folga * 2, 16) : 'none';
-    foco.hidden = !r;
+    veu.hidden = !!p.semVeu;
+    foco.hidden = !r || !!p.semVeu;
     const ra = estavel(p, 'ra', retanguloDe(destaques.slice(0, 1)));
     seta.hidden = !(ra || (r && p.permitir && p.permitir !== '*'));
     raiz.classList.toggle('livre', p.permitir === '*');

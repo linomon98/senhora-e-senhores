@@ -17,7 +17,7 @@ window.SS = window.SS || {};
   const ESPACOS = 8;
   const ACOES_POR_TURNO = 3;
   const CUSTO_RAINHA = 1; // ações passivas para sumonar uma Rainha
-  const SACRIFICIOS_RAINHA = 2; // Senhores sacrificados para a Rainha entrar
+  const SACRIFICIOS_RAINHA = 2; // (até 2) Senhores sacrificados para a Rainha entrar: 1 Rei ou 2 Valetes
   const DADO_ATAQUE_TOTAL = 4; // dado a partir do qual o ataque sai cheio (abaixo disso, metade)
   const LIMITE_MAO = 7;
   const DANO_BARALHO_VAZIO = 2;
@@ -449,16 +449,14 @@ window.SS = window.SS || {};
       for (const n of numeros) {
         if (valor(n) > LIMITE_FIGURA[f.rank]) continue;
         if (f.rank === 'Q') {
-          // A Rainha sacrifica 2 Senhores seus que já estavam em campo antes deste turno.
+          // A Rainha sacrifica 1 Rei ou 2 Valetes seus que já estavam em campo antes deste turno,
+          // e entra no lugar do Rei (ou do segundo Valete escolhido).
           if (e.acoes < CUSTO_RAINHA) continue;
           const aptos = senhores.filter(s => j.campo[s].entrou < e.turno);
-          for (let x = 0; x < aptos.length; x++) {
-            for (let y = x + 1; y < aptos.length; y++) {
-              const sa = aptos[x], sb = aptos[y];
-              for (const slot of vazios.concat([sa, sb])) {
-                r.push({ tipo: 'sumonar', figura: f.id, numero: n.id, sacrificio: j.campo[sa].uid, sacrificio2: j.campo[sb].uid, slot });
-              }
-            }
+          for (const s of aptos) if (j.campo[s].figura.rank === 'K') r.push({ tipo: 'sumonar', figura: f.id, numero: n.id, sacrificio: j.campo[s].uid, sacrificio2: null, slot: s });
+          const valetes = aptos.filter(s => j.campo[s].figura.rank === 'J');
+          for (const sa of valetes) for (const sb of valetes) {
+            if (sa !== sb) r.push({ tipo: 'sumonar', figura: f.id, numero: n.id, sacrificio: j.campo[sa].uid, sacrificio2: j.campo[sb].uid, slot: sb });
           }
         } else for (const slot of vazios) r.push({ tipo: 'sumonar', figura: f.id, numero: n.id, sacrificio: null, slot });
       }
@@ -627,16 +625,21 @@ window.SS = window.SS || {};
         if (e.sumonados >= SENHORES_POR_TURNO) throw new Error('Só 1 Senhor(a) por turno');
         e.sumonados++;
         if (f0.rank === 'Q') {
-          if (a.sacrificio == null || a.sacrificio2 == null || a.sacrificio === a.sacrificio2) throw new Error(`A Rainha exige ${SACRIFICIOS_RAINHA} sacrifícios`);
           if (e.acoes < CUSTO_RAINHA) throw new Error(`A Rainha custa ${CUSTO_RAINHA} ação`);
           custo = CUSTO_RAINHA;
-          const sacs = [a.sacrificio, a.sacrificio2].map(uid => localizar(e, uid));
+          const uids = [a.sacrificio, a.sacrificio2].filter(uid => uid != null);
+          const sacs = uids.map(uid => localizar(e, uid));
           for (const s of sacs) {
             if (!s || s.p !== p || s.u.tipo !== 'senhor') throw new Error('Sacrifício inválido');
             if (s.u.entrou >= e.turno) throw new Error('Não pode sacrificar quem entrou neste turno');
           }
+          // 1 Rei sozinho, ou 2 Valetes diferentes; ela entra no lugar do último sacrificado.
+          const rei = sacs.length === 1 && sacs[0].u.figura.rank === 'K';
+          const valetes = sacs.length === 2 && uids[0] !== uids[1] && sacs.every(s => s.u.figura.rank === 'J');
+          if (!rei && !valetes) throw new Error('A Rainha exige 1 Rei ou 2 Valetes');
+          if (a.slot !== sacs[sacs.length - 1].i) throw new Error('A Rainha entra no lugar do Senhor sacrificado');
           registrar(e, t('log.sacrifica', { j: j.nome, us: sacs.map(s => nomeUnidade(s.u)).join(` ${t('e')} `) }));
-          for (const uid of [a.sacrificio, a.sacrificio2]) {
+          for (const uid of uids) {
             const s = localizar(e, uid);
             if (s) morrer(e, s.p, s.i, 'sacrificio');
           }

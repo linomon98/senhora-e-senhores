@@ -49,7 +49,7 @@ window.SS = window.SS || {};
         <table class="tabela-regras">
           <tr><th>Figura</th><th>Equipa</th><th>Custo</th><th>Habilidade</th></tr>
           <tr><td><b>Valete</b></td><td>2 a 4</td><td>1 ação</td><td><b>Ímpeto:</b> ataca no mesmo turno em que entra.</td></tr>
-          <tr><td><b>Rainha</b></td><td>2 a 10</td><td>${M.CUSTO_RAINHA} ação + sacrifício de ${M.SACRIFICIOS_RAINHA} Senhores seus que já estavam em campo antes deste turno</td><td><b>Atropelar:</b> se matar quem bloqueou, o dano que sobra vai para o PV.</td></tr>
+          <tr><td><b>Rainha</b></td><td>2 a 10</td><td>${M.CUSTO_RAINHA} ação + sacrifício de <b>1 Rei</b> ou <b>2 Valetes</b> seus que já estavam em campo antes deste turno. Ela entra no lugar do Rei (ou do segundo Valete).</td><td><b>Atropelar:</b> se matar quem bloqueou, o dano que sobra vai para o PV.</td></tr>
           <tr><td><b>Rei</b></td><td>2 a 7</td><td>1 ação</td><td><b>Ordem real:</b> ao atacar, pode escolher como alvo um Senhor(a) inimigo. O alvo é obrigado a defender, e outros Senhores ativos do dono podem entrar junto para ajudar.</td></tr>
         </table>
         <h3>Vida e posição da carta</h3>
@@ -250,7 +250,7 @@ window.SS = window.SS || {};
         <table class="tabela-regras">
           <tr><th>Face card</th><th>Equips</th><th>Cost</th><th>Ability</th></tr>
           <tr><td><b>Jack</b></td><td>2 to 4</td><td>1 action</td><td><b>Haste:</b> attacks the same turn it enters.</td></tr>
-          <tr><td><b>Queen</b></td><td>2 to 10</td><td>${M.CUSTO_RAINHA} action + sacrifice ${M.SACRIFICIOS_RAINHA} of your Gentlemen that were already on the field before this turn</td><td><b>Trample:</b> if it kills its blocker, the leftover damage goes to HP.</td></tr>
+          <tr><td><b>Queen</b></td><td>2 to 10</td><td>${M.CUSTO_RAINHA} action + sacrifice <b>1 King</b> or <b>2 Jacks</b> of yours that were already on the field before this turn. She takes the King's place (or the second Jack's).</td><td><b>Trample:</b> if it kills its blocker, the leftover damage goes to HP.</td></tr>
           <tr><td><b>King</b></td><td>2 to 7</td><td>1 action</td><td><b>Royal Order:</b> when attacking, may target an enemy Gentleman. The target must defend, and its owner's other ready Gentlemen can join to help.</td></tr>
         </table>
         <h3>Health and card position</h3>

@@ -107,7 +107,7 @@ window.SS = window.SS || {};
   function candidatosPendentes() {
     const pd = ui.pend;
     return pd.cands.filter(a => Object.keys(pd.esc).every(k => {
-      if (k === 'sacrificios') return pd.esc.sacrificios.every(uid => uid === a.sacrificio || uid === a.sacrificio2);
+      if (k === 'sacrificios') return pd.esc.sacrificios.every((uid, n) => [a.sacrificio, a.sacrificio2][n] === uid);
       return a[k] === pd.esc[k];
     }));
   }
@@ -182,7 +182,9 @@ window.SS = window.SS || {};
       const k = lista.indexOf(v);
       if (k >= 0) lista.splice(k, 1); // clicar de novo desmarca
       else lista.push(v);
-      if (lista.length < M.SACRIFICIOS_RAINHA) return render();
+      // Fecha quando a escolha completa um dos jeitos (1 Rei, ou 2 Valetes); senão espera o próximo clique.
+      const completo = candidatosPendentes().some(a => [a.sacrificio, a.sacrificio2].filter(x => x != null).length === lista.length);
+      if (!completo) return render();
     } else pd.esc[passo] = v;
     pd.k++;
     avancarPendente();
@@ -191,7 +193,7 @@ window.SS = window.SS || {};
   function rotuloTipo(tipo, a) {
     const j = jogo.jogadores[jogo.vez];
     switch (tipo) {
-      case 'sumonar': return a.sacrificio != null ? t('acao.rainha', { n: M.SACRIFICIOS_RAINHA }) : t('acao.sumonar');
+      case 'sumonar': return a.sacrificio != null ? t('acao.rainha') : t('acao.sumonar');
       case 'invocarAs': return t('acao.as');
       case 'curar': {
         // Infartitte (Coração forte): a carta mostra a cura normal e o +1 da passiva à parte.
@@ -214,8 +216,8 @@ window.SS = window.SS || {};
     if (fig && jogo.sumonados >= M.SENHORES_POR_TURNO) return t('dica.umSenhor');
     if (as && jogo.asesTurno >= M.ASES_POR_TURNO) return t('dica.umAs');
     if (fig && num && M.valor(num) > M.LIMITE_FIGURA[fig.rank]) return t('dica.limiteFigura', { c: M.nomeCarta(fig), n: M.LIMITE_FIGURA[fig.rank] });
-    if (fig && num && fig.rank === 'Q') return t('dica.rainhaSacrificio', { n: M.SACRIFICIOS_RAINHA });
-    if (cartas.length === 1 && fig && fig.rank === 'Q' && !candidatosParceiros().size) return t('dica.rainhaSemSenhores', { n: M.SACRIFICIOS_RAINHA });
+    if (fig && num && fig.rank === 'Q') return t('dica.rainhaSacrificio');
+    if (cartas.length === 1 && fig && fig.rank === 'Q' && !candidatosParceiros().size) return t('dica.rainhaSemSenhores');
     if (fig && num && !j.campo.includes(null)) return t('dica.fileiraCheia');
     if (as && num && as.naipe !== num.naipe) return t('dica.asMesmoNaipe');
     if (cartas.length === 1 && fig) return t('dica.selecioneNumero');
@@ -228,7 +230,7 @@ window.SS = window.SS || {};
     if (passo === 'slot') return t(tipo === 'invocarAs' ? 'passo.slotAs' : 'passo.slot');
     if (passo === 'sacrificios') {
       const n = (ui.pend.esc.sacrificios || []).length;
-      return t('passo.sacrificios', { total: M.SACRIFICIOS_RAINHA, n });
+      return t('passo.sacrificios', { n });
     }
     if (passo === 'alvo') {
       if (tipo === 'espadas') return t('passo.espadas');
@@ -352,8 +354,9 @@ window.SS = window.SS || {};
         if (passo === 'slot') s.add(`slot:${p}:${a.slot}`);
         else if (passo === 'alvo') s.add('uid:' + a.alvo);
         else if (passo === 'sacrificios') {
-          s.add('uid:' + a.sacrificio);
-          s.add('uid:' + a.sacrificio2);
+          const n = (ui.pend.esc.sacrificios || []).length, prox = [a.sacrificio, a.sacrificio2][n];
+          if (prox != null) s.add('uid:' + prox);
+          for (const uid of ui.pend.esc.sacrificios || []) s.add('uid:' + uid); // (clicar de novo desmarca)
         }
       }
     } else if (humanoAtaca()) {
@@ -3066,11 +3069,21 @@ window.SS = window.SS || {};
   // o amigo manda o resultado dele pela rede, o bot rola sozinho.
   async function dadoDe(p, n, id) {
     const deCima = p !== eu;
-    // Tutorial: a aula pode combinar o resultado do dado de antes (o oponente "tira 5").
-    if (cfg.modo === 'tutorial' && ui.tutDado) {
-      const v = ui.tutDado;
+    // Tutorial: a aula pode combinar o resultado do dado de antes (o oponente "tira 5"), ou um por atacante
+    // (tutDadoPor). Com tutSemUm, você joga o dado normalmente, mas um 1 é rolado de novo sozinho.
+    if (cfg.modo === 'tutorial') {
+      const v = ui.tutDado || (ui.tutDadoPor && ui.tutAt ? ui.tutDadoPor(ui.tutAt) : null);
       ui.tutDado = null;
-      return SS.Dados.mostrar(Array(n).fill(v), corDe(p), deCima);
+      if (v) return SS.Dados.mostrar(Array(n).fill(v), corDe(p), deCima);
+      if (ui.tutSemUm && controle(p) === 'humano') {
+        let r = await SS.Dados.jogar(n, corDe(p));
+        if (r.includes(1)) {
+          await esperar(500);
+          SS.Dados.sumir();
+          r = await SS.Dados.mostrar(r.map(x => (x === 1 ? 2 + Math.floor(Math.random() * 5) : x)), corDe(p), deCima);
+        }
+        return r;
+      }
     }
     if (controle(p) === 'humano') {
       const r = await SS.Dados.jogar(n, corDe(p));
@@ -3383,6 +3396,7 @@ window.SS = window.SS || {};
       // O duelo aparece no painel da direita (dentro do tabuleiro); os dados rolam soltos pela mesa.
       if (temDuelo) mostrarDuelo(foto, total, null);
       SS.Dados.definirArena($('#mesa'));
+      ui.tutAt = at;
       await tutGancho('antesDado', { at, p: jogo.vez });
       if (id !== partida) return;
       // Quem ataca joga o dado: você arremessa, o amigo manda o resultado, o bot rola.

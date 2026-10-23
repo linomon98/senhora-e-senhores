@@ -176,7 +176,7 @@ window.SS = window.SS || {};
   adicionar({
     // Figuras: limite de número (destaque amarelo), habilidade (título em caixa alta) e texto curto.
     'figLim.J': ['Só pode ser equipado com números de 2 a 4.', 'Can only equip numbers 2 to 4.'],
-    'figLim.Q': ['Equipa qualquer número. Para entrar, sacrifique 2 Senhores seus que já estavam em campo.', 'Equips any number. To enter, sacrifice 2 of your Gentlemen that were already on the field.'],
+    'figLim.Q': ['Equipa qualquer número. Para entrar, sacrifique 1 Rei ou 2 Valetes seus que já estavam em campo.', 'Equips any number. To enter, sacrifice 1 King or 2 Jacks of yours that were already on the field.'],
     'figLim.K': ['Só pode ser equipado com números de 2 a 7.', 'Can only equip numbers 2 to 7.'],
     'figHab.J': ['Ímpeto', 'Haste'],
     'figHab.Q': ['Atropelar', 'Trample'],
@@ -213,7 +213,7 @@ window.SS = window.SS || {};
 
   // ---------- Interface: ações da mão e instruções ----------
   adicionar({
-    'acao.rainha': ['♛ Invocar Rainha ({n} sacrifícios)', '♛ Summon Queen ({n} sacrifices)'],
+    'acao.rainha': ['♛ Invocar Rainha (sacrifício)', '♛ Summon Queen (sacrifice)'],
     'acao.sumonar': ['⚔ Invocar', '⚔ Summon'],
     'acao.as': ['✦ Invocar Ás', '✦ Summon Ace'],
     'acao.curar': ['♥ Curar {n} PV', '♥ Heal {n} HP'],
@@ -226,8 +226,8 @@ window.SS = window.SS || {};
     'dica.umAs': ['Você já invocou um Ás neste turno (só 1 por turno).', 'You already summoned an Ace this turn (only 1 per turn).'],
     'dica.semAcoes': ['Suas ações deste turno acabaram.', 'You have no actions left this turn.'],
     'dica.limiteFigura': ['{c} só pode ser equipado(a) com cartas de 2 a {n}.', '{c} can only equip cards from 2 to {n}.'],
-    'dica.rainhaSacrificio': ['A Rainha precisa sacrificar {n} Senhores seus que já estavam em campo antes deste turno.', 'The Queen needs to sacrifice {n} of your Gentlemen that were already on the field before this turn.'],
-    'dica.rainhaSemSenhores': ['A Rainha precisa de {n} Senhores seus em campo desde o turno anterior para sacrificar.', 'The Queen needs {n} of your Gentlemen on the field since last turn to sacrifice.'],
+    'dica.rainhaSacrificio': ['A Rainha precisa sacrificar 1 Rei ou 2 Valetes seus que já estavam em campo antes deste turno.', 'The Queen needs to sacrifice 1 King or 2 Jacks of yours that were already on the field before this turn.'],
+    'dica.rainhaSemSenhores': ['A Rainha precisa de 1 Rei ou 2 Valetes seus em campo desde o turno anterior para sacrificar.', 'The Queen needs 1 King or 2 Jacks of yours on the field since last turn to sacrifice.'],
     'dica.fileiraCheia': ['Sua fileira está cheia.', 'Your row is full.'],
     'dica.asMesmoNaipe': ['Para invocar o Ás, sacrifique uma carta numérica do mesmo naipe.', 'To summon the Ace, sacrifice a number card of the same suit.'],
     'dica.selecioneNumero': ['Selecione também uma carta numérica (2 a 10) para invocar.', 'Also select a number card (2 to 10) to summon.'],
@@ -235,7 +235,8 @@ window.SS = window.SS || {};
     'dica.nenhumaAcao': ['Nenhuma ação com essa seleção.', 'No action with this selection.'],
     'passo.slot': ['Clique num espaço livre da sua fileira.', 'Click an empty slot in your row.'],
     'passo.slotAs': ['Clique num espaço livre, ou numa carta para colocar o Ás no lugar dela (as cartas são empurradas para o lado).', 'Click an empty slot, or a card to put the Ace in its place (the cards are pushed aside).'],
-    'passo.sacrificios': ['Clique nos {total} Senhores que serão sacrificados para a Rainha ({n}/{total}).', 'Click the {total} Gentlemen to sacrifice for the Queen ({n}/{total}).'],
+    'passo.sacrificios': [p => (p.n ? 'Agora clique no segundo Valete: a Rainha entra no lugar dele.' : 'Clique no Rei (ou em 2 Valetes) para sacrificar pela Rainha. Ela entra no lugar do Rei, ou do segundo Valete.'),
+      p => (p.n ? 'Now click the second Jack: the Queen takes its place.' : 'Click the King (or 2 Jacks) to sacrifice for the Queen. She takes the King\'s place, or the second Jack\'s.')],
     'passo.espadas': ['Clique no Senhor(a) que recebe +1 de ataque neste turno.', 'Click the Gentleman that gets +1 attack this turn.'],
     'passo.paus': ['Clique no Senhor(a) ferido(a) que entra em berserk.', 'Click the wounded Gentleman that goes berserk.'],
     'passo.poder': ['{nome} — {texto} Clique no alvo.', '{nome} — {texto} Click the target.'],
@@ -420,7 +421,7 @@ window.SS = window.SS || {};
     'carta.tempoTurno': ['1 turno', '1 turn'],
     'custo.titulo': ['Custo', 'Cost'],
     'custo.sumonar': ['1 ação + 1 figura (Valete ou Rei) e 1 carta numérica da mão. Ou um Ás e 1 número do mesmo naipe.', '1 action + 1 face card (Jack or King) and 1 number card from your hand. Or an Ace and 1 number of the same suit.'],
-    'custo.rainha': ['1 ação + a Rainha e 1 carta numérica da mão + sacrificar 2 Senhores seus que já estavam em campo.', '1 action + the Queen and 1 number card from your hand + sacrifice 2 of your Gentlemen already on the field.'],
+    'custo.rainha': ['1 ação + a Rainha e 1 carta numérica da mão + sacrificar 1 Rei ou 2 Valetes seus que já estavam em campo (ela entra no lugar deles).', '1 action + the Queen and 1 number card from your hand + sacrifice 1 King or 2 Jacks of yours already on the field (she takes their place).'],
     'custo.as': ['1 ação + o Ás e 1 carta numérica do mesmo naipe (que vai para o cemitério).', '1 action + the Ace and 1 number card of the same suit (which goes to the graveyard).'],
     'custo.espadas': ['1 ação + 1 carta de Espadas da mão.', '1 action + 1 Spades card from your hand.'],
     'custo.paus': ['1 ação + 1 carta de Paus da mão.', '1 action + 1 Clubs card from your hand.'],
