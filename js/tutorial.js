@@ -121,13 +121,13 @@
         { ate: 'depoisGolpe', esconder: true },
         { gancho: 'depoisGolpe', passos: [
           { espera: 500 },
-          { foco: slotDe(0), fala: ['Você defendeu, <b>boua!!</b> Ele tirou 5: dano total de 3. Agora o seu Valete está <b>deitado</b>, porque levou dano.',
+          { foco: slotDe(0), semSetas: true, fala: ['Você defendeu, <b>boua!!</b> Ele tirou 5: dano total de 3. Agora o seu Valete está <b>deitado</b>, porque levou dano.',
             'You defended, <b>nice!!</b> He rolled a 5: full damage of 3. Now your Jack is <b>lying down</b>, because it took damage.'] },
-          { foco: slotDe(0), fala: ['Tá vendo essas <b>bolinhas</b> em cima de cada Senhor? Elas são a <b>defesa</b> dele. De padrão, cada Senhor aguenta <b>2 hits</b>. Quando leva um hit, ele deita pra mostrar que tá machucado, tadinho :(',
+          { foco: [slotDe(0), slotDe(1)], semSetas: true, pulsar: [api => slotDe(0)(api) && slotDe(0)(api) + ' .selo-vida', api => slotDe(1)(api) && slotDe(1)(api) + ' .selo-vida'], fala: ['Tá vendo essas <b>bolinhas</b> em cima de cada Senhor? Elas são a <b>defesa</b> dele. De padrão, cada Senhor aguenta <b>2 hits</b>. Quando leva um hit, ele deita pra mostrar que tá machucado, tadinho :(',
             'See those <b>little dots</b> on each Gentleman? They are its <b>defense</b>. By default, each Gentleman takes <b>2 hits</b>. When it takes a hit, it lies down to show it is hurt, poor thing :('] },
-          { foco: [slotDe(0), slotDe(1)], fala: ['E olha o Valete dele: também levou 1 hit! Isso é o <b>contra-ataque</b>. Ele acontece quando você defende com um Senhor que tem o ataque <b>MAIOR</b> que o do Senhor(a) que atacou.',
+          { foco: [slotDe(0), slotDe(1)], semSetas: true, fala: ['E olha o Valete dele: também levou 1 hit! Isso é o <b>contra-ataque</b>. Ele acontece quando você defende com um Senhor que tem o ataque <b>MAIOR</b> que o do Senhor(a) que atacou.',
             'And look at his Jack: it took 1 hit too! That is the <b>counterattack</b>. It happens when you defend with a Gentleman whose attack is <b>HIGHER</b> than the attacking Gentleman\'s.'] },
-          { foco: [slotDe(0), slotDe(1)], fala: ['Neste caso, o Valete do oponente tem <b>3</b> de ataque, e o seu tem <b>4</b>... 4 é maior que 3, né? Então o contra-ataque acontece!',
+          { foco: [slotDe(0), slotDe(1)], semSetas: true, fala: ['Neste caso, o Valete do oponente tem <b>3</b> de ataque, e o seu tem <b>4</b>... 4 é maior que 3, né? Então o contra-ataque acontece!',
             'Here, the opponent\'s Jack has <b>3</b> attack, and yours has <b>4</b>... 4 is higher than 3, right? So the counterattack happens!'] },
           { fala: ['Por enquanto é isso! O tutorial continua em breve. 🎓', 'That is it for now! The tutorial continues soon. 🎓'], botao: ['Continuar', 'Continue'], fim: true },
         ] },
@@ -192,6 +192,11 @@
     const visivel = !!(p && !p.esconder && (p.textoAtual != null));
     raiz.classList.toggle('mostrando', visivel);
     document.body.classList.toggle('tut-pulsa-seta', visivel && !!p.pulsarSeta);
+    document.body.classList.toggle('tut-sem-setas', visivel && !!p.semSetas);
+    // O que a fala aponta pulsa (as bolinhas de defesa, por exemplo).
+    const pulsando = visivel ? elementos(p.pulsar) : [];
+    document.querySelectorAll('.tut-pulsa').forEach(el => { if (!pulsando.includes(el)) el.classList.remove('tut-pulsa'); });
+    pulsando.forEach(el => el.classList.add('tut-pulsa'));
     // A carta que a aula quer que você jogue flutua (a classe volta a cada redesenho da mão).
     const destaques = visivel ? elementos(p.alvo) : [];
     document.querySelectorAll('.tut-destaque').forEach(el => { if (!destaques.includes(el)) el.classList.remove('tut-destaque'); });
@@ -323,7 +328,8 @@
     if (T.aoProximo) T.aoProximo();
     const raiz = $('#tut');
     if (raiz) raiz.remove();
-    document.body.classList.remove('tut-pulsa-seta');
+    document.body.classList.remove('tut-pulsa-seta', 'tut-sem-setas');
+    document.querySelectorAll('.tut-pulsa').forEach(el => el.classList.remove('tut-pulsa'));
     document.querySelectorAll('.tut-destaque').forEach(el => el.classList.remove('tut-destaque'));
   }
 

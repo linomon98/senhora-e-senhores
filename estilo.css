@@ -1593,6 +1593,11 @@ html.sem-caixa-meio #faixa .caixa-faixa { display: none; }
 /* Carta que o tutorial pede para jogar: flutua (translate não briga com o transform do leque) */
 .tut-destaque { animation: tut-flutua .7s ease-in-out infinite alternate !important; filter: drop-shadow(0 0 10px rgba(255, 216, 77, .95)) !important; z-index: 5 !important; }
 @keyframes tut-flutua { from { translate: 0 0; } to { translate: 0 -16px; } }
+/* Falas sobre o resultado: as setas do combate somem para a mesa ficar legível */
+body.tut-sem-setas #setas, body.tut-sem-setas .unidade .tags { opacity: 0 !important; transition: opacity .25s; }
+/* Algo que a fala aponta (as bolinhas de defesa): cresce e brilha */
+.tut-pulsa { animation: tut-pulsa 0.55s ease-in-out infinite alternate !important; z-index: 6 !important; }
+@keyframes tut-pulsa { from { transform: translateX(-50%) scale(1); filter: drop-shadow(0 0 0 rgba(255, 216, 77, 0)); } to { transform: translateX(-50%) scale(1.7); filter: drop-shadow(0 0 8px rgba(255, 216, 77, 1)); } }
 /* Seta do ataque pulsando enquanto o tutorial fala dela (só brilho e espessura: base e ponta não saem do lugar) */
 body.tut-pulsa-seta #setas .seta { animation: tut-pulsa-seta .6s ease-in-out infinite alternate; }
 body.tut-pulsa-seta #setas .seta .linha { animation: tut-pulsa-linha .6s ease-in-out infinite alternate; }
