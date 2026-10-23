@@ -1685,7 +1685,7 @@ body.tut-pulsa-seta #setas .seta .linha { animation: tut-pulsa-linha .6s ease-in
 /* Tudo é medido em "pixels do desenho" (u): a tela inteira encolhe junto para caber em qualquer janela. */
 #modal.modal-menu .caixa:has(.inicio-novo) { background: none; border: 0; box-shadow: none; padding: 0; max-width: none; max-height: none; width: auto; overflow: visible; }
 .inicio-novo { --u: min(calc(100vh / 900), calc(100vw / 1230)); color: #141414; }
-.palco-menu { position: relative; width: calc(1200 * var(--u)); height: calc(870 * var(--u)); margin: 0 auto; }
+.palco-menu { position: relative; width: calc(1200 * var(--u)); height: calc(840 * var(--u)); margin: 0 auto; }
 .palco-menu > * { position: absolute; margin: 0; }
 .palco-menu button { cursor: pointer; }
 .btn-tutorial, .btn-grande-menu, .btn-medio-menu, .caixa-baralho {
@@ -1697,11 +1697,11 @@ body.tut-pulsa-seta #setas .seta .linha { animation: tut-pulsa-linha .6s ease-in
 .btn-tutorial:active, .btn-grande-menu:active, .btn-medio-menu:active, .caixa-baralho:active { transform: translateY(calc(6 * var(--u))); box-shadow: 0 calc(4 * var(--u)) 0 #141414; }
 .btn-tutorial { left: calc(16 * var(--u)); top: calc(25 * var(--u)); padding: 0 calc(26 * var(--u)); height: calc(96 * var(--u)); background: #ffc21a; font-size: calc(58 * var(--u)); white-space: nowrap; }
 .btn-grande-menu { left: calc(430 * var(--u)); width: calc(340 * var(--u)); height: calc(86 * var(--u)); font-size: calc(58 * var(--u)); }
-.btn-grande-menu.jogar { top: calc(495 * var(--u)); }
-.btn-grande-menu.multi { top: calc(605 * var(--u)); }
+.btn-grande-menu.jogar { top: calc(458 * var(--u)); }
+.btn-grande-menu.multi { top: calc(568 * var(--u)); }
 .btn-medio-menu { left: calc(615 * var(--u)); width: calc(155 * var(--u)); height: calc(55 * var(--u)); font-size: calc(37 * var(--u)); border-width: calc(5 * var(--u)); border-radius: calc(14 * var(--u)); }
-.btn-medio-menu.regras { top: calc(715 * var(--u)); }
-.btn-medio-menu.testes { top: calc(788 * var(--u)); }
+.btn-medio-menu.regras { top: calc(678 * var(--u)); }
+.btn-medio-menu.testes { top: calc(751 * var(--u)); }
 .idiomas { left: calc(950 * var(--u)); top: calc(38 * var(--u)); display: flex; align-items: center; gap: calc(10 * var(--u)); }
 .idiomas button { padding: 0; border: 0; background: none; border-radius: 50%; line-height: 0; transition: transform .14s, filter .14s; }
 .idiomas button img { display: block; width: calc(64 * var(--u)); height: calc(64 * var(--u)); border-radius: 50%; }
@@ -1724,11 +1724,11 @@ body.tut-pulsa-seta #setas .seta .linha { animation: tut-pulsa-linha .6s ease-in
   -webkit-text-stroke: calc(14 * var(--u)) #141414; paint-order: stroke fill;
 }
 .logo-menu.logo-texto span { font-size: .6em; }
-.palco-menu .convite { left: calc(240 * var(--u)); right: calc(240 * var(--u)); top: calc(875 * var(--u)); text-align: center; }
+.palco-menu .convite { left: calc(240 * var(--u)); right: calc(240 * var(--u)); top: calc(845 * var(--u)); text-align: center; }
 
 /* Caixinha de cigarro (os baralhos): a tampa abre e as cartas aparecem quando o mouse passa em cima */
-.caixa-baralho { left: calc(430 * var(--u)); top: calc(715 * var(--u)); width: calc(170 * var(--u)); height: calc(128 * var(--u)); overflow: visible; border-radius: calc(16 * var(--u)); }
-.maco { position: absolute; left: calc(37 * var(--u)); top: calc(-22 * var(--u)); width: calc(96 * var(--u)); aspect-ratio: 896 / 1090; }
+.caixa-baralho { left: calc(430 * var(--u)); top: calc(678 * var(--u)); width: calc(170 * var(--u)); height: calc(128 * var(--u)); overflow: visible; border-radius: calc(16 * var(--u)); }
+.maco { position: absolute; left: calc(22 * var(--u)); top: calc(-40 * var(--u)); width: calc(126 * var(--u)); aspect-ratio: 896 / 1090; }
 .maco > * { position: absolute; }
 .maco-baixo { left: 0; top: 24.7%; width: 100%; z-index: 2; }
 .maco-tampa { left: 3%; top: 0; width: 93.5%; z-index: 4; transform-origin: 50% 100%; transition: transform .38s cubic-bezier(.3, 1.4, .5, 1); }
@@ -1739,7 +1739,7 @@ body.tut-pulsa-seta #setas .seta .linha { animation: tut-pulsa-linha .6s ease-in
 .maco-cartas .carta:nth-child(3) { transform: rotate(7deg); left: 28%; }
 .maco-nome {
   left: 21%; top: 72%; width: 67%; z-index: 3; text-align: center; white-space: nowrap; pointer-events: none;
-  font: 400 calc(21 * var(--u)) / 1 'Marlboro', var(--fonte-titulo); color: #141414; transform: skewY(-10deg); transform-origin: 50% 50%;
+  font: 400 calc(27 * var(--u)) / 1 'Marlboro', var(--fonte-titulo); color: #141414; transform: skewY(-10deg); transform-origin: 50% 50%;
 }
 .caixa-baralho:hover .maco-tampa { transform: translateY(-48%) rotate(-5deg); }
 .caixa-baralho:hover .maco-cartas { transform: translateY(-22%); }
