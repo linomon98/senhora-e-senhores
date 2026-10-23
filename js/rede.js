@@ -61,17 +61,12 @@ window.SS = window.SS || {};
     return typeof window.Peer === 'function';
   }
 
-  // Se o PeerJS não veio do cdnjs (rede ou extensão bloqueando), tenta um segundo endereço.
-  if (!disponivel()) {
-    const s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';
-    document.head.appendChild(s);
-  }
 
   // Cria a sala e espera o amigo. Devolve o código; o evento 'conectou' avisa quando ele entrar.
+  // (o PeerJS só é baixado quando alguém vai jogar online: ver js/libs.js)
   function criarSala() {
     sair();
-    return new Promise((resolver, rejeitar) => {
+    return SS.Libs.carregar('peer').then(() => new Promise((resolver, rejeitar) => {
       if (!disponivel()) return rejeitar(new Error('PeerJS indisponível'));
       const tentar = n => {
         codigo = novoCodigo();
@@ -87,13 +82,13 @@ window.SS = window.SS || {};
         });
       };
       tentar(0);
-    });
+    }));
   }
 
   function entrar(cod) {
     sair();
     codigo = String(cod || '').trim().toUpperCase();
-    return new Promise((resolver, rejeitar) => {
+    return SS.Libs.carregar('peer').then(() => new Promise((resolver, rejeitar) => {
       if (!disponivel()) return rejeitar(new Error('PeerJS indisponível'));
       peer = new window.Peer();
       let ok = false;
@@ -103,7 +98,7 @@ window.SS = window.SS || {};
         c.on('open', () => { ok = true; clearTimeout(desistir); ligar(c); resolver(); });
       });
       peer.on('error', err => { if (!ok) { clearTimeout(desistir); rejeitar(err); } });
-    });
+    }));
   }
 
   function enviar(m) {

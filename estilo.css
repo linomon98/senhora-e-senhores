@@ -998,6 +998,10 @@ button.cb-item { cursor: default; }
 .titulo, .titulo-etapa, .vs, .titulo-fim, .btn-menu, .caixa-info h3, #modal h2, .texto-regras h2, .pronto-info h2 { font-family: var(--fonte-titulo); font-weight: 400; letter-spacing: .5px; }
 
 html, body { background: #9de03a url('arte/mesa/grama.webp') center / cover; }
+/* Antes da primeira partida (e sempre que o menu está na frente) a mesa fica escondida e a grama nem é baixada */
+html.em-menu, html.em-menu body { background: #d8d1c5; }
+html.em-menu #palco { visibility: hidden; }
+html.em-menu #mesa { background: none; }
 #app { width: 1600px; height: 900px; padding: 0; display: block; gap: 0; }
 #mesa {
   position: absolute; inset: 0; width: 1600px; height: 900px; padding: 8px 40px 0; border-radius: 0; overflow: hidden;

@@ -2944,6 +2944,10 @@ window.SS = window.SS || {};
     cfg.modo = modo;
     partida++;
     const id = partida;
+    prepararMesa();
+    // O dado 3D já vem carregando desde o menu; se ainda não chegou, espera um pouco (sem ele, o dado é 2D).
+    if (!SS.Libs.pronta('three') || !SS.Libs.pronta('cannon')) await Promise.race([SS.Libs.dado(), esperar(4000)]);
+    if (id !== partida) return;
     Som.musica('partida');
     fecharModal();
     esconderAnuncio();
@@ -3410,6 +3414,7 @@ window.SS = window.SS || {};
     cfg.modo = 'tutorial';
     cfg.aula = n;
     partida++;
+    prepararMesa();
     Som.musica('partida');
     fecharModal();
     esconderAnuncio();
@@ -3539,8 +3544,11 @@ window.SS = window.SS || {};
   let papel = null, sala = null, amigoFora = false;
   const espera = () => '<div class="espera-pontos"><i></i><i></i><i></i></div>';
 
+  let redeFalhou = false;
   function telaOnline(voltar, aviso) {
-    const disp = SS.Rede.disponivel();
+    // O PeerJS baixa agora (só quem vai jogar online precisa dele); se não vier, a tela avisa.
+    if (!SS.Rede.disponivel() && !redeFalhou) SS.Libs.carregar('peer').then(ok => { if (!ok) { redeFalhou = true; if ($('#modal .online-opcoes')) telaOnline(voltar, aviso); } });
+    const disp = !redeFalhou;
     modal(`<h2>${t('on.titulo')}</h2>
       <p class="nota">${t('on.nota', { p: P.get(cfg.palhaco).nome })}</p>
       <p class="nota aviso-ip">🔒 ${t('on.avisoIp')}</p>
@@ -3683,7 +3691,19 @@ window.SS = window.SS || {};
   SS.Rede.ao('tchau', () => amigoSaiu('on.saiu'));
   SS.Rede.ao('caiu', () => amigoSaiu('on.caiu'));
 
+  // A mesa (grama, cobra, enfeites) só é montada quando a primeira partida começa; no menu ela fica escondida.
+  let mesaPronta = false;
+  function prepararMesa() {
+    document.documentElement.classList.remove('em-menu');
+    if (mesaPronta) return;
+    mesaPronta = true;
+    plantarGraminhas();
+    animarCobra();
+    if (SS.Decoracao) SS.Decoracao.montar($('#mesa'));
+  }
+
   function menu() {
+    document.documentElement.classList.add('em-menu');
     if (SS.Tutorial) SS.Tutorial.parar();
     fecharEditorLivre();
     if (cfg.modo === 'tutorial' || cfg.modo === 'livre') cfg.modo = 'bot';
@@ -3885,6 +3905,7 @@ window.SS = window.SS || {};
     const lv = cfg.livre;
     cfg.modo = 'livre';
     partida++;
+    prepararMesa();
     Som.musica('partida');
     fecharModal();
     esconderAnuncio();
@@ -4331,6 +4352,7 @@ window.SS = window.SS || {};
         if (agora > proximoChiado) { Som.tocar('cobra-chiado'); proximoChiado = agora + 25000 + Math.random() * 25000; }
       };
       const passo = agora => {
+        if (document.documentElement.classList.contains('em-menu')) return void setTimeout(() => requestAnimationFrame(passo), 400); // menu na frente: não desenha
         const seg = agora / 1000, base = -((seg * VEL) % volta);
         g.clearRect(0, 0, LARG, altTela);
         // Cada cobra morde num tempo um pouco diferente (para não abrirem a boca juntas).
@@ -4429,9 +4451,6 @@ window.SS = window.SS || {};
 
   SS.Idioma.aplicarEstaticos();
   C.aplicarTexturas();
-  plantarGraminhas();
-  animarCobra();
-  if (SS.Decoracao) SS.Decoracao.montar($('#mesa'));
   sonsDasJogadas();
   aplicarOpcoes();
   ajustarEscala();
@@ -4441,8 +4460,12 @@ window.SS = window.SS || {};
   document.addEventListener('mouseup', aoSoltar);
   document.addEventListener('mousemove', aoMover);
   document.addEventListener('keydown', aoTeclar);
-  SS.Dados.iniciar();
   menu();
+  // Com o menu na tela, baixa por trás o que a partida vai usar (dado 3D) e, se veio de um convite, o online.
+  setTimeout(() => {
+    SS.Libs.dado();
+    if (SS.Rede.codigoDoLink()) SS.Libs.carregar('peer');
+  }, 700);
 
   // Acesso para depuração pelo console do navegador.
   SS.depurar = {
