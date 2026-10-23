@@ -1192,6 +1192,7 @@ window.SS = window.SS || {};
   }
 
   function atualizarDica(ev) {
+    if (ui && ui.dicaFixa) return; // o tutorial deixou uma dica aberta de propósito
     const caixa = $('#dica');
     const d = dicaPara(ev.target);
     if (!d) {
@@ -3414,6 +3415,17 @@ window.SS = window.SS || {};
       jogo: () => jogo, ui: () => ui, render,
       aplicar: a => { M.aplicarAcao(jogo, a); render(); },
       sair: () => { cfg.modo = 'bot'; menu(); },
+      // Abre a dica de uma carta e deixa ela parada na tela (o tutorial aponta para um trecho dela).
+      fixarDica: sel => {
+        const el = sel && document.querySelector(sel);
+        if (!el) return;
+        ui.dicaFixa = false;
+        const r = el.getBoundingClientRect();
+        atualizarDica({ target: el, clientX: r.right - 6, clientY: Math.max(8, r.top - 150) });
+        ui.dicaFixa = true;
+      },
+      soltarDica: () => { if (ui) ui.dicaFixa = false; $('#dica').hidden = true; },
+      negar: (sel, texto) => negar(sel && document.querySelector(sel), texto, []),
     });
   }
 
