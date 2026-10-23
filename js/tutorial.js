@@ -88,9 +88,9 @@
           { fala: ['Não é porque você tem 4 de ataque que vai, obrigatoriamente, dar 4 de dano. Tudo depende do <b>DADO</b>!',
             'Having 4 attack doesn\'t mean you will always deal 4 damage. It all depends on the <b>DIE</b>!'] },
           { fala: [`<div class="tut-dados"><div><i>⚃ ⚄ ⚅</i><b>4 a 6</b><span>dano total: <b>4</b></span></div><div><i>⚁ ⚂</i><b>2 ou 3</b><span>metade (pra baixo): <b>2</b></span></div><div class="ruim"><i>⚀</i><b>1</b><span>errou!</span></div></div>
-            Esse lance de <b>errar quando tira 1</b> só vale quando você ataca o oponente <b>diretamente</b> (daqui a pouco eu te explico).`,
+            Tirou <b>1</b>, errou: vale para <b>qualquer ataque</b>, até contra quem defende. Ninguém leva hit, que vergonha!`,
             `<div class="tut-dados"><div><i>⚃ ⚄ ⚅</i><b>4 to 6</b><span>full damage: <b>4</b></span></div><div><i>⚁ ⚂</i><b>2 or 3</b><span>half (rounded down): <b>2</b></span></div><div class="ruim"><i>⚀</i><b>1</b><span>miss!</span></div></div>
-            That <b>missing on a 1</b> thing only counts when you attack the opponent <b>directly</b> (I will explain in a bit).`] },
+            Roll a <b>1</b> and you miss: it counts for <b>any attack</b>, even against a defender. Nobody takes a hit, shame on you!`] },
         ] },
         { ate: 'depoisGolpe', permitir: '*', dado: true, fala: ['Vamo lá, <b>joga o dado!</b> (pegue o dado e jogue na mesa)', 'Come on, <b>roll the die!</b> (grab the die and throw it on the table)'] },
         { gancho: 'depoisGolpe', passos: [
@@ -258,7 +258,7 @@
           { espera: 1200 },
           { foco: slotFig(1, 'J', 'paus'), fala: ['Outro <b>Valete</b>... ok.', 'Another <b>Jack</b>... okay.'] },
           { acao: api => { const j = api.jogo().jogadores[1]; aplicarPerto(api, x => x.tipo === 'curar' && x.carta === idNaMao(j, '6', 'copas')); } },
-          { espera: 1300 },
+          { espera: 2100 }, // (a carta de Copas dele aparece virando e vai para o cemitério)
           { foco: '#info-1 .heroi', fala: ['Ele usou uma carta de <b>Copas</b> para se curar. Interessante...', 'He used a <b>Hearts</b> card to heal. Interesting...'] },
           { foco: '#campo-1', fala: ['Agora ele vai <b>atacar</b>...', 'Now he is going to <b>attack</b>...'] },
         ] },

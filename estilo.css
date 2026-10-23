@@ -1836,3 +1836,19 @@ body.tut-pulsa-seta #setas .seta .linha { animation: tut-pulsa-linha .6s ease-in
 .tomate-splat i:nth-child(3) { left: 40%; bottom: 2%; width: 16px; height: 34px; border-radius: 40% 40% 50% 50%; }
 .tomate-splat i:nth-child(4) { right: 14%; bottom: 12%; width: 14px; height: 14px; }
 .tomate-splat i:nth-child(5) { left: 22%; top: 6%; width: 12px; height: 12px; background: #f6e27a; box-shadow: 30px 40px 0 -1px #f6e27a, 60px 22px 0 -2px #f6e27a, 44px 64px 0 -1px #f6e27a; }
+
+/* ---------- Espaços do campo: vermelho escuro (aparece bem na grama) e o vão que os Senhores abrem ---------- */
+.espaco.clicavel { border-color: #8e1b1b; background: rgba(150, 25, 25, .14); box-shadow: 0 0 16px rgba(150, 25, 25, .45); }
+.espaco.destino { background: radial-gradient(ellipse at center, rgba(150, 25, 25, .3), rgba(150, 25, 25, 0) 70%); }
+.espaco.destino::before { border-color: rgba(170, 30, 30, .95); box-shadow: 0 0 22px rgba(140, 20, 20, .65); }
+.fileira .espaco { transition: translate .22s cubic-bezier(.3, 1.3, .5, 1), rotate .22s ease; }
+.fileira .espaco.abrindo { translate: calc(var(--abre) * 34px) 0; rotate: calc(var(--abre) * 6deg); }
+/* carta esperando o número num espaço que já tem alguém: flutua por cima do vão */
+.espaco.preparo > .unidade ~ .carta-preparo { position: absolute; left: 50%; top: 50%; translate: -50% -50%; z-index: 4; }
+
+/* ---------- Carta que o oponente usou como recurso: aparece no meio, vira e vai para o cemitério ---------- */
+.carta-usada { position: absolute; z-index: 70; width: 86px; height: 120px; pointer-events: none; filter: drop-shadow(4px 6px 0 rgba(20, 20, 20, .5)); }
+.carta-usada .carta { width: 100%; height: 100%; }
+
+/* ---------- Tutorial: na compra, só o baralho pedido pulsa ---------- */
+body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !important; box-shadow: none !important; transform: none !important; }

@@ -154,7 +154,11 @@ window.SS = window.SS || {};
       if (pd.passos[pd.k] === 'as') return escolherAsDoBaralho();
       return render();
     }
-    const acao = maisPerto(candidatosPendentes(), pd.destino);
+    let acao = maisPerto(candidatosPendentes(), pd.destino);
+    // Senhor(a) solto em cima de alguém: entra ali mesmo, empurrando as cartas para o lado (a Rainha tem lugar certo).
+    if (acao.tipo === 'sumonar' && acao.sacrificio == null && pd.destino != null && acao.slot !== pd.destino && jogo.jogadores[jogo.vez].campo[pd.destino]) {
+      acao = Object.assign({}, acao, { slot: pd.destino });
+    }
     aplicarDoJogador(acao);
   }
 
@@ -725,7 +729,7 @@ window.SS = window.SS || {};
   function efeitoDoDestino(id, dest) {
     if (!dest) return null;
     const legais = M.acoesLegais(jogo);
-    if (dest.tipo === 'unidade') {
+    if (dest.tipo === 'unidade' && !M.ehAs(cartaDaMao(id) || {})) {
       const a = legais.find(x => (x.tipo === 'espadas' || x.tipo === 'paus') && x.carta === id && x.alvo === dest.uid);
       if (a) return { acao: a };
     }
@@ -770,6 +774,7 @@ window.SS = window.SS || {};
   // Mostra onde a carta vai cair: um brilho no lugar da fileira (os espaços não aparecem) ou no alvo.
   function marcarDestino(dest, ehAlvo) {
     document.querySelectorAll('.destino, .destino-alvo').forEach(e => e.classList.remove('destino', 'destino-alvo'));
+    abrirEspaco(jogo.vez, dest && !ehAlvo && dest.tipo !== 'heroi' ? dest.i : null);
     const fileira = $('#campo-' + jogo.vez);
     fileira.classList.toggle('soltando', !!ui.arrasto && ui.arrasto.moveu);
     if (!dest) return;
@@ -1321,6 +1326,49 @@ window.SS = window.SS || {};
     }
   }
 
+  // Carta da mão do oponente usada como recurso (cura, +1 de ataque, Berserk, compra): antes de sumir da mão,
+  // guarda de onde ela sai; depois ela aparece grande no meio da mesa, vira para frente e vai para o cemitério.
+  const RECURSO = new Set(['curar', 'espadas', 'paus', 'comprar']);
+  function antesDeRecurso(a) {
+    if (!a || !RECURSO.has(a.tipo) || !jogo || controle(jogo.vez) === 'humano' || MOVIMENTO_REDUZIDO) return null;
+    const p = jogo.vez, j = jogo.jogadores[p];
+    return chaveCartas(a).filter(x => x !== 'TOKEN').map(x => ({ c: j.mao.find(k => k.id === x), de: centroDe(document.querySelector(`#mao-${p} [data-voo="${x}"]`)) }))
+      .filter(x => x.c && x.de);
+  }
+  // Devolve quanto tempo a animação leva (para o turno do bot esperar).
+  function mostrarRecurso(p, lista) {
+    if (!lista || !lista.length) return 0;
+    lista.forEach(({ c, de }, k) => {
+      const el = document.createElement('div');
+      el.className = 'carta-usada';
+      el.innerHTML = `<div class="carta dorso ${corDe(p)}"></div>`;
+      Object.assign(el.style, { left: de.x + 'px', top: de.y + 'px' });
+      $('#app').appendChild(el);
+      const meio = { x: 800 + k * 120, y: 400 }, atraso = k * 120;
+      const noMeio = (dy, s, giro) => `translate(calc(-50% + ${meio.x - de.x}px), calc(-50% + ${meio.y - de.y + dy}px)) scale(${s}) rotateY(${giro}deg)`;
+      // (as etapas vão por temporizador, não pelo fim da animação: com a aba escondida o navegador pausa as animações)
+      el.animate([{ transform: 'translate(-50%, -50%) scale(.7) rotateY(0deg)' }, { transform: noMeio(0, 1.6, 90) }],
+        { duration: 420, delay: atraso, easing: 'ease-in', fill: 'forwards' });
+      setTimeout(() => {
+        Som.tocar('descartar');
+        el.innerHTML = `<div class="carta">${C.frente(c)}</div>`;
+        el.animate([
+          { transform: noMeio(0, 1.6, 90) }, { transform: noMeio(0, 1.6, 0), offset: .35 },
+          { transform: noMeio(0, 1.6, 0), offset: .8 }, { transform: noMeio(-10, 1.65, 0) },
+        ], { duration: 950, easing: 'ease-out', fill: 'forwards' });
+      }, atraso + 420);
+      setTimeout(() => {
+        const alvo = centroDe(cemiterioDe(p)) || meio;
+        el.animate([
+          { transform: noMeio(-10, 1.65, 0), opacity: 1 },
+          { transform: `translate(calc(-50% + ${alvo.x - de.x}px), calc(-50% + ${alvo.y - de.y}px)) scale(.7) rotate(12deg)`, opacity: .5 },
+        ], { duration: 420, easing: 'ease-in', fill: 'forwards' });
+      }, atraso + 1370);
+      setTimeout(() => el.remove(), atraso + 1800);
+    });
+    return 1850 + (lista.length - 1) * 120;
+  }
+
   // O Palhaço perde PV fora do combate (o Infartitte pagando o poder): treme, solta faíscas e o número sobe.
   function danoNoPalhaco(p, n) {
     const el = elRetrato(p), c = centroDe(el);
@@ -1492,6 +1540,7 @@ window.SS = window.SS || {};
   // ---------- Cartas voando do baralho (ou do cemitério) para a mão ----------
 
   let maoVista = [null, null], cemVisto = [new Set(), new Set()], campoVisto = [null, null];
+  let posCampo = [{}, {}]; // em que espaço estava cada Senhor(a) no último desenho (para animar quem foi empurrado)
   const voando = new Set(), voandoCampo = new Set();
 
   function animarEntradas() {
@@ -2056,13 +2105,44 @@ window.SS = window.SS || {};
       let dentro = u ? htmlUnidade(p, i, u) : '';
       if (preparo && i === lugarPreparo) {
         cls.push('preparo');
-        if (!u) dentro = `<div class="carta-preparo"><div class="carta">${C.frente(preparo)}</div></div>`;
+        // (num espaço ocupado, a carta esperando o número flutua por cima do vão que os outros abrem)
+        dentro += `<div class="carta-preparo"><div class="carta">${C.frente(preparo)}</div></div>`;
       }
       h += `<div class="${cls.join(' ')}" data-slot="${p}:${i}">${dentro}</div>`;
     }
     const fileira = $('#campo-' + p);
     fileira.style.setProperty('--dorso', `var(--dorso-${corDe(p)})`);
+    const leftAntes = [...fileira.children].map(el => el.offsetLeft), antes = posCampo[p];
     fileira.innerHTML = h;
+    // Quem mudou de espaço (empurrado por uma carta que entrou) desliza do lugar antigo até o novo, meio inclinado.
+    const agora = {};
+    j.campo.forEach((u, i) => {
+      if (!u) return;
+      agora[u.uid] = i;
+      const de = antes[u.uid];
+      if (de == null || de === i || voandoCampo.has(u.uid) || MOVIMENTO_REDUZIDO || leftAntes[de] == null) return;
+      const el = fileira.children[i], dx = leftAntes[de] - el.offsetLeft;
+      el.animate([{ translate: `${dx}px 0`, rotate: `${Math.sign(-dx) * 7}deg` }, { translate: '0 0', rotate: '0deg' }], { duration: 420, easing: 'cubic-bezier(.3, 1.3, .5, 1)' });
+    });
+    posCampo[p] = agora;
+    if (preparo && lugarPreparo != null) abrirEspaco(p, lugarPreparo);
+  }
+
+  // Prévia de onde a carta vai entrar: se o espaço já tem alguém, quem vai ser empurrado dá um passo para o lado,
+  // inclinando, e abre o vão (a mesma conta do motor: empurra para o lado do espaço vazio mais perto).
+  function abrirEspaco(p, i) {
+    const fileira = $('#campo-' + p);
+    if (!fileira || !jogo) return;
+    const campo = jogo.jogadores[p].campo, slots = [...fileira.children];
+    slots.forEach(s => { s.classList.remove('abrindo'); s.style.removeProperty('--abre'); });
+    if (i == null || !campo[i]) return;
+    let dir = -1, esq = -1;
+    for (let k = i + 1; k < campo.length; k++) if (!campo[k]) { dir = k; break; }
+    for (let k = i - 1; k >= 0; k--) if (!campo[k]) { esq = k; break; }
+    const movem = [];
+    if (dir >= 0 && (esq < 0 || dir - i <= i - esq)) for (let k = i; k < dir; k++) movem.push([k, 1]);
+    else if (esq >= 0) for (let k = esq + 1; k <= i; k++) movem.push([k, -1]);
+    for (const [k, lado] of movem) { slots[k].classList.add('abrindo'); slots[k].style.setProperty('--abre', lado); }
   }
 
   function ataquesVisiveis() {
@@ -2996,6 +3076,7 @@ window.SS = window.SS || {};
     viradoAnterior = {};
     maoVista = [null, null];
     campoVisto = [null, null];
+    posCampo = [{}, {}];
     cemVisto = [new Set(), new Set()];
     // No online, cada tela mostra o próprio jogador embaixo; o sorteio do motor usa a mesma semente nas duas.
     eu = online ? online.eu : 0;
@@ -3033,6 +3114,7 @@ window.SS = window.SS || {};
     ui = novoUi();
     maoVista = [null, null];
     campoVisto = [null, null];
+    posCampo = [{}, {}];
     M.registrar(jogo, `${nomes[0]} × ${nomes[1]}.`);
     M.registrar(jogo, t('log.inicioDados', { a: nomes[0], da: dadosInicio[0], b: nomes[1], db: dadosInicio[1], j: nomes[primeiro] }));
     render();
@@ -3227,10 +3309,12 @@ window.SS = window.SS || {};
     for (let g = 0; g < 12 && jogo.fase === 'principal'; g++) {
       const a = await pensar('proximaAcao', jogo, p, nivelDe(p));
       if (id !== partida) return;
+      const recurso = antesDeRecurso(a);
       M.aplicarAcao(jogo, a);
       render();
+      const durRecurso = mostrarRecurso(p, recurso);
       if (jogo.vencedor != null) return fimDeJogo();
-      await esperar(Math.max(a.tipo === 'atacar' ? 300 : 900, esperaMagia())); // deixa a magia terminar
+      await esperar(Math.max(a.tipo === 'atacar' ? 300 : 900, esperaMagia(), durRecurso)); // deixa a magia (ou a carta) terminar
       if (id !== partida) return;
     }
     if (jogo.fase === 'principal') M.aplicarAcao(jogo, { tipo: 'atacar' });
@@ -3281,7 +3365,11 @@ window.SS = window.SS || {};
   function acaoLegalRemota(a) {
     if (!a || typeof a !== 'object' || Array.isArray(a)) return false;
     const k = chaveJogada(a);
-    return M.acoesLegais(jogo).some(x => chaveJogada(x) === k);
+    if (M.acoesLegais(jogo).some(x => chaveJogada(x) === k)) return true;
+    // Senhor(a) entrando num espaço ocupado (empurrando): vale se a mesma invocação é legal em algum espaço vazio.
+    if (a.tipo !== 'sumonar' || a.sacrificio != null || !Number.isInteger(a.slot) || a.slot < 0 || a.slot >= M.ESPACOS) return false;
+    const semSlot = x => chaveJogada(Object.assign({}, x, { slot: 0 }));
+    return M.acoesLegais(jogo).some(x => x.tipo === 'sumonar' && x.sacrificio == null && semSlot(x) === semSlot(a));
   }
 
   // Dados que o amigo jogou: a quantidade certa, cada um de 1 a 6.
@@ -3296,7 +3384,10 @@ window.SS = window.SS || {};
       if (id !== partida) return;
       if (m.t === 'acao') {
         if (!acaoLegalRemota(m.a)) return jogadaInvalida(m.a);
+        const recurso = antesDeRecurso(m.a);
         if (!aplicarRemoto(() => M.aplicarAcao(jogo, m.a))) return;
+        render();
+        mostrarRecurso(jogo.vez, recurso);
         render();
         if (jogo.vencedor != null) return fimDeJogo();
         continue;
@@ -3476,6 +3567,7 @@ window.SS = window.SS || {};
     viradoAnterior = {};
     maoVista = [null, null];
     campoVisto = [null, null];
+    posCampo = [{}, {}];
     cemVisto = [new Set(), new Set()];
     eu = 0;
     definirLados(0);
@@ -3492,7 +3584,7 @@ window.SS = window.SS || {};
     render();
     SS.Tutorial.comecar(n, {
       jogo: () => jogo, ui: () => ui, render,
-      aplicar: a => { M.aplicarAcao(jogo, a); render(); },
+      aplicar: a => { const recurso = antesDeRecurso(a); M.aplicarAcao(jogo, a); render(); mostrarRecurso(jogo.vez, recurso); },
       sair: () => { cfg.modo = 'bot'; menu(); },
       // Abre a dica de uma carta e deixa ela parada na tela (o tutorial aponta para um trecho dela).
       fixarDica: sel => {
@@ -4043,6 +4135,7 @@ window.SS = window.SS || {};
     viradoAnterior = {};
     maoVista = [null, null];
     campoVisto = [null, null];
+    posCampo = [{}, {}];
     cemVisto = [new Set(), new Set()];
     eu = 0;
     definirLados(0);

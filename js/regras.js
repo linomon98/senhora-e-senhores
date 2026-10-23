@@ -100,7 +100,7 @@ window.SS = window.SS || {};
           <li><b>Cartas de ação no ataque:</b> depois de Preparar ataque (e antes de confirmar), você ainda pode jogar cartas da mão; os ataques já marcados continuam.</li>
           <li><b>Espadas:</b> +1 de ataque no turno; se o dado der 6, o bônus vira metade do valor da carta de Espadas (crítico).</li>
           <li><b>Sem bloqueio:</b> o dano vai direto no PV. Se o alvo era um Ás, ele é destruído.</li>
-          <li><b>Errou!:</b> no ataque direto ao Palhaço sem ninguém defendendo, se o maior dado for <b>1</b> o golpe passa no vento: <b>0 de dano</b> (que vergonha!).</li>
+          <li><b>Errou!:</b> se o maior dado for <b>1</b>, o golpe passa no vento, contra quem for: <b>ninguém leva hit</b>, nem o contra-ataque (que vergonha!).</li>
         </ul>
         <p class="exemplo"><b>Exemplo:</b> Rainha com 8 ataca e ninguém bloqueia. Rolou 3 = meio ataque = <b>4 de dano</b> no PV.</p>
         <p>Quem atacou fica <b>virado para baixo no fim do turno</b> e não pode bloquear no turno seguinte do oponente.</p>`,
@@ -301,7 +301,7 @@ window.SS = window.SS || {};
           <li><b>Action cards while attacking:</b> after Prepare attack (and before confirming) you can still play cards from your hand; the attacks you marked stay.</li>
           <li><b>Spades:</b> +1 attack this turn; if the die shows 6, the bonus becomes half the Spades card's value (critical).</li>
           <li><b>Unblocked:</b> the damage goes straight to HP. If the target was an Ace, it is destroyed.</li>
-          <li><b>Miss!:</b> on a direct attack at the Jester with no one blocking, if the highest die is <b>1</b> the blow hits only air: <b>0 damage</b> (shame on you!).</li>
+          <li><b>Miss!:</b> if the highest die is <b>1</b>, the blow hits only air, whoever the target: <b>nobody takes a hit</b>, not even the counterattack (shame on you!).</li>
         </ul>
         <p class="exemplo"><b>Example:</b> a Queen with 8 attacks and no one blocks. Rolled 3 = half attack = <b>4 damage</b> to HP.</p>
         <p>Attackers flip <b>face down at the end of the turn</b> and can't block on the opponent's next turn.</p>`,

@@ -104,13 +104,13 @@ window.SS = window.SS || {};
     ourinhos: {
       pt: {
         titulo: 'o banqueiro',
-        passiva: { nome: 'Juros compostos', texto: 'No começo do turno, compra sozinho 2 cartas: 1 Letra e 1 Número (os outros compram só 1). Limite de mão de 6 cartas. Começa com 12 PV.' },
+        passiva: { nome: 'Juros compostos', texto: 'No começo do turno, compra 2 cartas, escolhendo de qual monte vem cada uma (os outros compram só 1). Limite de mão de 6 cartas. Começa com 12 PV.' },
         poder: { nome: 'Cobrança', texto: 'Pague 2 PV para roubar 1 carta sorteada da mão do oponente.' },
         plano: 'Rouba e acumula: tira as cartas do oponente e usa Valetes Naipados de Ouros, que atacam 2 vezes no mesmo turno.',
       },
       en: {
         titulo: 'the banker',
-        passiva: { nome: 'Compound Interest', texto: 'At the start of the turn, automatically draws 2 cards: 1 Face and 1 Number (the others draw only 1). Hand limit of 6 cards. Starts with 12 HP.' },
+        passiva: { nome: 'Compound Interest', texto: 'At the start of the turn, draws 2 cards, choosing the pile for each one (the others draw only 1). Hand limit of 6 cards. Starts with 12 HP.' },
         poder: { nome: 'Debt Collection', texto: "Pay 2 HP to steal 1 random card from the opponent's hand." },
         plano: "Steals and hoards: takes the opponent's cards and uses Suited Jacks of Diamonds, which attack twice in the same turn.",
       },

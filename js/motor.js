@@ -26,7 +26,7 @@ window.SS = window.SS || {};
   // dadosPrimeiro/ataquePrimeiro: bônus do 1º ataque do turno (Lançalotte);
   // reducaoDefesa: dano a menos em quem defende; soPaus: só Senhores com carta de Paus (Paumol).
   // Valores calibrados com o simulador.
-  // Compra do turno: 1 carta do baralho que o jogador escolher; o Ourinhos (compraDupla) compra sozinho 1 Letra + 1 Número.
+  // Compra do turno: 1 carta do baralho que o jogador escolher; o Ourinhos (compraDupla) compra 2, escolhendo o monte de cada.
   const PALHACOS = {
     lancalotte: { naipe: 'espadas', pv: 19, limiteMao: 7, poder: 'desafio', dadosPrimeiro: 1, ataquePrimeiro: 1 },
     infartitte: { naipe: 'copas', pv: 24, limiteMao: 7, poder: 'transfusao', curaExtra: 1 },
@@ -384,14 +384,10 @@ window.SS = window.SS || {};
         evento(e, { tipo: 'cura', p, n: c, de: u.uid });
       }
     }
-    e.compras = 1;
+    // Ourinhos (Juros compostos): compra 2 cartas, escolhendo o monte de cada uma.
+    e.compras = palhacoDe(j) && palhacoDe(j).compraDupla ? 2 : 1;
     if (e.turno === 1) registrar(e, t('log.primeiroTurno', { j: j.nome }));
-    else if (palhacoDe(j) && palhacoDe(j).compraDupla) {
-      // Ourinhos (Juros compostos): compra sozinho 1 Letra e 1 Número, sem escolher (baralho vazio: vem do outro).
-      comprar(e, p, 1, 'letras');
-      if (e.vencedor == null) comprar(e, p, 1, 'numeros');
-      registrar(e, t('log.juros', { j: j.nome }));
-    } else if (!j.letras.length && !j.numeros.length) comprar(e, p, e.compras, 'numeros'); // sem cartas: perde PV
+    else if (!j.letras.length && !j.numeros.length) comprar(e, p, e.compras, 'numeros'); // sem cartas: perde PV
     else e.fase = 'compra'; // o jogador escolhe de qual baralho comprar
   }
 
@@ -644,13 +640,15 @@ window.SS = window.SS || {};
             if (s) morrer(e, s.p, s.i, 'sacrificio');
           }
         }
-        if (j.campo[a.slot]) throw new Error('Espaço ocupado');
+        // A Rainha entra no lugar de quem foi sacrificado; os outros podem entrar num espaço ocupado (empurram as cartas).
+        if (f0.rank === 'Q' ? j.campo[a.slot] : !j.campo.includes(null)) throw new Error(f0.rank === 'Q' ? 'Espaço ocupado' : 'Fileira cheia');
         const f = tirarDaMao(j, a.figura), n = tirarDaMao(j, a.numero);
         const u = {
           uid: e.proximoUid++, tipo: 'senhor', figura: f, numero: n, hits: 0, ativo: true, atacou: false,
           ataques: f.naipe === n.naipe && f.naipe === 'ouros' ? 2 : 1, entrou: e.turno, bonus: [], berserk: null,
         };
-        j.campo[a.slot] = u;
+        if (f.rank === 'Q') j.campo[a.slot] = u;
+        else inserirNoCampo(j, a.slot, u);
         const nai = naipado(u);
         registrar(e, t('log.sumonou', { j: j.nome, u: nomeUnidade(u), a: ataque(e, p, a.slot), nai: nai ? nomeNaipe(nai) : '' }));
         break;
@@ -975,8 +973,9 @@ window.SS = window.SS || {};
     const vivos = defensores.filter(uid => localizar(e, uid)).length;
     const reducaoGrupo = Math.max(0, vivos - 1) * REDUCAO_POR_DEFENSOR;
     const total = Math.max(0, base + bonus - reducaoGrupo);
-    // Ataque direto no Palhaço, sem ninguém defendendo, com o dado em 1: erra o golpe (que vergonha!).
-    const errou = !at.refletido && !defensores.length && at.alvo === 'jogador' && maior === 1;
+    // Dado em 1: erra o golpe, contra quem for (Palhaço, Ás, Senhor que defende, ataque refletido). Ninguém leva
+    // hit, nem o contra-ataque (que vergonha!).
+    const errou = maior === 1;
     const cheio = maior >= DADO_ATAQUE_TOTAL;
     // (o golpe refletido bate normal: o Refletir já é limitado aos pares baixos)
     const dano = errou ? 0 : cheio ? total : Math.floor(total / 2);
