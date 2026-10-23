@@ -475,7 +475,7 @@ window.SS = window.SS || {};
     'menu.surpresaTexto': ['Um dos outros três Palhaços, sorteado na hora.', 'One of the other three Jesters, drawn at random.'],
     'menu.estilo': ['Estilo do deck:', 'Deck style:'],
     'menu.deckTematico2': ['Cada Palhaço tem um deck temático feito para a habilidade dele.', 'Each Jester has a themed deck built around their ability.'],
-    'menu.tutorial': ['Tutorial · Aula 1', 'Tutorial · Lesson 1'],
+    'menu.tutorial': ['Tutorial', 'Tutorial'],
     'menu.jogar':['Jogar contra o bot', 'Play against the bot'],
     'menu.assistir': ['Assistir bot × bot', 'Watch bot vs bot'],
     'menu.decks': ['Montar decks', 'Build decks'],

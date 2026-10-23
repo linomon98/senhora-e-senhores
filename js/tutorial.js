@@ -24,8 +24,8 @@
 
   const AULAS = {
     1: {
-      titulo: ['Aula 1 · O básico', 'Lesson 1 · The basics'],
-      palhacos: ['infartitte', 'ourinhos'],
+      titulo: ['Tutorial', 'Tutorial'],
+      palhacos: ['infartitte', 'paumol'],
       montar(e) {
         const [eu, ele] = e.jogadores;
         for (const [r, n] of [['J', 'espadas'], ['4', 'copas'], ['K', 'paus'], ['7', 'ouros'], ['9', 'paus'], ['5', 'espadas'], ['Q', 'ouros']]) darNaMao(eu, r, n);
@@ -47,14 +47,16 @@
           'Each Jester has a deck, split into <b>Face</b> cards (Jack, Queen and King) and <b>Number</b> cards.'] },
         { foco: '#mao-0', fala: ['Você começa a partida com <b>7 cartas na mão</b>.', 'You start the match with <b>7 cards in your hand</b>.'] },
         { foco: '#campo-0', fala: ['Para invocar um Senhor(a) no campo, você precisa de <b>1 carta de Letra + 1 carta de Número</b>.', 'To summon a Gentleman onto the field, you need <b>1 Face card + 1 Number card</b>.'] },
-        { foco: maoSel(0, 'J', 'espadas'), permitir: [maoSel(0, 'J', 'espadas'), '#campo-0'],
+        { foco: ['#campo-0', '#mao-0'], alvo: maoSel(0, 'J', 'espadas'), permitir: [maoSel(0, 'J', 'espadas'), '#campo-0'],
           fala: ['Por exemplo: coloque esse <b>Valete de Espadas</b> no campo (arraste a carta até o campo).', 'For example: put this <b>Jack of Spades</b> on the field (drag the card onto the field).'],
           esperar: api => api.ui().sel.includes(idNaMao(api.jogo().jogadores[0], 'J', 'espadas')) || unidadeDe(api.jogo(), 0) >= 0 },
-        { foco: [maoSel(0, '4', 'copas')], permitir: [maoSel(0, '4', 'copas'), maoSel(0, 'J', 'espadas'), '#campo-0', '#cartas-acao'],
+        { foco: ['#campo-0', '#mao-0'], alvo: maoSel(0, '4', 'copas'), permitir: [maoSel(0, '4', 'copas'), maoSel(0, 'J', 'espadas'), '#campo-0', '#cartas-acao'],
           fala: ['Agora coloque esse <b>4 de Copas</b> junto com o Valete.', 'Now put this <b>4 of Hearts</b> together with the Jack.'],
           esperar: api => unidadeDe(api.jogo(), 0) >= 0 },
         { espera: 900 },
-        { foco: slotDe(0), fala: ['<b>Tcharam!</b> Você acabou de invocar o seu primeiro Senhor.', '<b>Ta-da!</b> You just summoned your first Gentleman.'] },
+        { foco: slotDe(0), fala: ['<b>Tcharam!</b> Você acabou de invocar o seu primeiro Senhor. Viu como é fácil invocar um Senhor em campo?', '<b>Ta-da!</b> You just summoned your first Gentleman. See how easy it is to summon a Gentleman onto the field?'] },
+        { tremer: true, fala: ['<b>ATENÇÃO!</b> Nas partidas pra valer, <b>NÃO é permitido atacar no primeiro turno</b>.', '<b>WARNING!</b> In real matches, <b>you can NOT attack on the first turn</b>.'] },
+        { fala: ['MASSS isso é o <b>TUTORIAL</b>, então tá tudo bem.', 'BUUUT this is the <b>TUTORIAL</b>, so it is all fine.'] },
         { foco: slotDe(0), fala: ['O <b>ataque</b> do seu Senhor é definido pelo <b>número</b> equipado nele. O seu Valete tem <b>4 de ataque</b>.',
           'Your Gentleman\'s <b>attack</b> is set by the <b>number</b> equipped on it. Your Jack has <b>4 attack</b>.'] },
         { foco: '[data-acao="ir-ataque"]', permitir: ['[data-acao="ir-ataque"]'],
@@ -63,7 +65,7 @@
         { foco: slotDe(0), permitir: [slotDe(0)],
           fala: ['Agora clique no <b>Valete</b> para mostrar que você quer agredir esse Palhaço na sua frente.', 'Now click the <b>Jack</b> to show you want to smack that Jester in front of you.'],
           esperar: api => api.ui().ataques.length > 0 },
-        { foco: '#info-1 .heroi', fala: ['Tá vendo essa <b>setinha</b>? Quer dizer que você vai atacar o oponente.', 'See that <b>little arrow</b>? It means you are going to attack the opponent.'] },
+        { foco: [slotDe(0), '#info-1 .heroi'], pulsarSeta: true, fala: ['Tá vendo essa <b>setinha</b>? Quer dizer que você vai atacar o oponente.', 'See that <b>little arrow</b>? It means you are going to attack the opponent.'] },
         { foco: '[data-acao="confirmar-ataques"]', permitir: ['[data-acao="confirmar-ataques"]'],
           fala: ['Agora confirme o ataque!', 'Now confirm the attack!'],
           esperar: api => api.jogo().fase !== 'ataque' },
@@ -85,15 +87,17 @@
           } },
         ] },
         { gancho: 'fimDoTurno', passos: [
-          { foco: slotDe(0), fala: ['Depois de rodar o seu ataque, <b>o turno acaba</b>, e os Senhores que atacaram ficam <b>virados para baixo</b>, inutilizáveis.',
-            'After your attack is rolled, <b>the turn ends</b>, and the Gentlemen who attacked are <b>turned face down</b>, unusable.'] },
-          { acao: api => { const e = api.jogo(), i = unidadeDe(e, 0); if (i >= 0) e.jogadores[0].campo[i].ativo = true; api.render(); } },
-          { espera: 700 },
+          { acao: api => api.render() }, // a carta vira para baixo
+          { espera: 900 },
+          { foco: slotDe(0), fala: ['Depois de rodar o seu ataque, <b>o turno acaba</b>, e os Senhores que atacaram ficam <b>virados para baixo</b>: inutilizáveis até o <b>seu próximo turno</b>.',
+            'After your attack is rolled, <b>the turn ends</b>, and the Gentlemen who attacked are <b>turned face down</b>: unusable until <b>your next turn</b>.'] },
+          { acao: api => { const e = api.jogo(), i = unidadeDe(e, 0); if (i >= 0) e.jogadores[0].campo[i].ativo = true; api.render(); } }, // e vira de volta
+          { espera: 900 },
           { foco: slotDe(0), fala: ['MAAAS, como a gente tá num tutorial ainda, eu vou deixar o seu Valete <b>ativo</b>. É só dessa vez, hein?!',
             'BUUUT since we are still in a tutorial, I will keep your Jack <b>active</b>. Just this once, okay?!'] },
         ] },
         { gancho: 'turnoOponente', passos: [
-          { foco: '#info-1 .heroi', fala: ['Agora é o <b>turno do oponente</b>.', 'Now it is the <b>opponent\'s turn</b>.'] },
+          { foco: '#info-1 .heroi', fala: ['Agora é o turno do <b>OPONENTE</b>!', 'Now it is the <b>OPPONENT\'s</b> turn!'] },
           { acao: api => {
             const e = api.jogo(), j = e.jogadores[1];
             const a = M.acoesLegais(e).find(x => x.tipo === 'sumonar' && x.figura === idNaMao(j, 'J', 'copas') && x.numero === idNaMao(j, '3', 'espadas'));
@@ -107,8 +111,8 @@
           { foco: [slotDe(0), slotDe(1)], fala: ['Toda vez que rolar um ataque e tiver Senhores ativos dos dois lados, você tem a oportunidade de <b>defender</b>.',
             'Every time an attack comes and there are ready Gentlemen on both sides, you get the chance to <b>defend</b>.'] },
         ] },
-        { foco: [slotDe(0), slotDe(1)], permitir: [slotDe(0)],
-          fala: ['Clique no <b>seu Valete</b> e arraste a seta até o <b>Valete inimigo</b>.', 'Click <b>your Jack</b> and drag the arrow to the <b>enemy Jack</b>.'],
+        { foco: [slotDe(0), slotDe(1)], alvo: slotDe(0), permitir: [slotDe(0), slotDe(1)],
+          fala: ['Clique no <b>seu Valete</b> e depois no <b>Valete inimigo</b>: assim você escolhe que quer <b>defender</b> o ataque dele.', 'Click <b>your Jack</b> and then the <b>enemy Jack</b>: that is how you choose to <b>defend</b> against its attack.'],
           esperar: api => Object.values(api.ui().bloqueios || {}).some(l => l.length) },
         { acao: api => { api.ui().tutDado = 5; } },
         { foco: '[data-acao="confirmar-bloqueios"]', permitir: ['[data-acao="confirmar-bloqueios"]'],
@@ -121,8 +125,17 @@
             'You defended, <b>nice!!</b> He rolled a 5: full damage of 3. Now your Jack is <b>lying down</b>, because it took damage.'] },
           { foco: slotDe(0), fala: ['Tá vendo essas <b>bolinhas</b> em cima de cada Senhor? Elas são a <b>defesa</b> dele. De padrão, cada Senhor aguenta <b>2 hits</b>. Quando leva um hit, ele deita pra mostrar que tá machucado, tadinho :(',
             'See those <b>little dots</b> on each Gentleman? They are its <b>defense</b>. By default, each Gentleman takes <b>2 hits</b>. When it takes a hit, it lies down to show it is hurt, poor thing :('] },
-          { foco: slotDe(1), fala: ['E olha o Valete dele: também levou 1 hit! O número dele (3) é menor que o do seu (4), então ele leva o <b>contra-ataque</b>. Isso fica pra próxima aula 😉',
-            'And look at his Jack: it took 1 hit too! Its number (3) is lower than yours (4), so it takes the <b>counterattack</b>. That is for the next lesson 😉'] },
+          { foco: [slotDe(0), slotDe(1)], fala: ['E olha o Valete dele: também levou 1 hit! Isso é o <b>contra-ataque</b>. Ele acontece quando você defende com um Senhor que tem o ataque <b>MAIOR</b> que o do Senhor(a) que atacou.',
+            'And look at his Jack: it took 1 hit too! That is the <b>counterattack</b>. It happens when you defend with a Gentleman whose attack is <b>HIGHER</b> than the attacking Gentleman\'s.'] },
+          { foco: [slotDe(0), slotDe(1)], fala: ['Neste caso, o Valete do oponente tem <b>3</b> de ataque, e o seu tem <b>4</b>... 4 é maior que 3, né? Então o contra-ataque acontece!',
+            'Here, the opponent\'s Jack has <b>3</b> attack, and yours has <b>4</b>... 4 is higher than 3, right? So the counterattack happens!'] },
+          { fala: ['Por enquanto é isso! O tutorial continua em breve. 🎓', 'That is it for now! The tutorial continues soon. 🎓'], botao: ['Continuar', 'Continue'], fim: true },
+        ] },
+      ],
+    },
+  };
+  /* (fica guardado para a continuação: a explicação de defender sem levar dano)
+
           { fala: ['Mas existe a chance de você defender e <b>não levar dano</b>.<br><b>PRESTA ATENÇÃO!!!</b>', 'But there is a chance you defend and <b>take no damage</b>.<br><b>PAY ATTENTION!!!</b>'] },
           { fala: [`Se o dano do oponente for <b>menor que a METADE do seu ataque</b>, você defende e não leva dano.
             <div class="tut-conta"><div><small>se ele tirasse 1 a 3</small><b>3 ÷ 2 = 1</b><small>dano dele</small></div><span>&lt;</span><div><small>o seu Valete</small><b>4 ÷ 2 = 2</b><small>metade do seu ataque</small></div></div>
@@ -133,11 +146,7 @@
           { fala: ['Por exemplo: se ele tivesse tirado 1 a 3 no dado, o ataque dele cairia pela metade: a metade de 3 é <b>1</b> (sempre arredondado pra baixo). E a metade do seu ataque é <b>2</b>. Então você defenderia e não levaria dano!',
             'For example: had he rolled 1 to 3, his attack would be halved: half of 3 is <b>1</b> (always rounded down). And half of your attack is <b>2</b>. So you would block and take no damage!'] },
           { fala: ['<b>COMPLICADO, NÉ?</b> ...mas eu sei que você não é burro.', '<b>COMPLICATED, HUH?</b> ...but I know you are not dumb.'] },
-          { fala: ['Acho que a <b>aula 1 acabou</b>! 🎓', 'I think <b>lesson 1 is over</b>! 🎓'], botao: ['Continuar', 'Continue'], fim: true },
-        ] },
-      ],
-    },
-  };
+  */
 
   // ---------- Motor do tutorial ----------
 
@@ -182,6 +191,11 @@
     const p = T.passo;
     const visivel = !!(p && !p.esconder && (p.textoAtual != null));
     raiz.classList.toggle('mostrando', visivel);
+    document.body.classList.toggle('tut-pulsa-seta', visivel && !!p.pulsarSeta);
+    // A carta que a aula quer que você jogue flutua (a classe volta a cada redesenho da mão).
+    const destaques = visivel ? elementos(p.alvo) : [];
+    document.querySelectorAll('.tut-destaque').forEach(el => { if (!destaques.includes(el)) el.classList.remove('tut-destaque'); });
+    destaques.forEach(el => el.classList.add('tut-destaque'));
     if (!visivel) return;
     const foco = raiz.querySelector('.tut-foco'), seta = raiz.querySelector('.tut-seta'), balao = raiz.querySelector('.tut-balao'), veu = raiz.querySelector('.tut-veu');
     const r = retanguloDe(elementos(p.foco));
@@ -189,13 +203,15 @@
     // Véu escuro com um furo arredondado em volta do foco (clip-path com evenodd).
     veu.style.clipPath = r ? furo(r.left - folga, r.top - folga, r.width + folga * 2, r.height + folga * 2, 16) : 'none';
     foco.hidden = !r;
-    seta.hidden = !r || !p.permitir;
+    const ra = retanguloDe(destaques);
+    seta.hidden = !(ra || (r && p.permitir && p.permitir !== '*'));
     raiz.classList.toggle('livre', p.permitir === '*');
     let bx, by;
     const bw = balao.offsetWidth, bh = balao.offsetHeight;
     if (r) {
       Object.assign(foco.style, { left: r.left - folga + 'px', top: r.top - folga + 'px', width: r.width + folga * 2 + 'px', height: r.height + folga * 2 + 'px' });
-      Object.assign(seta.style, { left: r.left + r.width / 2 + 'px', top: r.top - folga - 34 + 'px' });
+      const rs = ra || r;
+      Object.assign(seta.style, { left: rs.left + rs.width / 2 + 'px', top: rs.top - (ra ? 6 : folga) - 34 + 'px' });
       const embaixo = r.top + r.height / 2 < innerHeight * 0.5;
       by = embaixo ? r.bottom + folga + 22 : r.top - folga - 22 - bh - (seta.hidden ? 0 : 30);
       bx = r.left + r.width / 2 - bw / 2;
@@ -221,9 +237,9 @@
     prox.hidden = !temBotao;
     prox.textContent = p.botao ? tx(p.botao) : (L() ? 'Next ▶' : 'Próximo ▶');
     const balao = raiz.querySelector('.tut-balao');
-    balao.classList.remove('entra');
+    balao.classList.remove('entra', 'treme');
     void balao.offsetWidth;
-    balao.classList.add('entra');
+    balao.classList.add(p.tremer ? 'treme' : 'entra');
     posicionar();
   }
 
@@ -307,6 +323,8 @@
     if (T.aoProximo) T.aoProximo();
     const raiz = $('#tut');
     if (raiz) raiz.remove();
+    document.body.classList.remove('tut-pulsa-seta');
+    document.querySelectorAll('.tut-destaque').forEach(el => el.classList.remove('tut-destaque'));
   }
 
   SS.Tutorial = {

@@ -1585,6 +1585,19 @@ html.sem-caixa-meio #faixa .caixa-faixa { display: none; }
   font: 500 17px/1.45 var(--fonte-ui); transition: left .25s, top .25s;
 }
 #tut .tut-balao.entra { animation: tut-entra .28s cubic-bezier(.3, 1.4, .5, 1); }
+#tut .tut-balao.treme { animation: tut-treme .55s ease-in-out 2; }
+@keyframes tut-treme {
+  0%, 100% { transform: translateX(0) rotate(0); } 15% { transform: translateX(-12px) rotate(-2deg); } 30% { transform: translateX(10px) rotate(2deg); }
+  45% { transform: translateX(-8px) rotate(-1.5deg); } 60% { transform: translateX(6px) rotate(1deg); } 75% { transform: translateX(-3px); }
+}
+/* Carta que o tutorial pede para jogar: flutua (translate não briga com o transform do leque) */
+.tut-destaque { animation: tut-flutua .7s ease-in-out infinite alternate !important; filter: drop-shadow(0 0 10px rgba(255, 216, 77, .95)) !important; z-index: 5 !important; }
+@keyframes tut-flutua { from { translate: 0 0; } to { translate: 0 -16px; } }
+/* Seta do ataque pulsando enquanto o tutorial fala dela (só brilho e espessura: base e ponta não saem do lugar) */
+body.tut-pulsa-seta #setas .seta { animation: tut-pulsa-seta .6s ease-in-out infinite alternate; }
+body.tut-pulsa-seta #setas .seta .linha { animation: tut-pulsa-linha .6s ease-in-out infinite alternate; }
+@keyframes tut-pulsa-seta { from { filter: drop-shadow(0 0 2px rgba(255, 255, 255, .4)); } to { filter: drop-shadow(0 0 12px rgba(255, 230, 120, 1)); } }
+@keyframes tut-pulsa-linha { from { stroke-width: 5; } to { stroke-width: 10; } }
 @keyframes tut-entra { from { transform: scale(.85) translateY(10px); opacity: 0; } }
 #tut .tut-topo { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
 #tut .tut-titulo { font: 400 15px var(--fonte-titulo); color: #8a10b0; letter-spacing: .4px; }
