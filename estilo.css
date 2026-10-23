@@ -1723,11 +1723,6 @@ body.tut-pulsa-seta #setas .seta .linha { animation: tut-pulsa-linha .6s ease-in
 .palco-menu .leque-inicio { left: calc(425 * var(--u)); top: calc(0 * var(--u)); width: calc(350 * var(--u)); height: calc(240 * var(--u)); z-index: 0; }
 .palco-menu .leque-inicio img { width: calc(122 * var(--u)); border-radius: calc(10 * var(--u)); filter: drop-shadow(calc(4 * var(--u)) calc(6 * var(--u)) 0 rgba(20, 20, 20, .55)); }
 .logo-menu { left: calc(300 * var(--u)); top: calc(195 * var(--u)); width: calc(600 * var(--u)); z-index: 1; pointer-events: none; }
-.logo-menu.logo-texto {
-  top: calc(205 * var(--u)); text-align: center; font: 400 calc(120 * var(--u)) / .9 var(--fonte-titulo); color: #f6ac2c;
-  -webkit-text-stroke: calc(14 * var(--u)) #141414; paint-order: stroke fill;
-}
-.logo-menu.logo-texto span { font-size: .6em; }
 .palco-menu .convite { left: calc(240 * var(--u)); right: calc(240 * var(--u)); top: calc(845 * var(--u)); text-align: center; }
 
 /* Caixinha de cigarro (os baralhos): a tampa abre e as cartas aparecem quando o mouse passa em cima */

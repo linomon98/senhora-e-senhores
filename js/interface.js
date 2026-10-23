@@ -3760,10 +3760,10 @@ window.SS = window.SS || {};
     document.documentElement.style.removeProperty('--lado-dir');
     const idioma = SS.Idioma.atual();
     const feito = SS.Tutorial && SS.Tutorial.feita(1);
-    // Logo em PNG (só existe em português por enquanto; em inglês vai o nome escrito na mesma cor)
+    // Logo em PNG, um para cada idioma
     const logo = idioma === 'pt'
       ? `<img class="logo-menu" src="arte/menu/logo.webp" alt="Senhora e Senhores" draggable="false">`
-      : `<h1 class="logo-menu logo-texto">${t('menu.titulo')}</h1>`;
+      : `<img class="logo-menu" src="arte/menu/logo-en.png" alt="Lady and Gentlemen" draggable="false">`;
     const bandeira = (id, arq, nome) => `<button class="${idioma === id ? 'ativo' : ''}" data-idioma="${id}" title="${nome}" aria-label="${nome}"><img src="arte/menu/${arq}" alt="" draggable="false"></button>`;
     modal(`<div class="menu-tema inicio-novo"><div class="palco-menu">
       <button class="btn-tutorial" data-m="tutorial">${t('menu.tutorialBotao')}${feito ? ' ✓' : ''}</button>
