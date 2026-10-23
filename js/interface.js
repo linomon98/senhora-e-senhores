@@ -2281,6 +2281,8 @@ window.SS = window.SS || {};
           const c = cartaDaMao(ui.sel[0]);
           botoes += btnGrande('negar-cura', t('acao.curar', { n: M.curaPara(j, c) }), 'curar', 'cura-no-limite');
         }
+        // Tutorial: carta de ação só de mostra (ex.: o Berserk, quando ninguém está ferido para usar de verdade).
+        if (ui.tutCartaExtra === 'paus') botoes += btnGrande('tut-demo', t('acao.paus'), 'paus');
         if (ui.miraDado) texto = t('faixa.miraDado');
         botoes = btnGrande('passar-turno', t('btn.encerrarTurno'), 'passar')
           + (alguemAtaca ? btnGrande('ir-ataque', t('btn.irAtaque').replace(/^⚔\s*/, ''), 'preparar', 'perigo') : '')
@@ -3346,6 +3348,8 @@ window.SS = window.SS || {};
       if (temDuelo) {
         mostrarDuelo(foto, total, linhas);
         animarPV();
+        await tutGancho('duelo', { at, p: jogo.vez }); // o tutorial pode explicar o quadro do ataque antes de ele sumir
+        if (id !== partida) return;
         await esperarContinuar();
       } else await esperar(1200);
       if (id !== partida) return;

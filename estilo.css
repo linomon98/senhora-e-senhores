@@ -1601,6 +1601,10 @@ body.tut-sem-setas #setas, body.tut-sem-setas .unidade .tags { opacity: 0 !impor
 /* Trecho de uma dica que o tutorial circula (ex.: "só pode ser equipado com números de 2 a 4") */
 .tut-circula { position: relative; display: inline-block; padding: 1px 6px; border-radius: 999px; outline: 3px solid #ff5a5a; outline-offset: 2px; animation: tut-circula .6s ease-in-out infinite alternate; }
 @keyframes tut-circula { from { outline-color: rgba(255, 90, 90, .55); box-shadow: 0 0 0 0 rgba(255, 90, 90, 0); } to { outline-color: #ff5a5a; box-shadow: 0 0 14px 4px rgba(255, 90, 90, .7); } }
+/* Dado do tutorial por cima do balão; na compra, só o baralho que o tutorial pede flutua */
+body.tut-dado #dados3d { z-index: 450; }
+body.tut-compra .pilha.pulsando { animation: none !important; }
+body.tut-compra .seta-compra { display: none !important; }
 /* Seta do ataque pulsando enquanto o tutorial fala dela (só brilho e espessura: base e ponta não saem do lugar) */
 body.tut-pulsa-seta #setas .seta { animation: tut-pulsa-seta .6s ease-in-out infinite alternate; }
 body.tut-pulsa-seta #setas .seta .linha { animation: tut-pulsa-linha .6s ease-in-out infinite alternate; }
@@ -1608,7 +1612,8 @@ body.tut-pulsa-seta #setas .seta .linha { animation: tut-pulsa-linha .6s ease-in
 @keyframes tut-pulsa-linha { from { stroke-width: 5; } to { stroke-width: 10; } }
 @keyframes tut-entra { from { transform: scale(.85) translateY(10px); opacity: 0; } }
 #tut .tut-topo { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
-#tut .tut-titulo { font: 400 15px var(--fonte-titulo); color: #8a10b0; letter-spacing: .4px; }
+#tut .tut-titulo { font: 400 16px var(--fonte-titulo); color: #c41e2a; letter-spacing: 1px; text-transform: uppercase; }
+#tut .tut-texto .termo { color: #c41e2a; font-weight: 800; }
 #tut .tut-pular { font: 600 12px var(--fonte-ui); color: #6b6b5a; background: none; border: 0; cursor: pointer; text-decoration: underline; padding: 2px; }
 #tut .tut-texto b { color: #b0101e; }
 #tut .tut-texto i { color: #4a4a3a; }
