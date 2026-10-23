@@ -191,13 +191,101 @@ window.SS = window.SS || {};
     tocarMusica();
   }
 
+  // ---------- Sons feitos na hora (camadas por cima dos seus sons de vitória e derrota) ----------
+  // Aplausos, vaia, fogos de artifício e tomate esborrachando: gerados com ruído e osciladores,
+  // passam pelo mesmo volume geral dos efeitos.
+  function saida(vol) {
+    const g = ctx.createGain();
+    g.gain.value = vol;
+    g.connect(mestre);
+    return g;
+  }
+  const pronto = () => ligado.efeitos && ctx && (ctx.state !== 'suspended' || (ctx.resume(), true));
+
+  // Plateia batendo palmas: centenas de palminhas curtas de ruído, mais densas no meio.
+  function aplausos(dur) {
+    if (!pronto()) return;
+    dur = dur || 4;
+    const taxa = ctx.sampleRate, n = Math.round(taxa * dur), buf = ctx.createBuffer(2, n, taxa);
+    for (let c = 0; c < 2; c++) {
+      const d = buf.getChannelData(c);
+      const palmas = Math.round(dur * 70);
+      for (let k = 0; k < palmas; k++) {
+        const t = Math.random() * dur, env = Math.sin(Math.PI * Math.min(1, t / dur)) ** 0.6;
+        if (Math.random() > env) continue;
+        const ini = Math.round(t * taxa), len = Math.round(taxa * (0.006 + Math.random() * 0.012)), amp = 0.25 + Math.random() * 0.5;
+        for (let i = 0; i < len * 4 && ini + i < n; i++) d[ini + i] += (Math.random() * 2 - 1) * amp * Math.exp(-i / len);
+      }
+    }
+    const f = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), hp = ctx.createBiquadFilter();
+    f.buffer = buf;
+    hp.type = 'highpass'; hp.frequency.value = 500;
+    bp.type = 'peaking'; bp.frequency.value = 1800; bp.gain.value = 5; bp.Q.value = 0.8;
+    f.connect(hp); hp.connect(bp); bp.connect(saida(0.55));
+    f.start();
+  }
+
+  // Vaia: um coro de "buuuu" (vozes graves em "u", cada uma num tom, descendo) com um pouco de sopro.
+  function vaia(dur) {
+    if (!pronto()) return;
+    dur = dur || 3.2;
+    const agora = ctx.currentTime, mix = saida(0.5);
+    const formante = ctx.createBiquadFilter(), passa = ctx.createBiquadFilter();
+    formante.type = 'bandpass'; formante.frequency.value = 330; formante.Q.value = 1.4;
+    passa.type = 'lowpass'; passa.frequency.value = 900;
+    formante.connect(passa); passa.connect(mix);
+    for (let v = 0; v < 9; v++) {
+      const o = ctx.createOscillator(), g = ctx.createGain(), vib = ctx.createOscillator(), vibG = ctx.createGain();
+      const f0 = 95 + Math.random() * 90, ini = agora + Math.random() * 0.35;
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(f0, ini);
+      o.frequency.linearRampToValueAtTime(f0 * 0.82, ini + dur);
+      vib.frequency.value = 4 + Math.random() * 3; vibG.gain.value = f0 * 0.025;
+      vib.connect(vibG); vibG.connect(o.frequency);
+      g.gain.setValueAtTime(0, ini);
+      g.gain.linearRampToValueAtTime(0.16, ini + 0.35);
+      g.gain.setValueAtTime(0.16, ini + dur - 0.7);
+      g.gain.linearRampToValueAtTime(0, ini + dur);
+      o.connect(g); g.connect(formante);
+      o.start(ini); vib.start(ini); o.stop(ini + dur + 0.05); vib.stop(ini + dur + 0.05);
+    }
+  }
+
+  // Fogos: um estouro grave e um chiado de faíscas estalando.
+  function fogos() {
+    if (!pronto()) return;
+    const taxa = ctx.sampleRate, n = Math.round(taxa * 1.1), buf = ctx.createBuffer(1, n, taxa), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) {
+      const t = i / taxa;
+      d[i] = (Math.random() * 2 - 1) * Math.exp(-t / 0.07) * 0.9; // estouro
+      if (t > 0.08 && Math.random() < 0.004) d[i] += (Math.random() < 0.5 ? -1 : 1) * 0.8 * Math.exp(-(t - 0.08) / 0.5); // estalos
+    }
+    const f = ctx.createBufferSource(), lp = ctx.createBiquadFilter();
+    f.buffer = buf; lp.type = 'lowpass'; lp.frequency.value = 2600;
+    f.playbackRate.value = 0.8 + Math.random() * 0.5;
+    f.connect(lp); lp.connect(saida(0.32));
+    f.start();
+  }
+
+  // Tomate esborrachando na tela: um "plaft" abafado.
+  function tomate() {
+    if (!pronto()) return;
+    const taxa = ctx.sampleRate, n = Math.round(taxa * 0.35), buf = ctx.createBuffer(1, n, taxa), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) { const t = i / taxa; d[i] = ((Math.random() * 2 - 1) * 0.8 + Math.sin(2 * Math.PI * (140 - 200 * t) * t) * 0.6) * Math.exp(-t / 0.06); }
+    const f = ctx.createBufferSource(), lp = ctx.createBiquadFilter();
+    f.buffer = buf; lp.type = 'lowpass'; lp.frequency.value = 1100;
+    f.playbackRate.value = 0.85 + Math.random() * 0.3;
+    f.connect(lp); lp.connect(saida(0.6));
+    f.start();
+  }
+
   addEventListener('pointerdown', carregar, { once: true, capture: true });
   addEventListener('keydown', carregar, { once: true, capture: true });
   // Clique em qualquer botão do jogo (menus, ações, opções).
   addEventListener('click', ev => { if (ev.target.closest && ev.target.closest('button')) tocar('clique'); }, true);
 
   SS.Som = {
-    tocar, parar, musica, configurar,
+    tocar, parar, musica, configurar, aplausos, vaia, fogos, tomate,
     tem: nome => !!(buffers[nome] && buffers[nome].length), // o som já carregou (existe o arquivo)?
     // Para conferir pelo console quais arquivos o jogo achou e o que está tocando.
     depurar: () => ({ efeitos: Object.keys(EFEITOS).filter(n => buffers[n] && buffers[n].length).map(n => n + ' ×' + buffers[n].length), faltando: Object.keys(EFEITOS).filter(n => !buffers[n] || !buffers[n].length), musica: fonteMusica ? musicaPedida : null }),

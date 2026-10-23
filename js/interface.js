@@ -193,7 +193,11 @@ window.SS = window.SS || {};
     switch (tipo) {
       case 'sumonar': return a.sacrificio != null ? t('acao.rainha', { n: M.SACRIFICIOS_RAINHA }) : t('acao.sumonar');
       case 'invocarAs': return t('acao.as');
-      case 'curar': return t('acao.curar', { n: M.curaPara(j, j.mao.find(c => c.id === a.carta)) });
+      case 'curar': {
+        // Infartitte (Coração forte): a carta mostra a cura normal e o +1 da passiva à parte.
+        const c = j.mao.find(x => x.id === a.carta), extra = M.curaPara(j, c) - M.curaDe(c);
+        return t('acao.curar', { n: M.curaDe(c) }) + (extra ? ` +${extra}♥` : '');
+      }
       case 'espadas': return t('acao.espadas');
       case 'paus': return t('acao.paus');
       case 'comprar': return t(a.baralho === 'letras' ? 'acao.comprarLetra' : 'acao.comprarNumero');
@@ -1299,6 +1303,7 @@ window.SS = window.SS || {};
       for (let k = 0; k < 4; k++) voarIcone(elRetrato(1 - ev.p), () => elRetrato(ev.p), '<img src="arte/naipes/ouros.webp" alt="">', 'token-ouro', 120 + k * 150);
       return;
     }
+    if (ev.poder === 'transfusao' || ev.poder === 'sangria') danoNoPalhaco(ev.p, ev.poder === 'sangria' ? M.CUSTO_SANGRIA : M.CUSTO_TRANSFUSAO);
     if (!c) return;
     if (ev.poder === 'transfusao') {
       naipesSubindo(c, 'copas', 8);
@@ -1311,6 +1316,25 @@ window.SS = window.SS || {};
       naipesSubindo(c, 'paus', 6);
       ondaEm(c, '60, 190, 80', 2.4);
     }
+  }
+
+  // O Palhaço perde PV fora do combate (o Infartitte pagando o poder): treme, solta faíscas e o número sobe.
+  function danoNoPalhaco(p, n) {
+    const el = elRetrato(p), c = centroDe(el);
+    if (!c) return;
+    Som.tocar('palhaco-dano', { atraso: 100 });
+    particulas(c, 10, false);
+    el.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-9px) rotate(-3deg)' }, { transform: 'translateX(8px) rotate(2deg)' },
+      { transform: 'translateX(-4px)' }, { transform: 'translateX(0)' }], { duration: 450, easing: 'ease-out', composite: 'add' });
+    const num = document.createElement('div');
+    num.className = 'dano-voando';
+    num.textContent = '−' + n;
+    Object.assign(num.style, { left: c.x + 'px', top: (c.y - 30) + 'px' });
+    $('#app').appendChild(num);
+    num.animate([
+      { transform: 'translate(-50%, 0) scale(.5)', opacity: 0 }, { transform: 'translate(-50%, -18px) scale(1.2)', opacity: 1, offset: .2 },
+      { transform: 'translate(-50%, -70px) scale(1)', opacity: 0 },
+    ], { duration: 1300, easing: 'ease-out' }).onfinish = () => num.remove();
   }
 
   function naipesSubindo(c, naipe, n) {
@@ -2094,6 +2118,15 @@ window.SS = window.SS || {};
   const selosPoder = u => (jogo.desafio === u.uid ? '<img class="selo-poder selo-desafio" src="arte/naipes/espadas.webp" alt="" draggable="false">' : '')
     + (u.vigilia ? '<img class="selo-poder selo-vigilia" src="arte/naipes/paus.webp" alt="" draggable="false">' : '');
 
+  // Lançalotte (Golpe certeiro): o 1º ataque do turno ganha +1 de ataque (e +1 dado). Aparece no selo de ataque
+  // do Senhor(a) assim que ele é o primeiro atacante escolhido, até o golpe dele ser resolvido.
+  function bonusGolpeCerteiro(p, u) {
+    if (!jogo || jogo.vez !== p || jogo.jogadores[p].palhaco !== 'lancalotte') return 0;
+    if (jogo.fase === 'ataque') return ui.ataques.length && ui.ataques[0].atacante === u.uid ? M.PALHACOS.lancalotte.ataquePrimeiro : 0;
+    const at = jogo.combate && jogo.combate.ataques[0];
+    return at && at.atacante === u.uid && !at.resultado ? at.bonusAtaque || 0 : 0;
+  }
+
   function htmlUnidade(p, i, u) {
     const foco = emFoco(u) ? ' foco' : '';
     if (u.tipo === 'as') {
@@ -2117,7 +2150,7 @@ window.SS = window.SS || {};
     return `<div class="${cls.join(' ')}${foco}"${virada ? ` style="--atraso:${virada.atraso.toFixed(0)}ms"` : ''}>
       <div class="pilha-senhor${estiloGiro(u, post)}"><div class="carta numero">${C.frente(u.numero)}</div><div class="carta figura">${C.frente(u.figura)}</div></div>
       <div class="selo-vida">${vida}</div>
-      <div class="selo-atk">⚔ ${atk}${atk > base ? `<small>+${atk - base}</small>` : ''}</div>
+      <div class="selo-atk">⚔ ${atk}${atk > base ? `<small>+${atk - base}</small>` : ''}${bonusGolpeCerteiro(p, u) ? `<small class="bonus-lanca">+${bonusGolpeCerteiro(p, u)}♠</small>` : ''}</div>
       ${nai ? `<div class="selo-naipado">${SIMB[nai]}</div>` : ''}${tagsUnidade(u)}${selosPoder(u)}</div>`;
   }
 
@@ -2280,7 +2313,8 @@ window.SS = window.SS || {};
         if (defesaNoLimite() && !botoes.includes('data-acao="tipo:magia')) botoes += btnGrande('negar-defesa', t('acao.magia.paus'), 'par-paus', 'cura-no-limite');
         if (ui.sel.length === 1 && curaNoLimite(ui.sel[0]) && !botoes.includes('data-acao="tipo:curar')) {
           const c = cartaDaMao(ui.sel[0]);
-          botoes += btnGrande('negar-cura', t('acao.curar', { n: M.curaPara(j, c) }), 'curar', 'cura-no-limite');
+          const extra = M.curaPara(j, c) - M.curaDe(c);
+          botoes += btnGrande('negar-cura', t('acao.curar', { n: M.curaDe(c) }) + (extra ? ` +${extra}♥` : ''), 'curar', 'cura-no-limite');
         }
         // Tutorial: carta de ação só de mostra (ex.: o Berserk, quando ninguém está ferido para usar de verdade).
         if (ui.tutCartaExtra === 'paus') botoes += btnGrande('tut-demo', t('acao.paus'), 'paus');
@@ -2581,7 +2615,7 @@ window.SS = window.SS || {};
   function anuncioInicio(primeiro, dados) {
     const lado = p => {
       const pal = palhacoDe(p);
-      return `<div class="inicio-lado${p === primeiro ? ' comeca' : ''}">
+      return `<div class="inicio-lado lado-${p === 0 ? 'esq' : 'dir'}${p === primeiro ? ' comeca' : ''}">
         <div class="heroi mini cor-${pal.cor}${pal.retrato ? ' com-retrato' : ''}">${arteHeroi(pal)}<div class="heroi-nome">${pal.nome}</div></div>
         <span>${t(controle(p) === 'humano' ? 'ui.voce' : 'ui.oponente')}</span>
         ${dados ? `<b class="dado-inicio">🎲 ${dados[p]}</b>` : ''}
@@ -2605,15 +2639,18 @@ window.SS = window.SS || {};
     const m = $('#modal');
     m.innerHTML = `<div class="caixa">${html}</div>`;
     m.classList.toggle('modal-menu', !jogo);
+    m.classList.toggle('modal-papel', !jogo || /class="(menu-tema|confirmacao)/.test(html));
     m.hidden = false;
     m.onclick = aoClicarModal || null;
   }
 
   function fecharModal() {
+    const festa = $('#festa');
+    if (festa) festa.remove();
     const m = $('#modal');
     m.hidden = true;
     m.innerHTML = '';
-    m.classList.remove('modal-menu');
+    m.classList.remove('modal-menu', 'modal-papel');
     m.onclick = null;
     $('#dica').hidden = true;
   }
@@ -2996,7 +3033,9 @@ window.SS = window.SS || {};
     M.registrar(jogo, `${nomes[0]} × ${nomes[1]}.`);
     M.registrar(jogo, t('log.inicioDados', { a: nomes[0], da: dadosInicio[0], b: nomes[1], db: dadosInicio[1], j: nomes[primeiro] }));
     render();
-    mostrarAnuncio(anuncioInicio(primeiro, dadosInicio) + botaoContinuar());
+    mostrarAnuncio(anuncioInicio(primeiro, dadosInicio) + botaoContinuar(), 'inicio');
+    // O Palhaço que tirou mais dá uma porradinha no outro (o impacto acontece no meio da animação).
+    setTimeout(() => { if (id === partida) Som.tocar('impacto-medio'); }, 980);
     await esperarContinuar(2600);
     if (id !== partida) return;
     esconderAnuncio();
@@ -3481,10 +3520,13 @@ window.SS = window.SS || {};
     Som.tocar(venceu === false ? 'derrota' : 'vitoria');
     const titulo = cfg.modo === 'bots' ? t('faixa.venceu', { j: escapar(jogo.jogadores[v].nome) }) : t(venceu ? 'fim.vitoria' : 'fim.derrota');
     const online = cfg.modo === 'online';
-    modal(`<h2 class="titulo-fim${venceu === false ? ' derrota' : ''}">${titulo}</h2>
-      <p>${t('fim.turno', { n: jogo.turno })}</p>
+    // Vitória: fogos e aplausos; derrota: tomates na tela e vaia (por cima dos sons de vitória/derrota).
+    setTimeout(() => { if (venceu === false) festaTomates(); else festaFogos(); }, 60);
+    setTimeout(() => (venceu === false ? Som.vaia() : Som.aplausos()), venceu === false ? 700 : 500);
+    modal(`<div class="tela-fim ${venceu === false ? 'derrota' : 'vitoria'}"><h2 class="titulo-fim-grande">${titulo}</h2>
+      <p class="fim-turno">${t('fim.turno', { n: jogo.turno })}</p>
       ${online && revanche.dele ? `<p class="nota destaque">${t('on.amigoQuerRevanche', { j: escapar(jogo.jogadores[1 - eu].nome) })}</p>` : ''}
-      <div class="acoes-menu"><button class="btn principal" data-m="denovo">${t(online ? 'on.revanche' : 'fim.denovo')}</button><button class="btn" data-m="ver">${t('fim.ver')}</button><button class="btn" data-m="menu">${t('fim.menu')}</button></div>`,
+      <div class="acoes-menu"><button class="btn principal" data-m="denovo">${t(online ? 'on.revanche' : 'fim.denovo')}</button><button class="btn" data-m="ver">${t('fim.ver')}</button><button class="btn" data-m="menu">${t('fim.menu')}</button></div></div>`,
     ev => {
       const b = ev.target.closest('[data-m]');
       if (!b) return;
@@ -3494,13 +3536,89 @@ window.SS = window.SS || {};
     });
   }
 
+  // ---------- Festa do fim de jogo (por cima de tudo, sem pegar cliques) ----------
+  function camadaFesta() {
+    let el = $('#festa');
+    if (el) el.remove();
+    el = document.createElement('div');
+    el.id = 'festa';
+    document.body.appendChild(el);
+    return el;
+  }
+  // Acaba quando a tela de fim sai (jogar de novo, ver a mesa, menu) ou depois de alguns segundos.
+  const festaAtiva = (inicio, ms) => performance.now() - inicio < ms && !!$('#modal .tela-fim');
+
+  function festaFogos() {
+    if (MOVIMENTO_REDUZIDO) return;
+    const camada = camadaFesta(), inicio = performance.now();
+    const cores = ['#ffd84d', '#ff5a5a', '#4fd1ff', '#7dff6b', '#ff8af0', '#ffffff', '#ffa21a'];
+    const estouro = () => {
+      if (!festaAtiva(inicio, 7000)) return camada.remove();
+      const x = 12 + Math.random() * 76, y = 12 + Math.random() * 40, cor = cores[Math.floor(Math.random() * cores.length)], cor2 = cores[Math.floor(Math.random() * cores.length)];
+      Som.fogos();
+      const n = 30;
+      for (let k = 0; k < n; k++) {
+        const f = document.createElement('i');
+        f.className = 'faisca-fogo';
+        f.style.left = x + 'vw'; f.style.top = y + 'vh';
+        f.style.background = f.style.color = k % 3 ? cor : cor2;
+        camada.appendChild(f);
+        const ang = (k / n) * Math.PI * 2 + Math.random() * 0.2, dist = 90 + Math.random() * 90;
+        const dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist;
+        f.animate([
+          { transform: 'translate(-50%, -50%) scale(1)', opacity: 1 },
+          { transform: `translate(calc(-50% + ${dx * 0.85}px), calc(-50% + ${dy * 0.85}px)) scale(1)`, opacity: 1, offset: 0.55 },
+          { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy + 60}px)) scale(.3)`, opacity: 0 },
+        ], { duration: 1300 + Math.random() * 300, easing: 'cubic-bezier(.15, .7, .3, 1)' }).onfinish = () => f.remove();
+      }
+      setTimeout(estouro, 380 + Math.random() * 380);
+    };
+    estouro();
+  }
+
+  // Tomates voando de fora da tela e esborrachando no "vidro" (no estilo das brincadeiras do MSN).
+  function festaTomates() {
+    if (MOVIMENTO_REDUZIDO) return;
+    const camada = camadaFesta(), inicio = performance.now();
+    const jogar = () => {
+      if (!festaAtiva(inicio, 6500)) return;
+      const alvoX = 10 + Math.random() * 80, alvoY = 12 + Math.random() * 70;
+      const daEsquerda = Math.random() < 0.5, deX = daEsquerda ? -10 : 110, deY = 60 + Math.random() * 50;
+      const tom = document.createElement('div');
+      tom.className = 'tomate-voando';
+      tom.textContent = '🍅';
+      tom.style.left = alvoX + 'vw'; tom.style.top = alvoY + 'vh';
+      camada.appendChild(tom);
+      const dx = (deX - alvoX) + 'vw', dy = (deY - alvoY) + 'vh';
+      tom.animate([
+        { transform: `translate(-50%, -50%) translate(${dx}, ${dy}) scale(.6) rotate(0deg)` },
+        { transform: `translate(-50%, -50%) translate(calc(${dx} / 2), calc(${dy} / 2 - 18vh)) scale(1) rotate(${daEsquerda ? 220 : -220}deg)`, offset: 0.5 },
+        { transform: 'translate(-50%, -50%) scale(1.5) rotate(400deg)' },
+      ], { duration: 650, easing: 'ease-in' }).onfinish = () => {
+        tom.remove();
+        Som.tomate();
+        const s = document.createElement('div');
+        s.className = 'tomate-splat';
+        s.style.left = alvoX + 'vw'; s.style.top = alvoY + 'vh';
+        s.style.setProperty('--giro', Math.round(Math.random() * 360) + 'deg');
+        s.innerHTML = '<i></i><i></i><i></i><i></i><i></i>';
+        camada.appendChild(s);
+        s.animate([{ transform: 'translate(-50%, -50%) rotate(var(--giro)) scale(.2)' }, { transform: 'translate(-50%, -50%) rotate(var(--giro)) scale(1.15)', offset: 0.25 }, { transform: 'translate(-50%, -50%) rotate(var(--giro)) scale(1)' }], { duration: 260, easing: 'ease-out' });
+        // escorre devagar e some
+        s.animate([{ translate: '0 0', opacity: 1 }, { translate: '0 0', opacity: 1, offset: 0.5 }, { translate: '0 50px', opacity: 0 }], { duration: 7000, delay: 260, easing: 'ease-in', fill: 'forwards' }).onfinish = () => s.remove();
+      };
+      setTimeout(jogar, 280 + Math.random() * 420);
+    };
+    jogar();
+  }
+
   function confirmarDesistir() {
     if (!jogo || jogo.vencedor != null) return;
     const assistindo = cfg.modo === 'bots';
     const k = assistindo ? 'conf.encerrar' : 'conf.desistir';
-    modal(`<h2>${t(k + 'Titulo')}</h2>
+    modal(`<div class="confirmacao"><h2>${t(k + 'Titulo')}</h2>
       <p class="nota">${t(k + 'Nota')}</p>
-      <div class="acoes-menu"><button class="btn principal" data-m="sim">${t(k + 'Btn')}</button><button class="btn" data-m="nao">${t('conf.continuar')}</button></div>`,
+      <div class="acoes-menu"><button class="btn principal" data-m="sim">${t(k + 'Btn')}</button><button class="btn" data-m="nao">${t('conf.continuar')}</button></div></div>`,
     ev => {
       const b = ev.target.closest('[data-m]');
       if (!b) return;
@@ -3517,8 +3635,8 @@ window.SS = window.SS || {};
 
   function confirmarReiniciar() {
     if (!jogo) return;
-    modal(`<h2>${t('conf.reiniciarTitulo')}</h2><p class="nota">${t('conf.reiniciarNota')}</p>
-      <div class="acoes-menu"><button class="btn principal" data-m="sim">${t('conf.reiniciarBtn')}</button><button class="btn" data-m="nao">${t('conf.continuar')}</button></div>`,
+    modal(`<div class="confirmacao"><h2>${t('conf.reiniciarTitulo')}</h2><p class="nota">${t('conf.reiniciarNota')}</p>
+      <div class="acoes-menu"><button class="btn principal" data-m="sim">${t('conf.reiniciarBtn')}</button><button class="btn" data-m="nao">${t('conf.continuar')}</button></div></div>`,
     ev => {
       const b = ev.target.closest('[data-m]');
       if (!b) return;
@@ -3529,7 +3647,7 @@ window.SS = window.SS || {};
 
   function confirmarMenu() {
     if (!jogo || jogo.vencedor != null) return menu();
-    modal(`<h2>${t('conf.menuTitulo')}</h2><div class="acoes-menu"><button class="btn principal" data-m="sim">${t('conf.menuBtn')}</button><button class="btn" data-m="nao">${t('conf.continuar')}</button></div>`,
+    modal(`<div class="confirmacao"><h2>${t('conf.menuTitulo')}</h2><div class="acoes-menu"><button class="btn principal" data-m="sim">${t('conf.menuBtn')}</button><button class="btn" data-m="nao">${t('conf.continuar')}</button></div></div>`,
       ev => {
         const b = ev.target.closest('[data-m]');
         if (!b) return;
@@ -4476,5 +4594,6 @@ window.SS = window.SS || {};
     combate: () => fluxoCombate(partida),
     palcoFiguras: () => escolherFigurasModal(), palcoDescarte: () => escolherDescarte(),
     magia: (p, cartas) => animarParDestruido(p, cartas),
+    fim: () => fimDeJogo(),
   };
 })(window.SS);

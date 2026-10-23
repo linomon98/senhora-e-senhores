@@ -1659,35 +1659,35 @@ body.tut-pulsa-seta #setas .seta .linha { animation: tut-pulsa-linha .6s ease-in
 @media (prefers-reduced-motion: reduce) { #modal.modal-menu::before { animation: none; } }
 
 /* Submenus: o conteúdo fica numa folha branca de contorno grosso, em tinta escura */
-#modal.modal-menu .caixa {
+#modal.modal-papel .caixa {
   position: relative; z-index: 1; color: var(--tinta); background: #fffdf4; border: 4px solid #141414; border-radius: 22px;
   box-shadow: 0 10px 0 #141414, 0 18px 30px rgba(0, 0, 0, .18);
 }
-#modal.modal-menu .caixa:has(.menu-tema) { background: #fffdf4; }
-#modal.modal-menu h2, #modal.modal-menu .titulo-etapa { color: #141414; text-shadow: none; font-family: var(--fonte-titulo); font-size: 34px; }
-#modal.modal-menu .opcao > label { color: #b0101e; font-weight: 800; }
-#modal.modal-menu .nota { color: #33402a; opacity: .9; }
-#modal.modal-menu .nota.aviso-ip, #modal.modal-menu .online-caixa { background: #f2eddf; border: 2px solid #141414; }
-#modal.modal-menu .online-caixa h3 { color: #b0101e; }
-#modal.modal-menu .tabela td { border-bottom-color: rgba(20, 20, 20, .15); }
-#modal.modal-menu .dica-carta { color: #33402a; }
-#modal.modal-menu .btn {
+#modal.modal-papel .caixa:has(.menu-tema) { background: #fffdf4; }
+#modal.modal-papel h2, #modal.modal-papel .titulo-etapa { color: #141414; text-shadow: none; font-family: var(--fonte-titulo); font-size: 34px; }
+#modal.modal-papel .opcao > label { color: #b0101e; font-weight: 800; }
+#modal.modal-papel .nota { color: #33402a; opacity: .9; }
+#modal.modal-papel .nota.aviso-ip, #modal.modal-papel .online-caixa { background: #f2eddf; border: 2px solid #141414; }
+#modal.modal-papel .online-caixa h3 { color: #b0101e; }
+#modal.modal-papel .tabela td { border-bottom-color: rgba(20, 20, 20, .15); }
+#modal.modal-papel .dica-carta { color: #33402a; }
+#modal.modal-papel .btn {
   color: #141414; background: #fff; border: 3px solid #141414; border-radius: 12px; font: 400 19px var(--fonte-titulo);
   box-shadow: 0 5px 0 #141414; transition: transform .12s, box-shadow .12s, background .12s;
 }
-#modal.modal-menu .btn:hover:not(:disabled) { background: #fff; transform: translateY(-2px); box-shadow: 0 7px 0 #141414; }
-#modal.modal-menu .btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 2px 0 #141414; }
-#modal.modal-menu .btn.principal { background: #ffc21a; }
-#modal.modal-menu .btn.principal:hover:not(:disabled) { background: #ffcd3d; }
-#modal.modal-menu .grupo { flex-wrap: wrap; justify-content: center; }
-#modal.modal-menu .grupo button { color: #141414; background: #fff; border: 2px solid #141414; box-shadow: 0 3px 0 #141414; font-weight: 700; }
-#modal.modal-menu .grupo button.ativo { background: #ffc21a; color: #141414; border-color: #141414; }
-#modal.modal-menu input[type="range"] { accent-color: #c41e2a; }
-#modal.modal-menu .campo-codigo { border: 2px solid #141414; }
+#modal.modal-papel .btn:hover:not(:disabled) { background: #fff; transform: translateY(-2px); box-shadow: 0 7px 0 #141414; }
+#modal.modal-papel .btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 2px 0 #141414; }
+#modal.modal-papel .btn.principal { background: #ffc21a; }
+#modal.modal-papel .btn.principal:hover:not(:disabled) { background: #ffcd3d; }
+#modal.modal-papel .grupo { flex-wrap: wrap; justify-content: center; }
+#modal.modal-papel .grupo button { color: #141414; background: #fff; border: 2px solid #141414; box-shadow: 0 3px 0 #141414; font-weight: 700; }
+#modal.modal-papel .grupo button.ativo { background: #ffc21a; color: #141414; border-color: #141414; }
+#modal.modal-papel input[type="range"] { accent-color: #c41e2a; }
+#modal.modal-papel .campo-codigo { border: 2px solid #141414; }
 
 /* ---------- Tela inicial ---------- */
 /* Tudo é medido em "pixels do desenho" (u): a tela inteira encolhe junto para caber em qualquer janela. */
-#modal.modal-menu .caixa:has(.inicio-novo) { background: none; border: 0; box-shadow: none; padding: 0; max-width: none; max-height: none; width: auto; overflow: visible; }
+#modal.modal-papel .caixa:has(.inicio-novo) { background: none; border: 0; box-shadow: none; padding: 0; max-width: none; max-height: none; width: auto; overflow: visible; }
 .inicio-novo { --u: min(calc(100vh / 900), calc(100vw / 1230)); color: #141414; }
 .palco-menu { position: relative; width: calc(1200 * var(--u)); height: calc(840 * var(--u)); margin: 0 auto; }
 .palco-menu > * { position: absolute; margin: 0; }
@@ -1760,7 +1760,7 @@ body.tut-pulsa-seta #setas .seta .linha { animation: tut-pulsa-linha .6s ease-in
 
 /* ---------- Editor da mesa livre ---------- */
 #editor-livre {
-  position: fixed; right: 10px; top: 64px; z-index: 120; width: 300px; max-height: calc(100vh - 80px); overflow: auto;
+  position: fixed; right: 10px; top: 64px; z-index: 90; width: 300px; max-height: calc(100vh - 80px); overflow: auto;
   color: #141414; background: #fffdf4; border: 3px solid #141414; border-radius: 14px; box-shadow: 0 6px 0 #141414;
   font: 600 13px var(--fonte-ui);
 }
@@ -1778,3 +1778,61 @@ body.tut-pulsa-seta #setas .seta .linha { animation: tut-pulsa-linha .6s ease-in
 #editor-livre .ed-unidade { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 4px 0; border-bottom: 1px dashed rgba(20, 20, 20, .25); }
 #editor-livre .ed-unidade span { flex: 1 1 100%; }
 #editor-livre .ed-vazio { margin: 4px 0; opacity: .6; }
+
+/* ---------- Confirmações (desistir, reiniciar, menu) e opções durante a partida: folha branca ---------- */
+#modal.modal-papel .caixa:has(.confirmacao) { max-width: 460px; padding: 22px 28px; }
+#modal .confirmacao h2 { font-size: 32px; }
+
+/* ---------- Quem começa: sem caixa, fundo escuro, no meio da mesa; o vencedor dá uma porradinha no outro ---------- */
+#anuncio.inicio { left: 800px; top: 450px; min-width: 0; padding: 0; background: none; border: 0; box-shadow: none; }
+#anuncio.inicio::before { content: ''; position: absolute; inset: -1200px; z-index: -1; background: rgba(6, 12, 4, .72); }
+#anuncio.inicio .anuncio-topo { font: 400 34px var(--fonte-titulo); letter-spacing: 1px; text-transform: none; color: #fff; margin-bottom: 18px; text-shadow: 0 3px 0 #000; }
+#anuncio.inicio .duelo { gap: 60px; }
+#anuncio.inicio .inicio-lado { opacity: 1; color: #fff; }
+#anuncio.inicio .inicio-lado span { font-size: 18px; }
+#anuncio.inicio .dado-inicio { font-size: 34px; color: #fff; }
+#anuncio.inicio .inicio-lado em { font: 400 30px var(--fonte-titulo); color: #ffd84d; text-shadow: 0 3px 0 #000; }
+#anuncio.inicio .nota { color: #fff; opacity: .8; font-size: 15px; }
+#anuncio.inicio .duelo-seta { font-size: 60px; }
+#anuncio.inicio .inicio-lado.comeca.lado-esq .heroi { animation: porrada-dir 1.3s .3s cubic-bezier(.5, 0, .3, 1) both; z-index: 2; }
+#anuncio.inicio .inicio-lado.comeca.lado-dir .heroi { animation: porrada-esq 1.3s .3s cubic-bezier(.5, 0, .3, 1) both; z-index: 2; }
+#anuncio.inicio .inicio-lado:not(.comeca) .heroi { animation: apanha 1.3s .3s ease-out both; filter: saturate(.6) brightness(.85); }
+#anuncio.inicio .inicio-lado.lado-dir:not(.comeca) .heroi { animation-name: apanha-dir; }
+/* recua, avança até o outro, volta (o impacto é aos ~50%) */
+@keyframes porrada-dir { 0% { transform: none; } 25% { transform: translateX(-26px) rotate(-6deg); } 48% { transform: translateX(150px) rotate(8deg) scale(1.06); } 62% { transform: translateX(120px) rotate(4deg); } 100% { transform: none; } }
+@keyframes porrada-esq { 0% { transform: none; } 25% { transform: translateX(26px) rotate(6deg); } 48% { transform: translateX(-150px) rotate(-8deg) scale(1.06); } 62% { transform: translateX(-120px) rotate(-4deg); } 100% { transform: none; } }
+/* (quem apanha é empurrado para longe de quem bate: o da esquerda vai para a esquerda, o da direita para a direita) */
+@keyframes apanha { 0%, 46% { transform: none; } 54% { transform: translateX(-38px) rotate(-14deg); } 64% { transform: translateX(-26px) rotate(6deg); } 76% { transform: translateX(-32px) rotate(-4deg); } 100% { transform: translateX(-18px) rotate(-8deg); } }
+@keyframes apanha-dir { 0%, 46% { transform: none; } 54% { transform: translateX(38px) rotate(14deg); } 64% { transform: translateX(26px) rotate(-6deg); } 76% { transform: translateX(32px) rotate(4deg); } 100% { transform: translateX(18px) rotate(8deg); } }
+
+/* ---------- Bônus das passivas à vista ---------- */
+.selo-atk .bonus-lanca { margin-left: 3px; color: #8fb8ff; font-weight: 800; }
+.dano-voando { position: absolute; z-index: 60; pointer-events: none; font: 400 38px var(--fonte-titulo); color: #ff3b3b; -webkit-text-stroke: 4px #141414; paint-order: stroke fill; }
+
+/* ---------- Vitória e derrota: fundo escuro, título enorme, festa ou tomates ---------- */
+#modal:has(.tela-fim) { background: rgba(4, 8, 3, .8); }
+#modal .caixa:has(.tela-fim) { background: none; border: 0; box-shadow: none; max-width: none; text-align: center; }
+.tela-fim .titulo-fim-grande {
+  margin: 0; font: 400 clamp(90px, 15vw, 210px) / .9 var(--fonte-titulo); letter-spacing: 2px; color: #ffd84d;
+  -webkit-text-stroke: 10px #141414; paint-order: stroke fill; text-shadow: 0 12px 0 #141414;
+  animation: fim-entra .7s cubic-bezier(.3, 1.5, .5, 1) both;
+}
+.tela-fim.derrota .titulo-fim-grande { color: #ff4b4b; animation-name: fim-cai; }
+.tela-fim .fim-turno { margin: 14px 0 6px; font-size: 18px; color: #fff; opacity: .85; }
+@keyframes fim-entra { from { transform: scale(.2) rotate(-8deg); opacity: 0; } }
+@keyframes fim-cai { from { transform: translateY(-120px) rotate(6deg); opacity: 0; } 60% { transform: translateY(12px) rotate(-2deg); opacity: 1; } }
+.tela-fim .btn { color: #141414; background: #fff; border: 3px solid #141414; border-radius: 12px; font: 400 20px var(--fonte-titulo); box-shadow: 0 5px 0 #141414; }
+.tela-fim .btn.principal { background: #ffc21a; }
+.tela-fim .btn:hover { transform: translateY(-2px); box-shadow: 0 7px 0 #141414; }
+
+#festa { position: fixed; inset: 0; z-index: 140; pointer-events: none; overflow: hidden; }
+.faisca-fogo { position: absolute; width: 9px; height: 9px; border-radius: 50%; box-shadow: 0 0 10px currentColor, 0 0 4px #fff; }
+.tomate-voando { position: absolute; font-size: 72px; line-height: 1; filter: drop-shadow(0 6px 4px rgba(0, 0, 0, .4)); }
+.tomate-splat { position: absolute; width: 190px; height: 170px; }
+.tomate-splat::before { content: ''; position: absolute; inset: 22% 18%; border-radius: 46% 54% 40% 60% / 52% 44% 56% 48%; background: radial-gradient(circle at 40% 38%, #ff7b6b, #d4140f 55%, #a30b07); box-shadow: inset 0 -6px 12px rgba(80, 0, 0, .45); }
+.tomate-splat i { position: absolute; border-radius: 50%; background: #c8120d; }
+.tomate-splat i:nth-child(1) { left: 6%; top: 30%; width: 26px; height: 22px; }
+.tomate-splat i:nth-child(2) { right: 4%; top: 18%; width: 20px; height: 18px; }
+.tomate-splat i:nth-child(3) { left: 40%; bottom: 2%; width: 16px; height: 34px; border-radius: 40% 40% 50% 50%; }
+.tomate-splat i:nth-child(4) { right: 14%; bottom: 12%; width: 14px; height: 14px; }
+.tomate-splat i:nth-child(5) { left: 22%; top: 6%; width: 12px; height: 12px; background: #f6e27a; box-shadow: 30px 40px 0 -1px #f6e27a, 60px 22px 0 -2px #f6e27a, 44px 64px 0 -1px #f6e27a; }
