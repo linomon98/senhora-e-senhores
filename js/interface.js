@@ -1224,6 +1224,7 @@ window.SS = window.SS || {};
     animarEntradas();
     processarEventos();
     if (cfg.modo === 'tutorial' && SS.Tutorial) SS.Tutorial.aposRender();
+    if (cfg.modo === 'livre' && !(document.activeElement && document.activeElement.closest && document.activeElement.closest('#editor-livre'))) desenharEditor();
     sincronizarRefletirFlutuante();
     // Coração acelerado quando o seu PV cai para 5 ou menos (só na hora em que cruza).
     if (cfg.modo !== 'bots') {
@@ -1498,7 +1499,7 @@ window.SS = window.SS || {};
     if (!alvo0 || !fonte) return;
     voando.add(c.id);
     alvo0.style.visibility = 'hidden';
-    const visivel = p === eu || cfg.modo === 'bots';
+    const visivel = p === eu || cfg.modo === 'bots' || cfg.modo === 'livre';
     const de = fonte.getBoundingClientRect(), para = alvo0.getBoundingClientRect();
     const voo = document.createElement('div');
     voo.className = `carta-voando dorso ${corDe(p)}`;
@@ -1909,7 +1910,7 @@ window.SS = window.SS || {};
 
   function renderJogador(p, alvos) {
     const j = jogo.jogadores[p], cor = corDe(p), teto = M.tetoCura(j), pal = palhacoDe(p);
-    const quem = controle(p) === 'humano' ? t('ui.voce') : controle(p) === 'remoto' ? t('ui.amigo') : `bot · ${NOME_NIVEL[cfg.nivel]}`;
+    const quem = controle(p) === 'humano' ? t('ui.voce') : controle(p) === 'remoto' ? t('ui.amigo') : `bot · ${NOME_NIVEL[nivelDe(p)]}`;
     const podeJogar = controle(p) === 'humano' && jogo.vez === p && (jogo.fase === 'principal' || jogo.fase === 'ataque') && !ui.ocupado;
     // Fichas do Ás de Ouros: botões amarelos "♦ EXTRA" do lado esquerdo do Palhaço (os que ainda estão
     // chegando voando do totem ficam invisíveis até o naipe pousar).
@@ -2603,6 +2604,7 @@ window.SS = window.SS || {};
   function modal(html, aoClicarModal) {
     const m = $('#modal');
     m.innerHTML = `<div class="caixa">${html}</div>`;
+    m.classList.toggle('modal-menu', !jogo);
     m.hidden = false;
     m.onclick = aoClicarModal || null;
   }
@@ -2611,6 +2613,7 @@ window.SS = window.SS || {};
     const m = $('#modal');
     m.hidden = true;
     m.innerHTML = '';
+    m.classList.remove('modal-menu');
     m.onclick = null;
     $('#dica').hidden = true;
   }
@@ -2964,11 +2967,13 @@ window.SS = window.SS || {};
       // Contra o bot, você fica embaixo; o bot pega outro Palhaço (o escolhido ou um sorteado).
       const ids = P.LISTA.map(x => x.id);
       const sortear = lista => lista[Math.floor(Math.random() * lista.length)];
-      const meu = modo === 'bots' ? sortear(ids) : cfg.palhaco;
+      const bc = modo === 'bots' ? cfg.botsCfg : null; // escolhas da área de testes (Palhaço, deck e nível de cada bot)
+      const meu = modo === 'bots' ? (bc && bc.pal[0] !== 'aleatorio' ? bc.pal[0] : sortear(ids)) : cfg.palhaco;
       const outros = ids.filter(x => x !== meu);
-      const rival = modo !== 'bots' && outros.includes(cfg.rival) ? cfg.rival : sortear(outros);
+      const rival = bc && bc.pal[1] !== 'aleatorio' ? bc.pal[1] : modo !== 'bots' && outros.includes(cfg.rival) ? cfg.rival : sortear(outros);
       palhacos = [meu, rival];
-      contagens = [modo === 'bots' ? P.get(meu).deck : contagemEscolhida(), P.get(rival).deck];
+      contagens = bc ? [contagemDe(bc.deck[0], meu), contagemDe(bc.deck[1], rival)]
+        : [modo === 'bots' ? P.get(meu).deck : contagemEscolhida(), P.get(rival).deck];
     }
     const nomes = palhacos.map(x => P.get(x).nome);
     if (nomes[0] === nomes[1]) nomes[1] += ' 2'; // dois amigos com o mesmo Palhaço
@@ -2996,8 +3001,8 @@ window.SS = window.SS || {};
     } else {
       for (const p of [1, 0]) {
         if (controle(p) !== 'bot') continue;
-        M.escolherFiguras(jogo, p, Bot.escolherFiguras(jogo, p, cfg.nivel));
-        if (Bot.querMulligan(jogo, p, cfg.nivel)) M.mulligan(jogo, p);
+        M.escolherFiguras(jogo, p, Bot.escolherFiguras(jogo, p, nivelDe(p)));
+        if (Bot.querMulligan(jogo, p, nivelDe(p))) M.mulligan(jogo, p);
         else M.confirmarAbertura(jogo, p);
       }
       if (controle(0) === 'humano') {
@@ -3086,7 +3091,7 @@ window.SS = window.SS || {};
       if (controle(p) === 'bot') {
         await esperar(500);
         if (id !== partida) return;
-        M.comprarDoTurno(jogo, Bot.escolherBaralho(jogo, p, cfg.nivel));
+        M.comprarDoTurno(jogo, Bot.escolherBaralho(jogo, p, nivelDe(p)));
       } else if (controle(p) === 'remoto') {
         // Online: o amigo escolhe o baralho na tela dele.
         const m = await SS.Rede.esperar(['compra']);
@@ -3113,7 +3118,7 @@ window.SS = window.SS || {};
   const pedidos = new Map();
   function pensar(fn, ...args) {
     const aqui = () => Bot[fn](...args);
-    if (cfg.nivel !== 'profissional' || cerebroQuebrado || typeof Worker !== 'function') return Promise.resolve(aqui());
+    if (args[2] !== 'profissional' || cerebroQuebrado || typeof Worker !== 'function') return Promise.resolve(aqui());
     try {
       if (!cerebro) {
         const s = document.querySelector('script[src*="js/bot.js"]');
@@ -3144,15 +3149,27 @@ window.SS = window.SS || {};
     }
   }
 
+  // Mesa livre com o oponente "parado": ele não joga nada, só passa o turno.
+  const oponenteParado = p => cfg.modo === 'livre' && cfg.livre && cfg.livre.oponente === 'parado' && p !== eu;
+
   async function turnoBot(id) {
     if (cfg.modo === 'tutorial') return turnoBotTutorial(id);
+    if (oponenteParado(jogo.vez)) {
+      ui.ocupado = true;
+      render();
+      await esperar(500);
+      if (id !== partida) return;
+      if (jogo.fase === 'principal') M.aplicarAcao(jogo, { tipo: 'atacar' });
+      M.declararAtaques(jogo, []);
+      return fluxoCombate(id);
+    }
     const p = jogo.vez;
     ui.ocupado = true;
     render();
     await esperar(800);
     if (id !== partida) return;
     for (let g = 0; g < 12 && jogo.fase === 'principal'; g++) {
-      const a = await pensar('proximaAcao', jogo, p, cfg.nivel);
+      const a = await pensar('proximaAcao', jogo, p, nivelDe(p));
       if (id !== partida) return;
       M.aplicarAcao(jogo, a);
       render();
@@ -3161,7 +3178,7 @@ window.SS = window.SS || {};
       if (id !== partida) return;
     }
     if (jogo.fase === 'principal') M.aplicarAcao(jogo, { tipo: 'atacar' });
-    const lista = await pensar('declararAtaques', jogo, p, cfg.nivel);
+    const lista = await pensar('declararAtaques', jogo, p, nivelDe(p));
     if (id !== partida) return;
     M.declararAtaques(jogo, lista);
     await mostrarDeclaracao(lista);
@@ -3246,8 +3263,8 @@ window.SS = window.SS || {};
       if (controle(d) === 'bot') {
         await esperar(500);
         if (id !== partida) return;
-        for (const rf of Bot.refletir(jogo, d)) M.refletir(jogo, rf.n, rf.cartas);
-        const mapa = await pensar('bloquear', jogo, d, cfg.nivel);
+        if (!oponenteParado(d)) for (const rf of Bot.refletir(jogo, d)) M.refletir(jogo, rf.n, rf.cartas);
+        const mapa = oponenteParado(d) ? {} : await pensar('bloquear', jogo, d, nivelDe(d));
         if (id !== partida) return;
         M.definirBloqueios(jogo, mapa);
       } else if (!M.bloqueadoresAptos(jogo).length && !podeRefletir) {
@@ -3500,7 +3517,7 @@ window.SS = window.SS || {};
     ev => {
       const b = ev.target.closest('[data-m]');
       if (!b) return;
-      if (b.dataset.m === 'sim') { if (cfg.modo === 'tutorial') iniciarTutorial(cfg.aula); else iniciarPartida(cfg.modo); }
+      if (b.dataset.m === 'sim') { if (cfg.modo === 'tutorial') iniciarTutorial(cfg.aula); else if (cfg.modo === 'livre') iniciarMesaLivre(); else iniciarPartida(cfg.modo); }
       else fecharModal();
     });
   }
@@ -3668,7 +3685,8 @@ window.SS = window.SS || {};
 
   function menu() {
     if (SS.Tutorial) SS.Tutorial.parar();
-    if (cfg.modo === 'tutorial') cfg.modo = 'bot';
+    fecharEditorLivre();
+    if (cfg.modo === 'tutorial' || cfg.modo === 'livre') cfg.modo = 'bot';
     if (cfg.modo === 'online') {
       SS.Rede.enviar({ t: 'tchau' });
       SS.Rede.sair();
@@ -3720,50 +3738,295 @@ window.SS = window.SS || {};
     // Fora da partida, as laterais da tela voltam ao verde.
     document.documentElement.style.removeProperty('--lado-esq');
     document.documentElement.style.removeProperty('--lado-dir');
-    modal(`<div class="menu-tema inicio">
-      <div class="opcao idioma">${grupoMenu('idioma', [['en', 'English'], ['pt', 'Português']], SS.Idioma.atual())}</div>
+    const idioma = SS.Idioma.atual();
+    const feito = SS.Tutorial && SS.Tutorial.feita(1);
+    // Logo em PNG (só existe em português por enquanto; em inglês vai o nome escrito na mesma cor)
+    const logo = idioma === 'pt'
+      ? `<img class="logo-menu" src="arte/menu/logo.webp" alt="Senhora e Senhores" draggable="false">`
+      : `<h1 class="logo-menu logo-texto">${t('menu.titulo')}</h1>`;
+    const bandeira = (id, arq, nome) => `<button class="${idioma === id ? 'ativo' : ''}" data-idioma="${id}" title="${nome}" aria-label="${nome}"><img src="arte/menu/${arq}" alt="" draggable="false"></button>`;
+    modal(`<div class="menu-tema inicio-novo"><div class="palco-menu">
+      <button class="btn-tutorial" data-m="tutorial">${t('menu.tutorialBotao')}${feito ? ' ✓' : ''}</button>
+      <div class="idiomas">${bandeira('pt', 'bandeira-br.webp', 'Português')}${bandeira('en', 'bandeira-us.webp', 'English')}</div>
+      <button class="btn-engrenagem" data-m="opcoes" title="${t('menu.opcoes')}" aria-label="${t('menu.opcoes')}">⚙&#xFE0E;</button>
       <div class="leque-inicio">${P.LISTA.map((pal, k) => `<img src="${pal.carta}" alt="" style="--i:${k}" draggable="false">`).join('')}</div>
-      <h1 class="titulo">${t('menu.titulo')}</h1>
-      <p class="sub">${t('menu.sub')}</p>
+      ${logo}
+      <button class="btn-grande-menu jogar" data-m="jogar">${t('menu.jogarCurto')}</button>
+      <button class="btn-grande-menu multi" data-m="online">${t('menu.multiplayer')}</button>
+      <button class="caixa-baralho" data-m="decks" title="${t('menu.decks')}" aria-label="${t('menu.decks')}"><span class="maco">
+        <span class="maco-cartas"><i class="carta dorso vermelho"></i><i class="carta dorso azul"></i><i class="carta dorso verde"></i></span>
+        <img class="maco-baixo" src="arte/menu/caixa-baixo.webp" alt="" draggable="false">
+        <span class="maco-nome">${t('menu.baralhos')}</span>
+        <img class="maco-tampa" src="arte/menu/caixa-cima.webp" alt="" draggable="false">
+      </span></button>
+      <button class="btn-medio-menu regras" data-m="regras">${t('menu.regrasCurto')}</button>
+      <button class="btn-medio-menu testes" data-m="testes">${t('menu.testes')}</button>
       ${convite ? `<div class="convite"><span>🌐 ${t('on.convite', { c: escapar(convite) })}</span>
         <button class="btn principal" data-m="entrar-convite">${t('on.entrarEscolher')}</button>
         <p class="nota aviso-ip">🔒 ${t('on.avisoIp')}</p></div>` : ''}
-      <div class="menu-principal">
-        <button class="btn-menu principal" data-m="jogar"><span>⚔</span>${t('menu.jogar')}</button>
-        <button class="btn-menu" data-m="online"><span>🌐</span>${t('menu.online')}</button>
-        <button class="btn-menu" data-m="assistir"><span>🎭</span>${t('menu.assistir')}</button>
-        <button class="btn-menu" data-m="tutorial"><span>🎓</span>${t('menu.tutorial')}${SS.Tutorial && SS.Tutorial.feita(1) ? ' ✓' : ''}</button>
-      </div>
-      <div class="acoes-menu secundario">
-        <button class="btn" data-m="decks">🂠 ${t('menu.decks')}</button>
-        <button class="btn" data-m="regras">📖 ${t('menu.regras')}</button>
-        <button class="btn" data-m="simular">${t('menu.simular')}</button>
-        <button class="btn" data-m="opcoes">⚙ ${t('menu.opcoes')}</button>
-      </div></div>`,
+    </div></div>`,
     ev => {
-      const g = ev.target.closest('[data-grupo="idioma"] [data-v]');
+      const g = ev.target.closest('[data-idioma]');
       if (g) {
-        SS.Idioma.definir(g.dataset.v);
+        SS.Idioma.definir(g.dataset.idioma);
         renderVazio();
         return telaInicio();
       }
       const b = ev.target.closest('[data-m]');
       if (!b) return;
       const m = b.dataset.m;
-      if (m === 'jogar') telaPalhacos('bot');
+      if (m === 'tutorial') iniciarTutorial(1);
+      else if (m === 'jogar') telaPalhacos('bot');
       else if (m === 'online') telaPalhacos('online');
       else if (m === 'entrar-convite') telaPalhacos('convite');
-      else if (m === 'assistir') iniciarPartida('bots');
-      else if (m === 'tutorial') iniciarTutorial(1);
       else if (m === 'decks') {
         fecharModal();
         SS.Decks.abrir(telaInicio);
       } else if (m === 'regras') {
         fecharModal();
         SS.Regras.abrir(telaInicio);
-      } else if (m === 'simular') simulacao(telaInicio);
+      } else if (m === 'testes') telaTestes();
       else if (m === 'opcoes') telaOpcoes(telaInicio);
     });
+  }
+
+  // ---------- Área de testes: bot × bot com decks escolhidos, simulação em massa e mesa livre ----------
+
+  function telaTestes() {
+    const item = (m, icone, titulo, nota) => `<button class="btn-teste" data-m="${m}"><b>${icone} ${titulo}</b><span>${nota}</span></button>`;
+    modal(`<div class="menu-tema testes">
+      <h2 class="titulo-etapa">${t('teste.titulo')}</h2>
+      <div class="lista-testes">
+        ${item('botxbot', '🎭', t('teste.botxbot'), t('teste.botxbotNota'))}
+        ${item('simular', '📊', t('menu.simular'), t('teste.simularNota'))}
+        ${item('livre', '🛠', t('teste.livre'), t('teste.livreNota'))}
+      </div>
+      <div class="acoes-menu"><button class="btn" data-m="voltar">${t('btn.voltar')}</button></div></div>`,
+    ev => {
+      const b = ev.target.closest('[data-m]');
+      if (!b) return;
+      if (b.dataset.m === 'voltar') telaInicio();
+      else if (b.dataset.m === 'botxbot') telaBots();
+      else if (b.dataset.m === 'simular') simulacao(telaTestes);
+      else if (b.dataset.m === 'livre') telaMesaLivre();
+    });
+  }
+
+  // Opções de deck para um Palhaço: o temático dele, o padrão ou um dos decks montados.
+  const decksParaEscolha = () => [{ id: 'palhaco', nome: t('menu.deckPalhaco') }].concat(SS.Decks.opcoes());
+  const contagemDe = (deck, pal) => (deck === 'palhaco' ? P.get(pal).deck : deck === 'padrao' ? M.contagemPadrao() : SS.Decks.contagemPara(deck));
+  // Nível de cada bot (no bot × bot da área de testes, cada lado tem o seu).
+  const nivelDe = p => (cfg.modo === 'bots' && cfg.botsCfg ? cfg.botsCfg.nivel[p] : cfg.modo === 'livre' && cfg.livre ? cfg.livre.nivel : cfg.nivel);
+
+  // Bot × bot: Palhaço, deck e nível de cada lado.
+  function telaBots() {
+    const bc = cfg.botsCfg || (cfg.botsCfg = { pal: ['aleatorio', 'aleatorio'], deck: ['palhaco', 'palhaco'], nivel: ['medio', 'medio'] });
+    const decks = decksParaEscolha();
+    const grupo = (chave, k, opcoes) => `<div class="grupo" data-b="${chave}:${k}">${opcoes.map(([v, r]) =>
+      `<button data-v="${v}" class="${bc[chave][k] === v ? 'ativo' : ''}">${r}</button>`).join('')}</div>`;
+    const palhacos = [['aleatorio', '?']].concat(P.LISTA.map(pal => [pal.id, `${SIMB[pal.naipe]} ${pal.nome}`]));
+    const lado = k => `<div class="lado-bot"><h3>${t(k ? 'teste.botCima' : 'teste.botBaixo')}</h3>
+      <div class="opcao"><label>${t('teste.palhaco')}</label>${grupo('pal', k, palhacos)}</div>
+      <div class="opcao"><label>${t('teste.deck')}</label>${grupo('deck', k, decks.map(d => [d.id, escapar(d.nome)]))}</div>
+      <div class="opcao"><label>${t('menu.dificuldade')}</label>${grupo('nivel', k, NIVEIS_BOT.map(n => [n, NOME_NIVEL[n]]))}</div></div>`;
+    modal(`<div class="menu-tema">
+      <h2 class="titulo-etapa">${t('teste.botxbot')}</h2>
+      <p class="nota">${t('teste.botxbotNota')}</p>
+      <div class="lados-bots">${lado(0)}${lado(1)}</div>
+      <div class="acoes-menu"><button class="btn" data-m="voltar">${t('btn.voltar')}</button>
+        <button class="btn principal grande" data-m="assistir">🎭 ${t('teste.assistir')}</button></div></div>`,
+    ev => {
+      const g = ev.target.closest('[data-b] [data-v]');
+      if (g) {
+        const [chave, k] = g.parentElement.dataset.b.split(':');
+        bc[chave][Number(k)] = g.dataset.v;
+        return marcarGrupo(g);
+      }
+      const b = ev.target.closest('[data-m]');
+      if (!b) return;
+      if (b.dataset.m === 'voltar') telaTestes();
+      else if (b.dataset.m === 'assistir') iniciarPartida('bots');
+    });
+  }
+
+  // ---------- Mesa livre: monte a situação que quiser (Palhaços, mãos, Senhores em campo, PV...) ----------
+
+  function telaMesaLivre() {
+    const lv = cfg.livre || (cfg.livre = { pal: ['infartitte', 'paumol'], oponente: 'parado', nivel: 'medio', mao: 'vazia' });
+    const grupo = (chave, opcoes, k) => `<div class="grupo" data-l="${chave}${k != null ? ':' + k : ''}">${opcoes.map(([v, r]) =>
+      `<button data-v="${v}" class="${(k != null ? lv[chave][k] : lv[chave]) === v ? 'ativo' : ''}">${r}</button>`).join('')}</div>`;
+    const palhacos = P.LISTA.map(pal => [pal.id, `${SIMB[pal.naipe]} ${pal.nome}`]);
+    modal(`<div class="menu-tema">
+      <h2 class="titulo-etapa">${t('teste.livre')}</h2>
+      <p class="nota">${t('teste.livreNota2')}</p>
+      <div class="opcao"><label>${t('teste.seuPalhaco')}</label>${grupo('pal', palhacos, 0)}</div>
+      <div class="opcao"><label>${t('teste.palhacoOponente')}</label>${grupo('pal', palhacos, 1)}</div>
+      <div class="opcao"><label>${t('teste.oponente')}</label>${grupo('oponente', [['parado', t('teste.parado')], ['bot', t('teste.botJoga')]])}</div>
+      <div class="opcao"><label>${t('menu.dificuldade')}</label>${grupo('nivel', NIVEIS_BOT.map(n => [n, NOME_NIVEL[n]]))}</div>
+      <div class="opcao"><label>${t('teste.maoInicial')}</label>${grupo('mao', [['vazia', t('teste.maoVazia')], ['normal', t('teste.maoNormal')]])}</div>
+      <div class="acoes-menu"><button class="btn" data-m="voltar">${t('btn.voltar')}</button>
+        <button class="btn principal grande" data-m="comecar">🛠 ${t('teste.montar')}</button></div></div>`,
+    ev => {
+      const g = ev.target.closest('[data-l] [data-v]');
+      if (g) {
+        const [chave, k] = g.parentElement.dataset.l.split(':');
+        if (k != null) lv[chave][Number(k)] = g.dataset.v;
+        else lv[chave] = g.dataset.v;
+        return marcarGrupo(g);
+      }
+      const b = ev.target.closest('[data-m]');
+      if (!b) return;
+      if (b.dataset.m === 'voltar') telaTestes();
+      else if (b.dataset.m === 'comecar') iniciarMesaLivre();
+    });
+  }
+
+  function iniciarMesaLivre() {
+    const lv = cfg.livre;
+    cfg.modo = 'livre';
+    partida++;
+    Som.musica('partida');
+    fecharModal();
+    esconderAnuncio();
+    SS.Dados.cancelar();
+    posturaAnterior = {};
+    viradoAnterior = {};
+    maoVista = [null, null];
+    campoVisto = [null, null];
+    cemVisto = [new Set(), new Set()];
+    eu = 0;
+    definirLados(0);
+    $('[data-acao="reiniciar"]').hidden = false;
+    M.definirRng(Math.random);
+    revanche = { minha: false, dele: false };
+    palhacos = lv.pal.slice();
+    const nomes = palhacos.map(x => P.get(x).nome);
+    if (nomes[0] === nomes[1]) nomes[1] += ' 2';
+    jogo = M.criarJogo({ nomes, primeiro: 0, decks: [0, 1].map(k => M.cartasDoDeck(M.contagemPadrao(), k)), palhacos });
+    ui = novoUi();
+    for (const [p, j] of jogo.jogadores.entries()) {
+      if (lv.mao === 'normal') { M.escolherFiguras(jogo, p, Bot.escolherFiguras(jogo, p, 'medio')); jogo.fase = 'abertura'; }
+      j.abertura = { figuras: [], mulligan: false, pronto: true };
+    }
+    // Turno 2: quem joga primeiro já pode atacar (no turno 1 não pode).
+    Object.assign(jogo, { turno: 2, vez: 0, fase: 'principal', acoes: M.ACOES_POR_TURNO, sumonados: 0, asesTurno: 0, poderUsado: false });
+    M.registrar(jogo, t('livre.log'));
+    render();
+    abrirEditorLivre();
+  }
+
+  // Painel do editor da mesa livre (fica no canto da tela durante a partida).
+  const RANKS_FIG = ['J', 'Q', 'K'], RANKS_NUM = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+  let editorLado = 0, editorSeq = 0;
+  function abrirEditorLivre() {
+    let el = $('#editor-livre');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'editor-livre';
+      document.body.appendChild(el);
+      el.addEventListener('click', aoClicarEditor);
+    }
+    desenharEditor();
+  }
+  function fecharEditorLivre() {
+    const el = $('#editor-livre');
+    if (el) el.remove();
+  }
+  function desenharEditor() {
+    const el = $('#editor-livre');
+    if (!el || !jogo) return;
+    const p = editorLado, j = jogo.jogadores[p];
+    const opcoesSel = (nome, lista) => `<select data-e="${nome}">${lista.map(v => `<option value="${v}">${v}</option>`).join('')}</select>`;
+    const naipes = `<select data-e="NOME">${M.NAIPES.map(n => `<option value="${n}">${SIMB[n]} ${NOME_NAIPE[n]}</option>`).join('')}</select>`;
+    const unidades = j.campo.map((u, i) => {
+      if (!u) return '';
+      const vida = u.tipo === 'as' ? '' : `${M.resistencia(jogo, p, i) - u.hits}/${M.resistencia(jogo, p, i)}`;
+      return `<div class="ed-unidade"><span>${i + 1}. ${escapar(M.nomeUnidade(u))} ${vida}</span>
+        ${u.tipo === 'senhor' ? `<button data-ed="hit:${i}:1">+hit</button><button data-ed="hit:${i}:-1">−hit</button><button data-ed="ativo:${i}">${u.ativo ? '⤵' : '⤴'}</button>` : ''}
+        <button data-ed="tirar:${i}">✕</button></div>`;
+    }).join('');
+    el.classList.toggle('fechado', !!ui.editorFechado);
+    el.innerHTML = `<div class="ed-topo"><b>🛠 ${t('livre.editor')}</b><button data-ed="minimizar">${ui.editorFechado ? '▢' : '—'}</button></div>
+      <div class="ed-corpo">
+      <div class="ed-linha ed-lados"><button data-ed="lado:0" class="${p === 0 ? 'ativo' : ''}">${t('livre.voce')}</button><button data-ed="lado:1" class="${p === 1 ? 'ativo' : ''}">${t('livre.oponente')}</button></div>
+      <div class="ed-linha"><label>PV</label><button data-ed="pv:-5">−5</button><button data-ed="pv:-1">−1</button><b>${j.pv}</b><button data-ed="pv:1">+1</button><button data-ed="pv:5">+5</button></div>
+      <div class="ed-titulo">${t('livre.mao')} (${j.mao.length})</div>
+      <div class="ed-linha">${opcoesSel('rank', RANKS_FIG.concat(RANKS_NUM))}${naipes.replace('NOME', 'naipe')}<button data-ed="mao">${t('livre.porNaMao')}</button></div>
+      <div class="ed-linha"><button data-ed="aleatoria">${t('livre.aleatoria')}</button><button data-ed="limparMao">${t('livre.limparMao')}</button></div>
+      <div class="ed-titulo">${t('livre.campo')}</div>
+      <div class="ed-linha">${opcoesSel('fig', RANKS_FIG)}${naipes.replace('NOME', 'figNaipe')}<span>+</span>${opcoesSel('num', RANKS_NUM.slice(1))}${naipes.replace('NOME', 'numNaipe')}</div>
+      <div class="ed-linha"><button data-ed="invocar">${t('livre.invocar')}</button>${naipes.replace('NOME', 'asNaipe')}<button data-ed="as">${t('livre.porAs')}</button></div>
+      ${unidades || `<p class="ed-vazio">${t('livre.campoVazio')}</p>`}
+      <div class="ed-linha"><button data-ed="limparCampo">${t('livre.limparCampo')}</button></div>
+      <div class="ed-titulo">${t('livre.turno')}</div>
+      <div class="ed-linha"><button data-ed="acoes">${t('livre.acoes3')}</button><button data-ed="vez">${t('livre.darVez')}</button></div>
+      </div>`;
+    // mantém a escolha dos selects entre um redesenho e outro
+    for (const s of el.querySelectorAll('select')) if (editorSel[s.dataset.e]) s.value = editorSel[s.dataset.e];
+    el.querySelectorAll('select').forEach(s => { s.onchange = () => { editorSel[s.dataset.e] = s.value; }; });
+  }
+  const editorSel = {};
+  const valorSel = nome => { const s = $(`#editor-livre select[data-e="${nome}"]`); return s ? s.value : null; };
+  const novaCarta = (p, rank, naipe) => ({ id: `${p}-${rank}-${naipe}-L${++editorSeq}`, rank, naipe });
+  function aoClicarEditor(ev) {
+    const b = ev.target.closest('[data-ed]');
+    if (!b || !jogo) return;
+    const [acao, a1, a2] = b.dataset.ed.split(':');
+    const p = editorLado, j = jogo.jogadores[p];
+    const vazio = () => {
+      let melhor = -1;
+      for (let i = 0; i < M.ESPACOS; i++) if (!j.campo[i] && (melhor < 0 || Math.abs(i - (M.ESPACOS - 1) / 2) < Math.abs(melhor - (M.ESPACOS - 1) / 2))) melhor = i;
+      return melhor;
+    };
+    switch (acao) {
+      case 'minimizar': ui.editorFechado = !ui.editorFechado; break;
+      case 'lado': editorLado = Number(a1); break;
+      case 'pv': j.pv = Math.max(1, j.pv + Number(a1)); break;
+      case 'mao': j.mao.push(novaCarta(p, valorSel('rank'), valorSel('naipe'))); break;
+      case 'aleatoria': {
+        const ranks = RANKS_FIG.concat(RANKS_NUM);
+        j.mao.push(novaCarta(p, ranks[Math.floor(Math.random() * ranks.length)], M.NAIPES[Math.floor(Math.random() * 4)]));
+        break;
+      }
+      case 'limparMao': j.cemiterio.push(...j.mao.splice(0)); break;
+      case 'invocar': case 'as': {
+        const i = vazio();
+        if (i < 0) break;
+        if (acao === 'as') {
+          const c = novaCarta(p, 'A', valorSel('asNaipe'));
+          j.campo[i] = { uid: jogo.proximoUid++, tipo: 'as', carta: c, naipe: c.naipe };
+        } else {
+          const f = novaCarta(p, valorSel('fig'), valorSel('figNaipe')), n = novaCarta(p, valorSel('num'), valorSel('numNaipe'));
+          // (entrou num turno anterior: já pode atacar)
+          j.campo[i] = { uid: jogo.proximoUid++, tipo: 'senhor', figura: f, numero: n, hits: 0, ativo: true, atacou: false,
+            ataques: f.naipe === n.naipe && f.naipe === 'ouros' ? 2 : 1, entrou: jogo.turno - 1, bonus: [], berserk: null };
+        }
+        break;
+      }
+      case 'hit': {
+        const u = j.campo[Number(a1)];
+        if (u) u.hits = Math.max(0, Math.min(M.resistencia(jogo, p, Number(a1)) - 1, u.hits + Number(a2)));
+        break;
+      }
+      case 'ativo': { const u = j.campo[Number(a1)]; if (u) u.ativo = !u.ativo; break; }
+      case 'tirar': j.campo[Number(a1)] = null; break;
+      case 'limparCampo': j.campo.fill(null); break;
+      case 'acoes': if (jogo.vez === p) jogo.acoes = M.ACOES_POR_TURNO; break;
+      case 'vez': {
+        if (ui.ocupado || jogo.fase !== 'principal') break;
+        Object.assign(jogo, { vez: p, fase: 'principal', acoes: M.ACOES_POR_TURNO, sumonados: 0, asesTurno: 0, poderUsado: false, combate: null, desafio: null });
+        jogo.turno = Math.max(2, jogo.turno + 1);
+        for (const u of j.campo) if (u && u.tipo === 'senhor') Object.assign(u, { ativo: true, atacou: false, ataques: M.naipado(u) === 'ouros' ? 2 : 1 });
+        ui.sel = []; ui.pend = null; ui.destino = null; ui.ataques = [];
+        render();
+        desenharEditor();
+        if (controle(p) === 'bot') turnoBot(partida);
+        return;
+      }
+    }
+    ui.sel = ui.sel.filter(id => j.mao.some(c => c.id === id));
+    render();
+    desenharEditor();
   }
 
   function telaOpcoes(voltar) {
