@@ -3747,7 +3747,7 @@ window.SS = window.SS || {};
     const bandeira = (id, arq, nome) => `<button class="${idioma === id ? 'ativo' : ''}" data-idioma="${id}" title="${nome}" aria-label="${nome}"><img src="arte/menu/${arq}" alt="" draggable="false"></button>`;
     modal(`<div class="menu-tema inicio-novo"><div class="palco-menu">
       <button class="btn-tutorial" data-m="tutorial">${t('menu.tutorialBotao')}${feito ? ' ✓' : ''}</button>
-      <div class="idiomas">${bandeira('pt', 'bandeira-br.webp', 'Português')}${bandeira('en', 'bandeira-us.webp', 'English')}</div>
+      <div class="idiomas">${bandeira('pt', 'bandeira-br.svg', 'Português')}${bandeira('en', 'bandeira-us.svg', 'English')}</div>
       <button class="btn-engrenagem" data-m="opcoes" title="${t('menu.opcoes')}" aria-label="${t('menu.opcoes')}">⚙&#xFE0E;</button>
       <div class="leque-inicio">${P.LISTA.map((pal, k) => `<img src="${pal.carta}" alt="" style="--i:${k}" draggable="false">`).join('')}</div>
       ${logo}
