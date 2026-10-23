@@ -3520,9 +3520,8 @@ window.SS = window.SS || {};
     Som.tocar(venceu === false ? 'derrota' : 'vitoria');
     const titulo = cfg.modo === 'bots' ? t('faixa.venceu', { j: escapar(jogo.jogadores[v].nome) }) : t(venceu ? 'fim.vitoria' : 'fim.derrota');
     const online = cfg.modo === 'online';
-    // Vitória: fogos e aplausos; derrota: tomates na tela e vaia (por cima dos sons de vitória/derrota).
+    // Vitória: fogos de artifício; derrota: tomates na tela (só o visual: o som é o de vitória/derrota gravado).
     setTimeout(() => { if (venceu === false) festaTomates(); else festaFogos(); }, 60);
-    setTimeout(() => (venceu === false ? Som.vaia() : Som.aplausos()), venceu === false ? 700 : 500);
     modal(`<div class="tela-fim ${venceu === false ? 'derrota' : 'vitoria'}"><h2 class="titulo-fim-grande">${titulo}</h2>
       <p class="fim-turno">${t('fim.turno', { n: jogo.turno })}</p>
       ${online && revanche.dele ? `<p class="nota destaque">${t('on.amigoQuerRevanche', { j: escapar(jogo.jogadores[1 - eu].nome) })}</p>` : ''}
@@ -3555,7 +3554,6 @@ window.SS = window.SS || {};
     const estouro = () => {
       if (!festaAtiva(inicio, 7000)) return camada.remove();
       const x = 12 + Math.random() * 76, y = 12 + Math.random() * 40, cor = cores[Math.floor(Math.random() * cores.length)], cor2 = cores[Math.floor(Math.random() * cores.length)];
-      Som.fogos();
       const n = 30;
       for (let k = 0; k < n; k++) {
         const f = document.createElement('i');
@@ -3596,7 +3594,6 @@ window.SS = window.SS || {};
         { transform: 'translate(-50%, -50%) scale(1.5) rotate(400deg)' },
       ], { duration: 650, easing: 'ease-in' }).onfinish = () => {
         tom.remove();
-        Som.tomate();
         const s = document.createElement('div');
         s.className = 'tomate-splat';
         s.style.left = alvoX + 'vw'; s.style.top = alvoY + 'vh';
