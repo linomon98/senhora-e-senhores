@@ -77,6 +77,26 @@ window.SS = window.SS || {};
 
   const valido = s => !!s && M.validarDeck(s.cont).length === 0;
 
+  // ---------- Decks dos bots (área de testes) ----------
+  // Para cada Palhaço: 4 espaços e qual deles é o padrão do bot. Sem padrão (ou inválido), o bot usa o deck temático.
+  const CHAVE_BOT = 'senhora-e-senhores:decks-bot';
+  function carregarBot() {
+    try {
+      const v = JSON.parse(localStorage.getItem(CHAVE_BOT));
+      if (v && typeof v === 'object') return v;
+    } catch (err) { /* sem armazenamento */ }
+    return {};
+  }
+  function doBot(pal) {
+    const d = carregarBot()[pal] || {};
+    return { slots: Array.from({ length: ESPACOS }, (_, k) => (Array.isArray(d.slots) && d.slots[k]) || null), padrao: Number.isInteger(d.padrao) ? d.padrao : null };
+  }
+  // Contagem que o bot com esse Palhaço usa nas partidas.
+  function deckDoBot(pal) {
+    const d = doBot(pal), s = d.padrao != null ? d.slots[d.padrao] : null;
+    return valido(s) ? s.cont : SS.Palhacos.get(pal).deck;
+  }
+
   // Decks que podem ser usados numa partida.
   function opcoes() {
     const r = [{ id: 'padrao', nome: tr('dk.padrao') }];
@@ -99,6 +119,8 @@ window.SS = window.SS || {};
   // pedido: ação que pede um segundo clique para confirmar (apagar, copiar por cima de um baralho).
   // animar: 'aba' / 'vista' quando a troca acabou de acontecer (as cartas entram pulando só nessa hora).
   let slots = null, atual = 0, aba = 'paus', vista = 1, editando = false, aoVoltar = null, avisoSalvo = '', pedido = null, extras = {}, animar = null;
+  // palBot: Palhaço cujos decks de bot estão abertos (null no deckbuilder normal); padraoBot: espaço padrão dele.
+  let palBot = null, padraoBot = null;
   try { vista = localStorage.getItem(CHAVE_VISTA) === '2' ? 2 : 1; } catch (err) { /* fica na vista 1 */ }
 
   function tela() {
@@ -125,10 +147,12 @@ window.SS = window.SS || {};
   }
 
   // extras.opcoes(volta): abre as opções do jogo e chama volta() ao fechar.
+  // extras.bot: abre o deckbuilder dos decks de bot (escolhendo o Palhaço em cima).
   function abrir(voltar, mais) {
     aoVoltar = voltar;
     extras = mais || {};
-    slots = carregar();
+    palBot = extras.bot ? (palBot || SS.Palhacos.LISTA[0].id) : null;
+    carregarEspacos();
     atual = 0;
     editando = false;
     desenhar();
@@ -143,8 +167,18 @@ window.SS = window.SS || {};
 
   const slotAtual = () => (typeof atual === 'number' ? slots[atual] : null);
 
+  function carregarEspacos() {
+    if (!palBot) { slots = carregar(); return; }
+    const d = doBot(palBot);
+    slots = d.slots;
+    padraoBot = d.padrao;
+  }
+
   function guardar() {
-    avisoSalvo = salvar(slots) ? 'salvo' : 'naoSalvo';
+    if (!palBot) { avisoSalvo = salvar(slots) ? 'salvo' : 'naoSalvo'; return; }
+    const todos = carregarBot();
+    todos[palBot] = { slots, padrao: padraoBot };
+    try { localStorage.setItem(CHAVE_BOT, JSON.stringify(todos)); avisoSalvo = 'salvo'; } catch (err) { avisoSalvo = 'naoSalvo'; }
   }
 
   // Decks prontos (só leitura): o deck temático de cada Palhaço, na caixinha da cor dele.
@@ -224,10 +258,10 @@ window.SS = window.SS || {};
 
   function painelLista() {
     const meus = slots.map((s, k) => (s
-      ? `<button class="db-caixa${k === atual ? ' atual' : ''}${valido(s) ? '' : ' incompleto'}" data-slot-deck="${k}" title="${escapar(s.nome || `Deck ${k + 1}`)}">${caixa(visualDe(s, k), s.nome || `Deck ${k + 1}`)}</button>`
+      ? `<button class="db-caixa${k === atual ? ' atual' : ''}${valido(s) ? '' : ' incompleto'}" data-slot-deck="${k}" title="${escapar(s.nome || `Deck ${k + 1}`)}">${caixa(visualDe(s, k), s.nome || `Deck ${k + 1}`)}${palBot && padraoBot === k ? `<b class="db-estrela" title="${tr('db.ehPadrao')}">★</b>` : ''}</button>`
       : `<button class="db-caixa nova${k === atual ? ' atual' : ''}" data-slot-deck="${k}" title="${tr('db.novo')}"><span class="db-mais">+</span><small>${tr('db.novo')}</small></button>`)).join('');
     const prs = prontos().map(p => `<button class="db-caixa pronto${p.id === atual ? ' atual' : ''}" data-pronto="${p.id}" title="${escapar(p.nome)}">${caixa(p.visual, null)}</button>`).join('');
-    return `<aside class="db-lista"><h2>${tr('db.meus')}</h2><div class="db-grade">${meus}</div><hr>
+    return `<aside class="db-lista"><h2>${tr(palBot ? 'db.meusBot' : 'db.meus')}</h2><div class="db-grade">${meus}</div><hr>
       <h2>${tr('db.prontos')}</h2><div class="db-grade">${prs}</div></aside>`;
   }
 
@@ -243,6 +277,12 @@ window.SS = window.SS || {};
       acoes = `<button class="db-btn" data-cmd="auto" title="${tr('dk.autoTitulo')}">${tr('db.padrao')}</button>
         <button class="db-btn" data-cmd="limpar">${tr('btn.limpar')}</button>
         <button class="db-btn perigo${pedido === 'apagar' ? ' confirmar' : ''}" data-cmd="apagar">${tr(pedido === 'apagar' ? 'db.certeza' : 'db.apagar')}</button>`;
+      // Decks de bot: escolher este espaço como o deck que o bot desse Palhaço usa.
+      if (palBot) {
+        const ehPadrao = padraoBot === atual, ok = M.validarDeck(d.cont).length === 0;
+        acoes = `<button class="db-btn principal estrela${ehPadrao ? ' ativa' : ''}" data-cmd="padraoBot"${ok || ehPadrao ? '' : ' disabled'}>${tr(ehPadrao ? 'db.ehPadrao' : 'db.usarPadrao')}</button>
+          <p class="db-nota">${tr(ehPadrao ? 'db.padraoNotaSim' : ok ? 'db.padraoNota' : 'db.padraoInvalido', { p: SS.Palhacos.get(palBot).nome })}</p>` + acoes;
+      }
     }
     return `<aside class="db-limites"><h2>${tr('db.limites')}</h2>
       <div class="db-limite${r.letras > R.letras ? ' passou' : ''}"><small>${tr('db.letras')}</small><b>${r.letras}/${R.letras}</b></div>
@@ -293,7 +333,9 @@ window.SS = window.SS || {};
     el.innerHTML = `<div class="deck-palco">
       <button class="db-btn voltar" data-cmd="voltar">← ${tr('btn.voltarMenu')}</button>
       ${extras.opcoes ? `<button class="db-engrenagem" data-cmd="opcoes" title="${tr('menu.opcoes')}" aria-label="${tr('menu.opcoes')}">⚙&#xFE0E;</button>` : ''}
-      <h1 class="db-titulo">${tr('db.titulo')}</h1>
+      <h1 class="db-titulo">${tr(palBot ? 'db.tituloBot' : 'db.titulo')}</h1>
+      ${palBot ? `<div class="db-palhacos">${SS.Palhacos.LISTA.map(p => `<button class="db-palhaco cor-${p.cor}${p.id === palBot ? ' ativo' : ''}" data-palbot="${p.id}">
+        <img src="arte/naipes/${p.naipe}.webp" alt="" draggable="false">${p.nome}${doBot(p.id).padrao != null ? ' ★' : ''}</button>`).join('')}</div>` : ''}
       <div class="db-vistas">${[1, 2].map(n => `<button class="db-vista${vista === n ? ' ativa' : ''}" data-vista="${n}" title="${tr('db.vista' + n)}">${n}</button>`).join('')}</div>
       ${painelLista()}${painelDeck(d)}${painelLimites(d)}${colecao(d)}
       ${editando && d && !d.leitura ? painelEditar(d) : ''}
@@ -398,6 +440,11 @@ window.SS = window.SS || {};
     if (b) {
       const cmd = b.dataset.cmd;
       if (cmd === 'voltar') return fechar();
+      if (cmd === 'padraoBot' && palBot && s) {
+        padraoBot = padraoBot === atual ? null : atual;
+        guardar();
+        return desenhar();
+      }
       if (cmd === 'opcoes' && extras.opcoes) {
         tela().hidden = true;
         return extras.opcoes(() => { tela().hidden = false; desenhar(); });
@@ -414,6 +461,7 @@ window.SS = window.SS || {};
       if (cmd === 'apagar' && s) {
         if (antes !== 'apagar') { pedido = 'apagar'; return desenhar(); }
         slots[atual] = null;
+        if (padraoBot === atual) padraoBot = null;
       }
       guardar();
       return desenhar();
@@ -421,6 +469,15 @@ window.SS = window.SS || {};
     const pr = t.closest('[data-pronto]');
     if (pr) {
       atual = pr.dataset.pronto;
+      avisoSalvo = '';
+      editando = false;
+      return desenhar();
+    }
+    const pb = t.closest('[data-palbot]');
+    if (pb) {
+      palBot = pb.dataset.palbot;
+      carregarEspacos();
+      atual = 0;
       avisoSalvo = '';
       editando = false;
       return desenhar();
@@ -459,5 +516,5 @@ window.SS = window.SS || {};
 
   const escapar = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 
-  SS.Decks = { abrir, opcoes, contagemPara, caixa, caixaDe };
+  SS.Decks = { abrir, opcoes, contagemPara, caixa, caixaDe, deckDoBot };
 })(window.SS);

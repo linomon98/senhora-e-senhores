@@ -3166,7 +3166,7 @@ window.SS = window.SS || {};
       const rival = bc && bc.pal[1] !== 'aleatorio' ? bc.pal[1] : modo !== 'bots' && outros.includes(cfg.rival) ? cfg.rival : sortear(outros);
       palhacos = [meu, rival];
       contagens = bc ? [contagemDe(bc.deck[0], meu), contagemDe(bc.deck[1], rival)]
-        : [modo === 'bots' ? P.get(meu).deck : contagemEscolhida(), P.get(rival).deck];
+        : [modo === 'bots' ? SS.Decks.deckDoBot(meu) : contagemEscolhida(), SS.Decks.deckDoBot(rival)];
     }
     const nomes = palhacos.map(x => P.get(x).nome);
     if (nomes[0] === nomes[1]) nomes[1] += ' 2'; // dois amigos com o mesmo Palhaço
@@ -4117,6 +4117,7 @@ window.SS = window.SS || {};
         ${item('botxbot', '🎭', t('teste.botxbot'), t('teste.botxbotNota'))}
         ${item('simular', '📊', t('menu.simular'), t('teste.simularNota'))}
         ${item('livre', '🛠', t('teste.livre'), t('teste.livreNota'))}
+        ${item('deckbot', '🃏', t('teste.deckBot'), t('teste.deckBotNota'))}
       </div>
       <div class="acoes-menu"><button class="btn" data-m="voltar">${t('btn.voltar')}</button></div></div>`,
     ev => {
@@ -4126,12 +4127,16 @@ window.SS = window.SS || {};
       else if (b.dataset.m === 'botxbot') telaBots();
       else if (b.dataset.m === 'simular') simulacao(telaTestes);
       else if (b.dataset.m === 'livre') telaMesaLivre();
+      else if (b.dataset.m === 'deckbot') {
+        fecharModal();
+        SS.Decks.abrir(telaTestes, { bot: true, opcoes: volta => telaOpcoes(() => { fecharModal(); volta(); }) });
+      }
     });
   }
 
   // Opções de deck para um Palhaço: o temático dele, o padrão ou um dos decks montados.
   const decksParaEscolha = () => [{ id: 'palhaco', nome: t('menu.deckPalhaco') }].concat(SS.Decks.opcoes());
-  const contagemDe = (deck, pal) => (deck === 'palhaco' ? P.get(pal).deck : deck === 'padrao' ? M.contagemPadrao() : SS.Decks.contagemPara(deck));
+  const contagemDe = (deck, pal) => (deck === 'palhaco' ? SS.Decks.deckDoBot(pal) : deck === 'padrao' ? M.contagemPadrao() : SS.Decks.contagemPara(deck));
   // Nível de cada bot (no bot × bot da área de testes, cada lado tem o seu).
   const nivelDe = p => (cfg.modo === 'bots' && cfg.botsCfg ? cfg.botsCfg.nivel[p] : cfg.modo === 'livre' && cfg.livre ? cfg.livre.nivel : cfg.nivel);
 
@@ -4565,7 +4570,7 @@ window.SS = window.SS || {};
           try {
             const par = confrontos[s.feitos % confrontos.length];
             const r = Bot.partidaAutomatica([s.a, s.b], quemComeca(), 200, {
-              palhacos: par, decks: par.map((x, k) => M.cartasDoDeck(P.get(x).deck, k)),
+              palhacos: par, decks: par.map((x, k) => M.cartasDoDeck(SS.Decks.deckDoBot(x), k)),
             });
             if (r.vencedor == null) s.r.empates++;
             else {

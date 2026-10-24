@@ -2116,3 +2116,20 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 
 /* Caixinha pequena do deck nos botões da escolha antes da partida */
 .deck-mini { --u: .26px; display: inline-block; vertical-align: middle; margin: -6px 7px -6px -2px; }
+
+/* Decks de bot (área de testes): escolha do Palhaço e a estrela do deck padrão */
+.db-palhacos { left: 24px; top: 72px; display: flex; gap: 6px; z-index: 3; }
+.db-palhaco {
+  display: flex; align-items: center; gap: 4px; height: 46px; padding: 0 10px 0 6px; border: 3px solid #141414; border-radius: 14px; background: #fff;
+  font: 400 19px 'Marlboro', var(--fonte-titulo); color: #141414; box-shadow: 0 4px 0 #141414; cursor: pointer; transition: transform .15s cubic-bezier(.3, 1.6, .5, 1);
+}
+.db-palhaco img { width: 28px; height: 28px; object-fit: contain; }
+.db-palhaco:hover { transform: translateY(-3px); }
+.db-palhaco.ativo { transform: translateY(-3px) scale(1.06); }
+.db-palhaco.ativo.cor-azul { background: #8fb2ff; }
+.db-palhaco.ativo.cor-vermelho { background: #ff9a9a; }
+.db-palhaco.ativo.cor-verde { background: #8fe58a; }
+.db-palhaco.ativo.cor-dourado { background: #ffd666; }
+.db-estrela { position: absolute; right: -6px; top: -8px; z-index: 6; font: 400 28px/1 'Segoe UI Symbol', sans-serif; color: #ffc21a; -webkit-text-stroke: 2px #141414; pointer-events: none; }
+.db-btn.estrela.ativa { background: #7fe07a; }
+.db-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: 0 4px 0 #141414; }
