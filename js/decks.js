@@ -1,18 +1,45 @@
-/* Montagem de decks: 4 espaços salvos neste navegador, editor por contagem de cartas
-   e checagem das regras de limite (as regras ficam no motor: SS.Motor.REGRAS_DECK). */
+/* Deckbuilder: 4 baralhos salvos neste navegador (cada um com a sua caixinha personalizada: nome, ícone e cores),
+   os baralhos prontos dos Palhaços e a checagem das regras de limite (as regras ficam no motor: SS.Motor.REGRAS_DECK).
+   Em cima fica o baralho sendo montado (duas vistas: por naipes ou corrida); embaixo, todas as cartas em abas de naipe. */
 window.SS = window.SS || {};
 (function (SS) {
   'use strict';
   const M = SS.Motor, C = SS.Cartas;
   const CHAVE = 'senhora-e-senhores:decks';
+  const CHAVE_VISTA = 'senhora-e-senhores:deck-vista';
   const ESPACOS = 4;
-  const NAIPES = M.NAIPES;
-  const SIMB = M.SIMBOLO;
+  const NAIPES = ['paus', 'copas', 'espadas', 'ouros']; // (ordem das abas e das fileiras, como no desenho)
   const tr = (k, p) => SS.Idioma.t(k, p);
-  const NOME_NAIPE = new Proxy({}, { get: (_, k) => tr('naipe.' + String(k)) });
   const FIGURAS = ['J', 'Q', 'K'];
   const NUMEROS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
-  const NOME_FIG = new Proxy({}, { get: (_, k) => tr('carta.' + String(k) + '.pl') });
+
+  // ---------- Caixinhas: cores e ícones ----------
+
+  const CORES = {
+    verde: '#2e9e3a', azul: '#2a5fd6', vermelho: '#d42a2a', amarelo: '#f3b51b',
+    roxo: '#7b3fc4', rosa: '#ee5fa8', laranja: '#f17a1a', marrom: '#7a4a26',
+  };
+  const COR_ICONE = Object.assign({ preto: '#141414' }, CORES);
+  const ICONES = ['cavaleiro', 'porta', 'joker', 'espada', 'adaga', 'bainha', 'escudo', 'cura', 'dados', 'ases', 'cemiterio', 'espelho', 'maorei', 'maooito', 'zoio',
+    'naipe-paus', 'naipe-copas', 'naipe-espadas', 'naipe-ouros'];
+  const srcIcone = ic => (ic.startsWith('naipe-') ? `arte/naipes/${ic.slice(6)}.webp` : `arte/icones/deck/${ic}.webp`);
+  const COR_NAIPE = { paus: 'verde', copas: 'vermelho', espadas: 'azul', ouros: 'amarelo' };
+  const VISUAL_INICIAL = [
+    { tampa: 'verde', icone: 'cavaleiro', corIcone: 'preto' }, { tampa: 'vermelho', icone: 'porta', corIcone: 'preto' },
+    { tampa: 'amarelo', icone: 'joker', corIcone: 'preto' }, { tampa: 'azul', icone: 'espada', corIcone: 'preto' },
+  ];
+  const visualDe = (s, k) => Object.assign({}, VISUAL_INICIAL[k % VISUAL_INICIAL.length], s && s.visual);
+
+  // A caixinha de cigarro do baralho: corpo branco com o ícone e o nome, e a tampa pintada na cor escolhida.
+  function caixa(v, nome) {
+    const cor = COR_ICONE[v.corIcone];
+    const icone = `<span class="cx-icone${cor && v.corIcone !== 'preto' ? ' pintado' : ''}" style="--m:url('${srcIcone(v.icone)}'); --cor:${cor || '#141414'}">
+      <img src="${srcIcone(v.icone)}" alt="" draggable="false"></span>`;
+    return `<span class="maco cx" style="--tampa:${CORES[v.tampa] || CORES.verde}">
+      <img class="maco-baixo" src="arte/menu/caixa-baixo.webp" alt="" draggable="false">
+      ${icone}${nome != null ? `<span class="maco-nome">${escapar(nome)}</span>` : ''}
+      <span class="maco-tampa cx-tampa"><img src="arte/menu/tampa-pb.webp" alt="" draggable="false"></span></span>`;
+  }
 
   // ---------- Armazenamento ----------
 
@@ -24,9 +51,9 @@ window.SS = window.SS || {};
     return Array.from({ length: ESPACOS }, () => null);
   }
 
-  function salvar(slots) {
+  function salvar(lista) {
     try {
-      localStorage.setItem(CHAVE, JSON.stringify(slots));
+      localStorage.setItem(CHAVE, JSON.stringify(lista));
       return true;
     } catch (err) {
       return false;
@@ -53,26 +80,39 @@ window.SS = window.SS || {};
 
   // ---------- Tela ----------
 
-  let slots = null, atual = 0, aoVoltar = null, avisoSalvo = '';
+  // atual: número (um dos seus baralhos) ou id de um baralho pronto (só para ver). aba: naipe embaixo.
+  // pedido: ação que pede um segundo clique para confirmar (apagar, copiar por cima de um baralho).
+  let slots = null, atual = 0, aba = 'paus', vista = 1, editando = false, aoVoltar = null, avisoSalvo = '', pedido = null;
+  try { vista = localStorage.getItem(CHAVE_VISTA) === '2' ? 2 : 1; } catch (err) { /* fica na vista 1 */ }
 
   function tela() {
     let el = document.getElementById('tela-decks');
     if (!el) {
       el = document.createElement('div');
       el.id = 'tela-decks';
-      el.className = 'tela';
+      el.className = 'tela tela-deck';
       document.body.appendChild(el);
       el.addEventListener('click', aoClicar);
       el.addEventListener('contextmenu', aoClicarDireito);
       el.addEventListener('input', aoDigitar);
+      window.addEventListener('resize', encaixar);
     }
     return el;
+  }
+
+  // O palco tem 1600×900 "pixels do desenho" e encolhe junto para caber na janela.
+  function encaixar() {
+    const p = document.querySelector('#tela-decks .deck-palco');
+    if (!p) return;
+    const s = Math.min(innerWidth / 1600, innerHeight / 900);
+    p.style.transform = `translate(${(innerWidth - 1600 * s) / 2}px, ${(innerHeight - 900 * s) / 2}px) scale(${s})`;
   }
 
   function abrir(voltar) {
     aoVoltar = voltar;
     slots = carregar();
     atual = 0;
+    editando = false;
     desenhar();
     tela().hidden = false;
   }
@@ -83,106 +123,175 @@ window.SS = window.SS || {};
     if (aoVoltar) aoVoltar();
   }
 
-  const slotAtual = () => slots[atual];
+  const slotAtual = () => (typeof atual === 'number' ? slots[atual] : null);
 
   function guardar() {
     avisoSalvo = salvar(slots) ? 'salvo' : 'naoSalvo';
   }
 
-  // Decks prontos (só leitura): o padrão (baralho comum) e o deck temático de cada Palhaço.
-  // Servem de base: copie um para um dos seus espaços e edite a partir dele.
+  // Decks prontos (só leitura): o deck temático de cada Palhaço, na caixinha da cor dele.
   function prontos() {
-    return [{ id: 'padrao', nome: tr('dk.padrao'), sub: tr('dk.padraoSub'), cont: M.contagemPadrao() }]
-      .concat(SS.Palhacos.LISTA.map(p => ({ id: p.id, nome: tr('dk.deckDe', { p: p.nome }), sub: p.plano, cont: p.deck, naipe: p.naipe })));
+    return SS.Palhacos.LISTA.map(p => ({ id: p.id, nome: tr('dk.deckDe', { p: p.nome }), curto: p.nome, sub: p.plano, cont: p.deck,
+      visual: { tampa: COR_NAIPE[p.naipe], icone: 'naipe-' + p.naipe, corIcone: 'original' } }));
   }
   const prontoAtual = () => (typeof atual === 'string' ? prontos().find(p => p.id === atual) : null);
-
-  function celula(rank, naipe, cont, soLeitura) {
-    const chave = `${rank}-${naipe}`, n = cont[chave] || 0;
-    const vermelho = naipe === 'copas' || naipe === 'ouros';
-    const controles = soLeitura ? `<b>${n}</b>` : `<button data-menos="${chave}">−</button><b>${n}</b><button data-mais="${chave}">+</button>`;
-    return `<div class="celula${n ? ' tem' : ''}${soLeitura ? ' leitura' : ''}" data-carta-deck="${chave}" title="${M.nomeCarta({ rank, naipe })}${soLeitura ? '' : ' · ' + tr('dk.celula')}">
-      <div class="mini-carta">${C.frente({ rank, naipe })}</div>
-      <div class="celula-naipe${vermelho ? ' vermelho' : ''}">${SIMB[naipe]} ${NOME_NAIPE[naipe]}</div>
-      <div class="celula-controles${soLeitura ? ' leitura' : ''}">${controles}</div></div>`;
+  // O que está aberto em cima: { nome, cont, visual, leitura }.
+  function aberto() {
+    const pr = prontoAtual();
+    if (pr) return { nome: pr.nome, cont: pr.cont, visual: pr.visual, leitura: true, sub: pr.sub };
+    const s = slotAtual();
+    return s ? { nome: s.nome || `Deck ${atual + 1}`, cont: s.cont, visual: visualDe(s, atual), leitura: false } : null;
   }
 
-  function linhaRegra(ok, texto) {
-    return `<li class="${ok ? 'ok' : 'falha'}"><span>${ok ? '✓' : '✗'}</span>${texto}</li>`;
+  // ---------- Cartas ----------
+
+  const chaveDe = (rank, naipe) => `${rank}-${naipe}`;
+  const vermelha = naipe => naipe === 'copas' || naipe === 'ouros';
+  const face = (rank, naipe) => `<span class="db-face">${C.frente({ rank, naipe })}</span>`;
+  const nomeCarta = (rank, naipe) => M.nomeCarta({ rank, naipe });
+
+  // Vista 1: uma fileira por naipe, com as Letras (J Q K) e os Números (Ás a 10) em leque; o que falta fica em branco.
+  function vistaNaipes(d) {
+    const pilha = (rank, naipe) => {
+      const n = d.cont[chaveDe(rank, naipe)] || 0;
+      return n ? `<span class="db-mini tem" data-tirar="${chaveDe(rank, naipe)}" title="${nomeCarta(rank, naipe)}">${face(rank, naipe)}${n > 1 ? `<b class="db-copias">${n}</b>` : ''}</span>`
+        : '<span class="db-mini fantasma"></span>';
+    };
+    return `<div class="db-naipes">${NAIPES.map(naipe => `<div class="db-fileira">
+      <img class="db-fileira-naipe" src="arte/naipes/${naipe}.webp" alt="" draggable="false">
+      <span class="db-leque letras">${FIGURAS.map(r => pilha(r, naipe)).join('')}</span>
+      <span class="db-leque numeros">${NUMEROS.map(r => pilha(r, naipe)).join('')}</span></div>`).join('')}</div>`;
   }
 
-  function painelRegras(cont) {
-    const R = M.REGRAS_DECK, r = M.resumoDeck(cont);
-    const copiasOk = Object.values(cont).every(n => n <= R.copias);
-    return `<h3>${tr('dk.regrasLimite')}</h3>
-      <ul class="regras-deck">
-        ${linhaRegra(r.letras <= R.letras && r.letras + r.numeros > 0, tr('dk.rLetras', { n: R.letras, v: r.letras }))}
-        ${linhaRegra(r.numeros <= R.numeros, tr('dk.rNumeros', { n: R.numeros, v: r.numeros }))}
-        ${linhaRegra(copiasOk, tr('dk.rCopias', { n: R.copias }))}
-      </ul>
-      <p class="nota">${tr('dk.livre')}</p>`;
+  // Vista 2: as cartas corridas. Com pouca variedade é uma linha só de cartas grandes; quanto mais cartas
+  // diferentes, mais linhas e cartas menores. As cópias aparecem num número em cima da carta.
+  const AREA_CORRIDA = { w: 560, h: 316 }, PASSO = 0.62, PROPORCAO = 1.4;
+  function vistaCorrida(d) {
+    const cartas = [];
+    for (const naipe of NAIPES) for (const rank of FIGURAS.concat(NUMEROS)) {
+      const n = d.cont[chaveDe(rank, naipe)] || 0;
+      if (n) cartas.push({ rank, naipe, n });
+    }
+    if (!cartas.length) return `<div class="db-corrida vazia"><p>${tr('db.vazio')}</p></div>`;
+    // Escolhe quantas linhas deixam a carta maior: largura cabendo na área e altura cabendo nas linhas.
+    let melhor = null;
+    for (let linhas = 1; linhas <= 8; linhas++) {
+      const porLinha = Math.ceil(cartas.length / linhas);
+      const w = Math.min(130, AREA_CORRIDA.w / (1 + (porLinha - 1) * PASSO), (AREA_CORRIDA.h - (linhas - 1) * 8) / linhas / PROPORCAO);
+      if (!melhor || w > melhor.w) melhor = { linhas, porLinha, w };
+    }
+    const { porLinha, w } = melhor, linhas = [];
+    for (let k = 0; k < cartas.length; k += porLinha) linhas.push(cartas.slice(k, k + porLinha));
+    return `<div class="db-corrida" style="--w:${w.toFixed(1)}px; --passo:${(w * PASSO).toFixed(1)}px">${linhas.map(l => `<div class="db-linha">${l.map(c =>
+      `<span class="db-carta" data-tirar="${chaveDe(c.rank, c.naipe)}" title="${nomeCarta(c.rank, c.naipe)}">${face(c.rank, c.naipe)}${c.n > 1 ? `<b class="db-copias">${c.n}</b>` : ''}</span>`).join('')}</div>`).join('')}</div>`;
   }
 
-  // As cartas do deck em duas grades (Letras e Números); só leitura nos decks prontos.
-  function grades(cont, soLeitura) {
-    const r = M.resumoDeck(cont);
-    const linhasFig = FIGURAS.map(f => `<div class="linha-cartas"><span class="rot">${NOME_FIG[f]}</span>${NAIPES.map(n => celula(f, n, cont, soLeitura)).join('')}</div>`).join('');
-    const linhasNum = NAIPES.map(n => `<div class="linha-cartas"><span class="rot" style="color:${n === 'copas' || n === 'ouros' ? '#ff7b7b' : '#ddd'}">${SIMB[n]} ${NOME_NAIPE[n]}</span>${NUMEROS.map(v => celula(v, n, cont, soLeitura)).join('')}</div>`).join('');
-    return `<div class="editor-cartas">
-        <h3>${tr('dk.baralhoLetras')} <em>${r.letras}/${M.REGRAS_DECK.letras}</em></h3>
-        <div class="grade-deck">${linhasFig}</div>
-        <h3>${tr('dk.baralhoNumeros')} <em>${r.numeros}/${M.REGRAS_DECK.numeros}</em></h3>
-        <div class="grade-deck">${linhasNum}</div>
+  // Embaixo: todas as cartas do naipe da aba. Clique põe no baralho, botão direito tira.
+  function colecao(d) {
+    const R = M.REGRAS_DECK, r = M.resumoDeck(d ? d.cont : {});
+    const cartas = FIGURAS.concat(NUMEROS).map(rank => {
+      const chave = chaveDe(rank, aba), n = d ? d.cont[chave] || 0 : 0;
+      const cheio = !(d && d.leitura) && (n >= R.copias || (FIGURAS.includes(rank) ? r.letras >= R.letras : r.numeros >= R.numeros));
+      return `<span class="db-colecao-carta${n ? ' tem' : ''}${cheio ? ' cheia' : ''}${n >= R.copias ? ' max' : ''}" data-por="${chave}" title="${nomeCarta(rank, aba)}">
+        <b class="db-qtd">${n}/${R.copias}</b>${face(rank, aba)}</span>`;
+    }).join('');
+    return `<div class="db-abas">${NAIPES.map(n => `<button class="db-aba ${n}${n === aba ? ' ativa' : ''}" data-aba="${n}" title="${tr('naipe.' + n)}">
+        <img src="arte/naipes/${n}.webp" alt="${tr('naipe.' + n)}" draggable="false"></button>`).join('')}</div>
+      <div class="db-colecao ${aba}${d && d.leitura ? ' leitura' : ''}">
+        <div class="db-colecao-cartas">${cartas}</div>
+        <p class="db-dica">${tr(d && d.leitura ? 'db.dicaLeitura' : d ? 'db.dica' : 'db.dicaSem')}</p></div>`;
+  }
+
+  // ---------- Painéis ----------
+
+  function painelLista() {
+    const meus = slots.map((s, k) => (s
+      ? `<button class="db-caixa${k === atual ? ' atual' : ''}${valido(s) ? '' : ' incompleto'}" data-slot-deck="${k}" title="${escapar(s.nome || `Deck ${k + 1}`)}">${caixa(visualDe(s, k), s.nome || `Deck ${k + 1}`)}</button>`
+      : `<button class="db-caixa nova${k === atual ? ' atual' : ''}" data-slot-deck="${k}" title="${tr('db.novo')}"><span class="db-mais">+</span><small>${tr('db.novo')}</small></button>`)).join('');
+    const prs = prontos().map(p => `<button class="db-caixa pronto${p.id === atual ? ' atual' : ''}" data-pronto="${p.id}" title="${escapar(p.nome)}">${caixa(p.visual, null)}</button>`).join('');
+    return `<aside class="db-lista"><h2>${tr('db.meus')}</h2><div class="db-grade">${meus}</div><hr>
+      <h2>${tr('db.prontos')}</h2><div class="db-grade">${prs}</div></aside>`;
+  }
+
+  function painelLimites(d) {
+    const R = M.REGRAS_DECK, r = M.resumoDeck(d ? d.cont : {});
+    const erros = d ? M.validarDeck(d.cont) : [];
+    let acoes = '';
+    if (d && d.leitura) {
+      acoes = `<p class="db-rot">${tr('db.copiarPara')}</p><div class="db-copiar">${slots.map((s, k) =>
+        `<button class="db-btn mini${pedido === 'copiar:' + k ? ' perigo' : ''}" data-copiar="${atual}:${k}" title="${s ? escapar(s.nome || `Deck ${k + 1}`) : tr('dk.espaco', { n: k + 1 })}">${k + 1}${s ? '' : ' ✦'}</button>`).join('')}</div>
+        <p class="db-nota">${pedido && pedido.startsWith('copiar:') ? tr('db.substituir', { n: escapar(slots[Number(pedido.slice(7))].nome || '') }) : tr('db.copiarNota')}</p>`;
+    } else if (d) {
+      acoes = `<button class="db-btn" data-cmd="auto" title="${tr('dk.autoTitulo')}">${tr('db.padrao')}</button>
+        <button class="db-btn" data-cmd="limpar">${tr('btn.limpar')}</button>
+        <button class="db-btn perigo${pedido === 'apagar' ? ' confirmar' : ''}" data-cmd="apagar">${tr(pedido === 'apagar' ? 'db.certeza' : 'db.apagar')}</button>`;
+    }
+    return `<aside class="db-limites"><h2>${tr('db.limites')}</h2>
+      <div class="db-limite${r.letras > R.letras ? ' passou' : ''}"><small>${tr('db.letras')}</small><b>${r.letras}/${R.letras}</b></div>
+      <div class="db-limite${r.numeros > R.numeros ? ' passou' : ''}"><small>${tr('db.numeros')}</small><b>${r.numeros}/${R.numeros}</b></div>
+      ${d ? `<p class="db-status ${erros.length ? 'falha' : 'ok'}" title="${escapar(erros.join(' '))}">${erros.length ? '✗ ' + tr('dk.problemas', { n: erros.length }) : '✓ ' + tr('dk.prontoBtn')}</p>` : ''}
+      </aside><div class="db-acoes">${acoes}${avisoSalvo && d && !d.leitura ? `<small class="db-salvo">${tr('dk.' + avisoSalvo)}</small>` : ''}</div>`;
+  }
+
+  function painelDeck(d) {
+    if (!d) {
+      return `<section class="db-deck"><div class="db-vazio-espaco"><h3>${tr('dk.espacoVazio', { n: atual + 1 })}</h3>
+        <p>${tr('db.comece')}</p>
+        <div class="db-acoes-linha"><button class="db-btn principal" data-cmd="novo">${tr('db.criar')}</button>
+        <button class="db-btn" data-cmd="novoPadrao">${tr('db.criarPadrao')}</button></div></div></section>`;
+    }
+    const corpo = vista === 2 ? vistaCorrida(d) : vistaNaipes(d);
+    return `<section class="db-deck">
+      <div class="db-deck-caixa">${caixa(d.visual, d.leitura ? null : d.nome)}
+        ${d.leitura ? `<p class="db-deck-nome">${escapar(d.nome)}</p>` : `<button class="db-btn editar" data-cmd="editar">${tr('db.editar')}</button>`}</div>
+      <div class="db-deck-cartas${d.leitura ? ' leitura' : ''}">${corpo}</div></section>`;
+  }
+
+  // Personalizar a caixinha: nome, ícone, cor do ícone e cor da tampa (a caixa ao lado mostra como fica).
+  function painelEditar(d) {
+    const v = d.visual;
+    const amostras = (cores, campo, atualCor) => Object.entries(cores).map(([id, hex]) =>
+      `<button class="db-cor${id === atualCor ? ' ativa' : ''}" data-${campo}="${id}" style="--c:${hex}" title="${tr('db.cor.' + id)}" aria-label="${tr('db.cor.' + id)}"></button>`).join('');
+    return `<div class="db-editar-fundo" data-cmd="fecharEditar"></div>
+      <div class="db-editar">
+        <h2>${tr('db.personalizar')}</h2>
+        <div class="db-editar-corpo">
+          <div class="db-editar-previa">${caixa(v, d.nome)}</div>
+          <div class="db-editar-campos">
+            <label>${tr('db.nome')}</label>
+            <input class="nome-deck" value="${escapar(slotAtual().nome || '')}" placeholder="${tr('dk.nome')}" maxlength="14">
+            <label>${tr('db.corTampa')}</label><div class="db-cores">${amostras(CORES, 'tampa', v.tampa)}</div>
+            <label>${tr('db.icone')}</label><div class="db-icones">${ICONES.map(ic => `<button class="db-icone${ic === v.icone ? ' ativa' : ''}" data-icone="${ic}">
+              <img src="${srcIcone(ic)}" alt="" draggable="false"></button>`).join('')}</div>
+            <label>${tr('db.corIcone')}</label><div class="db-cores">${amostras(Object.assign({ original: '#ffffff' }, COR_ICONE), 'cor-icone', v.corIcone)}</div>
+          </div>
+        </div>
+        <button class="db-btn principal" data-cmd="fecharEditar">${tr('db.pronto')}</button>
       </div>`;
   }
 
-  // Botões para copiar um deck pronto para um dos espaços.
-  const botoesCopiar = id => slots.map((x, k) => `<button class="btn" data-copiar="${id}:${k}">→ ${x ? escapar(x.nome || `Deck ${k + 1}`) : tr('dk.espaco', { n: k + 1 })}</button>`).join('');
-
   function desenhar() {
-    const el = tela();
-    const s = typeof atual === 'number' ? slotAtual() : null, pr = prontoAtual();
-    const lista = slots.map((x, k) => {
-      const st = tr(!x ? 'dk.vazio' : valido(x) ? 'dk.pronto' : 'dk.incompleto');
-      return `<button class="slot${k === atual ? ' atual' : ''}${x && valido(x) ? ' valido' : ''}" data-slot-deck="${k}">
-        <b>${x ? escapar(x.nome || `Deck ${k + 1}`) : tr('dk.espaco', { n: k + 1 })}</b><small>${st}</small></button>`;
-    }).join('');
-    const listaProntos = prontos().map(p => `<button class="slot pronto${p.id === atual ? ' atual' : ''}" data-pronto="${p.id}">
-        <b>${p.naipe ? SIMB[p.naipe] + ' ' : ''}${escapar(p.nome)}</b><small>${tr('dk.soLeitura')}</small></button>`).join('');
-    let editor;
-    if (pr) {
-      editor = `<div class="editor-topo">
-          <div class="pronto-info"><h2>${escapar(pr.nome)}</h2><p class="nota">${pr.sub}</p></div>
-        </div>
-        <div class="copiar-para"><span>${tr('dk.usarBase')}</span>${botoesCopiar(pr.id)}</div>
-        <div class="editor-corpo">${grades(pr.cont, true)}<aside class="editor-regras">${painelRegras(pr.cont)}</aside></div>`;
-    } else if (!s) {
-      editor = `<div class="vazio-deck"><h3>${tr('dk.espacoVazio', { n: atual + 1 })}</h3>
-        <p class="nota">${tr('dk.comece')}</p>
-        <div class="acoes-menu">${prontos().map(p => `<button class="btn${p.id === 'padrao' ? ' principal' : ''}" data-copiar="${p.id}:${atual}">${p.naipe ? SIMB[p.naipe] + ' ' : ''}${escapar(p.nome)}</button>`).join('')}</div>
-        <div class="acoes-menu"><button class="btn" data-cmd="novo">${tr('dk.zero')}</button></div></div>`;
-    } else {
-      const erros = M.validarDeck(s.cont);
-      editor = `<div class="editor-topo">
-          <input class="nome-deck" value="${escapar(s.nome || '')}" placeholder="${tr('dk.nome')}" maxlength="24">
-          <button class="btn" data-cmd="auto" title="${tr('dk.autoTitulo')}">${tr('dk.auto')}</button>
-          <button class="btn" data-cmd="limpar">${tr('btn.limpar')}</button>
-          <button class="btn" data-cmd="apagar">${tr('dk.apagar')}</button>
-          <span class="status-deck ${erros.length ? 'falha' : 'ok'}" title="${escapar(erros.join(' '))}">${erros.length ? tr('dk.problemas', { n: erros.length }) : '✓ ' + tr('dk.prontoBtn')}</span>
-          <span class="salvo">${avisoSalvo ? tr('dk.' + avisoSalvo) : ''}</span>
-        </div>
-        <div class="editor-corpo">${grades(s.cont, false)}<aside class="editor-regras">${painelRegras(s.cont)}</aside></div>`;
-    }
-    el.innerHTML = `<div class="tela-caixa">
-      <div class="tela-cabecalho"><h1>${tr('menu.decks')}</h1><span class="nota">${tr('dk.ajuda')}</span>
-        <button class="btn principal" data-cmd="voltar">${tr('btn.voltarMenu')}</button></div>
-      <div class="deck-layout"><nav class="slots"><h4>${tr('dk.seusDecks')}</h4>${lista}<h4>${tr('dk.decksProntos')}</h4>${listaProntos}</nav><section class="editor">${editor}</section></div></div>`;
+    const el = tela(), d = aberto();
+    el.innerHTML = `<div class="deck-palco">
+      <button class="db-btn voltar" data-cmd="voltar">← ${tr('btn.voltarMenu')}</button>
+      <h1 class="db-titulo">${tr('db.titulo')}</h1>
+      <div class="db-vistas">${[1, 2].map(n => `<button class="db-vista${vista === n ? ' ativa' : ''}" data-vista="${n}" title="${tr('db.vista' + n)}">${n}</button>`).join('')}</div>
+      ${painelLista()}${painelDeck(d)}${painelLimites(d)}${colecao(d)}
+      ${editando && d && !d.leitura ? painelEditar(d) : ''}
+    </div>`;
+    encaixar();
   }
 
   function mudar(chave, delta) {
-    const s = typeof atual === 'number' ? slotAtual() : null;
+    const s = slotAtual();
     if (!s) return;
-    const n = Math.max(0, (s.cont[chave] || 0) + delta);
+    const R = M.REGRAS_DECK, r = M.resumoDeck(s.cont), n0 = s.cont[chave] || 0;
+    if (delta > 0) {
+      // Clique além do limite: não faz nada (a carta já aparece apagada).
+      const fig = FIGURAS.includes(chave.split('-')[0]);
+      if (n0 >= R.copias || (fig ? r.letras >= R.letras : r.numeros >= R.numeros)) return;
+    }
+    const n = Math.max(0, n0 + delta);
     if (n) s.cont[chave] = n;
     else delete s.cont[chave];
     guardar();
@@ -190,13 +299,34 @@ window.SS = window.SS || {};
   }
 
   function aoClicar(ev) {
-    const t = ev.target;
+    const t = ev.target, antes = pedido;
+    pedido = null;
+    const ab = t.closest('[data-aba]');
+    if (ab) { aba = ab.dataset.aba; return desenhar(); }
+    const vi = t.closest('[data-vista]');
+    if (vi) {
+      vista = Number(vi.dataset.vista);
+      try { localStorage.setItem(CHAVE_VISTA, String(vista)); } catch (err) { /* ignora */ }
+      return desenhar();
+    }
     const cp = t.closest('[data-copiar]');
     if (cp) {
       const [id, k] = cp.dataset.copiar.split(':');
       const pr = prontos().find(p => p.id === id);
-      slots[Number(k)] = { nome: pr.nome, cont: Object.assign({}, pr.cont) };
+      if (slots[Number(k)] && antes !== 'copiar:' + k) { pedido = 'copiar:' + k; return desenhar(); }
+      slots[Number(k)] = { nome: pr.curto, cont: Object.assign({}, pr.cont), visual: Object.assign({}, pr.visual) };
       atual = Number(k);
+      guardar();
+      return desenhar();
+    }
+    // Personalizar a caixinha
+    const s = slotAtual();
+    const cTampa = t.closest('[data-tampa]'), cIcone = t.closest('[data-icone]'), cCor = t.closest('[data-cor-icone]');
+    if (s && (cTampa || cIcone || cCor)) {
+      s.visual = visualDe(s, atual);
+      if (cTampa) s.visual.tampa = cTampa.dataset.tampa;
+      if (cIcone) s.visual.icone = cIcone.dataset.icone;
+      if (cCor) s.visual.corIcone = cCor.dataset.corIcone;
       guardar();
       return desenhar();
     }
@@ -204,11 +334,19 @@ window.SS = window.SS || {};
     if (b) {
       const cmd = b.dataset.cmd;
       if (cmd === 'voltar') return fechar();
+      if (cmd === 'editar') { editando = true; return desenhar(); }
+      if (cmd === 'fecharEditar') { editando = false; return desenhar(); }
       if (typeof atual !== 'number') return;
-      if (cmd === 'auto') slots[atual] = { nome: (slotAtual() && slotAtual().nome) || `Deck ${atual + 1}`, cont: M.contagemPadrao() };
-      if (cmd === 'novo') slots[atual] = { nome: `Deck ${atual + 1}`, cont: {} };
-      if (cmd === 'limpar' && slotAtual()) slotAtual().cont = {};
-      if (cmd === 'apagar') slots[atual] = null;
+      if (cmd === 'novo' || cmd === 'novoPadrao') {
+        slots[atual] = { nome: `Deck ${atual + 1}`, cont: cmd === 'novoPadrao' ? M.contagemPadrao() : {}, visual: visualDe(null, atual) };
+        editando = true;
+      }
+      if (cmd === 'auto' && s) s.cont = M.contagemPadrao();
+      if (cmd === 'limpar' && s) s.cont = {};
+      if (cmd === 'apagar' && s) {
+        if (antes !== 'apagar') { pedido = 'apagar'; return desenhar(); }
+        slots[atual] = null;
+      }
       guardar();
       return desenhar();
     }
@@ -216,38 +354,38 @@ window.SS = window.SS || {};
     if (pr) {
       atual = pr.dataset.pronto;
       avisoSalvo = '';
+      editando = false;
       return desenhar();
     }
     const sl = t.closest('[data-slot-deck]');
     if (sl) {
       atual = Number(sl.dataset.slotDeck);
       avisoSalvo = '';
+      editando = false;
       return desenhar();
     }
-    const mais = t.closest('[data-mais]'), menos = t.closest('[data-menos]');
-    if (mais) return mudar(mais.dataset.mais, 1);
-    if (menos) return mudar(menos.dataset.menos, -1);
-    const cel = t.closest('[data-carta-deck]');
-    if (cel) mudar(cel.dataset.cartaDeck, 1);
+    const por = t.closest('[data-por]'), tirar = t.closest('[data-tirar]');
+    if (por) return mudar(por.dataset.por, 1);
+    if (tirar) return mudar(tirar.dataset.tirar, -1);
   }
 
   function aoClicarDireito(ev) {
-    const cel = ev.target.closest('[data-carta-deck]');
+    const cel = ev.target.closest('[data-por], [data-tirar]');
     if (!cel) return;
     ev.preventDefault();
-    mudar(cel.dataset.cartaDeck, -1);
+    mudar(cel.dataset.por || cel.dataset.tirar, -1);
   }
 
   function aoDigitar(ev) {
-    if (!ev.target.classList.contains('nome-deck') || !slotAtual()) return;
-    slotAtual().nome = ev.target.value;
+    const s = slotAtual();
+    if (!ev.target.classList.contains('nome-deck') || !s) return;
+    s.nome = ev.target.value;
     guardar();
-    // Atualiza só a lista de espaços, para não perder o foco do campo de nome.
-    const botao = tela().querySelector(`[data-slot-deck="${atual}"] b`);
-    if (botao) botao.textContent = ev.target.value || `Deck ${atual + 1}`;
+    // Atualiza só os nomes nas caixinhas, para não perder o foco do campo.
+    for (const el of tela().querySelectorAll(`[data-slot-deck="${atual}"] .maco-nome, .db-deck-caixa .maco-nome, .db-editar-previa .maco-nome`)) el.textContent = ev.target.value || `Deck ${atual + 1}`;
   }
 
   const escapar = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 
-  SS.Decks = { abrir, opcoes, contagemPara };
+  SS.Decks = { abrir, opcoes, contagemPara, caixa };
 })(window.SS);

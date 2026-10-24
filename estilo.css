@@ -1932,3 +1932,158 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 #tut .regua-defesa .rg-barra > i { color: #141414 !important; }
 #tut .regua-defesa .rg-seta b { color: #fff !important; }
 #tut .regua-defesa.ignorou .rg-resultado { color: #1b8a2b !important; }
+
+/* ---------- Deckbuilder: palco de 1600×900 que encolhe para caber na janela (ver encaixar() em decks.js) ---------- */
+#tela-decks.tela-deck { padding: 0; overflow: hidden; background: #6e0b0b url('arte/menu/fundo-deck.webp') center / cover; color: #141414; user-select: none; }
+.deck-palco { position: absolute; left: 0; top: 0; width: 1600px; height: 900px; transform-origin: 0 0; --u: 1px; font-family: var(--fonte-ui); }
+.deck-palco > * { position: absolute; margin: 0; }
+.deck-palco h2, .deck-palco h3, .db-titulo, .db-vista, .db-btn, .db-limite, .db-deck-nome { font-family: 'Marlboro', var(--fonte-titulo); font-weight: 400; }
+.db-lista, .db-deck, .db-limites, .db-titulo, .db-editar {
+  background: #fff; border: 4px solid #141414; border-radius: 20px; box-shadow: 0 8px 0 #141414;
+}
+.db-lista { left: 182px; top: 133px; width: 191px; height: 629px; padding: 14px 10px; text-align: center; }
+.db-lista h2 { font-size: 33px; line-height: .95; margin: 0 0 10px; }
+.db-lista hr { border: 0; border-top: 2px solid #8a8a8a; margin: 14px 8px; }
+.db-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 4px; justify-items: center; }
+.db-caixa { position: relative; width: 82px; height: 108px; padding: 0; border: 0; border-radius: 12px; background: none; cursor: pointer; transition: transform .15s; }
+.db-caixa .maco.cx { --u: .6px; margin: 4px auto 0; }
+.db-caixa:hover { transform: translateY(-4px); }
+.db-caixa:hover .maco-tampa { transform: translateY(-14%) rotate(-4deg); }
+.db-caixa.atual { background: #ffe066; box-shadow: 0 0 0 3px #141414; }
+.db-caixa.nova { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 3px dashed #9a9a9a; color: #6a6a6a; }
+.db-caixa.nova.atual { border-color: #141414; color: #141414; }
+.db-mais { font: 400 40px/1 'Marlboro', var(--fonte-titulo); }
+.db-caixa.nova small { font-size: 11px; font-weight: 700; line-height: 1.1; }
+
+/* A caixinha (mesmo desenho da caixa do menu): tampa pintada por multiplicação, ícone pintado por "tela" (o preto vira a cor) */
+.deck-palco .maco.cx { position: relative; left: 0; top: 0; display: block; width: calc(126 * var(--u)); }
+.maco.cx .cx-tampa { display: block; isolation: isolate; }
+.maco.cx .cx-tampa img { display: block; width: 100%; }
+.maco.cx .cx-tampa::after {
+  content: ''; position: absolute; inset: 0; background: var(--tampa); mix-blend-mode: multiply;
+  -webkit-mask: url('arte/menu/tampa-pb.webp') 0 0 / 100% 100%; mask: url('arte/menu/tampa-pb.webp') 0 0 / 100% 100%;
+}
+.maco.cx .cx-icone { left: 30%; top: 46%; width: 50%; height: 31%; z-index: 3; isolation: isolate; pointer-events: none; }
+.maco.cx .cx-icone img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
+.maco.cx .cx-icone.pintado::after {
+  content: ''; position: absolute; inset: 0; background: var(--cor); mix-blend-mode: screen;
+  -webkit-mask: var(--m) center / contain no-repeat; mask: var(--m) center / contain no-repeat;
+}
+.maco.cx .maco-nome { top: 79%; font-size: calc(22 * var(--u)); overflow: hidden; text-overflow: ellipsis; }
+
+/* Título, abas de vista e voltar */
+.db-titulo { left: 575px; top: 46px; width: 417px; height: 102px; z-index: 3; display: grid; place-items: center; font-size: 76px; line-height: 1; padding-top: 6px; }
+.db-vistas { left: 1008px; top: 52px; display: flex; gap: 6px; align-items: flex-end; height: 81px; z-index: 1; }
+.db-vista { width: 62px; height: 70px; padding: 0; border: 4px solid #141414; border-bottom: 0; border-radius: 16px 16px 0 0; background: #ececec; font-size: 40px; cursor: pointer; }
+.db-vista.ativa { height: 81px; background: #fff; position: relative; z-index: 3; }
+.db-btn.voltar { left: 24px; top: 24px; }
+.db-btn { padding: 6px 16px; border: 3px solid #141414; border-radius: 12px; background: #fff; color: #141414; font-size: 22px; line-height: 1.1; box-shadow: 0 4px 0 #141414; cursor: pointer; transition: transform .12s, box-shadow .12s; }
+.db-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #141414; }
+.db-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #141414; }
+.db-btn.principal { background: #ffc21a; }
+.db-btn.perigo { color: #b0101e; }
+.db-btn.perigo.confirmar { background: #ff6b6b; color: #141414; }
+.db-btn.mini { min-width: 38px; padding: 4px 8px; font-size: 20px; white-space: nowrap; }
+
+/* O baralho sendo montado */
+.db-deck { left: 393px; top: 129px; width: 815px; height: 350px; z-index: 2; }
+.db-deck-caixa { position: absolute; left: 62px; top: 36px; width: 170px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.db-deck-caixa .maco.cx { --u: 1.2px; }
+.db-deck-caixa .db-btn.editar { margin-top: -6px; width: 170px; font-size: 40px; padding: 2px 0 4px; border-width: 4px; border-radius: 18px; box-shadow: 0 6px 0 #141414; position: relative; z-index: 5; }
+.db-deck-nome { margin: -4px 0 0; font-size: 26px; text-align: center; line-height: 1; }
+.db-deck-cartas { position: absolute; left: 262px; top: 34px; width: 530px; height: 290px; }
+.db-vazio-espaco { position: absolute; inset: 40px 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 8px; }
+.db-vazio-espaco h3 { margin: 0; font-size: 40px; }
+.db-vazio-espaco p { margin: 0 0 8px; font-size: 16px; max-width: 460px; }
+.db-acoes-linha { display: flex; gap: 12px; }
+
+.db-face, .db-face svg { display: block; width: 100%; height: 100%; }
+.db-face svg { border-radius: 7%; }
+.db-copias { position: absolute; top: -9px; left: -7px; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 11px; background: #141414; color: #fff; font: 800 13px/22px var(--fonte-ui); text-align: center; z-index: 2; box-shadow: 0 0 0 2px #fff; }
+
+/* Vista 1: fileiras por naipe */
+.db-naipes { display: flex; flex-direction: column; justify-content: space-between; height: 100%; }
+.db-fileira { display: flex; align-items: center; gap: 22px; height: 68px; }
+.db-fileira-naipe { width: 42px; height: 42px; object-fit: contain; }
+.db-leque { display: flex; }
+.db-mini { position: relative; width: 48px; height: 67px; border-radius: 6px; flex: none; transition: transform .12s; }
+.db-mini + .db-mini { margin-left: -18px; }
+.db-mini.fantasma { background: #fff; border: 1.5px solid #b9b9b9; box-shadow: inset 0 0 0 4px #fff, inset 0 0 0 5.5px #d2d2d2; }
+.db-mini.tem { cursor: pointer; filter: drop-shadow(1px 2px 0 rgba(0, 0, 0, .35)); }
+.db-mini.tem:hover, .db-carta:hover { transform: translateY(-6px); z-index: 3; }
+
+/* Vista 2: cartas corridas */
+.db-corrida { display: flex; flex-direction: column; justify-content: center; gap: 8px; height: 100%; }
+.db-corrida.vazia { align-items: center; text-align: center; color: #6a6a6a; font-size: 16px; }
+.db-linha { display: flex; justify-content: center; }
+.db-carta { position: relative; width: var(--w); aspect-ratio: 5 / 7; flex: none; cursor: pointer; transition: transform .12s; filter: drop-shadow(1px 2px 0 rgba(0, 0, 0, .35)); }
+.db-carta + .db-carta { margin-left: calc(var(--passo) - var(--w)); }
+.db-deck-cartas.leitura .db-mini.tem, .db-deck-cartas.leitura .db-carta { cursor: default; }
+
+/* Limites e ações */
+.db-limites { left: 1229px; top: 132px; width: 192px; padding: 12px 10px 14px; text-align: center; }
+.db-limites h2 { margin: 0 0 6px; font-size: 40px; line-height: 1; }
+.db-limite { display: flex; flex-direction: column; line-height: .9; margin-top: 6px; }
+.db-limite small { font-size: 22px; }
+.db-limite b { font-weight: 400; font-size: 52px; }
+.db-limite.passou b { color: #c41e2a; }
+.db-status { margin: 10px 0 0; font: 800 13px var(--fonte-ui); padding: 4px 6px; border-radius: 8px; }
+.db-status.ok { background: #c9f2c2; color: #155d1f; }
+.db-status.falha { background: #ffd1d1; color: #8c0f18; }
+.db-acoes { left: 1229px; top: 420px; width: 192px; display: flex; flex-direction: column; gap: 12px; align-items: stretch; }
+.db-acoes .db-btn { font-size: 21px; }
+.db-rot { margin: 0; font: 400 26px 'Marlboro', var(--fonte-titulo); color: #fff; text-shadow: 0 2px 0 #141414; text-align: center; }
+.db-copiar { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
+.db-colecao.leitura .db-colecao-carta:not(.tem) { opacity: .45; }
+.db-nota { margin: 0; font-size: 13px; font-weight: 700; color: #fff; text-align: center; text-shadow: 0 1px 2px #000; }
+.db-salvo { color: #fff; opacity: .75; text-align: center; font-size: 12px; }
+
+/* Embaixo: todas as cartas, em abas de naipe */
+.db-abas { left: 661px; top: 497px; height: 89px; display: flex; gap: 6px; align-items: flex-end; z-index: 3; }
+.db-aba { width: 90px; height: 78px; padding: 0; border: 4px solid #141414; border-bottom: 0; border-radius: 16px 16px 0 0; display: grid; place-items: center; cursor: pointer; }
+.db-aba img { width: 58px; height: 58px; object-fit: contain; filter: drop-shadow(1px 2px 0 rgba(0, 0, 0, .3)); }
+.db-aba.ativa { height: 89px; }
+.db-aba.ativa img { width: 66px; height: 66px; }
+.db-aba.paus, .db-colecao.paus { background: #08a010; }
+.db-aba.copas, .db-colecao.copas { background: #e64545; }
+.db-aba.espadas, .db-colecao.espadas { background: #1f56d8; }
+.db-aba.ouros, .db-colecao.ouros { background: #f5b528; }
+.db-colecao { left: 393px; top: 582px; width: 817px; height: 251px; border: 4px solid #141414; border-radius: 22px; box-shadow: 0 8px 0 #141414; }
+.db-colecao-cartas { position: absolute; left: 42px; right: 42px; top: 42px; display: flex; }
+.db-colecao-carta { position: relative; width: 118px; height: 165px; flex: none; cursor: pointer; transition: transform .14s; filter: drop-shadow(2px 3px 0 rgba(0, 0, 0, .35)); }
+.db-colecao-carta + .db-colecao-carta { margin-left: -67px; }
+.db-colecao-carta:hover { transform: translateY(-14px); z-index: 5; }
+.db-colecao-carta.cheia:not(.tem) { filter: grayscale(.8) brightness(.8); opacity: .6; cursor: not-allowed; }
+.db-colecao.leitura .db-colecao-carta { cursor: default; }
+.db-colecao.leitura .db-colecao-carta:hover { transform: none; }
+.db-qtd { position: absolute; left: 8px; top: -27px; padding: 3px 9px 2px; border-radius: 9px 9px 0 0; background: #1b2a44; color: #fff; font: 800 15px var(--fonte-ui); opacity: 0; transition: opacity .12s; }
+.db-colecao-carta.tem .db-qtd, .db-colecao-carta:hover .db-qtd { opacity: 1; }
+.db-colecao-carta.max .db-qtd { background: #b0101e; }
+.db-dica { position: absolute; left: 0; right: 0; bottom: 8px; margin: 0; text-align: center; font: 700 14px var(--fonte-ui); color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, .7); }
+
+/* Personalizar a caixinha */
+.db-editar-fundo { inset: 0; background: rgba(20, 0, 0, .55); z-index: 20; }
+.db-editar { left: 330px; top: 90px; width: 940px; padding: 20px 28px 24px; z-index: 21; }
+.db-editar h2 { margin: 0 0 12px; font-size: 48px; text-align: center; }
+.db-editar-corpo { display: grid; grid-template-columns: 250px 1fr; gap: 28px; align-items: start; }
+.db-editar-previa { display: grid; place-items: center; padding-top: 20px; }
+.db-editar-previa .maco.cx { --u: 1.75px; }
+.db-editar-campos { display: flex; flex-direction: column; gap: 6px; }
+.db-editar-campos label { font: 400 26px 'Marlboro', var(--fonte-titulo); margin-top: 6px; }
+.db-editar .nome-deck { width: 320px; font: 700 18px var(--fonte-ui); padding: 8px 12px; border: 3px solid #141414; border-radius: 10px; color: #141414; background: #fff; user-select: text; }
+.db-cores { display: flex; flex-wrap: wrap; gap: 8px; }
+.db-cor { width: 38px; height: 38px; padding: 0; border-radius: 50%; border: 3px solid #141414; background: var(--c); cursor: pointer; box-shadow: 0 3px 0 #141414; }
+.db-cor[data-cor-icone="original"] { background: conic-gradient(#08a010 0 25%, #e64545 0 50%, #1f56d8 0 75%, #f5b528 0); }
+.db-cor.ativa { outline: 4px solid #ffc21a; outline-offset: 2px; }
+.db-icones { display: grid; grid-template-columns: repeat(10, 54px); gap: 6px; }
+.db-icone { width: 54px; height: 54px; padding: 5px; border: 3px solid #141414; border-radius: 10px; background: #fff; cursor: pointer; display: grid; place-items: center; }
+.db-icone img { max-width: 100%; max-height: 100%; }
+.db-icone.ativa { background: #ffe066; }
+.db-editar > .db-btn.principal { display: block; margin: 16px 0 0 auto; font-size: 28px; padding: 6px 30px; }
+/* Padrão de naipes andando por cima do fundo vermelho (o mesmo do menu) */
+#tela-decks.tela-deck::before {
+  content: ''; position: fixed; left: 0; top: 0; width: calc(100vw + 32.16vh); height: 136vh; pointer-events: none;
+  background: url('arte/menu/naipes.webp') 0 0 / 32.16vh 36vh repeat; mix-blend-mode: multiply; opacity: .5;
+  animation: naipes-andam 26s linear infinite; will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) { #tela-decks.tela-deck::before { animation: none; } }
