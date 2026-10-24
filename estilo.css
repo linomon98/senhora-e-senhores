@@ -2087,3 +2087,5 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
   animation: naipes-andam 26s linear infinite; will-change: transform;
 }
 @media (prefers-reduced-motion: reduce) { #tela-decks.tela-deck::before { animation: none; } }
+/* A tampa da caixinha do deckbuilder com a mesma largura do corpo (o corpo ocupa ~7%–92% da caixa) */
+.maco.cx .maco-tampa { left: 7.5%; top: 5.2%; width: 83.9%; }
