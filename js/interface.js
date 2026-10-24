@@ -605,6 +605,12 @@ window.SS = window.SS || {};
     const ouro = ui.miraDado.ouro;
     Som.tocar('dado-adicional');
     ui.miraDado = null;
+    // A carta de Ouros (ou a ficha) é gasta já, e o dadinho voa da carta Dado adicional até o Senhor(a).
+    const carta = $('.carta-acao[data-acao="dado-adicional"]');
+    const acao = { tipo: 'dadoExtra', carta: ouro, alvo: uid };
+    enviarJogada({ t: 'acao', a: acao });
+    M.aplicarAcao(jogo, acao);
+    if (carta) voarIcone(carta, () => elUnidade(uid), '<span>🎲</span>', 'dado-voando', 0);
     if (jogo.fase === 'principal') {
       if (ui.voltarAoAtaque) voltarAoAtaque();
       else {
@@ -615,8 +621,6 @@ window.SS = window.SS || {};
     ui.sel = [];
     if (!M.atacantesAptos(jogo).includes(uid)) return render();
     if (!ui.ataques.some(a => a.atacante === uid)) adicionarAtaque(uid, 'jogador');
-    const at = ui.ataques.find(a => a.atacante === uid);
-    if (at && ourosLivres().includes(ouro)) at.ouros.push(ouro);
     render();
   }
 
@@ -2234,6 +2238,7 @@ window.SS = window.SS || {};
       <div class="pilha-senhor${estiloGiro(u, post)}"><div class="carta numero">${C.frente(u.numero)}</div><div class="carta figura">${C.frente(u.figura)}</div></div>
       <div class="selo-vida">${vida}</div>
       <div class="selo-atk">⚔ ${atk}${atk > base ? `<small>+${atk - base}</small>` : ''}${bonusGolpeCerteiro(p, u) ? `<small class="bonus-lanca">+${bonusGolpeCerteiro(p, u)}♠</small>` : ''}</div>
+      ${u.dadosExtra ? `<div class="selo-dado" title="${t('ui.dadoExtra', { n: u.dadosExtra })}">🎲${u.dadosExtra > 1 ? '×' + u.dadosExtra : ''}</div>` : ''}
       ${nai ? `<div class="selo-naipado">${SIMB[nai]}</div>` : ''}${tagsUnidade(u)}${selosPoder(u)}</div>`;
   }
 
@@ -2265,13 +2270,14 @@ window.SS = window.SS || {};
     const loc = M.localizar(jogo, a.atacante);
     const temOuros = ourosLivres().length > 0;
     const n = ui.ataques.length;
+    const guardados = ui.ataques.findIndex(x => x.atacante === a.atacante) === k ? loc.u.dadosExtra || 0 : 0;
     return `<div class="cb-item">
       <span class="cb-num">${k + 1}</span>
       <span class="cb-txt"><b>${M.nomeUnidade(loc.u)} <em>⚔${M.ataque(jogo, loc.p, loc.i)}</em></b><span>→ ${nomeAlvo(a)}</span>
         <span class="cb-ctrl">
           ${k > 0 ? `<button class="mini" data-acao="mover:${k}:-1" title="${t('chip.antes')}">▲</button>` : ''}
           ${k < n - 1 ? `<button class="mini" data-acao="mover:${k}:1" title="${t('chip.depois')}">▼</button>` : ''}
-          ${a.ouros.length ? `<span class="dados-extra">${t('chip.dados', { n: 1 + a.ouros.length })} <button class="mini" data-acao="menos-dado:${k}" title="${t('chip.devolverOuros')}">−</button></span>` : ''}
+          ${a.ouros.length ? `<span class="dados-extra">${t('chip.dados', { n: 1 + a.ouros.length + guardados })} <button class="mini" data-acao="menos-dado:${k}" title="${t('chip.devolverOuros')}">−</button></span>` : guardados ? `<span class="dados-extra">${t('chip.dados', { n: 1 + guardados })}</span>` : ''}
           ${temOuros ? `<button class="mini" data-acao="mais-dado:${k}" title="${t('chip.gastarOuros')}">${t('chip.maisDado')}</button>` : ''}
           <button class="mini" data-acao="remover-ataque:${k}" title="${t('chip.cancelar')}">✕</button>
         </span></span></div>`;
@@ -3366,6 +3372,10 @@ window.SS = window.SS || {};
     if (!a || typeof a !== 'object' || Array.isArray(a)) return false;
     const k = chaveJogada(a);
     if (M.acoesLegais(jogo).some(x => chaveJogada(x) === k)) return true;
+    if (a.tipo === 'dadoExtra') {
+      const l = M.localizar(jogo, a.alvo);
+      return jogo.fase === 'principal' && !!l && l.p === jogo.vez && M.podeAtacar(jogo, l.p, l.i) && M.ourosDisponiveis(jogo, jogo.vez).includes(a.carta);
+    }
     // Senhor(a) entrando num espaço ocupado (empurrando): vale se a mesma invocação é legal em algum espaço vazio.
     if (a.tipo !== 'sumonar' || a.sacrificio != null || !Number.isInteger(a.slot) || a.slot < 0 || a.slot >= M.ESPACOS) return false;
     const semSlot = x => chaveJogada(Object.assign({}, x, { slot: 0 }));

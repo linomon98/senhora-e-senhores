@@ -611,6 +611,17 @@ window.SS = window.SS || {};
       e.fase = 'ataque';
       return;
     }
+    // Dado adicional: gasta já 1 Ouros (ou a ficha do Ás de Ouros) e o Senhor(a) escolhido guarda +1 dado para o
+    // próximo ataque dele neste turno. Não gasta ação.
+    if (a.tipo === 'dadoExtra') {
+      const p = e.vez, l = localizar(e, a.alvo);
+      if (!l || l.p !== p || l.u.tipo !== 'senhor' || !podeAtacar(e, p, l.i)) throw new Error('Esse Senhor(a) não pode atacar');
+      if (!ourosDisponiveis(e, p).includes(a.carta)) throw new Error('Ouros indisponível');
+      gastarOuros(e, p, a.carta);
+      l.u.dadosExtra = (l.u.dadosExtra || 0) + 1;
+      registrar(e, t('log.dadoExtra', { j: e.jogadores[p].nome, u: nomeUnidade(l.u) }));
+      return;
+    }
     if (e.acoes <= 0) throw new Error('Sem ações neste turno');
     const p = e.vez, j = e.jogadores[p];
     let custo = 1;
@@ -847,6 +858,8 @@ window.SS = window.SS || {};
 
   // lista: [{ atacante: uid, alvo: 'jogador' | uid de Ás, ouros: [ids de Ouros ou 'TOKEN'] }]
   function declararAtaques(e, lista) {
+    // dados a mais que o Senhor(a) já guardou (Dado adicional): valem no primeiro ataque dele
+    const dadosGuardados = uid => { const l = localizar(e, uid), n = l ? l.u.dadosExtra || 0 : 0; if (l) l.u.dadosExtra = 0; return n; };
     if (e.fase !== 'ataque') throw new Error('Fora da fase de ataque');
     const p = e.vez, j = e.jogadores[p];
     const contagem = {};
@@ -870,7 +883,7 @@ window.SS = window.SS || {};
       // Lançalotte (Golpe certeiro): o 1º ataque do turno ganha dado (e ataque) extra.
       const golpe = k === 0 && temPalhaco(j, 'lancalotte') ? PALHACOS.lancalotte : null;
       ataques.push({
-        n: k + 1, atacante: d.atacante, alvo: d.alvo, dados: 1 + extras.length + (golpe ? golpe.dadosPrimeiro : 0),
+        n: k + 1, atacante: d.atacante, alvo: d.alvo, dados: 1 + extras.length + (golpe ? golpe.dadosPrimeiro : 0) + dadosGuardados(d.atacante),
         bonusAtaque: golpe ? golpe.ataquePrimeiro : 0, bloqueadores: [], resultado: null,
       });
     });
@@ -1062,6 +1075,7 @@ window.SS = window.SS || {};
     for (const u of j.campo) {
       if (!u || u.tipo !== 'senhor') continue;
       u.bonus = [];
+      u.dadosExtra = 0; // dado adicional que não foi usado num ataque se perde
       if (u.atacou) {
         if (!u.vigilia) u.ativo = false; // vira para baixo: não bloqueia no turno do oponente
         else registrar(e, t('log.vigiliaPe', { u: nomeUnidade(u) }));

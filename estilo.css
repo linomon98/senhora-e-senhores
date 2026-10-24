@@ -1807,6 +1807,12 @@ body.tut-pulsa-seta #setas .seta .linha { animation: tut-pulsa-linha .6s ease-in
 
 /* ---------- Bônus das passivas à vista ---------- */
 .selo-atk .bonus-lanca { margin-left: 3px; color: #8fb8ff; font-weight: 800; }
+/* Dado adicional guardado no Senhor(a) */
+.selo-dado {
+  position: absolute; right: -10px; top: 18px; z-index: 4; padding: 1px 5px; border-radius: 9px; font: 800 15px/1.2 var(--fonte-ui);
+  background: #fffdf4; border: 2px solid #141414; box-shadow: 0 2px 0 #141414; animation: selo-entra .35s cubic-bezier(.3, 1.6, .5, 1);
+}
+.dado-voando span { font-size: 34px; filter: drop-shadow(0 3px 0 rgba(0, 0, 0, .5)); }
 .dano-voando { position: absolute; z-index: 60; pointer-events: none; font: 400 38px var(--fonte-titulo); color: #ff3b3b; -webkit-text-stroke: 4px #141414; paint-order: stroke fill; }
 
 /* ---------- Vitória e derrota: fundo escuro, título enorme, festa ou tomates ---------- */
