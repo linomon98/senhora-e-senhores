@@ -3211,7 +3211,7 @@ window.SS = window.SS || {};
 
   // Deck escolhido no menu para o seu Palhaço.
   function contagemEscolhida() {
-    if (cfg.deck === 'palhaco') return P.get(cfg.palhaco).deck;
+    if (cfg.deck === 'palhaco') return SS.Decks.deckDoBot(cfg.palhaco); // (o deck padrão do bot desse Palhaço, se houver; senão o temático)
     return cfg.deck === 'padrao' ? M.contagemPadrao() : SS.Decks.contagemPara(cfg.deck);
   }
 
