@@ -182,9 +182,17 @@ window.SS = window.SS || {};
   }
 
   // Decks prontos (só leitura): o deck temático de cada Palhaço, na caixinha da cor dele.
+  // No deckbuilder normal, o Palhaço que tem deck padrão de bot (área de testes) mostra esse deck aqui, com a caixinha dele;
+  // nos decks de bot, os prontos são sempre os temáticos (servem de base).
   function prontos() {
-    return SS.Palhacos.LISTA.map(p => ({ id: p.id, nome: tr('dk.deckDe', { p: p.nome }), curto: p.nome, sub: p.plano, cont: p.deck,
-      visual: { tampa: COR_NAIPE[p.naipe], icone: 'naipe-' + p.naipe, corIcone: 'original' } }));
+    return SS.Palhacos.LISTA.map(p => {
+      const tematico = { id: p.id, nome: tr('dk.deckDe', { p: p.nome }), curto: p.nome, sub: p.plano, cont: p.deck,
+        visual: { tampa: COR_NAIPE[p.naipe], icone: 'naipe-' + p.naipe, corIcone: 'original' } };
+      const b = palBot ? null : doBot(p.id), s = b && b.padrao != null ? b.slots[b.padrao] : null;
+      if (!valido(s)) return tematico;
+      return Object.assign(tematico, { nome: tr('dk.deckDe', { p: p.nome }) + ' · ' + (s.nome || `Deck ${b.padrao + 1}`), curto: s.nome || p.nome,
+        cont: s.cont, visual: visualDe(s, b.padrao) });
+    });
   }
   const prontoAtual = () => (typeof atual === 'string' ? prontos().find(p => p.id === atual) : null);
   // O que está aberto em cima: { nome, cont, visual, leitura }.

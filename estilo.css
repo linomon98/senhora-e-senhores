@@ -1984,7 +1984,7 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 .db-btn.principal { background: #ffc21a; }
 .db-btn.perigo { color: #b0101e; }
 .db-btn.perigo.confirmar { background: #ff6b6b; color: #141414; }
-.db-btn.mini { min-width: 38px; padding: 4px 8px; font-size: 20px; white-space: nowrap; }
+.db-btn.mini { min-width: 38px; padding: 4px 6px; font-size: 18px; white-space: nowrap; }
 
 /* O baralho sendo montado */
 .db-deck { left: 393px; top: 129px; width: 815px; height: 350px; z-index: 2; }
@@ -2034,7 +2034,8 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 .db-acoes { left: 1229px; top: 420px; width: 192px; display: flex; flex-direction: column; gap: 12px; align-items: stretch; }
 .db-acoes .db-btn { font-size: 21px; }
 .db-rot { margin: 0; font: 400 26px 'Marlboro', var(--fonte-titulo); color: #fff; text-shadow: 0 2px 0 #141414; text-align: center; }
-.db-copiar { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
+.db-copiar { display: flex; justify-content: center; gap: 4px; }
+.db-copiar .db-btn.mini { flex: 1 1 0; min-width: 0; padding: 4px 0; }
 .db-colecao.leitura .db-colecao-carta:not(.tem) { opacity: .45; }
 .db-nota { margin: 0; font-size: 13px; font-weight: 700; color: #fff; text-align: center; text-shadow: 0 1px 2px #000; }
 .db-salvo { color: #fff; opacity: .75; text-align: center; font-size: 12px; }
