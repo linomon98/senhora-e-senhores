@@ -1908,3 +1908,24 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 .regua-defesa .rg-seta b { display: block; padding: 0 5px; border-radius: 6px; background: #141414; color: #fff; font: 800 16px/20px var(--fonte-ui); }
 .regua-defesa .rg-seta::after { content: ''; position: absolute; left: 50%; top: 100%; transform: translateX(-50%); border: 6px solid transparent; border-top-color: #141414; }
 .regua-defesa small { display: block; font: 700 13px var(--fonte-ui); opacity: .7; }
+
+/* ---------- Tutorial: box "MAS..." com os selos do dado e o termômetro de defesa ---------- */
+#tut .tut-mas { position: relative; margin: 14px 0 4px; padding: 16px 12px 10px; border: 3px dashed #1d2a12; border-radius: 12px; background: #fff8dc; }
+#tut .tut-mas-titulo { position: absolute; left: 10px; top: -15px; padding: 0 10px; border: 3px solid #1d2a12; border-radius: 8px; background: #ffd23f; font: 400 22px/1.2 var(--fonte-titulo); color: #1d2a12 !important; transform: rotate(-3deg); }
+#tut .tut-selos { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 10px; }
+#tut .selo-golpe { position: relative; padding: 3px 10px 3px 5px; gap: 5px; border-width: 2px; border-radius: 12px; box-shadow: 0 3px 0 #141414; }
+#tut .selo-golpe .sg-dado .dado-img { width: 30px; }
+#tut .selo-golpe .sg-dado b { right: -5px; bottom: -5px; min-width: 16px; font: 800 11px/16px var(--fonte-ui); color: #fff !important; }
+#tut .selo-golpe .sg-titulo { font-size: 18px; color: #141414 !important; }
+#tut .selo-golpe .sg-conta { font-size: 14px; }
+#tut .tut-lista { margin: 8px 0; padding: 0; list-style: none; }
+#tut .tut-lista li { margin: 4px 0; padding: 4px 8px 4px 10px; border-left: 6px solid; border-radius: 4px; background: rgba(0, 0, 0, .04); }
+#tut .tut-lista li.verde { border-color: #3fb63a; }
+#tut .tut-lista li.amarelo { border-color: #f0b400; }
+#tut .tut-lista li.vermelho { border-color: #e03a3a; }
+#tut .tut-regua { display: flex; flex-direction: column; align-items: center; margin: 6px 0 2px; }
+#tut .tut-regua > small { font-size: 12px; font-weight: 700; color: #4a4a3a; }
+#tut .regua-defesa { position: relative; width: min(300px, 100%); padding: 6px 12px 2px; box-shadow: 0 3px 0 #141414; }
+#tut .regua-defesa .rg-barra > i { color: #141414 !important; }
+#tut .regua-defesa .rg-seta b { color: #fff !important; }
+#tut .regua-defesa.ignorou .rg-resultado { color: #1b8a2b !important; }

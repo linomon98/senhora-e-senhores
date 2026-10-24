@@ -27,6 +27,20 @@
   // Ás (totem) em campo e o espaço dele.
   const slotAs = p => api => { const i = api.jogo().jogadores[p].campo.findIndex(u => u && u.tipo === 'as'); return i >= 0 ? `[data-slot="${p}:${i}"]` : null; };
   // Ataque declarado por um Senhor(a) (pela figura).
+  // Ilustrações nas falas: o selo do dado e a régua de defesa (termômetro), iguais aos da partida, só que paradas.
+  const DADO = '<img class="dado-img" src="arte/icones/dado.webp" alt="" draggable="false">';
+  const seloEx = (tipo, n, titulo, conta) => `<div class="selo-golpe ${tipo}"><span class="sg-dado">${DADO}<b>${n}</b></span>`
+    + `<span class="sg-texto"><b class="sg-titulo">${titulo}</b>${conta ? `<span class="sg-conta">${conta}</span>` : ''}</span></div>`;
+  const reguaEx = (atk, dano, resultado, titulo, faixas) => {
+    const max = Math.max(atk * 1.6, (dano || 0) + 1, atk + 2), pct = v => Math.min(100, Math.max(0, (v / max) * 100));
+    const metade = String(atk / 2).replace('.', faixas === FAIXAS[1] ? '.' : ','); // (as falas são montadas uma vez só, nos dois idiomas)
+    return `<div class="regua-defesa caiu ${resultado || ''}">${titulo ? `<b class="rg-resultado">${titulo}</b>` : ''}<div class="rg-barra">`
+      + `<i class="rg-ignora" style="width:${pct(atk / 2)}%"><span>${faixas[0]}</span></i><i class="rg-hit" style="width:${pct(atk) - pct(atk / 2)}%"><span>${faixas[1]}</span></i><i class="rg-pesado"><span>${faixas[2]}</span></i>`
+      + `<em class="rg-marca" style="left:${pct(atk / 2)}%">${metade}</em><em class="rg-marca" style="left:${pct(atk)}%">${atk}</em>`
+      + (dano != null ? `<span class="rg-seta" style="--ate:${pct(dano)}%"><b>${dano}</b></span>` : '') + '</div></div>';
+  };
+  const FAIXAS = [['IGNORA', '1 HIT', '2 HITS'], ['IGNORE', '1 HIT', '2 HITS']];
+
   const ataqueDe = (e, p, rank, naipe) => { const u = unidadeFig(e, p, rank, naipe); return u && e.combate ? e.combate.ataques.find(a => a.atacante === u.uid) : null; };
   // Jogada do oponente feita pela aula: entre as jogadas que servem, a do espaço mais perto do meio da fileira.
   function aplicarPerto(api, filtro) {
@@ -91,6 +105,14 @@
             Tirou <b>1</b>, errou: vale para <b>qualquer ataque</b>, até contra quem defende. Ninguém leva hit, que vergonha!`,
             `<div class="tut-dados"><div><i>⚃ ⚄ ⚅</i><b>4 to 6</b><span>full damage: <b>4</b></span></div><div><i>⚁ ⚂</i><b>2 or 3</b><span>half (rounded down): <b>2</b></span></div><div class="ruim"><i>⚀</i><b>1</b><span>miss!</span></div></div>
             Roll a <b>1</b> and you miss: it counts for <b>any attack</b>, even against a defender. Nobody takes a hit, shame on you!`] },
+          { fala: [`<div class="tut-mas"><b class="tut-mas-titulo">MAS...</b>
+            se você for ruim em matemática, é só ficar de olho nesse <b>selo</b>! Ele aparece assim que o dado para e já te mostra quanto vai ser o seu dano.
+            <div class="tut-selos">${seloEx('cheio', 5, 'Dano cheio!', '⚔ 4')}${seloEx('metade', 3, 'Metade!', '<s>⚔ 4</s> → ⚔ 2')}${seloEx('errou', 1, 'Errou!')}</div></div>`,
+            `<div class="tut-mas"><b class="tut-mas-titulo">BUT...</b>
+            if you are bad at math, just keep an eye on this <b>badge</b>! It shows up as soon as the die stops and tells you how much damage you will deal.
+            <div class="tut-selos">${seloEx('cheio', 5, 'Full damage!', '⚔ 4')}${seloEx('metade', 3, 'Half!', '<s>⚔ 4</s> → ⚔ 2')}${seloEx('errou', 1, 'Miss!')}</div></div>`] },
+          { fala: ['Ah, e guarda isso: o <b>número</b> equipado no Senhor(a) é o ataque dele, e ele serve pra tudo: pra <b>atacar</b>, pra <b>defender</b> e pro <b>contra-ataque</b>.',
+            'Oh, and remember this: the <b>number</b> equipped on a Gentleman is its attack, and it counts for everything: <b>attacking</b>, <b>defending</b> and the <b>counterattack</b>.'] },
         ] },
         { ate: 'depoisGolpe', permitir: '*', dado: true, fala: ['Vamo lá, <b>joga o dado!</b> (pegue o dado e jogue na mesa)', 'Come on, <b>roll the die!</b> (grab the die and throw it on the table)'] },
         { gancho: 'depoisGolpe', passos: [
@@ -288,14 +310,20 @@
             fala: ['Você percebeu que o seu <b>Rei</b> não levou dano, mas o <b>Valete</b> levou o hit de <b>contra-ataque</b>??', 'Did you notice your <b>King</b> took no damage, but the <b>Jack</b> took the <b>counterattack</b> hit??'] },
           { foco: [slotFig(0, 'K'), slotFig(1, 'J', 'paus')], semSetas: true, fala: ['O <b>contra-ataque</b> você já tá ligado, né? O 7 do seu Rei é maior que o 4 do Valete, então o contra-ataque rola...',
             'You already know the <b>counterattack</b>, right? Your King\'s 7 is higher than the Jack\'s 4, so the counterattack happens...'] },
-          { semSetas: true, fala: ['E você não levou dano porque, se o ataque defendido for <b>menor que a METADE</b> do ataque do Senhor(a) que defendeu, você <b>não leva HIT</b>.',
-            'And you took no damage because, if the blocked attack is <b>lower than HALF</b> of the defending Gentleman\'s attack, you <b>take no HIT</b>.'] },
-          { semSetas: true, fala: [`Ele tirou 3 no dado e atacou só com a <b>metade</b> do dano: 2, no caso. E o seu Rei tem 7 de ataque: a metade de 7 é 3,5, mas aqui no jogo a gente sempre arredonda pra baixo :(
-            <div class="tut-conta"><div><small>ele tirou 3: metade</small><b>4 ÷ 2 = 2</b><small>dano dele</small></div><span>&lt;</span><div><small>o seu Rei</small><b>7 ÷ 2 = 3</b><small>metade do seu ataque</small></div></div>
-            <p class="tut-ok">2 é menor que 3, certo??</p>`,
-            `He rolled a 3 and attacked with only <b>half</b> the damage: 2, in this case. And your King has 7 attack: half of 7 is 3.5, but in this game we always round down :(
-            <div class="tut-conta"><div><small>he rolled 3: half</small><b>4 ÷ 2 = 2</b><small>his damage</small></div><span>&lt;</span><div><small>your King</small><b>7 ÷ 2 = 3</b><small>half your attack</small></div></div>
-            <p class="tut-ok">2 is lower than 3, right??</p>`] },
+          { semSetas: true, fala: [`Você só leva <b>HIT</b> defendendo se o ataque do oponente for minimamente forte. Pensa num <b>termômetro</b> feito com a <b>SUA carta equipada</b>:
+            <ul class="tut-lista"><li class="verde">Se o dano do oponente <b>não chegar nem na METADE</b> da sua carta equipada, <b>não machuca</b>.</li>
+            <li class="amarelo">Se chegar na metade, você leva <b>1 HIT</b>.</li><li class="vermelho">E se <b>passar</b> do valor da sua carta equipada, você leva <b>2 HITs</b>.</li></ul>
+            <div class="tut-regua">${reguaEx(7, null, '', '', FAIXAS[0])}<small>o seu Rei: carta equipada 7</small></div>`,
+            `You only take a <b>HIT</b> when defending if the opponent's attack is at least somewhat strong. Think of a <b>thermometer</b> made from <b>YOUR equipped card</b>:
+            <ul class="tut-lista"><li class="verde">If the opponent's damage <b>doesn't even reach HALF</b> of your equipped card, <b>it doesn't hurt</b>.</li>
+            <li class="amarelo">If it reaches half, you take <b>1 HIT</b>.</li><li class="vermelho">And if it <b>goes over</b> your equipped card's value, you take <b>2 HITs</b>.</li></ul>
+            <div class="tut-regua">${reguaEx(7, null, '', '', FAIXAS[1])}<small>your King: equipped card 7</small></div>`] },
+          { semSetas: true, fala: [`Agora olha o que aconteceu: ele tirou <b>3</b> no dado, então o ataque dele caiu pela <b>metade</b>: 4 ÷ 2 = <b>2</b>. A metade do seu 7 é 3,5, e o 2 nem chegou lá: caiu no <b>verde</b>!
+            <div class="tut-regua">${reguaEx(7, 2, 'ignorou', 'Não machucou!', FAIXAS[0])}</div>
+            <p class="tut-ok">Na partida, esse termômetro aparece em cima de quem defende, pra você ver onde o dano caiu.</p>`,
+            `Now look at what happened: he rolled a <b>3</b>, so his attack was cut in <b>half</b>: 4 ÷ 2 = <b>2</b>. Half of your 7 is 3.5, and the 2 didn't even get there: it landed in the <b>green</b>!
+            <div class="tut-regua">${reguaEx(7, 2, 'ignorou', 'No harm done!', FAIXAS[1])}</div>
+            <p class="tut-ok">During a match, this thermometer shows up over the defender so you can see where the damage landed.</p>`] },
           { semSetas: true, fala: ['Por isso você <b>não levou dano</b> defendendo esse ataque, e ainda deu um <b>contra-ataque</b>!', 'That is why you <b>took no damage</b> blocking this attack, and even landed a <b>counterattack</b>!'] },
           { fala: ['Parece meio complicado, mas eu juro que não é tão difícil de aprender (a não ser que você seja um bebezinho, hehehehe).', 'Looks a bit complicated, but I swear it is not that hard to learn (unless you are a little baby, hehehehe).'] },
         ] },
