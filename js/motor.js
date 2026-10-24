@@ -994,6 +994,8 @@ window.SS = window.SS || {};
     const dano = errou ? 0 : cheio ? total : Math.floor(total / 2);
     const numeroAtacante = base + u.bonus.length;
     res.dano = dano;
+    res.total = total; // (a tela mostra "ataque total → dano", para explicar o dado cheio ou pela metade)
+    res.cheio = cheio;
     if (reducaoGrupo) registrar(e, t('log.grupo', { n: vivos, r: reducaoGrupo, u: nomeUnidade(u) }));
     if (errou) {
       res.errou = true;
@@ -1036,6 +1038,9 @@ window.SS = window.SS || {};
       const loc = localizar(e, uid);
       if (!loc) return;
       const danoDefesa = danoPara(b);
+      // (a tela desenha a "régua de defesa": onde esse dano cai em relação ao ataque do defensor)
+      (res.defesas || (res.defesas = [])).push({ uid, dano: danoDefesa, atk: atkBloq[k],
+        resultado: danoDefesa * 2 < atkBloq[k] ? 'ignorou' : danoDefesa > atkBloq[k] ? 'pesado' : 'hit' });
       if (danoDefesa < dano) registrar(e, t('log.casca', { u: nomeUnidade(loc.u), n: danoDefesa }));
       if (danoDefesa * 2 < atkBloq[k]) registrar(e, t('log.ignorou', { u: nomeUnidade(loc.u) }));
       else if (danoDefesa > atkBloq[k]) {

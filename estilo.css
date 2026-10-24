@@ -1858,3 +1858,53 @@ body.tut-pulsa-seta #setas .seta .linha { animation: tut-pulsa-linha .6s ease-in
 
 /* ---------- Tutorial: na compra, só o baralho pedido pulsa ---------- */
 body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !important; box-shadow: none !important; transform: none !important; }
+
+/* ---------- Defesa em escudinhos (o hit levado apaga o escudo) ---------- */
+.selo-vida { display: inline-flex; align-items: center; gap: 1px; padding: 2px 5px; letter-spacing: 0; line-height: 0; }
+.selo-vida .esc { width: 13px; height: 16px; filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .6)); }
+.selo-vida .esc.apagado { filter: grayscale(1) brightness(.3); opacity: .55; }
+.selo-vida .berserk { line-height: 1.3; }
+
+/* ---------- Dado adicional guardado: o dado desenhado ---------- */
+.selo-dado { display: inline-flex; align-items: center; gap: 2px; padding: 1px 3px; }
+.selo-dado .dado-img { width: 22px; height: auto; display: block; }
+.selo-dado b { font: 800 13px var(--fonte-ui); }
+.dado-voando .dado-img { width: 46px; height: auto; display: block; filter: drop-shadow(2px 4px 0 rgba(0, 0, 0, .5)); }
+
+/* ---------- Selo do dado: cheio (verde), metade (amarelo), errou (vermelho) ---------- */
+.selo-golpe {
+  position: absolute; z-index: 66; pointer-events: none; display: flex; align-items: center; gap: 8px; white-space: nowrap;
+  padding: 6px 14px 6px 8px; border: 3px solid #141414; border-radius: 16px; box-shadow: 0 5px 0 #141414; color: #141414;
+}
+.selo-golpe.cheio { background: #7fe07a; }
+.selo-golpe.metade { background: #ffd23f; }
+.selo-golpe.errou { background: #ff6b6b; }
+.selo-golpe .sg-dado { position: relative; display: grid; place-items: center; }
+.selo-golpe .sg-dado .dado-img { width: 52px; height: auto; }
+.selo-golpe .sg-dado b { position: absolute; right: -6px; bottom: -6px; min-width: 20px; padding: 0 4px; border-radius: 10px; background: #141414; color: #fff; font: 800 14px/20px var(--fonte-ui); text-align: center; }
+.selo-golpe .sg-texto { display: flex; flex-direction: column; line-height: 1.05; }
+.selo-golpe .sg-titulo { font: 400 30px var(--fonte-titulo); }
+.selo-golpe .sg-conta { font: 800 22px var(--fonte-ui); }
+.selo-golpe .sg-conta s { text-decoration-thickness: 3px; text-decoration-color: #c41e2a; opacity: .7; }
+.selo-golpe small { font: 700 13px var(--fonte-ui); opacity: .8; }
+
+/* ---------- Régua de defesa: ignora (verde) · 1 hit (amarelo) · 2 hits (vermelho) ---------- */
+.regua-defesa {
+  position: absolute; z-index: 65; pointer-events: none; width: 290px; padding: 8px 12px 7px; text-align: center;
+  background: #fffdf4; border: 3px solid #141414; border-radius: 12px; box-shadow: 0 5px 0 #141414; color: #141414;
+}
+.regua-defesa .rg-resultado { display: block; font: 400 32px/1.1 var(--fonte-titulo); }
+.regua-defesa.ignorou .rg-resultado { color: #1b8a2b; }
+.regua-defesa.hit .rg-resultado { color: #b07a00; }
+.regua-defesa.pesado .rg-resultado { color: #c41e2a; }
+.regua-defesa .rg-barra { position: relative; display: flex; height: 30px; margin: 24px 0 22px; border: 3px solid #141414; border-radius: 6px; overflow: visible; }
+.regua-defesa .rg-barra > i { position: relative; display: grid; place-items: center; font: 800 13px var(--fonte-ui); font-style: normal; text-transform: uppercase; overflow: hidden; white-space: nowrap; }
+.regua-defesa .rg-ignora { background: #8fe58a; border-radius: 4px 0 0 4px; }
+.regua-defesa .rg-hit { background: #ffd84d; }
+.regua-defesa .rg-pesado { flex: 1; background: #ff7b7b; border-radius: 0 4px 4px 0; }
+.regua-defesa .rg-marca { position: absolute; top: 100%; transform: translateX(-50%); margin-top: 3px; font: 800 16px var(--fonte-ui); font-style: normal; }
+.regua-defesa .rg-seta { position: absolute; left: 0; top: -24px; transform: translateX(-50%); transition: left .55s cubic-bezier(.3, 1.3, .5, 1); }
+.regua-defesa.caiu .rg-seta { left: var(--ate); }
+.regua-defesa .rg-seta b { display: block; padding: 0 5px; border-radius: 6px; background: #141414; color: #fff; font: 800 16px/20px var(--fonte-ui); }
+.regua-defesa .rg-seta::after { content: ''; position: absolute; left: 50%; top: 100%; transform: translateX(-50%); border: 6px solid transparent; border-top-color: #141414; }
+.regua-defesa small { display: block; font: 700 13px var(--fonte-ui); opacity: .7; }

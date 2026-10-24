@@ -584,7 +584,8 @@ window.SS = window.SS || {};
   }
 
   // Carta "Dado adicional": com um Ouros selecionado, uma seta sai dele até o Senhor(a) que vai rolar
-  // 1 dado a mais. Escolhido, o jogo vai para o ataque (se ainda não estava) e marca o ataque dele.
+  // 1 dado a mais. Escolhido, o dado fica guardado nele; só se você já estava preparando o ataque o jogo
+  // volta para o ataque e marca o ataque dele.
   function iniciarDadoAdicional() {
     const id = ui.sel[0];
     if (!id) return;
@@ -610,17 +611,11 @@ window.SS = window.SS || {};
     const acao = { tipo: 'dadoExtra', carta: ouro, alvo: uid };
     enviarJogada({ t: 'acao', a: acao });
     M.aplicarAcao(jogo, acao);
-    if (carta) voarIcone(carta, () => elUnidade(uid), '<span>🎲</span>', 'dado-voando', 0);
-    if (jogo.fase === 'principal') {
-      if (ui.voltarAoAtaque) voltarAoAtaque();
-      else {
-        ui.sel = []; ui.pend = null; ui.ataques = [];
-        M.aplicarAcao(jogo, { tipo: 'atacar' });
-      }
-    }
+    if (carta) voarIcone(carta, () => elUnidade(uid), DADO_IMG, 'dado-voando', 0);
     ui.sel = [];
-    if (!M.atacantesAptos(jogo).includes(uid)) return render();
-    if (!ui.ataques.some(a => a.atacante === uid)) adicionarAtaque(uid, 'jogador');
+    if (!ui.voltarAoAtaque) return render(); // ainda nas ações: o dadinho fica guardado no Senhor(a)
+    voltarAoAtaque();
+    if (jogo.fase === 'ataque' && M.atacantesAptos(jogo).includes(uid) && !ui.ataques.some(a => a.atacante === uid)) adicionarAtaque(uid, 'jogador');
     render();
   }
 
@@ -1677,6 +1672,53 @@ window.SS = window.SS || {};
     return { atacante: at.atacante, forca: loc ? M.ataque(jogo, loc.p, loc.i) : 0, unidades, pv: jogo.jogadores.map(j => j.pv), alvo, de: centroDe(elUnidade(at.atacante)) };
   }
 
+  // ---------- Explicando o golpe: o selo do dado e a régua de defesa ----------
+  // Selo do dado (em cima de quem ataca): 4–6 = dano cheio, 2–3 = metade (o ataque "se parte"), 1 = errou.
+  async function seloDoDado(cena, res) {
+    if (MOVIMENTO_REDUZIDO || !cena.de) return;
+    const tipo = res.errou ? 'errou' : res.cheio ? 'cheio' : 'metade';
+    const el = document.createElement('div');
+    el.className = 'selo-golpe ' + tipo;
+    const conta = tipo === 'errou' ? `<b class="sg-titulo">${t('golpe.errou')}</b>`
+      : tipo === 'cheio' ? `<b class="sg-titulo">${t('golpe.cheio')}</b><span class="sg-conta">⚔ ${res.total}</span>`
+        : `<b class="sg-titulo">${t('golpe.metade')}</b><span class="sg-conta"><s>⚔ ${res.total}</s> → ⚔ ${res.dano}</span><small>${t('golpe.metadeNota')}</small>`;
+    el.innerHTML = `<span class="sg-dado">${DADO_IMG}<b>${res.maior}</b></span><span class="sg-texto">${conta}</span>`;
+    Object.assign(el.style, { left: cena.de.x + 'px', top: (cena.de.y - 92) + 'px' });
+    $('#app').appendChild(el);
+    el.animate([{ transform: 'translate(-50%, -50%) scale(.4)', opacity: 0 }, { transform: 'translate(-50%, -50%) scale(1.08)', opacity: 1, offset: .6 }, { transform: 'translate(-50%, -50%) scale(1)', opacity: 1 }],
+      { duration: 260, easing: 'ease-out', fill: 'forwards' });
+    await esperar(1150);
+    el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' });
+    setTimeout(() => el.remove(), 320);
+  }
+
+  // Régua de defesa (em cima de cada defensor): o ataque dele marca as faixas, e a seta do dano cai em uma:
+  // abaixo da metade = ignora; até o ataque dele = 1 hit; acima = 2 hits.
+  function mostrarRegua(cena, res) {
+    if (MOVIMENTO_REDUZIDO || !res.defesas) return;
+    for (const d of res.defesas) {
+      const ref = cena.unidades.find(x => x.uid === d.uid);
+      if (!ref || !ref.caixa) continue;
+      const c = pontoNoApp(ref.caixa.left + ref.caixa.width / 2, ref.caixa.top);
+      const max = Math.max(d.atk * 1.6, d.dano + 1, d.atk + 2), pct = v => Math.min(100, Math.max(0, (v / max) * 100));
+      const metade = d.atk / 2, numero = v => String(v).replace('.', ',');
+      const el = document.createElement('div');
+      el.className = 'regua-defesa ' + d.resultado;
+      el.innerHTML = `<b class="rg-resultado">${t('golpe.' + d.resultado)}</b>
+        <div class="rg-barra">
+          <i class="rg-ignora" style="width:${pct(metade)}%"><span>${t('golpe.faixaIgnora')}</span></i><i class="rg-hit" style="width:${pct(d.atk) - pct(metade)}%"><span>${t('golpe.faixaHit')}</span></i><i class="rg-pesado"><span>${t('golpe.faixaPesado')}</span></i>
+          <em class="rg-marca" style="left:${pct(metade)}%">${numero(metade)}</em><em class="rg-marca" style="left:${pct(d.atk)}%">${d.atk}</em>
+          <span class="rg-seta" style="--ate:${pct(d.dano)}%"><b>${d.dano}</b></span>
+        </div>
+        <small>${t('golpe.reguaNota', { a: d.atk })}</small>`;
+      Object.assign(el.style, { left: c.x + 'px', top: (c.y - 18) + 'px' });
+      $('#app').appendChild(el);
+      el.animate([{ opacity: 0, transform: 'translate(-50%, -100%) translateY(10px)' }, { opacity: 1, transform: 'translate(-50%, -100%)' }], { duration: 220, fill: 'forwards' });
+      setTimeout(() => el.classList.add('caiu'), 260);
+      setTimeout(() => { el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 350, fill: 'forwards' }); setTimeout(() => el.remove(), 380); }, 3000);
+    }
+  }
+
   // Quem levou dano no ataque (cartas com mais hits, cartas que morreram e Palhaços que perderam PV).
   function danosDesde(cena) {
     const r = [];
@@ -2214,6 +2256,11 @@ window.SS = window.SS || {};
     return at && at.atacante === u.uid && !at.resultado ? at.bonusAtaque || 0 : 0;
   }
 
+  // Defesa de cada Senhor(a): um escudinho por hit que ele aguenta; o hit levado apaga o escudo.
+  const ESCUDO = '<img class="esc" src="arte/icones/escudo.webp" alt="" draggable="false">';
+  const ESCUDO_APAGADO = '<img class="esc apagado" src="arte/icones/escudo.webp" alt="" draggable="false">';
+  const DADO_IMG = '<img class="dado-img" src="arte/icones/dado.webp" alt="" draggable="false">';
+
   function htmlUnidade(p, i, u) {
     const foco = emFoco(u) ? ' foco' : '';
     if (u.tipo === 'as') {
@@ -2233,12 +2280,12 @@ window.SS = window.SS || {};
     if (apto) cls.push('apto');
     const vida = u.berserk
       ? `<span class="berserk">BERSERK${u.berserk.hits ? ' ✖' : ''}</span>`
-      : '●'.repeat(Math.max(0, res - u.hits)) + '<i>' + '○'.repeat(Math.min(u.hits, res)) + '</i>';
+      : ESCUDO.repeat(Math.max(0, res - u.hits)) + ESCUDO_APAGADO.repeat(Math.min(u.hits, res));
     return `<div class="${cls.join(' ')}${foco}"${virada ? ` style="--atraso:${virada.atraso.toFixed(0)}ms"` : ''}>
       <div class="pilha-senhor${estiloGiro(u, post)}"><div class="carta numero">${C.frente(u.numero)}</div><div class="carta figura">${C.frente(u.figura)}</div></div>
       <div class="selo-vida">${vida}</div>
       <div class="selo-atk">⚔ ${atk}${atk > base ? `<small>+${atk - base}</small>` : ''}${bonusGolpeCerteiro(p, u) ? `<small class="bonus-lanca">+${bonusGolpeCerteiro(p, u)}♠</small>` : ''}</div>
-      ${u.dadosExtra ? `<div class="selo-dado" title="${t('ui.dadoExtra', { n: u.dadosExtra })}">🎲${u.dadosExtra > 1 ? '×' + u.dadosExtra : ''}</div>` : ''}
+      ${u.dadosExtra ? `<div class="selo-dado" title="${t('ui.dadoExtra', { n: u.dadosExtra })}">${DADO_IMG}${u.dadosExtra > 1 ? '<b>×' + u.dadosExtra + '</b>' : ''}</div>` : ''}
       ${nai ? `<div class="selo-naipado">${SIMB[nai]}</div>` : ''}${tagsUnidade(u)}${selosPoder(u)}</div>`;
   }
 
@@ -3511,8 +3558,12 @@ window.SS = window.SS || {};
       if (id !== partida) return;
       const antes = jogo.log.length;
       const cena = prepararInvestida(at);
-      cena.errou = !!M.resolverProximo(jogo, rolagens).errou;
+      const resGolpe = M.resolverProximo(jogo, rolagens);
+      cena.errou = !!resGolpe.errou;
       const linhas = jogo.log.slice(antes);
+      await seloDoDado(cena, resGolpe);
+      if (id !== partida) return;
+      mostrarRegua(cena, resGolpe);
       await investida(cena, danosDesde(cena));
       if (id !== partida) return;
       if (cena.errou) await queVergonha();
