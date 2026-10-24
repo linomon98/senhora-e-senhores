@@ -217,7 +217,7 @@ window.SS = window.SS || {};
 
   // Vista 2: as cartas corridas. Com pouca variedade é uma linha só de cartas grandes; quanto mais cartas
   // diferentes, mais linhas e cartas menores. As cópias aparecem num número em cima da carta.
-  const AREA_CORRIDA = { w: 560, h: 316 }, PASSO = 0.62, PROPORCAO = 1.4;
+  const AREA_CORRIDA = { w: 500, h: 236 }, PASSO = 0.62, PROPORCAO = 1.4;
   function vistaCorrida(d) {
     const cartas = [];
     for (const naipe of NAIPES) for (const rank of FIGURAS.concat(NUMEROS)) {

@@ -1992,7 +1992,7 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 .db-deck-caixa .maco.cx { --u: 1.2px; }
 .db-deck-caixa .db-btn.editar { margin-top: -6px; width: 170px; font-size: 40px; padding: 2px 0 4px; border-width: 4px; border-radius: 18px; box-shadow: 0 6px 0 #141414; position: relative; z-index: 5; }
 .db-deck-nome { margin: -4px 0 0; font-size: 26px; text-align: center; line-height: 1; }
-.db-deck-cartas { position: absolute; left: 262px; top: 34px; width: 530px; height: 290px; }
+.db-deck-cartas { position: absolute; left: 262px; top: 40px; width: 530px; height: 284px; }
 .db-vazio-espaco { position: absolute; inset: 40px 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 8px; }
 .db-vazio-espaco h3 { margin: 0; font-size: 40px; }
 .db-vazio-espaco p { margin: 0 0 8px; font-size: 16px; max-width: 460px; }
