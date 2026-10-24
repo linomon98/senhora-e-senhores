@@ -4098,7 +4098,7 @@ window.SS = window.SS || {};
       else if (m === 'entrar-convite') telaPalhacos('convite');
       else if (m === 'decks') {
         fecharModal();
-        SS.Decks.abrir(telaInicio);
+        SS.Decks.abrir(telaInicio, { opcoes: volta => telaOpcoes(() => { fecharModal(); volta(); }) });
       } else if (m === 'regras') {
         fecharModal();
         SS.Regras.abrir(telaInicio);
@@ -4395,7 +4395,7 @@ window.SS = window.SS || {};
       <h2 class="titulo-etapa">${t('menu.escolhaPalhaco')}</h2>
       <div class="mesa-cartas${sel ? ' com-escolha' : ''}">${P.LISTA.map((pal, k) => cartaJoker(pal, sel, k)).join('')}</div>
       <div class="info-carta">${sel ? caixaInfo(sel) : `<p class="dica-carta">${t('menu.cliqueCarta')}</p>`}</div>
-      <div class="opcao"><label>${t('menu.seuDeck')}</label>${grupoMenu('deck', decks.map(d => [d.id, escapar(d.nome)]))}
+      <div class="opcao"><label>${t('menu.seuDeck')}</label>${grupoMenu('deck', decks.map(d => [d.id, `<span class="deck-mini">${SS.Decks.caixaDe(d.id, sel)}</span>${escapar(d.nome)}`]))}
         <p class="nota nota-deck">${notaDeck()}</p></div>
       <div class="acoes-menu">
         <button class="btn" data-m="voltar">${t('btn.voltar')}</button>
@@ -4410,6 +4410,9 @@ window.SS = window.SS || {};
         $('#modal .mesa-cartas').classList.add('com-escolha');
         $('#modal .info-carta').innerHTML = caixaInfo(sel);
         $('#modal [data-m="confirmar"]').disabled = false;
+        // A caixinha do "Deck do Palhaço" vira a do naipe do Palhaço escolhido.
+        const mini = $('#modal [data-grupo="deck"] [data-v="palhaco"] .deck-mini');
+        if (mini) mini.innerHTML = SS.Decks.caixaDe('palhaco', sel);
         return;
       }
       const g = ev.target.closest('[data-grupo="deck"] [data-v]');

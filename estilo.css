@@ -1941,14 +1941,15 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 .db-lista, .db-deck, .db-limites, .db-titulo, .db-editar {
   background: #fff; border: 4px solid #141414; border-radius: 20px; box-shadow: 0 8px 0 #141414;
 }
-.db-lista { left: 182px; top: 133px; width: 191px; height: 629px; padding: 14px 10px; text-align: center; }
+.db-lista { left: 182px; top: 133px; width: 191px; padding: 14px 10px 26px; text-align: center; }
 .db-lista h2 { font-size: 33px; line-height: .95; margin: 0 0 10px; }
 .db-lista hr { border: 0; border-top: 2px solid #8a8a8a; margin: 14px 8px; }
 .db-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 4px; justify-items: center; }
 .db-caixa { position: relative; width: 82px; height: 108px; padding: 0; border: 0; border-radius: 12px; background: none; cursor: pointer; transition: transform .15s; }
 .db-caixa .maco.cx { --u: .6px; margin: 4px auto 0; }
 .db-caixa:hover { transform: translateY(-4px); }
-.db-caixa:hover .maco-tampa { transform: translateY(-14%) rotate(-4deg); }
+.db-caixa:hover .maco-tampa, .db-deck-caixa .maco.cx:hover .maco-tampa { transform: translateY(-48%) rotate(-5deg); }
+.db-caixa:hover .maco-cartas, .db-deck-caixa .maco.cx:hover .maco-cartas { transform: translateY(-22%); }
 .db-caixa.atual { background: #ffe066; box-shadow: 0 0 0 3px #141414; }
 .db-caixa.nova { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 3px dashed #9a9a9a; color: #6a6a6a; }
 .db-caixa.nova.atual { border-color: #141414; color: #141414; }
@@ -1956,20 +1957,20 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 .db-caixa.nova small { font-size: 11px; font-weight: 700; line-height: 1.1; }
 
 /* A caixinha (mesmo desenho da caixa do menu): tampa pintada por multiplicação, ícone pintado por "tela" (o preto vira a cor) */
-.deck-palco .maco.cx { position: relative; left: 0; top: 0; display: block; width: calc(126 * var(--u)); }
+.maco.cx { position: relative; left: 0; top: 0; display: block; width: calc(126 * var(--u)); }
 .maco.cx .cx-tampa { display: block; isolation: isolate; }
 .maco.cx .cx-tampa img { display: block; width: 100%; }
 .maco.cx .cx-tampa::after {
   content: ''; position: absolute; inset: 0; background: var(--tampa); mix-blend-mode: multiply;
   -webkit-mask: url('arte/menu/tampa-pb.webp') 0 0 / 100% 100%; mask: url('arte/menu/tampa-pb.webp') 0 0 / 100% 100%;
 }
-.maco.cx .cx-icone { left: 30%; top: 46%; width: 50%; height: 31%; z-index: 3; isolation: isolate; pointer-events: none; }
+.maco.cx .cx-icone { left: 31%; top: 45%; width: 48%; height: 27%; z-index: 3; isolation: isolate; pointer-events: none; transform: skewY(-10deg); }
 .maco.cx .cx-icone img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
 .maco.cx .cx-icone.pintado::after {
-  content: ''; position: absolute; inset: 0; background: var(--cor); mix-blend-mode: screen;
+  content: ''; position: absolute; inset: 0; background: var(--cor); mix-blend-mode: multiply;
   -webkit-mask: var(--m) center / contain no-repeat; mask: var(--m) center / contain no-repeat;
 }
-.maco.cx .maco-nome { top: 79%; font-size: calc(22 * var(--u)); overflow: hidden; text-overflow: ellipsis; }
+.maco.cx .maco-nome { top: 74.5%; font-size: calc(22 * var(--u)); overflow: hidden; }
 
 /* Título, abas de vista e voltar */
 .db-titulo { left: 575px; top: 46px; width: 417px; height: 102px; z-index: 3; display: grid; place-items: center; font-size: 76px; line-height: 1; padding-top: 6px; }
@@ -2076,8 +2077,8 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 .db-cor[data-cor-icone="original"] { background: conic-gradient(#08a010 0 25%, #e64545 0 50%, #1f56d8 0 75%, #f5b528 0); }
 .db-cor.ativa { outline: 4px solid #ffc21a; outline-offset: 2px; }
 .db-icones { display: grid; grid-template-columns: repeat(10, 54px); gap: 6px; }
-.db-icone { width: 54px; height: 54px; padding: 5px; border: 3px solid #141414; border-radius: 10px; background: #fff; cursor: pointer; display: grid; place-items: center; }
-.db-icone img { max-width: 100%; max-height: 100%; }
+.db-icone { position: relative; box-sizing: border-box; width: 54px; height: 54px; padding: 0; border: 3px solid #141414; border-radius: 10px; background: #fff; cursor: pointer; display: grid; place-items: center; }
+.db-icone img { position: absolute; inset: 7px; width: calc(100% - 14px); height: calc(100% - 14px); object-fit: contain; }
 .db-icone.ativa { background: #ffe066; }
 .db-editar > .db-btn.principal { display: block; margin: 16px 0 0 auto; font-size: 28px; padding: 6px 30px; }
 /* Padrão de naipes andando por cima do fundo vermelho (o mesmo do menu) */
@@ -2089,3 +2090,29 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 @media (prefers-reduced-motion: reduce) { #tela-decks.tela-deck::before { animation: none; } }
 /* A tampa da caixinha do deckbuilder com a mesma largura do corpo (o corpo ocupa ~7%–92% da caixa) */
 .maco.cx .maco-tampa { left: 7.5%; top: 5.2%; width: 83.9%; }
+
+/* Deckbuilder: cartas voando entre a coleção e o baralho */
+.db-voo { position: fixed; z-index: 300; pointer-events: none; filter: drop-shadow(3px 6px 0 rgba(0, 0, 0, .4)); }
+/* Troca de aba de naipe: o painel dá um pulo e as cartas entram quicando, uma atrás da outra */
+.db-colecao.entra { animation: db-painel-pula .42s cubic-bezier(.3, 1.6, .5, 1); transform-origin: 50% 0; }
+.db-colecao.entra .db-colecao-carta { animation: db-carta-entra .5s cubic-bezier(.3, 1.7, .5, 1) backwards; animation-delay: calc(var(--i) * 28ms); }
+.db-aba.ativa.pula { animation: db-aba-pula .45s cubic-bezier(.3, 1.8, .5, 1); transform-origin: 50% 100%; }
+.db-deck-cartas.entra > * > * { animation: db-carta-entra .45s cubic-bezier(.3, 1.7, .5, 1) backwards; }
+.db-deck-cartas.entra > * > *:nth-child(2) { animation-delay: .05s; }
+.db-deck-cartas.entra > * > *:nth-child(3) { animation-delay: .1s; }
+.db-deck-cartas.entra > * > *:nth-child(4) { animation-delay: .15s; }
+@keyframes db-painel-pula { 0% { transform: scaleY(.94); } 60% { transform: scaleY(1.025); } 100% { transform: none; } }
+@keyframes db-carta-entra { from { transform: translateY(70px) rotate(10deg) scale(.7); opacity: 0; } }
+@keyframes db-aba-pula { 0% { transform: scaleY(.7); } 55% { transform: scaleY(1.12); } 100% { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .db-colecao.entra, .db-colecao.entra .db-colecao-carta, .db-aba.ativa.pula, .db-deck-cartas.entra > * > * { animation: none; } }
+
+/* Engrenagem das opções no deckbuilder */
+.db-engrenagem {
+  left: 1500px; top: 20px; width: 76px; height: 76px; padding: 0; border-radius: 50%; display: grid; place-items: center; cursor: pointer;
+  color: #141414; background: #fff; border: 5px solid #141414; box-shadow: 0 7px 0 #141414;
+  font: 400 48px / 1 'Segoe UI Symbol', 'Segoe UI', sans-serif; transition: transform .3s cubic-bezier(.3, 1.4, .5, 1);
+}
+.db-engrenagem:hover { transform: rotate(60deg); }
+
+/* Caixinha pequena do deck nos botões da escolha antes da partida */
+.deck-mini { --u: .26px; display: inline-block; vertical-align: middle; margin: -6px 7px -6px -2px; }

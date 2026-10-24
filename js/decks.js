@@ -19,7 +19,7 @@ window.SS = window.SS || {};
     verde: '#2e9e3a', azul: '#2a5fd6', vermelho: '#d42a2a', amarelo: '#f3b51b',
     roxo: '#7b3fc4', rosa: '#ee5fa8', laranja: '#f17a1a', marrom: '#7a4a26',
   };
-  const COR_ICONE = Object.assign({ preto: '#141414' }, CORES);
+  const COR_ICONE = CORES;
   const ICONES = ['cavaleiro', 'porta', 'joker', 'espada', 'adaga', 'bainha', 'escudo', 'cura', 'dados', 'ases', 'cemiterio', 'espelho', 'maorei', 'maooito', 'zoio',
     'naipe-paus', 'naipe-copas', 'naipe-espadas', 'naipe-ouros'];
   const srcIcone = ic => (ic.startsWith('naipe-') ? `arte/naipes/${ic.slice(6)}.webp` : `arte/icones/deck/${ic}.webp`);
@@ -30,15 +30,30 @@ window.SS = window.SS || {};
   ];
   const visualDe = (s, k) => Object.assign({}, VISUAL_INICIAL[k % VISUAL_INICIAL.length], s && s.visual);
 
-  // A caixinha de cigarro do baralho: corpo branco com o ícone e o nome, e a tampa pintada na cor escolhida.
+  // A caixinha de cigarro do baralho: corpo branco com o ícone e o nome (os dois na perspectiva da frente da caixa),
+  // a tampa pintada na cor escolhida e, por dentro, três cartas que sobem quando a tampa abre (mouse em cima).
+  const MAX_NOME = 12;
+  // O nome encolhe conforme o tamanho, para caber na frente da caixa.
+  const tamanhoNome = nome => Math.min(22, 84 / (Math.max(1, String(nome).length) * 0.5)).toFixed(1);
   function caixa(v, nome) {
     const cor = COR_ICONE[v.corIcone];
-    const icone = `<span class="cx-icone${cor && v.corIcone !== 'preto' ? ' pintado' : ''}" style="--m:url('${srcIcone(v.icone)}'); --cor:${cor || '#141414'}">
+    const icone = `<span class="cx-icone${cor ? ' pintado' : ''}" style="--m:url('${srcIcone(v.icone)}'); --cor:${cor || '#fff'}">
       <img src="${srcIcone(v.icone)}" alt="" draggable="false"></span>`;
     return `<span class="maco cx" style="--tampa:${CORES[v.tampa] || CORES.verde}">
+      <span class="maco-cartas"><i class="carta dorso vermelho"></i><i class="carta dorso azul"></i><i class="carta dorso verde"></i></span>
       <img class="maco-baixo" src="arte/menu/caixa-baixo.webp" alt="" draggable="false">
-      ${icone}${nome != null ? `<span class="maco-nome">${escapar(nome)}</span>` : ''}
+      ${icone}${nome != null ? `<span class="maco-nome" style="font-size:calc(${tamanhoNome(nome)} * var(--u))">${escapar(nome)}</span>` : ''}
       <span class="maco-tampa cx-tampa"><img src="arte/menu/tampa-pb.webp" alt="" draggable="false"></span></span>`;
+  }
+  // Caixinha de um deck pelo id usado na escolha antes da partida ('palhaco', 'padrao' ou o número do espaço).
+  function caixaDe(id, palhaco) {
+    if (id === 'palhaco') {
+      const p = palhaco && SS.Palhacos.get(palhaco);
+      return caixa(p ? { tampa: COR_NAIPE[p.naipe], icone: 'naipe-' + p.naipe, corIcone: 'original' } : { tampa: 'roxo', icone: 'joker', corIcone: 'original' }, null);
+    }
+    if (id === 'padrao') return caixa({ tampa: 'marrom', icone: 'ases', corIcone: 'original' }, null);
+    const k = Number(id), s = carregar()[k];
+    return caixa(visualDe(s, k), null);
   }
 
   // ---------- Armazenamento ----------
@@ -82,7 +97,8 @@ window.SS = window.SS || {};
 
   // atual: número (um dos seus baralhos) ou id de um baralho pronto (só para ver). aba: naipe embaixo.
   // pedido: ação que pede um segundo clique para confirmar (apagar, copiar por cima de um baralho).
-  let slots = null, atual = 0, aba = 'paus', vista = 1, editando = false, aoVoltar = null, avisoSalvo = '', pedido = null;
+  // animar: 'aba' / 'vista' quando a troca acabou de acontecer (as cartas entram pulando só nessa hora).
+  let slots = null, atual = 0, aba = 'paus', vista = 1, editando = false, aoVoltar = null, avisoSalvo = '', pedido = null, extras = {}, animar = null;
   try { vista = localStorage.getItem(CHAVE_VISTA) === '2' ? 2 : 1; } catch (err) { /* fica na vista 1 */ }
 
   function tela() {
@@ -108,8 +124,10 @@ window.SS = window.SS || {};
     p.style.transform = `translate(${(innerWidth - 1600 * s) / 2}px, ${(innerHeight - 900 * s) / 2}px) scale(${s})`;
   }
 
-  function abrir(voltar) {
+  // extras.opcoes(volta): abre as opções do jogo e chama volta() ao fechar.
+  function abrir(voltar, mais) {
     aoVoltar = voltar;
+    extras = mais || {};
     slots = carregar();
     atual = 0;
     editando = false;
@@ -192,12 +210,12 @@ window.SS = window.SS || {};
     const cartas = FIGURAS.concat(NUMEROS).map(rank => {
       const chave = chaveDe(rank, aba), n = d ? d.cont[chave] || 0 : 0;
       const cheio = !(d && d.leitura) && (n >= R.copias || (FIGURAS.includes(rank) ? r.letras >= R.letras : r.numeros >= R.numeros));
-      return `<span class="db-colecao-carta${n ? ' tem' : ''}${cheio ? ' cheia' : ''}${n >= R.copias ? ' max' : ''}" data-por="${chave}" title="${nomeCarta(rank, aba)}">
+      return `<span class="db-colecao-carta${n ? ' tem' : ''}${cheio ? ' cheia' : ''}${n >= R.copias ? ' max' : ''}" data-por="${chave}" title="${nomeCarta(rank, aba)}" style="--i:${FIGURAS.concat(NUMEROS).indexOf(rank)}">
         <b class="db-qtd">${n}/${R.copias}</b>${face(rank, aba)}</span>`;
     }).join('');
-    return `<div class="db-abas">${NAIPES.map(n => `<button class="db-aba ${n}${n === aba ? ' ativa' : ''}" data-aba="${n}" title="${tr('naipe.' + n)}">
+    return `<div class="db-abas">${NAIPES.map(n => `<button class="db-aba ${n}${n === aba ? ' ativa' + (animar === 'aba' ? ' pula' : '') : ''}" data-aba="${n}" title="${tr('naipe.' + n)}">
         <img src="arte/naipes/${n}.webp" alt="${tr('naipe.' + n)}" draggable="false"></button>`).join('')}</div>
-      <div class="db-colecao ${aba}${d && d.leitura ? ' leitura' : ''}">
+      <div class="db-colecao ${aba}${d && d.leitura ? ' leitura' : ''}${animar === 'aba' ? ' entra' : ''}">
         <div class="db-colecao-cartas">${cartas}</div>
         <p class="db-dica">${tr(d && d.leitura ? 'db.dicaLeitura' : d ? 'db.dica' : 'db.dicaSem')}</p></div>`;
   }
@@ -244,7 +262,7 @@ window.SS = window.SS || {};
     return `<section class="db-deck">
       <div class="db-deck-caixa">${caixa(d.visual, d.leitura ? null : d.nome)}
         ${d.leitura ? `<p class="db-deck-nome">${escapar(d.nome)}</p>` : `<button class="db-btn editar" data-cmd="editar">${tr('db.editar')}</button>`}</div>
-      <div class="db-deck-cartas${d.leitura ? ' leitura' : ''}">${corpo}</div></section>`;
+      <div class="db-deck-cartas${d.leitura ? ' leitura' : ''}${animar === 'vista' ? ' entra' : ''}">${corpo}</div></section>`;
   }
 
   // Personalizar a caixinha: nome, ícone, cor do ícone e cor da tampa (a caixa ao lado mostra como fica).
@@ -259,11 +277,11 @@ window.SS = window.SS || {};
           <div class="db-editar-previa">${caixa(v, d.nome)}</div>
           <div class="db-editar-campos">
             <label>${tr('db.nome')}</label>
-            <input class="nome-deck" value="${escapar(slotAtual().nome || '')}" placeholder="${tr('dk.nome')}" maxlength="14">
+            <input class="nome-deck" value="${escapar(slotAtual().nome || '')}" placeholder="${tr('dk.nome')}" maxlength="${MAX_NOME}">
             <label>${tr('db.corTampa')}</label><div class="db-cores">${amostras(CORES, 'tampa', v.tampa)}</div>
             <label>${tr('db.icone')}</label><div class="db-icones">${ICONES.map(ic => `<button class="db-icone${ic === v.icone ? ' ativa' : ''}" data-icone="${ic}">
               <img src="${srcIcone(ic)}" alt="" draggable="false"></button>`).join('')}</div>
-            <label>${tr('db.corIcone')}</label><div class="db-cores">${amostras(Object.assign({ original: '#ffffff' }, COR_ICONE), 'cor-icone', v.corIcone)}</div>
+            <label>${tr('db.corIcone')}</label><div class="db-cores">${amostras(Object.assign({ original: '#ffffff' }, COR_ICONE), 'cor-icone', COR_ICONE[v.corIcone] ? v.corIcone : 'original')}</div>
           </div>
         </div>
         <button class="db-btn principal" data-cmd="fecharEditar">${tr('db.pronto')}</button>
@@ -274,17 +292,45 @@ window.SS = window.SS || {};
     const el = tela(), d = aberto();
     el.innerHTML = `<div class="deck-palco">
       <button class="db-btn voltar" data-cmd="voltar">← ${tr('btn.voltarMenu')}</button>
+      ${extras.opcoes ? `<button class="db-engrenagem" data-cmd="opcoes" title="${tr('menu.opcoes')}" aria-label="${tr('menu.opcoes')}">⚙&#xFE0E;</button>` : ''}
       <h1 class="db-titulo">${tr('db.titulo')}</h1>
       <div class="db-vistas">${[1, 2].map(n => `<button class="db-vista${vista === n ? ' ativa' : ''}" data-vista="${n}" title="${tr('db.vista' + n)}">${n}</button>`).join('')}</div>
       ${painelLista()}${painelDeck(d)}${painelLimites(d)}${colecao(d)}
       ${editando && d && !d.leitura ? painelEditar(d) : ''}
     </div>`;
+    animar = null;
     encaixar();
   }
 
-  function mudar(chave, delta) {
+  // ---------- Cartas voando entre a coleção (embaixo) e o baralho (em cima) ----------
+  const MOVIMENTO_REDUZIDO = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const caixaDoEl = el => (el && el.isConnected ? el.getBoundingClientRect() : null);
+  function voar(chave, de, para, entrando) {
+    if (MOVIMENTO_REDUZIDO || !de || !para) return;
+    const [rank, naipe] = chave.split('-');
+    const el = document.createElement('div');
+    el.className = 'db-voo';
+    el.innerHTML = face(rank, naipe);
+    Object.assign(el.style, { left: de.left + 'px', top: de.top + 'px', width: de.width + 'px', height: de.height + 'px' });
+    document.body.appendChild(el);
+    const dx = para.left - de.left, dy = para.top - de.top, s = para.width / de.width;
+    const meio = `translate(${dx * .5}px, ${dy * .5 - 60}px) scale(${(1 + s) / 2 * 1.08}) rotate(${entrando ? -8 : 8}deg)`;
+    el.animate([{ transform: 'translate(0, 0) scale(1)' }, { transform: meio, offset: .5 },
+      { transform: `translate(${dx}px, ${dy}px) scale(${s})`, opacity: entrando ? 1 : 0 }],
+      { duration: 420, easing: 'cubic-bezier(.4, 0, .3, 1)', fill: 'forwards' }).onfinish = () => el.remove();
+  }
+  // A carta que chegou (ou que perdeu uma cópia) dá um pulinho no lugar dela.
+  function pular(el, atraso) {
+    if (MOVIMENTO_REDUZIDO || !el) return;
+    el.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.18) translateY(-6px)', offset: .45 }, { transform: 'scale(.95)', offset: .75 }, { transform: 'scale(1)' }],
+      { duration: 380, delay: atraso, easing: 'ease-out', fill: 'backwards' });
+  }
+
+  function mudar(chave, delta, origem) {
     const s = slotAtual();
     if (!s) return;
+    const naTela = c => tela().querySelector(`[data-tirar="${c}"]`);
+    const antes = caixaDoEl(delta > 0 ? origem : naTela(chave) || origem);
     const R = M.REGRAS_DECK, r = M.resumoDeck(s.cont), n0 = s.cont[chave] || 0;
     if (delta > 0) {
       // Clique além do limite: não faz nada (a carta já aparece apagada).
@@ -296,15 +342,33 @@ window.SS = window.SS || {};
     else delete s.cont[chave];
     guardar();
     desenhar();
+    if (delta > 0) {
+      // Entrando: voa da coleção até o lugar dela no baralho, que aparece quando a carta chega.
+      const alvo = naTela(chave);
+      voar(chave, antes, caixaDoEl(alvo), true);
+      if (alvo && !MOVIMENTO_REDUZIDO) alvo.animate([{ opacity: 0 }, { opacity: 0, offset: .99 }, { opacity: 1 }], { duration: 400 });
+      pular(alvo, 400);
+    } else {
+      // Saindo: volta para a coleção (ou para a aba do naipe, se ela estiver fechada).
+      const naColecao = tela().querySelector(`[data-por="${chave}"]`) || tela().querySelector(`[data-aba="${chave.split('-')[1]}"]`);
+      voar(chave, antes, caixaDoEl(naColecao), false);
+      pular(naTela(chave), 0);
+      pular(naColecao, 380);
+    }
   }
 
   function aoClicar(ev) {
     const t = ev.target, antes = pedido;
     pedido = null;
     const ab = t.closest('[data-aba]');
-    if (ab) { aba = ab.dataset.aba; return desenhar(); }
+    if (ab) {
+      if (aba !== ab.dataset.aba) animar = 'aba';
+      aba = ab.dataset.aba;
+      return desenhar();
+    }
     const vi = t.closest('[data-vista]');
     if (vi) {
+      if (vista !== Number(vi.dataset.vista)) animar = 'vista';
       vista = Number(vi.dataset.vista);
       try { localStorage.setItem(CHAVE_VISTA, String(vista)); } catch (err) { /* ignora */ }
       return desenhar();
@@ -334,6 +398,10 @@ window.SS = window.SS || {};
     if (b) {
       const cmd = b.dataset.cmd;
       if (cmd === 'voltar') return fechar();
+      if (cmd === 'opcoes' && extras.opcoes) {
+        tela().hidden = true;
+        return extras.opcoes(() => { tela().hidden = false; desenhar(); });
+      }
       if (cmd === 'editar') { editando = true; return desenhar(); }
       if (cmd === 'fecharEditar') { editando = false; return desenhar(); }
       if (typeof atual !== 'number') return;
@@ -365,15 +433,15 @@ window.SS = window.SS || {};
       return desenhar();
     }
     const por = t.closest('[data-por]'), tirar = t.closest('[data-tirar]');
-    if (por) return mudar(por.dataset.por, 1);
-    if (tirar) return mudar(tirar.dataset.tirar, -1);
+    if (por) return mudar(por.dataset.por, 1, por);
+    if (tirar) return mudar(tirar.dataset.tirar, -1, tirar);
   }
 
   function aoClicarDireito(ev) {
     const cel = ev.target.closest('[data-por], [data-tirar]');
     if (!cel) return;
     ev.preventDefault();
-    mudar(cel.dataset.por || cel.dataset.tirar, -1);
+    mudar(cel.dataset.por || cel.dataset.tirar, -1, cel);
   }
 
   function aoDigitar(ev) {
@@ -382,10 +450,14 @@ window.SS = window.SS || {};
     s.nome = ev.target.value;
     guardar();
     // Atualiza só os nomes nas caixinhas, para não perder o foco do campo.
-    for (const el of tela().querySelectorAll(`[data-slot-deck="${atual}"] .maco-nome, .db-deck-caixa .maco-nome, .db-editar-previa .maco-nome`)) el.textContent = ev.target.value || `Deck ${atual + 1}`;
+    const nome = ev.target.value || `Deck ${atual + 1}`;
+    for (const el of tela().querySelectorAll(`[data-slot-deck="${atual}"] .maco-nome, .db-deck-caixa .maco-nome, .db-editar-previa .maco-nome`)) {
+      el.textContent = nome;
+      el.style.fontSize = `calc(${tamanhoNome(nome)} * var(--u))`;
+    }
   }
 
   const escapar = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 
-  SS.Decks = { abrir, opcoes, contagemPara, caixa };
+  SS.Decks = { abrir, opcoes, contagemPara, caixa, caixaDe };
 })(window.SS);
