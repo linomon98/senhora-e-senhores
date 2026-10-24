@@ -1327,12 +1327,16 @@ window.SS = window.SS || {};
 
   // Carta da mão do oponente usada como recurso (cura, +1 de ataque, Berserk, compra): antes de sumir da mão,
   // guarda de onde ela sai; depois ela aparece grande no meio da mesa, vira para frente e vai para o cemitério.
-  const RECURSO = new Set(['curar', 'espadas', 'paus', 'comprar']);
+  // A carta de ação usada (Curar, +1 de ataque, Berserk, Comprar…) aparece na frente dela, para você saber o que ele fez.
+  const RECURSO = new Set(['curar', 'espadas', 'paus', 'comprar', 'dadoExtra']);
   function antesDeRecurso(a) {
     if (!a || !RECURSO.has(a.tipo) || !jogo || controle(jogo.vez) === 'humano' || MOVIMENTO_REDUZIDO) return null;
     const p = jogo.vez, j = jogo.jogadores[p];
-    return chaveCartas(a).filter(x => x !== 'TOKEN').map(x => ({ c: j.mao.find(k => k.id === x), de: centroDe(document.querySelector(`#mao-${p} [data-voo="${x}"]`)) }))
+    const lista = chaveCartas(a).filter(x => x !== 'TOKEN').map(x => ({ c: j.mao.find(k => k.id === x), de: centroDe(document.querySelector(`#mao-${p} [data-voo="${x}"]`)) }))
       .filter(x => x.c && x.de);
+    // (o rótulo é montado antes da jogada, enquanto a carta ainda está na mão: a cura, por exemplo, depende dela)
+    if (lista.length) lista.acao = a.tipo === 'dadoExtra' ? btnGrande('nada', t('acao.dadoAdicional'), 'dado') : btnGrande('nada', rotuloTipo(a.tipo, a), iconeDaAcao(a));
+    return lista;
   }
   // Devolve quanto tempo a animação leva (para o turno do bot esperar).
   function mostrarRecurso(p, lista) {
@@ -1362,10 +1366,21 @@ window.SS = window.SS || {};
           { transform: noMeio(-10, 1.65, 0), opacity: 1 },
           { transform: `translate(calc(-50% + ${alvo.x - de.x}px), calc(-50% + ${alvo.y - de.y}px)) scale(.7) rotate(12deg)`, opacity: .5 },
         ], { duration: 420, easing: 'ease-in', fill: 'forwards' });
-      }, atraso + 1370);
-      setTimeout(() => el.remove(), atraso + 1800);
+      }, atraso + 1770);
+      setTimeout(() => el.remove(), atraso + 2200);
     });
-    return 1850 + (lista.length - 1) * 120;
+    if (lista.acao) {
+      const n = lista.length, el = document.createElement('div');
+      el.className = 'acao-usada';
+      el.innerHTML = lista.acao;
+      Object.assign(el.style, { left: (800 + (n - 1) * 60 - 95) + 'px', top: '455px' });
+      $('#app').appendChild(el);
+      el.animate([{ transform: 'translate(-50%, -50%) scale(.3) rotate(-25deg)', opacity: 0 }, { transform: 'translate(-50%, -50%) scale(1.15) rotate(-6deg)', opacity: 1, offset: .65 },
+        { transform: 'translate(-50%, -50%) scale(1) rotate(-8deg)', opacity: 1 }], { duration: 380, delay: 520, easing: 'ease-out', fill: 'both' });
+      setTimeout(() => el.animate([{ opacity: 1 }, { opacity: 0, transform: 'translate(-50%, -50%) scale(.8) rotate(-8deg)' }], { duration: 300, fill: 'forwards' }), 1720);
+      setTimeout(() => el.remove(), 2050);
+    }
+    return 2250 + (lista.length - 1) * 120;
   }
 
   // O Palhaço perde PV fora do combate (o Infartitte pagando o poder): treme, solta faíscas e o número sobe.

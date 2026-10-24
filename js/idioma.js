@@ -7,7 +7,11 @@ window.SS = window.SS || {};
   'use strict';
   const CHAVE = 'senhora-e-senhores:idioma';
   const IDIOMAS = ['en', 'pt'];
-  let atual = 'en';
+  // Sem escolha salva: navegador em português abre em português; qualquer outro idioma abre em inglês.
+  const doNavegador = () => {
+    try { return /^pt\b/i.test((navigator.languages && navigator.languages[0]) || navigator.language || '') ? 'pt' : 'en'; } catch (err) { return 'en'; }
+  };
+  let atual = doNavegador();
   try {
     const salvo = localStorage.getItem(CHAVE);
     if (IDIOMAS.includes(salvo)) atual = salvo;
