@@ -26,7 +26,9 @@ window.SS = window.SS || {};
   //   bonusNaipe: todo Senhor(a) ganha o bônus do naipe do número equipado (Espadas +1 de ataque,
   //     Paus +1 de defesa, Ouros +1 dado no ataque, Copas tira 1 hit dele no começo do seu turno)
   //   limitePV: true (a cura não passa de PV_MAX_CURA) | false (sem teto)
-  const REGRAS_PADRAO = Object.freeze({ casca: 'todos2', limiteDefesa: true, rainha: 'reiOuValetes', reiSacrificaValete: false, asesRecurso: true, asesNasLetras: false, bonusNaipe: false, limitePV: true });
+  //   pv: { palhaço: PV inicial } (vazio = o PV de cada Palhaço)
+  //   faixa: { J: [mín, máx], Q: [...], K: [...] } números que cada figura pode equipar (vazio = 2 até LIMITE_FIGURA)
+  const REGRAS_PADRAO = Object.freeze({ casca: 'todos2', limiteDefesa: true, rainha: 'reiOuValetes', reiSacrificaValete: false, asesRecurso: true, asesNasLetras: false, bonusNaipe: false, limitePV: true, pv: Object.freeze({}), faixa: Object.freeze({}) });
   let REGRAS = Object.assign({}, REGRAS_PADRAO);
   // Aceita só chaves e valores conhecidos (as regras do dono da sala chegam pela rede).
   function definirRegras(r) {
@@ -38,12 +40,27 @@ window.SS = window.SS || {};
         if (typeof padrao === 'boolean' && typeof v === 'boolean') novo[k] = v;
         if (k === 'casca' && ['todos2', 'paus1'].includes(v)) novo[k] = v;
         if (k === 'rainha' && ['reiOuValetes', 'doisSenhores'].includes(v)) novo[k] = v;
+        if (k === 'pv' && v && typeof v === 'object') {
+          novo.pv = {};
+          for (const pal in PALHACOS) if (Number.isInteger(v[pal]) && v[pal] >= 1 && v[pal] <= 60 && v[pal] !== PALHACOS[pal].pv) novo.pv[pal] = v[pal];
+        }
+        if (k === 'faixa' && v && typeof v === 'object') {
+          novo.faixa = {};
+          for (const f of ['J', 'Q', 'K']) {
+            const x = v[f];
+            if (Array.isArray(x) && x.length === 2 && x.every(Number.isInteger) && x[0] >= 2 && x[1] <= 10 && x[0] <= x[1] && !(x[0] === 2 && x[1] === LIMITE_FIGURA[f])) novo.faixa[f] = x.slice();
+          }
+        }
       }
     }
     REGRAS = novo;
     return Object.assign({}, REGRAS);
   }
-  const regras = () => Object.assign({}, REGRAS);
+  const regras = () => JSON.parse(JSON.stringify(REGRAS));
+  // Números que a figura pode equipar e PV inicial do Palhaço, com os modificadores.
+  const faixaFigura = rank => REGRAS.faixa[rank] || [2, LIMITE_FIGURA[rank]];
+  const foraDaFaixa = (rank, n) => { const [a, b] = faixaFigura(rank), v = valor(n); return v < a || v > b; };
+  const pvInicial = pal => REGRAS.pv[pal] || PALHACOS[pal].pv;
   const bonusDoNaipe = (u, naipe) => REGRAS.bonusNaipe && u.tipo === 'senhor' && u.numero.naipe === naipe;
   const limiteDefesa = () => (REGRAS.limiteDefesa ? RESISTENCIA_MAX : Infinity);
   const ESPACOS = 8;
@@ -131,7 +148,7 @@ window.SS = window.SS || {};
         return {
           nome: nomes[i],
           palhaco,
-          pv: palhaco ? PALHACOS[palhaco].pv : PV_INICIAL,
+          pv: palhaco ? pvInicial(palhaco) : PV_INICIAL,
           letras: embaralhar(cartas.filter(c => ehFigura(c) || (REGRAS.asesNasLetras && ehAs(c)))),
           numeros: embaralhar(cartas.filter(c => !ehFigura(c) && !(REGRAS.asesNasLetras && ehAs(c)))),
           mao: [],
@@ -483,7 +500,7 @@ window.SS = window.SS || {};
     const podeSumonar = e.sumonados < SENHORES_POR_TURNO, podeAs = e.asesTurno < ASES_POR_TURNO;
     for (const f of podeSumonar ? figuras : []) {
       for (const n of numeros) {
-        if (valor(n) > LIMITE_FIGURA[f.rank]) continue;
+        if (foraDaFaixa(f.rank, n)) continue;
         const aptos = senhores.filter(s => j.campo[s].entrou < e.turno);
         if (f.rank === 'Q') {
           // A Rainha sacrifica 1 Rei ou 2 Valetes seus que já estavam em campo antes deste turno,
@@ -679,7 +696,7 @@ window.SS = window.SS || {};
     switch (a.tipo) {
       case 'sumonar': {
         const f0 = j.mao.find(c => c.id === a.figura), n0 = j.mao.find(c => c.id === a.numero);
-        if (!f0 || !n0 || !ehFigura(f0) || !ehNumero(n0) || valor(n0) > LIMITE_FIGURA[f0.rank]) throw new Error('Sumonar inválido');
+        if (!f0 || !n0 || !ehFigura(f0) || !ehNumero(n0) || foraDaFaixa(f0.rank, n0)) throw new Error('Sumonar inválido');
         if (e.sumonados >= SENHORES_POR_TURNO) throw new Error('Só 1 Senhor(a) por turno');
         e.sumonados++;
         if (f0.rank === 'Q') {
@@ -1281,7 +1298,7 @@ window.SS = window.SS || {};
     desistir, REGRAS_DECK, RANKS, contagemPadrao, resumoDeck, validarDeck, cartasDoDeck,
     PALHACOS, CUSTO_TRANSFUSAO, CUSTO_SANGRIA, SACRIFICIOS_RAINHA, SENHORES_POR_TURNO, ASES_POR_TURNO, REDUCAO_POR_DEFENSOR, palhacoDe, limiteMao, ataqueDirecionado,
     NAIPES, SIMBOLO, LIMITE_FIGURA, PV_INICIAL, PV_MAX_CURA, RESISTENCIA_MAX, ESPACOS, ACOES_POR_TURNO, CUSTO_RAINHA, DADO_ATAQUE_TOTAL, LIMITE_MAO,
-    definirRng: f => { rng = f; }, rngAtual: () => rng, REGRAS_PADRAO, definirRegras, regras, limiteDefesa, voltarAoPrincipal, refletir, paresIguais, contraRefletir, podeContraRefletir, CURA_AS_COPAS, CURA_NAIPADO_COPAS,
+    definirRng: f => { rng = f; }, rngAtual: () => rng, REGRAS_PADRAO, definirRegras, regras, limiteDefesa, faixaFigura, pvInicial, voltarAoPrincipal, refletir, paresIguais, contraRefletir, podeContraRefletir, CURA_AS_COPAS, CURA_NAIPADO_COPAS,
     ehFigura, ehAs, ehNumero, ehSacrificavel, valor, nomeCarta, nomeNaipe, nomeUnidade, curaDe, curaPara, naipado,
     BARALHOS, NOME_BARALHO, baralhosDisponiveis, comprarDoTurno,
     criarJogo, registrar, figurasNoBaralho, escolherFiguras, mulligan, confirmarAbertura,

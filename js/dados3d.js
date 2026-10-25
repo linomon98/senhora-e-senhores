@@ -146,9 +146,10 @@ window.SS = window.SS || {};
     const r = arena && arena.isConnected ? arena.getBoundingClientRect() : null;
     // Área pequena (bandeja): dados menores. A mesa inteira usa o tamanho normal.
     TAM = r && r.width > 20 && r.width < 400 ? TAM_BANDEJA : TAM_MESA;
+    alturaMao = TAM === TAM_BANDEJA ? 6 : 11;
     limites = retanguloEm(0);
     // Onde os dados ficam enquanto você segura: dentro da bandeja no chão E vista do alto.
-    const alto = retanguloEm(ALTURA_MAO);
+    const alto = retanguloEm(alturaMao);
     limitesMao = { minX: Math.max(limites.minX, alto.minX), maxX: Math.min(limites.maxX, alto.maxX), minZ: Math.max(limites.minZ, alto.minZ), maxZ: Math.min(limites.maxZ, alto.maxZ) };
     const Y = new CANNON.Vec3(0, 1, 0);
     const plano = (x, z, ang) => {
@@ -205,7 +206,7 @@ window.SS = window.SS || {};
         d.malha.rotation.x += dt * d.giro.x * g;
         d.malha.rotation.y += dt * d.giro.y * g;
         d.malha.rotation.z += dt * d.giro.z * g;
-        if (!estado.arrastando) d.malha.position.y = ALTURA_MAO + Math.sin(t / 300 + k) * 0.4;
+        if (!estado.arrastando) d.malha.position.y = alturaMao + Math.sin(t / 300 + k) * 0.4;
       });
       renderer.render(cena, camera);
       requestAnimationFrame(quadro);
@@ -263,10 +264,10 @@ window.SS = window.SS || {};
       corpo.angularDamping = 0.2;
       // Arremesso a partir do canto inferior direito (o seu lado da mesa) ou superior (oponente).
       const z0 = dentroZ(deCima ? L.minZ + 3 * f + k * 2.6 * f : L.maxZ - 3 * f - k * 2.6 * f);
-      corpo.position.set(L.maxX - TAM - k * 0.8 * f, 5 + k * 2.4, z0);
+      corpo.position.set(L.maxX - TAM - k * 0.8 * f, (TAM === TAM_BANDEJA ? 5 : 11) + k * 2.4, z0);
       corpo.quaternion.setFromEuler(Math.random() * 6.28, Math.random() * 6.28, Math.random() * 6.28);
       const vz = (12 + Math.random() * 5) * (deCima ? 1 : -1) * Math.max(0.45, f);
-      corpo.velocity.set(-(22 + Math.random() * 6) * Math.max(0.45, f), 3 + Math.random() * 4, vz);
+      corpo.velocity.set(-(22 + Math.random() * 6) * Math.max(0.45, f), 5 + Math.random() * 5, vz);
       corpo.angularVelocity.set((Math.random() - 0.5) * 32, (Math.random() - 0.5) * 32, (Math.random() - 0.5) * 32);
       mundo.addBody(corpo);
       const malha = new THREE.Mesh(new THREE.BoxGeometry(TAM, TAM, TAM), mats);
@@ -296,7 +297,8 @@ window.SS = window.SS || {};
 
   // ---------- Jogar o dado com o mouse (pegar, arrastar e soltar) ----------
 
-  const ALTURA_MAO = 6;
+  // Altura em que o dado fica na sua mão antes de jogar (na mesa inteira mais alto, para ele cair e rolar mais).
+  let alturaMao = 6;
   let removerEventos = null;
 
   // Abandona qualquer dado na mesa ou na mão (ex.: o jogador desistiu da partida).
@@ -356,7 +358,7 @@ window.SS = window.SS || {};
     for (let k = 0; k < n; k++) {
       const malha = new THREE.Mesh(new THREE.BoxGeometry(TAM, TAM, TAM), mats);
       malha.castShadow = true;
-      malha.position.set(cx + (k - (n - 1) / 2) * passo, ALTURA_MAO, cz);
+      malha.position.set(cx + (k - (n - 1) / 2) * passo, alturaMao, cz);
       malha.rotation.set(Math.random() * 6, Math.random() * 6, 0);
       cena.add(malha);
       dados.push({ corpo: null, malha, deslocamento: (k - (n - 1) / 2) * passo });
@@ -369,8 +371,8 @@ window.SS = window.SS || {};
       estado = { fase: 'segurando', arrastando: false, trilha: [], resolver };
       const mover = ev => {
         if (!estado || !estado.arrastando) return;
-        const p = pontoNaAltura(ev.clientX, ev.clientY, ALTURA_MAO);
-        for (const d of dados) d.malha.position.set(p.x + d.deslocamento, ALTURA_MAO, p.z);
+        const p = pontoNaAltura(ev.clientX, ev.clientY, alturaMao);
+        for (const d of dados) d.malha.position.set(p.x + d.deslocamento, alturaMao, p.z);
         estado.trilha.push({ x: p.x, z: p.z, t: performance.now() });
         if (estado.trilha.length > 8) estado.trilha.shift();
       };
@@ -410,7 +412,7 @@ window.SS = window.SS || {};
           d.corpo = novoCorpo(pos.x, pos.y, pos.z);
           // Orientação sorteada na hora de soltar: a face de cima não dá para prever pelo giro.
           d.corpo.quaternion.setFromEuler(Math.random() * 6.28, Math.random() * 6.28, Math.random() * 6.28);
-          d.corpo.velocity.set(vx * (0.85 + Math.random() * 0.3), 3 + Math.random() * 3, vz * (0.85 + Math.random() * 0.3));
+          d.corpo.velocity.set(vx * (0.85 + Math.random() * 0.3), 5 + Math.random() * 4, vz * (0.85 + Math.random() * 0.3));
           const giro = 40 + Math.random() * 20;
           d.corpo.angularVelocity.set((Math.random() - 0.5) * giro, (Math.random() - 0.5) * giro, (Math.random() - 0.5) * giro);
           mundo.addBody(d.corpo);
@@ -469,11 +471,13 @@ window.SS = window.SS || {};
   // numa trajetória animada) e cai mostrando exatamente aqueles valores.
   function rolarPara(valores, cor, deCima) {
     SS.Som.tocar('dado-rolando', { canal: 'dado' });
+    // (sem isso, o dado anterior que ainda estava sumindo continuava apagando, e apagava este junto)
+    estado = null;
     limpar();
     montarParedes();
     const mats = materiais(cor);
     mats.forEach(m => { m.opacity = 1; });
-    const L = limites, dur = 1300, inicio = performance.now();
+    const L = limites, dur = TAM === TAM_BANDEJA ? 1300 : 1600, alto = TAM === TAM_BANDEJA ? 1 : 1.6, inicio = performance.now();
     const cima = new THREE.Vector3(0, 1, 0);
     const voos = valores.map((v, k) => {
       const malha = new THREE.Mesh(new THREE.BoxGeometry(TAM, TAM, TAM), mats);
@@ -485,7 +489,7 @@ window.SS = window.SS || {};
       const final = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(n[0], n[1], n[2]), cima);
       final.premultiply(new THREE.Quaternion().setFromAxisAngle(cima, Math.random() * Math.PI * 2));
       const larg = L.maxX - L.minX, prof = L.maxZ - L.minZ;
-      const de = new THREE.Vector3(L.maxX - TAM - k * 1.2, 7 + k, deCima ? L.minZ + TAM + k * 1.5 : L.maxZ - TAM - k * 1.5);
+      const de = new THREE.Vector3(L.maxX - TAM - k * 1.2, 7 * alto + k, deCima ? L.minZ + TAM + k * 1.5 : L.maxZ - TAM - k * 1.5);
       const para = new THREE.Vector3(L.minX + larg * (0.35 + Math.random() * 0.3) + k * TAM * 1.4, TAM / 2, L.minZ + prof * (0.35 + Math.random() * 0.3));
       const eixo = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
       return { malha, final, de, para, eixo, voltas: 5 + Math.random() * 3 };
@@ -500,7 +504,7 @@ window.SS = window.SS || {};
         for (const d of voos) {
           d.malha.position.lerpVectors(d.de, d.para, e);
           // Dois quiques que vão diminuindo até parar.
-          d.malha.position.y = TAM / 2 + Math.abs(Math.cos(e * Math.PI * 2.5)) * (1 - e) * 6;
+          d.malha.position.y = TAM / 2 + Math.abs(Math.cos(e * Math.PI * 2.5)) * (1 - e) * 6 * alto;
           const giro = new THREE.Quaternion().setFromAxisAngle(d.eixo, (1 - e) * d.voltas * Math.PI);
           d.malha.quaternion.copy(d.final).multiply(giro);
         }
@@ -564,6 +568,6 @@ window.SS = window.SS || {};
     mostrar: (valores, cor, deCima) => (iniciar() ? rolarPara(valores, cor, !!deCima) : rolarPara2D(valores, cor)),
     // O jogador pega o dado no centro da tela e arremessa na mesa.
     jogar: (n, cor) => (iniciar() ? rolarArrastando(n, cor) : rolar2D(n, cor)),
-    depurar: () => ({ limites, estado: estado && estado.fase, dados: dados.map(d => ({ p: d.corpo.position.toString(), v: d.corpo.velocity.norm().toFixed(2), sono: d.corpo.sleepState })) }),
+    depurar: () => ({ limites, alturaMao, estado: estado && estado.fase, dados: dados.map(d => (d.corpo ? { p: d.corpo.position.toString(), v: d.corpo.velocity.norm().toFixed(2), sono: d.corpo.sleepState } : { voando: true, y: d.malha.position.y.toFixed(1), opacidade: d.malha.material[0].opacity })) }),
   };
 })(window.SS);

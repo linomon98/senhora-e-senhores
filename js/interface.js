@@ -103,7 +103,7 @@ window.SS = window.SS || {};
   cfg.regras = (() => { try { return M.definirRegras(JSON.parse(localStorage.getItem(CHAVE_REGRAS))); } catch (err) { return M.definirRegras(null); } })();
   M.definirRegras(null);
   const salvarRegras = () => { try { localStorage.setItem(CHAVE_REGRAS, JSON.stringify(cfg.regras)); } catch (err) { /* fica só nesta visita */ } };
-  const regrasModificadas = r => Object.keys(M.REGRAS_PADRAO).filter(k => r && r[k] !== M.REGRAS_PADRAO[k]);
+  const regrasModificadas = r => Object.keys(M.REGRAS_PADRAO).filter(k => r && JSON.stringify(r[k]) !== JSON.stringify(M.REGRAS_PADRAO[k]));
   // Linha no log do começo da partida dizendo quais regras estão trocadas.
   function anotarRegras() {
     const lista = regrasModificadas(M.regras());
@@ -315,7 +315,7 @@ window.SS = window.SS || {};
     if (jogo.acoes <= 0) return t('dica.semAcoes');
     if (fig && jogo.sumonados >= M.SENHORES_POR_TURNO) return t('dica.umSenhor');
     if (as && jogo.asesTurno >= M.ASES_POR_TURNO) return t('dica.umAs');
-    if (fig && num && M.valor(num) > M.LIMITE_FIGURA[fig.rank]) return t('dica.limiteFigura', { c: M.nomeCarta(fig), n: M.LIMITE_FIGURA[fig.rank] });
+    if (fig && num && (M.valor(num) < M.faixaFigura(fig.rank)[0] || M.valor(num) > M.faixaFigura(fig.rank)[1])) return t('dica.faixaFigura', { c: M.nomeCarta(fig), a: M.faixaFigura(fig.rank)[0], n: M.faixaFigura(fig.rank)[1] });
     if (fig && num && fig.rank === 'Q') return t('dica.rainhaSacrificio');
     if (cartas.length === 1 && fig && fig.rank === 'Q' && !candidatosParceiros().size) return t('dica.rainhaSemSenhores');
     if (fig && num && !j.campo.includes(null)) return t('dica.fileiraCheia');
@@ -4378,6 +4378,17 @@ window.SS = window.SS || {};
       ${linha('asesNasLetras', [['false', t('rg.noNumeros')], ['true', t('rg.noLetras')]])}
       ${linha('bonusNaipe', [['false', t('rg.desligado')], ['true', t('rg.ligado')]])}
       ${linha('limitePV', [['true', t('rg.pvAte', { n: M.PV_MAX_CURA })], ['false', t('rg.semLimite')]])}
+      <div class="opcao"><label>${t('rg.pv')}</label><div class="rg-sliders">${P.LISTA.map(pal => {
+        const v = (r.pv && r.pv[pal.id]) || P.get(pal.id).pvBase;
+        return `<div class="rg-slider"><span>${SIMB[pal.naipe]} ${pal.nome}</span><input type="range" min="5" max="40" step="1" value="${v}" data-rg-pv="${pal.id}">
+          <b data-rg-mostra="pv-${pal.id}">${v}</b><small>★ ${P.get(pal.id).pvBase}</small></div>`;
+      }).join('')}</div><p class="nota">${t('rg.pvNota')}</p></div>
+      <div class="opcao"><label>${t('rg.faixa')}</label><div class="rg-sliders">${['J', 'Q', 'K'].map(f => {
+        const [a, b] = (r.faixa && r.faixa[f]) || [2, M.LIMITE_FIGURA[f]];
+        return `<div class="rg-slider faixa"><span>${t('carta.' + f)}</span>
+          <input type="range" min="2" max="10" step="1" value="${a}" data-rg-faixa="${f}:0"><input type="range" min="2" max="10" step="1" value="${b}" data-rg-faixa="${f}:1">
+          <b data-rg-mostra="faixa-${f}">${a} a ${b}</b><small>★ 2 a ${M.LIMITE_FIGURA[f]}</small></div>`;
+      }).join('')}</div><p class="nota">${t('rg.faixaNota')}</p></div>
       <div class="acoes-menu"><button class="btn" data-m="padrao">${t('rg.restaurar')}</button><button class="btn principal" data-m="voltar">${t('btn.voltar')}</button></div></div>`,
     ev => {
       const g = ev.target.closest('[data-regra] [data-v]');
@@ -4396,6 +4407,24 @@ window.SS = window.SS || {};
         return telaRegras();
       }
       if (b.dataset.m === 'voltar') telaTestes();
+    });
+    // Sliders: o número muda enquanto arrasta; ao soltar, a regra é salva.
+    const guardar = () => { M.definirRegras(null); salvarRegras(); };
+    document.querySelectorAll('#modal [data-rg-pv]').forEach(inp => {
+      inp.oninput = () => { $(`#modal [data-rg-mostra="pv-${inp.dataset.rgPv}"]`).textContent = inp.value; };
+      inp.onchange = () => { cfg.regras = M.definirRegras(Object.assign({}, cfg.regras, { pv: Object.assign({}, cfg.regras.pv, { [inp.dataset.rgPv]: Number(inp.value) }) })); guardar(); };
+    });
+    document.querySelectorAll('#modal [data-rg-faixa]').forEach(inp => {
+      const [f, lado] = inp.dataset.rgFaixa.split(':');
+      const par = () => [...document.querySelectorAll(`#modal [data-rg-faixa^="${f}:"]`)].map(x => Number(x.value));
+      inp.oninput = () => {
+        // o mínimo não passa do máximo (e vice-versa)
+        const [a, b] = par();
+        if (a > b) { if (lado === '0') inp.value = b; else inp.value = a; }
+        const [a2, b2] = par();
+        $(`#modal [data-rg-mostra="faixa-${f}"]`).textContent = `${a2} a ${b2}`;
+      };
+      inp.onchange = () => { cfg.regras = M.definirRegras(Object.assign({}, cfg.regras, { faixa: Object.assign({}, cfg.regras.faixa, { [f]: par() }) })); guardar(); };
     });
   }
 

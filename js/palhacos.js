@@ -136,6 +136,8 @@ window.SS = window.SS || {};
     }
   }
 
+  // PV oficial de cada Palhaço (o que vale no jogo pode mudar pelos modificadores de regras da área de testes).
+  for (const p of LISTA) p.pvBase = SS.Motor.PALHACOS[p.id].pv;
   const POR_ID = Object.fromEntries(LISTA.map(p => [p.id, p]));
 
   SS.Palhacos = {

@@ -2154,6 +2154,13 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 /* Mesa livre: dado forçado e desfazer */
 #editor-livre .ed-dados button { min-width: 30px; }
 /* Modificadores de regras */
+.rg-sliders { display: flex; flex-direction: column; gap: 6px; max-width: 520px; margin: 0 auto; }
+.rg-slider { display: grid; grid-template-columns: 120px 1fr 52px 64px; align-items: center; gap: 10px; }
+.rg-slider.faixa { grid-template-columns: 120px 1fr 1fr 64px 64px; }
+.rg-slider span { font-weight: 800; text-align: left; }
+.rg-slider b { font: 400 22px var(--fonte-titulo); text-align: center; }
+.rg-slider small { opacity: .7; font-weight: 700; }
+.rg-slider input[type="range"] { width: 100%; accent-color: #c41e2a; }
 .regras-teste .opcao { margin: 10px 0; }
 .regras-teste .opcao .nota { margin: 4px 0 0; font-size: 13px; }
 #modal.modal-papel .aviso-regras { margin: 4px auto 0; padding: 5px 10px; width: fit-content; border: 2px solid #141414; border-radius: 10px; background: #ffe066; font-weight: 700; }
