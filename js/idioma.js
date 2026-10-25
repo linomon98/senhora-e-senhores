@@ -355,6 +355,7 @@ window.SS = window.SS || {};
     'faixa.semAcoes': ['Suas ações acabaram. Vá para o ataque.', 'No actions left. Go to attack.'],
     'faixa.ataque': ['Ataque', 'Attack'],
     'faixa.dicaAs': ['para atacar um Ás, arraste até ele', 'to attack an Ace, drag onto it'],
+    'faixa.miraAs': ['Leve a seta do Ás até o espaço do seu campo onde ele vai entrar e clique (num espaço ocupado, as cartas abrem caminho).', 'Bring the Ace\'s arrow to the space on your field where it will enter and click (on an occupied space, the cards make room).'],
     'faixa.miraDado': ['Leve a seta até o Senhor(a) que vai rolar 1 dado a mais e clique (fora dele, desiste).', 'Bring the arrow to the Gentleman that will roll 1 extra die and click (clicking elsewhere backs out).'],
     'faixa.miraRei': ['Mire com a seta e clique onde o Rei vai bater (fora de um alvo, desiste).', 'Aim the arrow and click where the King will strike (clicking elsewhere backs out).'],
     'faixa.dicaRei': ['clique no Rei e mire com a seta onde ele vai bater: o Palhaço, um Ás ou um Senhor(a) inimigo (que é obrigado a defender)', 'click the King and aim the arrow where it will strike: the Jester, an Ace or an enemy Gentleman (who must defend)'],

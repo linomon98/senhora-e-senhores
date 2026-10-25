@@ -155,11 +155,44 @@ window.SS = window.SS || {};
       return render();
     }
     let acao = maisPerto(candidatosPendentes(), pd.destino);
+    // Par de Ouros: o Ás escolhido aparece na mesa e você leva a seta até o lugar dele.
+    if (acao.tipo === 'magia' && acao.naipe === 'ouros' && controle(jogo.vez) === 'humano') return mirarLugarDoAs(acao);
     // Senhor(a) solto em cima de alguém: entra ali mesmo, empurrando as cartas para o lado (a Rainha tem lugar certo).
     if (acao.tipo === 'sumonar' && acao.sacrificio == null && pd.destino != null && acao.slot !== pd.destino && jogo.jogadores[jogo.vez].campo[pd.destino]) {
       acao = Object.assign({}, acao, { slot: pd.destino });
     }
     aplicarDoJogador(acao);
+  }
+
+  // ---------- Par de Ouros: escolher onde o Ás entra ----------
+  const ORIGEM_AS = { x: 800, y: 690 };
+  function mirarLugarDoAs(acao) {
+    const as = jogo.jogadores[jogo.vez].numeros.find(c => c.id === acao.as);
+    ui.pend = null;
+    ui.sel = [];
+    ui.miraAs = { acao, de: Object.assign({}, ORIGEM_AS) };
+    ui.mouse = Object.assign({}, ORIGEM_AS);
+    let el = $('#as-mirando');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'as-mirando';
+      $('#app').appendChild(el);
+    }
+    el.innerHTML = `<div class="carta">${C.frente(as)}</div>`;
+    Object.assign(el.style, { left: ORIGEM_AS.x + 'px', top: ORIGEM_AS.y + 'px' });
+    Som.tocar('mira-seta');
+    render();
+  }
+  function pararMiraAs() {
+    ui.miraAs = null;
+    const el = $('#as-mirando');
+    if (el) el.remove();
+    abrirEspaco(jogo.vez, null);
+  }
+  // Qual espaço do seu campo está debaixo do mouse (para o Ás).
+  function espacoDoAs(alvo) {
+    const s = alvo && alvo.closest && alvo.closest(`[data-slot^="${jogo.vez}:"]`);
+    return s ? Number(s.dataset.slot.split(':')[1]) : null;
   }
 
   // Jogada feita nesta tela (no online, vai também para a tela do amigo).
@@ -433,6 +466,17 @@ window.SS = window.SS || {};
     if (ev.button !== 0 || !jogo || ev.target.closest('#modal')) return;
     if (ui) ui.ignorarProximoClique = false; // (o clique depois de fechar uma mira pode nem chegar a acontecer)
     const naMao = ev.target.closest('[data-mao]');
+    // Mirando o lugar do Ás (par de Ouros): o clique num espaço do seu campo põe o Ás ali; a carta Cancelar desiste.
+    if (ui.miraAs) {
+      if (ev.target.closest('[data-acao]')) return;
+      ev.preventDefault();
+      ui.ignorarProximoClique = true;
+      const i = espacoDoAs(ev.target);
+      if (i == null) return;
+      const acao = Object.assign({}, ui.miraAs.acao, { slot: i });
+      pararMiraAs();
+      return aplicarDoJogador(acao);
+    }
     // Mirando o Dado adicional: o clique escolhe o Senhor(a); fora dele, desiste.
     if (ui.miraDado) {
       if (ev.target.closest('[data-acao]')) { ui.miraDado = null; return; }
@@ -528,6 +572,8 @@ window.SS = window.SS || {};
       ui.mouse = pontoNoApp(ev.clientX, ev.clientY);
       desenharSetas();
     }
+    // Mirando o Ás: o espaço ocupado debaixo do mouse já abre caminho, mostrando para onde as cartas vão.
+    if (jogo && ui.miraAs) abrirEspaco(jogo.vez, espacoDoAs(ev.target));
     atualizarDica(ev);
   }
 
@@ -537,6 +583,7 @@ window.SS = window.SS || {};
       return ui.aoContinuar();
     }
     if (ev.key !== 'Escape' || !jogo) return;
+    if (ui.miraAs) pararMiraAs();
     ui.sel = []; ui.pend = null; ui.atacanteSel = null; ui.bloqSel = null; ui.mira = null; ui.destino = null; ui.reflexoModo = null; ui.miraRei = null; ui.miraDado = null; ui.acaoGuiada = null;
     if (ui.voltarAoAtaque) return voltarAoAtaque();
     render();
@@ -849,6 +896,9 @@ window.SS = window.SS || {};
         return negarLimiteCura([$('.carta-acao[data-acao="negar-cura"]')]);
       case 'dado-adicional':
         return iniciarDadoAdicional();
+      case 'cancelar-as':
+        pararMiraAs();
+        return render();
       case 'tipo':
         return iniciarPendente(arg);
       case 'ir-ataque':
@@ -1032,7 +1082,7 @@ window.SS = window.SS || {};
 
   const mirandoPoder = () => !!(ui && ui.pend && ui.pend.tipo === 'poder' && passoAtual() === 'alvo');
   const mirandoCarta = () => !!(ui && ui.pend && ui.pend.seta && passoAtual() === 'alvo');
-  const mirandoSeta = () => !!(ui && ((ui.reflexoModo && ui.reflexoModo.etapa === 'alvo') || mirandoPoder() || mirandoCarta() || ui.miraDado || (ui.miraRei != null && humanoAtaca())));
+  const mirandoSeta = () => !!(ui && ((ui.reflexoModo && ui.reflexoModo.etapa === 'alvo') || mirandoPoder() || mirandoCarta() || ui.miraDado || ui.miraAs || (ui.miraRei != null && humanoAtaca())));
 
   function desenharSetas() {
     const svg = $('#setas');
@@ -1069,6 +1119,7 @@ window.SS = window.SS || {};
       if (ui.mouse && ui.mouse.x === mira.de.x && ui.mouse.y === mira.de.y) ui.mouse = Object.assign({}, de); // mouse ainda não mexeu
       mira.de = de;
     };
+    if (ui.mouse && ui.miraAs) setas.push({ de: { x: ui.miraAs.de.x, y: ui.miraAs.de.y - 50 }, para: ui.mouse, cor: 'mira-bloqueio', viva: true });
     if (ui.mouse && ui.miraDado) {
       origemCarta('.carta-acao[data-acao="dado-adicional"]', ui.miraDado, 40);
       setas.push({ de: ui.miraDado.de, para: ui.mouse, cor: 'mira-ataque', viva: true });
@@ -2417,7 +2468,10 @@ window.SS = window.SS || {};
       } else texto = t('faixa.botComprando', { j: escapar(j.nome) });
     } else if (jogo.fase === 'principal') {
       if (!humanoNaVez) texto = t('faixa.botJogando', { j: escapar(j.nome) });
-      else if (ui.pend) {
+      else if (ui.miraAs) {
+        texto = t('faixa.miraAs');
+        botoes = btnGrande('cancelar-as', t('btn.cancelar'), 'par-ouros', 'mirando');
+      } else if (ui.pend) {
         texto = textoPasso();
         extras = btn('cancelar', t('btn.cancelar'));
         if (ui.pend.seta) botoes = btnGrande('cancelar', ui.pend.seta.rotulo, ui.pend.seta.icone, 'mirando mirando-roxo');
@@ -3437,6 +3491,11 @@ window.SS = window.SS || {};
     if (a.tipo === 'dadoExtra') {
       const l = M.localizar(jogo, a.alvo);
       return jogo.fase === 'principal' && !!l && l.p === jogo.vez && M.podeAtacar(jogo, l.p, l.i) && M.ourosDisponiveis(jogo, jogo.vez).includes(a.carta);
+    }
+    if (a.tipo === 'magia' && a.naipe === 'ouros' && a.slot != null) {
+      if (!Number.isInteger(a.slot) || a.slot < 0 || a.slot >= M.ESPACOS) return false;
+      const semLugar = chaveJogada(Object.assign({}, a, { slot: undefined }));
+      return M.acoesLegais(jogo).some(x => chaveJogada(x) === semLugar);
     }
     // Senhor(a) entrando num espaço ocupado (empurrando): vale se a mesma invocação é legal em algum espaço vazio.
     if (a.tipo !== 'sumonar' || a.sacrificio != null || !Number.isInteger(a.slot) || a.slot < 0 || a.slot >= M.ESPACOS) return false;

@@ -772,8 +772,12 @@ window.SS = window.SS || {};
         } else if (a.naipe === 'ouros') {
           const k = j.numeros.findIndex(c => c.id === a.as && ehAs(c));
           if (k < 0 || !j.campo.includes(null)) throw new Error('Ás não está no baralho');
+          // a.slot (opcional): onde o jogador quer o Ás (num espaço ocupado, empurra as cartas); sem ele, o espaço do meio.
+          if (a.slot != null && !(Number.isInteger(a.slot) && a.slot >= 0 && a.slot < ESPACOS)) throw new Error('Espaço inválido');
           const as = j.numeros.splice(k, 1)[0];
-          j.campo[espacoCentral(j)] = { uid: e.proximoUid++, tipo: 'as', carta: as, naipe: as.naipe };
+          const unidadeAs = { uid: e.proximoUid++, tipo: 'as', carta: as, naipe: as.naipe };
+          if (a.slot != null) inserirNoCampo(j, a.slot, unidadeAs);
+          else j.campo[espacoCentral(j)] = unidadeAs;
           if (as.naipe === 'ouros') j.tokens++;
           registrar(e, t('log.magiaOuros', { j: j.nome, as: nomeCarta(as) }));
           verificarMortes(e);

@@ -1855,6 +1855,11 @@ body.tut-pulsa-seta #setas .seta .linha { animation: tut-pulsa-linha .6s ease-in
 /* ---------- Carta que o oponente usou como recurso: aparece no meio, vira e vai para o cemitério ---------- */
 .carta-usada { position: absolute; z-index: 70; width: 86px; height: 120px; pointer-events: none; filter: drop-shadow(4px 6px 0 rgba(20, 20, 20, .5)); }
 .carta-usada .carta { width: 100%; height: 100%; }
+/* Ás do par de Ouros esperando o lugar: flutua no meio da mesa, com a seta saindo dele */
+#as-mirando { position: absolute; z-index: 60; width: 86px; height: 120px; transform: translate(-50%, -50%); pointer-events: none;
+  filter: drop-shadow(4px 6px 0 rgba(20, 20, 20, .5)) drop-shadow(0 0 14px rgba(255, 210, 60, .9)); animation: as-flutua 1.4s ease-in-out infinite alternate; }
+#as-mirando .carta { width: 100%; height: 100%; }
+@keyframes as-flutua { from { transform: translate(-50%, -50%) rotate(-4deg); } to { transform: translate(-50%, calc(-50% - 8px)) rotate(4deg); } }
 /* A carta de ação que o oponente usou, na frente da carta gasta */
 .acao-usada { position: absolute; z-index: 71; pointer-events: none; }
 .acao-usada .carta-acao { width: 150px; margin: 0; animation: none; transform: none; filter: drop-shadow(5px 8px 0 rgba(20, 20, 20, .55)); }
