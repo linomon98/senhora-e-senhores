@@ -91,6 +91,11 @@ window.SS = window.SS || {};
     const d = carregarBot()[pal] || {};
     return { slots: Array.from({ length: ESPACOS }, (_, k) => (Array.isArray(d.slots) && d.slots[k]) || null), padrao: Number.isInteger(d.padrao) ? d.padrao : null };
   }
+  // Nome do deck padrão do bot desse Palhaço (null se ele usa o temático).
+  function nomeDeckBot(pal) {
+    const d = doBot(pal), s = d.padrao != null ? d.slots[d.padrao] : null;
+    return valido(s) ? s.nome || `Deck ${d.padrao + 1}` : null;
+  }
   // Contagem que o bot com esse Palhaço usa nas partidas.
   function deckDoBot(pal) {
     const d = doBot(pal), s = d.padrao != null ? d.slots[d.padrao] : null;
@@ -524,5 +529,5 @@ window.SS = window.SS || {};
 
   const escapar = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 
-  SS.Decks = { abrir, opcoes, contagemPara, caixa, caixaDe, deckDoBot };
+  SS.Decks = { abrir, opcoes, contagemPara, caixa, caixaDe, deckDoBot, nomeDeckBot };
 })(window.SS);

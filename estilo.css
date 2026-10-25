@@ -2139,3 +2139,25 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 .db-estrela { position: absolute; right: -6px; top: -8px; z-index: 6; font: 400 28px/1 'Segoe UI Symbol', sans-serif; color: #ffc21a; -webkit-text-stroke: 2px #141414; pointer-events: none; }
 .db-btn.estrela.ativa { background: #7fe07a; }
 .db-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: 0 4px 0 #141414; }
+
+/* Ferramentas de teste no rodapé do log: semente e situação */
+#log-ferramentas { flex: none; padding: 8px 12px 10px; border-top: 1px solid rgba(255, 255, 255, .14); display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--texto); }
+#log-ferramentas .lf-linha { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+#log-ferramentas .lf-linha > span { flex: 1; }
+#log-ferramentas b { color: var(--ouro); user-select: text; }
+.lf-btn { padding: 4px 9px; border: 1px solid rgba(255, 255, 255, .35); border-radius: 8px; background: rgba(255, 255, 255, .08); color: var(--texto); font: 700 12px var(--fonte-ui); cursor: pointer; }
+.lf-btn:hover { background: rgba(255, 255, 255, .18); }
+.lf-semente { width: 110px; padding: 4px 6px; border: 1px solid rgba(255, 255, 255, .35); border-radius: 8px; background: rgba(0, 0, 0, .3); color: var(--texto); font: 600 12px var(--fonte-ui); user-select: text; }
+#modal .campo-situacao { width: 100%; box-sizing: border-box; padding: 8px; border: 2px solid #141414; border-radius: 10px; font: 12px/1.3 Consolas, monospace; resize: vertical; user-select: text; }
+#modal .erro-situacao { color: #b0101e !important; font-weight: 700; }
+
+/* Mesa livre: dado forçado e desfazer */
+#editor-livre .ed-dados button { min-width: 30px; }
+#editor-livre button:disabled { opacity: .45; cursor: default; }
+
+/* Bot × bot: velocidade */
+#velocidade { position: absolute; left: 380px; top: 14px; z-index: 46; display: flex; align-items: center; gap: 6px; padding: 5px 8px 5px 12px;
+  background: #fffdf4; border: 3px solid #141414; border-radius: 14px; box-shadow: 0 4px 0 #141414; font: 400 18px var(--fonte-titulo); color: #141414; }
+#velocidade[hidden] { display: none; }
+#velocidade button { padding: 3px 10px; border: 2px solid #141414; border-radius: 9px; background: #fff; font: 800 14px var(--fonte-ui); color: #141414; cursor: pointer; }
+#velocidade button.ativo { background: #ffc21a; }

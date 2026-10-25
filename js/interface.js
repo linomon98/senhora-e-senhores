@@ -10,7 +10,58 @@ window.SS = window.SS || {};
     SS.Rede = { disponivel: () => false, codigoDoLink: () => null, ao: nada, enviar: nada, sair: nada, limparFila: nada, conectado: () => false, gerador: () => Math.random, esperar: () => new Promise(nada) };
   }
   const $ = s => document.querySelector(s);
-  const esperar = ms => new Promise(r => setTimeout(r, ms));
+  // No Bot × bot dá para acelerar: as esperas e as animações correm "velocidadeBots" vezes mais rápido.
+  let velocidadeBots = 1;
+  const fatorTempo = () => (cfg.modo === 'bots' ? velocidadeBots : 1);
+  const esperar = ms => new Promise(r => setTimeout(r, ms / fatorTempo()));
+  const animarOriginal = Element.prototype.animate;
+  Element.prototype.animate = function (quadros, opcoesAnim) {
+    const a = animarOriginal.call(this, quadros, opcoesAnim);
+    const f = fatorTempo();
+    if (f > 1) a.playbackRate = f;
+    return a;
+  };
+
+  // ---------- Semente da partida ----------
+  // A semente embaralha os baralhos e rola os dados dos bots: a mesma semente repete as mesmas compras
+  // (os dados que você joga e as escolhas dos bots com "ruído" podem fazer a partida tomar outro rumo).
+  const gerarSemente = () => (Math.random() * 4294967296) >>> 0;
+  function geradorSemente(semente) {
+    let a = semente >>> 0;
+    return () => {
+      a = (a + 0x6D2B79F5) | 0;
+      let x = Math.imul(a ^ (a >>> 15), 1 | a);
+      x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x;
+      return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  let sementeAtual = null, rngDadosBot = null;
+  function usarSemente(semente) {
+    sementeAtual = semente != null ? semente >>> 0 : gerarSemente();
+    M.definirRng(geradorSemente(sementeAtual));
+    rngDadosBot = geradorSemente(sementeAtual ^ 0x9E3779B9);
+  }
+
+  // Copia um texto para a área de transferência (com plano B para navegador sem permissão).
+  function copiarTexto(texto) {
+    const planoB = () => {
+      const ta = document.createElement('textarea');
+      ta.value = texto;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch (err) { /* sem jeito */ }
+      ta.remove();
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(texto).catch(planoB);
+    else planoB();
+  }
+  // O botão mostra "Copiado!" por um instante.
+  function avisarCopiado(botao) {
+    if (!botao) return;
+    const antes = botao.innerHTML;
+    botao.innerHTML = '✓ ' + t('teste.copiado');
+    setTimeout(() => { if (botao.isConnected) botao.innerHTML = antes; }, 1400);
+  }
   const SIMB = M.SIMBOLO;
   const t = (k, p) => SS.t(k, p);
   // Tabelas de textos ligadas ao idioma atual: TABELA[x] devolve t(prefixo + x).
@@ -439,6 +490,19 @@ window.SS = window.SS || {};
     if (ds.acao === 'desistir') return confirmarDesistir();
     if (ds.acao === 'reiniciar') return confirmarReiniciar();
     if (ds.acao === 'opcoes-mesa') return telaOpcoes(() => { fecharModal(); if (jogo) render(); });
+    if (ds.acao && ds.acao.startsWith('vel:')) {
+      velocidadeBots = Number(ds.acao.slice(4)) || 1;
+      return renderVelocidade();
+    }
+    if (ds.acao === 'copiar-semente' && sementeAtual != null) { copiarTexto(String(sementeAtual)); return avisarCopiado(el); }
+    if (ds.acao === 'copiar-situacao' && jogo) { copiarTexto(textoSituacao()); return avisarCopiado(el); }
+    if (ds.acao === 'colar-situacao') return colarSituacao();
+    if (ds.acao === 'repetir-semente' && podeRepetir()) return reiniciarComSemente(sementeAtual);
+    if (ds.acao === 'jogar-semente' && podeRepetir()) {
+      const v = Number(($('#log-ferramentas .lf-semente') || {}).value);
+      if (Number.isFinite(v) && v >= 0) return reiniciarComSemente(Math.floor(v));
+      return;
+    }
     if (!jogo) return;
     if (ds.pilha && ui.aoComprar) {
       const [p, b] = ds.pilha.split(':');
@@ -1286,7 +1350,11 @@ window.SS = window.SS || {};
     animarEntradas();
     processarEventos();
     if (cfg.modo === 'tutorial' && SS.Tutorial) SS.Tutorial.aposRender();
-    if (cfg.modo === 'livre' && !(document.activeElement && document.activeElement.closest && document.activeElement.closest('#editor-livre'))) desenharEditor();
+    if (cfg.modo === 'livre') {
+      guardarHistoricoLivre();
+      if (!(document.activeElement && document.activeElement.closest && document.activeElement.closest('#editor-livre'))) desenharEditor();
+    }
+    renderVelocidade();
     sincronizarRefletirFlutuante();
     // Coração acelerado quando o seu PV cai para 5 ou menos (só na hora em que cruza).
     if (cfg.modo !== 'bots') {
@@ -2636,6 +2704,56 @@ window.SS = window.SS || {};
     const el = $('#log');
     el.innerHTML = jogo.log.slice(-150).map(l => `<p${l.startsWith('—') ? ' class="turno"' : ''}>${escapar(l)}</p>`).join('');
     el.scrollTop = el.scrollHeight;
+    renderFerramentasLog();
+  }
+
+  // Embaixo do log: a semente da partida (copiar / jogar de novo com ela) e copiar ou colar a situação da mesa.
+  const podeRepetir = () => ['bot', 'bots', 'livre'].includes(cfg.modo);
+  function renderFerramentasLog() {
+    let el = $('#log-ferramentas');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'log-ferramentas';
+      $('#painel').appendChild(el);
+    }
+    if (el.dataset.chave === sementeAtual + '|' + cfg.modo) return; // (não redesenha à toa: o campo de semente perderia o que você digitou)
+    el.dataset.chave = sementeAtual + '|' + cfg.modo;
+    el.innerHTML = `<div class="lf-linha"><span>${t('teste.semente')}: <b>${sementeAtual != null ? sementeAtual : '–'}</b></span>
+        ${sementeAtual != null ? `<button class="lf-btn" data-acao="copiar-semente" title="${t('teste.copiarSemente')}">📋</button>` : ''}</div>
+      ${podeRepetir() ? `<div class="lf-linha"><button class="lf-btn" data-acao="repetir-semente">↻ ${t('teste.repetir')}</button>
+        <input class="lf-semente" inputmode="numeric" placeholder="${t('teste.outraSemente')}"><button class="lf-btn" data-acao="jogar-semente">▶</button></div>` : ''}
+      <div class="lf-linha"><button class="lf-btn" data-acao="copiar-situacao">📋 ${t('teste.copiarSituacao')}</button>
+        <button class="lf-btn" data-acao="colar-situacao">📥 ${t('teste.colarSituacao')}</button></div>`;
+  }
+
+  // Recomeça o mesmo modo com uma semente escolhida.
+  function reiniciarComSemente(semente) {
+    cfg.proximaSemente = semente;
+    if (cfg.modo === 'livre') iniciarMesaLivre();
+    else iniciarPartida(cfg.modo);
+  }
+
+  // A situação inteira da mesa em texto (para colar aqui ou mandar para alguém).
+  const textoSituacao = () => JSON.stringify({ v: 1, modo: cfg.modo, semente: sementeAtual, palhacos, jogo });
+  function colarSituacao() {
+    modal(`<div class="confirmacao colar-situacao"><h2>${t('teste.colarTitulo')}</h2><p class="nota">${t('teste.colarNota')}</p>
+      <textarea class="campo-situacao" rows="7" spellcheck="false"></textarea><p class="nota erro-situacao" hidden>${t('teste.colarErro')}</p>
+      <div class="acoes-menu"><button class="btn principal" data-m="carregar">${t('teste.carregar')}</button><button class="btn" data-m="nao">${t('btn.cancelar')}</button></div></div>`,
+    ev => {
+      const b = ev.target.closest('[data-m]');
+      if (!b) return;
+      if (b.dataset.m === 'nao') return fecharModal();
+      let s = null;
+      try { s = JSON.parse($('#modal .campo-situacao').value); } catch (err) { s = null; }
+      if (!s || !s.jogo || !Array.isArray(s.jogo.jogadores) || s.jogo.jogadores.length !== 2) {
+        $('#modal .erro-situacao').hidden = false;
+        return;
+      }
+      cfg.livre = Object.assign({ oponente: 'parado', nivel: 'medio', mao: 'vazia' }, cfg.livre, { pal: (s.palhacos || s.jogo.jogadores.map(j => j.palhaco)).slice() });
+      cfg.proximaSemente = s.semente;
+      iniciarMesaLivre(s.jogo);
+    });
+    setTimeout(() => { const ta = $('#modal .campo-situacao'); if (ta) ta.focus(); }, 50);
   }
 
   // ---------- Pop-up de ataque ----------
@@ -3204,7 +3322,12 @@ window.SS = window.SS || {};
     eu = online ? online.eu : 0;
     definirLados(eu);
     $('[data-acao="reiniciar"]').hidden = modo === 'online';
-    M.definirRng(online ? SS.Rede.gerador(online.semente) : Math.random);
+    if (online) {
+      M.definirRng(SS.Rede.gerador(online.semente));
+      sementeAtual = online.semente;
+      rngDadosBot = null;
+    } else usarSemente(cfg.proximaSemente);
+    cfg.proximaSemente = null;
     revanche = { minha: false, dele: false };
     let contagens;
     if (online) {
@@ -3273,6 +3396,8 @@ window.SS = window.SS || {};
   // o amigo manda o resultado dele pela rede, o bot rola sozinho.
   async function dadoDe(p, n, id) {
     const deCima = p !== eu;
+    // Mesa livre: o Editor pode forçar o resultado de todos os dados (1 a 6).
+    if (cfg.modo === 'livre' && cfg.livre && cfg.livre.dado) return SS.Dados.mostrar(Array(n).fill(cfg.livre.dado), corDe(p), deCima);
     // Tutorial: a aula pode combinar o resultado do dado de antes (o oponente "tira 5"), ou um por atacante
     // (tutDadoPor). Com tutSemUm, você joga o dado normalmente, mas um 1 é rolado de novo sozinho.
     if (cfg.modo === 'tutorial') {
@@ -3302,6 +3427,11 @@ window.SS = window.SS || {};
         return [1];
       }
       return SS.Dados.mostrar(msg.v, corDe(p), deCima);
+    }
+    if (rngDadosBot && cfg.modo !== 'tutorial') {
+      const v = Array.from({ length: n }, () => 1 + Math.floor(rngDadosBot() * 6));
+      if (cfg.modo === 'bots' && velocidadeBots >= 10) return v; // turbo: nem mostra o dado
+      return SS.Dados.mostrar(v, corDe(p), deCima);
     }
     return SS.Dados.rolar(n, corDe(p), deCima);
   }
@@ -4049,6 +4179,25 @@ window.SS = window.SS || {};
 
   // A mesa (grama, cobra, enfeites) só é montada quando a primeira partida começa; no menu ela fica escondida.
   let mesaPronta = false;
+  // Velocidade do Bot × bot (canto de cima da mesa): ×1, ×3 ou turbo (×10, sem mostrar os dados).
+  function renderVelocidade() {
+    let el = $('#velocidade');
+    const mostrar = !!jogo && cfg.modo === 'bots';
+    if (!el) {
+      if (!mostrar) return;
+      el = document.createElement('div');
+      el.id = 'velocidade';
+      $('#app').appendChild(el);
+    }
+    el.hidden = !mostrar;
+    if (!mostrar) return;
+    const chave = String(velocidadeBots);
+    if (el.dataset.v === chave) return;
+    el.dataset.v = chave;
+    el.innerHTML = `<span>${t('teste.velocidade')}</span>${[[1, '×1'], [3, '×3'], [10, '⚡ ×10']].map(([v, r]) =>
+      `<button class="${velocidadeBots === v ? 'ativo' : ''}" data-acao="vel:${v}">${r}</button>`).join('')}`;
+  }
+
   function prepararMesa() {
     document.documentElement.classList.remove('em-menu');
     if (mesaPronta) return;
@@ -4262,8 +4411,10 @@ window.SS = window.SS || {};
     });
   }
 
-  function iniciarMesaLivre() {
+  // estado (opcional): uma situação colada do log, que entra no lugar da mesa montada do zero.
+  function iniciarMesaLivre(estado) {
     const lv = cfg.livre;
+    historicoLivre = [];
     cfg.modo = 'livre';
     partida++;
     prepararMesa();
@@ -4280,9 +4431,11 @@ window.SS = window.SS || {};
     eu = 0;
     definirLados(0);
     $('[data-acao="reiniciar"]').hidden = false;
-    M.definirRng(Math.random);
+    usarSemente(cfg.proximaSemente);
+    cfg.proximaSemente = null;
     revanche = { minha: false, dele: false };
     palhacos = lv.pal.slice();
+    if (estado) return carregarEstadoLivre(estado, true);
     const nomes = palhacos.map(x => P.get(x).nome);
     if (nomes[0] === nomes[1]) nomes[1] += ' 2';
     jogo = M.criarJogo({ nomes, primeiro: 0, decks: [0, 1].map(k => M.cartasDoDeck(M.contagemPadrao(), k)), palhacos });
@@ -4296,6 +4449,45 @@ window.SS = window.SS || {};
     M.registrar(jogo, t('livre.log'));
     render();
     abrirEditorLivre();
+  }
+
+  // Põe uma situação (colada, ou a de antes do "Desfazer") na mesa livre. Em combate ou fim de partida,
+  // volta para a fase de ações de quem está na vez.
+  let historicoLivre = [];
+  function carregarEstadoLivre(estado, nova) {
+    partida++;
+    SS.Dados.cancelar();
+    esconderAnuncio();
+    posturaAnterior = {};
+    viradoAnterior = {};
+    maoVista = [null, null];
+    campoVisto = [null, null];
+    posCampo = [{}, {}];
+    cemVisto = [new Set(), new Set()];
+    jogo = JSON.parse(JSON.stringify(estado));
+    if (!['principal', 'compra'].includes(jogo.fase) || jogo.vencedor != null) Object.assign(jogo, { fase: 'principal', combate: null, vencedor: null });
+    const editorFechado = ui && ui.editorFechado;
+    ui = novoUi();
+    ui.editorFechado = editorFechado;
+    if (nova) {
+      M.registrar(jogo, t('teste.situacaoCarregada'));
+      abrirEditorLivre();
+    }
+    render();
+    if (jogo.vez !== eu || jogo.fase === 'compra') proximoTurno(partida);
+  }
+  // Guarda cada situação "parada" da mesa livre (fora do combate) para o Desfazer voltar a ela.
+  function guardarHistoricoLivre() {
+    if (cfg.modo !== 'livre' || !jogo || ui.ocupado || jogo.combate || !['principal', 'compra'].includes(jogo.fase)) return;
+    const s = JSON.stringify(jogo);
+    if (historicoLivre[historicoLivre.length - 1] === s) return;
+    historicoLivre.push(s);
+    if (historicoLivre.length > 60) historicoLivre.shift();
+  }
+  function desfazerLivre() {
+    if (historicoLivre.length < 2) return;
+    historicoLivre.pop();
+    carregarEstadoLivre(JSON.parse(historicoLivre[historicoLivre.length - 1]), false);
   }
 
   // Painel do editor da mesa livre (fica no canto da tela durante a partida).
@@ -4343,6 +4535,9 @@ window.SS = window.SS || {};
       <div class="ed-linha"><button data-ed="limparCampo">${t('livre.limparCampo')}</button></div>
       <div class="ed-titulo">${t('livre.turno')}</div>
       <div class="ed-linha"><button data-ed="acoes">${t('livre.acoes3')}</button><button data-ed="vez">${t('livre.darVez')}</button></div>
+      <div class="ed-titulo">${t('livre.dado')}</div>
+      <div class="ed-linha ed-dados">${[0, 1, 2, 3, 4, 5, 6].map(v => `<button data-ed="dado:${v}" class="${(cfg.livre.dado || 0) === v ? 'ativo' : ''}" title="${v ? t('livre.dadoFixo', { n: v }) : t('livre.dadoSorte')}">${v || '🎲'}</button>`).join('')}</div>
+      <div class="ed-linha"><button data-ed="desfazer"${historicoLivre.length < 2 ? ' disabled' : ''}>↶ ${t('livre.desfazer')} (${Math.max(0, historicoLivre.length - 1)})</button></div>
       </div>`;
     // mantém a escolha dos selects entre um redesenho e outro
     for (const s of el.querySelectorAll('select')) if (editorSel[s.dataset.e]) s.value = editorSel[s.dataset.e];
@@ -4363,6 +4558,8 @@ window.SS = window.SS || {};
     };
     switch (acao) {
       case 'minimizar': ui.editorFechado = !ui.editorFechado; break;
+      case 'dado': cfg.livre.dado = Number(a1) || null; break;
+      case 'desfazer': return desfazerLivre();
       case 'lado': editorLado = Number(a1); break;
       case 'pv': j.pv = Math.max(1, j.pv + Number(a1)); break;
       case 'mao': j.mao.push(novaCarta(p, valorSel('rank'), valorSel('naipe'))); break;
@@ -4598,7 +4795,7 @@ window.SS = window.SS || {};
         <div class="opcao"><label>Bot A</label>${grupo('a', niveis)}</div>
         <div class="opcao"><label>Bot B</label>${grupo('b', niveis)}</div>
         <div id="sim-res">${s.rodando ? `<p>${t('sim.rodando')} ${s.feitos}/${s.n}</p>` : ''}${resultado()}</div>
-        <div class="acoes-menu"><button class="btn principal" data-m="rodar"${s.rodando ? ' disabled' : ''}>${t('sim.rodar')}</button><button class="btn" data-m="voltar">${t('btn.voltar')}</button></div>`,
+        <div class="acoes-menu"><button class="btn principal" data-m="rodar"${s.rodando ? ' disabled' : ''}>${t('sim.rodar')}</button>${s.r && !s.rodando ? `<button class="btn" data-m="copiar">📋 ${t('sim.copiar')}</button>` : ''}<button class="btn" data-m="voltar">${t('btn.voltar')}</button></div>`,
     ev => {
       const g = ev.target.closest('[data-s] [data-v]');
       if (g && !s.rodando) {
@@ -4613,11 +4810,28 @@ window.SS = window.SS || {};
         return voltar();
       }
       if (b.dataset.m === 'rodar' && !s.rodando) rodar();
+      if (b.dataset.m === 'copiar' && s.r) { copiarTexto(textoSimulacao()); avisarCopiado(b); }
     });
+    // Resultado em texto puro, para colar numa conversa ou planilha.
+    const textoSimulacao = () => {
+      const r = s.r, total = r.vit[0] + r.vit[1];
+      const deck = pal => SS.Decks.nomeDeckBot(pal) || t('sim.deckTematico');
+      const linhas = [
+        `${t('sim.titulo')} — ${new Date().toLocaleString()}`,
+        `${t('sim.partidas')}: ${s.feitos} · Bot A: ${NOME_NIVEL[s.a]} · Bot B: ${NOME_NIVEL[s.b]}`,
+        `${t('sim.vitBot', { b: 'A', n: NOME_NIVEL[s.a] })}: ${r.vit[0]} (${pct(r.vit[0], total)}) · ${t('sim.vitBot', { b: 'B', n: NOME_NIVEL[s.b] })}: ${r.vit[1]} (${pct(r.vit[1], total)})`,
+        '', t('sim.porPalhaco'),
+        ...P.LISTA.map(pal => `  ${pal.nome} [${deck(pal.id)}]: ${r.palhacos[pal.id].vit}/${r.palhacos[pal.id].jogos} (${pct(r.palhacos[pal.id].vit, r.palhacos[pal.id].jogos)})`),
+        '', t('sim.confrontos'),
+        ...Object.entries(r.confrontos).map(([k, x]) => { const [a, b] = k.split('|'); return `  ${P.get(a).nome} × ${P.get(b).nome}: ${x.vit}/${x.jogos} (${pct(x.vit, x.jogos)})`; }),
+        '', `${t('sim.primeiro')}: ${pct(r.primeiroVenceu, total)} · ${t('sim.mediaTurnos')}: ${total ? (r.turnos / total).toFixed(1) : '–'} · ${t('sim.empates')}: ${r.empates}${r.erros ? ` · ${t('sim.erros')}: ${r.erros}` : ''}`,
+      ];
+      return linhas.join('\n').replace(/<[^>]+>/g, '');
+    };
     const rodar = () => {
       s.rodando = true;
       s.feitos = 0;
-      s.r = { vit: [0, 0], primeiroVenceu: 0, turnos: 0, empates: 0, erros: 0, palhacos: Object.fromEntries(P.LISTA.map(x => [x.id, { vit: 0, jogos: 0 }])) };
+      s.r = { vit: [0, 0], primeiroVenceu: 0, turnos: 0, empates: 0, erros: 0, palhacos: Object.fromEntries(P.LISTA.map(x => [x.id, { vit: 0, jogos: 0 }])), confrontos: {} };
       // Todos os confrontos entre Palhaços diferentes, em rodízio (os dois lados de cada um).
       const confrontos = [];
       for (const a of P.LISTA) for (const b of P.LISTA) if (a.id !== b.id) confrontos.push([a.id, b.id]);
@@ -4640,6 +4854,10 @@ window.SS = window.SS || {};
                 s.r.palhacos[par[k]].jogos++;
                 if (r.vencedor === k) s.r.palhacos[par[k]].vit++;
               }
+              // confronto do ponto de vista do primeiro Palhaço do par (vitórias dele sobre o outro)
+              const cf = s.r.confrontos[par[0] + '|' + par[1]] || (s.r.confrontos[par[0] + '|' + par[1]] = { vit: 0, jogos: 0 });
+              cf.jogos++;
+              if (r.vencedor === 0) cf.vit++;
             }
           } catch (err) {
             console.error(err);
