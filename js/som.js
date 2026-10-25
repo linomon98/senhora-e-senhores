@@ -44,14 +44,15 @@ window.SS = window.SS || {};
     // cobra (do jeito que estava)
     'cobra-mordida': 0.3, 'cobra-chiado': 0.15,
   };
-  // Música: um loop só (sons/musica.wav, cortado no compasso para emendar sem pulo), tocado pelo Web Audio
-  // com loop exato. Menu e partida usam a mesma faixa por enquanto; trocar de tela não reinicia a música.
-  const ARQ_MUSICA = 'musica.mp3', VOLUME_MUSICA = 0.7; // volume máximo da música (o slider das Opções vai de 0 a isso)
+  // Música: as faixas tocam uma depois da outra, alternando (a primeira é sorteada). A segunda só carrega
+  // depois que a primeira começou, para não atrasar o começo. Trocar de tela não reinicia a música.
+  const FAIXAS = ['musica.mp3', 'musica-2.mp3'], VOLUME_MUSICA = 0.7; // volume máximo da música (o slider das Opções vai de 0 a isso)
   let volumeMusica = 0.6; // slider "Música" das Opções (0–1), separado do volume dos efeitos
 
   let ligado = { efeitos: true, musica: true }, volume = 0.8;
   let ctx = null, mestre = null, carregado = false, musicaPedida = null;
-  let bufMusica = null, fonteMusica = null, ganhoMusica = null;
+  let fonteMusica = null, ganhoMusica = null, faixaAtual = -1;
+  const bufFaixas = []; // índice da faixa → AudioBuffer (quando já carregou)
   const buffers = {}; // nome → lista de AudioBuffer (as variações que carregaram)
   const ultimo = {}; // nome → índice da última variação tocada
   const canais = {}; // canal → { fonte, ganho } que está tocando (ex.: o dado rolando, para parar quando ele para)
@@ -112,10 +113,13 @@ window.SS = window.SS || {};
     ganhoMusica = ctx.createGain();
     ganhoMusica.gain.value = VOLUME_MUSICA * volumeMusica;
     ganhoMusica.connect(ctx.destination); // fora do compressor dos efeitos (para a música não "bombear")
-    if (ARQ_MUSICA) fetch(PASTA + ARQ_MUSICA + VERSAO).then(r => (r.ok ? r.arrayBuffer() : null))
+    const primeira = Math.floor(Math.random() * FAIXAS.length);
+    faixaAtual = primeira - 1; // (a próxima a tocar é a sorteada)
+    const carregarFaixa = k => fetch(PASTA + FAIXAS[k] + VERSAO).then(r => (r.ok ? r.arrayBuffer() : null))
       .then(b => (b ? new Promise((ok, erro) => ctx.decodeAudioData(b, ok, erro)) : null))
-      .then(buf => { if (buf) { bufMusica = semSilencioNoFim(semSilencioInicial(buf)); tocarMusica(); } })
-      .catch(() => { /* sem música */ });
+      .then(buf => { if (buf) { bufFaixas[k] = semSilencioNoFim(semSilencioInicial(buf)); tocarMusica(); } })
+      .catch(() => { /* faixa faltando: toca as outras */ });
+    carregarFaixa(primeira).then(() => FAIXAS.forEach((_, k) => { if (k !== primeira) carregarFaixa(k); }));
   }
 
   // o: { vol (0–1, multiplica o volume do som), canal (um som por canal: o novo corta o anterior), atraso (ms) }
@@ -155,24 +159,41 @@ window.SS = window.SS || {};
   function tocarMusica() {
     if (!ctx || !ganhoMusica) return;
     ganhoMusica.gain.setTargetAtTime(VOLUME_MUSICA * volumeMusica, ctx.currentTime, 0.05);
-    const querTocar = ligado.musica && musicaPedida && bufMusica;
-    if (querTocar && !fonteMusica) {
-      if (ctx.state === 'suspended') ctx.resume();
-      fonteMusica = ctx.createBufferSource();
-      fonteMusica.buffer = bufMusica;
-      fonteMusica.loop = true;
-      fonteMusica.connect(ganhoMusica);
-      // entra com um fade curtinho
-      ganhoMusica.gain.setValueAtTime(0, ctx.currentTime);
-      ganhoMusica.gain.linearRampToValueAtTime(VOLUME_MUSICA * volumeMusica, ctx.currentTime + 0.8);
-      fonteMusica.start();
-    } else if (!querTocar && fonteMusica) {
+    const querTocar = ligado.musica && musicaPedida && bufFaixas.some(Boolean);
+    if (querTocar && !fonteMusica) tocarProximaFaixa(true);
+    else if (!querTocar && fonteMusica) {
       const f = fonteMusica;
       fonteMusica = null;
       ganhoMusica.gain.setTargetAtTime(0, ctx.currentTime, 0.15);
       try { f.stop(ctx.currentTime + 0.8); } catch (e) { /* já parou */ }
       setTimeout(() => { if (!fonteMusica) ganhoMusica.gain.value = VOLUME_MUSICA * volumeMusica; }, 900);
     }
+  }
+
+  // Toca a próxima faixa que já carregou; quando ela acaba, vem a seguinte (comFade: só ao começar a música).
+  function tocarProximaFaixa(comFade) {
+    let k = faixaAtual;
+    for (let n = 0; n < FAIXAS.length; n++) {
+      k = (k + 1) % FAIXAS.length;
+      if (bufFaixas[k]) break;
+    }
+    if (!bufFaixas[k]) return;
+    faixaAtual = k;
+    if (ctx.state === 'suspended') ctx.resume();
+    const f = ctx.createBufferSource();
+    f.buffer = bufFaixas[k];
+    f.connect(ganhoMusica);
+    f.onended = () => {
+      if (fonteMusica !== f) return; // (parou de propósito)
+      fonteMusica = null;
+      if (ligado.musica && musicaPedida) tocarProximaFaixa(false);
+    };
+    fonteMusica = f;
+    if (comFade) {
+      ganhoMusica.gain.setValueAtTime(0, ctx.currentTime);
+      ganhoMusica.gain.linearRampToValueAtTime(VOLUME_MUSICA * volumeMusica, ctx.currentTime + 0.8);
+    }
+    f.start();
   }
 
   // nome: 'menu', 'partida' ou null (silêncio).
@@ -200,6 +221,6 @@ window.SS = window.SS || {};
     tocar, parar, musica, configurar,
     tem: nome => !!(buffers[nome] && buffers[nome].length), // o som já carregou (existe o arquivo)?
     // Para conferir pelo console quais arquivos o jogo achou e o que está tocando.
-    depurar: () => ({ efeitos: Object.keys(EFEITOS).filter(n => buffers[n] && buffers[n].length).map(n => n + ' ×' + buffers[n].length), faltando: Object.keys(EFEITOS).filter(n => !buffers[n] || !buffers[n].length), musica: fonteMusica ? musicaPedida : null }),
+    depurar: () => ({ efeitos: Object.keys(EFEITOS).filter(n => buffers[n] && buffers[n].length).map(n => n + ' ×' + buffers[n].length), faltando: Object.keys(EFEITOS).filter(n => !buffers[n] || !buffers[n].length), musica: fonteMusica ? musicaPedida : null, faixa: fonteMusica ? FAIXAS[faixaAtual] : null, faixasCarregadas: bufFaixas.map((b, k) => (b ? FAIXAS[k] : null)).filter(Boolean) }),
   };
 })(window.SS);
