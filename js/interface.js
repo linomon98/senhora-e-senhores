@@ -97,6 +97,18 @@ window.SS = window.SS || {};
   const P = SS.Palhacos;
 
   const cfg = { palhaco: 'lancalotte', rival: 'aleatorio', nivel: 'medio', modo: 'bot', deck: 'palhaco' };
+  // Modificadores de regras (área de testes): valem contra o bot, no Bot × bot, na simulação, na mesa livre
+  // e no online (lá valem as regras do dono da sala); o tutorial sempre usa as regras oficiais.
+  const CHAVE_REGRAS = 'ss-regras';
+  cfg.regras = (() => { try { return M.definirRegras(JSON.parse(localStorage.getItem(CHAVE_REGRAS))); } catch (err) { return M.definirRegras(null); } })();
+  M.definirRegras(null);
+  const salvarRegras = () => { try { localStorage.setItem(CHAVE_REGRAS, JSON.stringify(cfg.regras)); } catch (err) { /* fica só nesta visita */ } };
+  const regrasModificadas = r => Object.keys(M.REGRAS_PADRAO).filter(k => r && r[k] !== M.REGRAS_PADRAO[k]);
+  // Linha no log do começo da partida dizendo quais regras estão trocadas.
+  function anotarRegras() {
+    const lista = regrasModificadas(M.regras());
+    if (lista.length) M.registrar(jogo, t('log.regrasModificadas', { l: lista.map(k => t('rg.curto.' + k)).join(', ') }));
+  }
   let jogo = null, ui = null, partida = 0, escala = 1;
   let posturaAnterior = {};
   const DURACAO_ANIM = 700;
@@ -318,6 +330,9 @@ window.SS = window.SS || {};
     if (passo === 'slot') return t(tipo === 'invocarAs' ? 'passo.slotAs' : 'passo.slot');
     if (passo === 'sacrificios') {
       const n = (ui.pend.esc.sacrificios || []).length;
+      const fig = cartaDaMao(ui.pend.cands[0].figura);
+      if (fig && fig.rank === 'K') return t('passo.sacrificioRei');
+      if (M.regras().rainha === 'doisSenhores') return t('passo.sacrificiosDois', { n });
       return t('passo.sacrificios', { n });
     }
     if (passo === 'alvo') {
@@ -953,8 +968,8 @@ window.SS = window.SS || {};
         if (ui.voltarAoAtaque) return voltarAoAtaque();
         return render();
       case 'negar-defesa': {
-        const p = jogo.vez, i = jogo.jogadores[p].campo.findIndex((u, k) => u && u.tipo === 'senhor' && M.resistencia(jogo, p, k) >= M.RESISTENCIA_MAX);
-        return negar(document.querySelector(`[data-slot="${p}:${i}"]`), t('aviso.limiteDefesa', { n: M.RESISTENCIA_MAX }), [$('.carta-acao[data-acao="negar-defesa"]')]);
+        const p = jogo.vez, i = jogo.jogadores[p].campo.findIndex((u, k) => u && u.tipo === 'senhor' && M.resistencia(jogo, p, k) >= M.limiteDefesa());
+        return negar(document.querySelector(`[data-slot="${p}:${i}"]`), t('aviso.limiteDefesa', { n: M.limiteDefesa() }), [$('.carta-acao[data-acao="negar-defesa"]')]);
       }
       case 'negar-cura':
         return negarLimiteCura([$('.carta-acao[data-acao="negar-cura"]')]);
@@ -1063,7 +1078,7 @@ window.SS = window.SS || {};
     if ((passo === 'sacrificios' || passo === 'alvo') && u && alvos.has('uid:' + u.uid)) return escolherParametro(u.uid);
     // Par de Paus num Senhor(a) seu que já está no limite de defesa: as cartas dizem "não".
     if (passo === 'alvo' && u && u.tipo === 'senhor' && p === jogo.vez && ui.pend.tipo === 'magia' && ui.pend.cands.some(a => a.naipe === 'paus')
-      && M.resistencia(jogo, p, i) >= M.RESISTENCIA_MAX) negarLimiteDefesa(u.uid);
+      && M.resistencia(jogo, p, i) >= M.limiteDefesa()) negarLimiteDefesa(u.uid);
   }
 
   // "Não" com as cartas: o Senhor(a) e a carta de ação balançam de um lado para o outro, e uma frase
@@ -1078,9 +1093,9 @@ window.SS = window.SS || {};
     const cs = ui.sel.map(cartaDaMao);
     if (!cs.every(c => c && c.naipe === 'paus' && M.ehSacrificavel(c))) return false;
     const p = jogo.vez;
-    return jogo.jogadores[p].campo.some((u, k) => u && u.tipo === 'senhor' && M.resistencia(jogo, p, k) >= M.RESISTENCIA_MAX);
+    return jogo.jogadores[p].campo.some((u, k) => u && u.tipo === 'senhor' && M.resistencia(jogo, p, k) >= M.limiteDefesa());
   }
-  const negarLimiteDefesa = uid => negar(elUnidade(uid), t('aviso.limiteDefesa', { n: M.RESISTENCIA_MAX }), [$('.carta-acao.mirando-roxo')]);
+  const negarLimiteDefesa = uid => negar(elUnidade(uid), t('aviso.limiteDefesa', { n: M.limiteDefesa() }), [$('.carta-acao.mirando-roxo')]);
   // Cura com o PV já no limite: o Palhaço (e a carta de Copas) dizem "não".
   const negarLimiteCura = outros => negar(elRetrato(jogo.vez), t('aviso.limiteCura', { n: M.PV_MAX_CURA }), outros || []);
   function negar(alvo, texto, outros) {
@@ -2262,7 +2277,7 @@ window.SS = window.SS || {};
     $('#pilhas-' + p).innerHTML = `
       ${M.BARALHOS.map(b => {
         const pulsa = ui.aoComprar && jogo.vez === p && j[b].length ? ' pulsando' : '';
-        return `<div class="pilha${pulsa}" data-pilha="${p}:${b}">${pulsa ? '<span class="seta-compra">▼</span>' : ''}<div class="carta${j[b].length ? ' dorso ' + cor : ' vazia'}"><span class="marca-pilha">${b === 'letras' ? 'J Q K' : 'A–10'}</span></div><span class="cont">${j[b].length}</span><label>${M.NOME_BARALHO[b]}</label></div>`;
+        return `<div class="pilha${pulsa}" data-pilha="${p}:${b}">${pulsa ? '<span class="seta-compra">▼</span>' : ''}<div class="carta${j[b].length ? ' dorso ' + cor : ' vazia'}"><span class="marca-pilha">${b === 'letras' ? (M.regras().asesNasLetras ? 'J Q K A' : 'J Q K') : (M.regras().asesNasLetras ? '2–10' : 'A–10')}</span></div><span class="cont">${j[b].length}</span><label>${M.NOME_BARALHO[b]}</label></div>`;
       }).join('')}
       <div class="pilha" data-cemiterio="${p}">${topo ? `<div class="carta">${C.frente(topo)}</div>` : '<div class="carta vazia"></div>'}<span class="cont">${j.cemiterio.length}</span><label>${t('ui.cemiterio')}</label></div>`;
   }
@@ -3328,6 +3343,7 @@ window.SS = window.SS || {};
       rngDadosBot = null;
     } else usarSemente(cfg.proximaSemente);
     cfg.proximaSemente = null;
+    M.definirRegras(online ? online.regras : cfg.regras);
     revanche = { minha: false, dele: false };
     let contagens;
     if (online) {
@@ -3356,6 +3372,7 @@ window.SS = window.SS || {};
     if (!dadosInicio) return;
     const primeiro = dadosInicio[0] > dadosInicio[1] ? 0 : 1;
     jogo = M.criarJogo({ nomes, primeiro, decks, palhacos });
+    anotarRegras();
     ui = novoUi();
     maoVista = [null, null];
     campoVisto = [null, null];
@@ -3531,7 +3548,7 @@ window.SS = window.SS || {};
       return new Promise(pronto => {
         const id = ++proximoPedido;
         pedidos.set(id, { pronto, falhou: () => pronto(aqui()) });
-        cerebro.postMessage({ id, fn, args });
+        cerebro.postMessage({ id, fn, args, regras: M.regras() });
       });
     } catch (erro) {
       cerebroQuebrado = true;
@@ -3822,6 +3839,7 @@ window.SS = window.SS || {};
     if (!aula) return;
     cfg.modo = 'tutorial';
     cfg.aula = n;
+    M.definirRegras(null); // o tutorial ensina as regras oficiais
     partida++;
     prepararMesa();
     Som.musica('partida');
@@ -4112,6 +4130,7 @@ window.SS = window.SS || {};
       semente: Math.floor(Math.random() * 4294967296) >>> 0,
       palhacos: [sala.palhaco, sala.convidado.palhaco],
       decks: [sala.deck, sala.convidado.deck],
+      regras: cfg.regras, // valem as regras do dono da sala
     };
     SS.Rede.enviar(Object.assign({ t: 'inicio' }, config));
     iniciarPartida('online', Object.assign({ eu: 0 }, config));
@@ -4160,7 +4179,7 @@ window.SS = window.SS || {};
       return modal(`<h2>${t('on.invalido', { j: '' })}</h2><div class="acoes-menu"><button class="btn principal" data-m="menu">${t('fim.menu')}</button></div>`,
         ev => { if (ev.target.closest('[data-m="menu"]')) menu(); });
     }
-    iniciarPartida('online', { eu: 1, semente: m.semente, palhacos: m.palhacos, decks: m.decks });
+    iniciarPartida('online', { eu: 1, semente: m.semente, palhacos: m.palhacos, decks: m.decks, regras: m.regras });
   });
   SS.Rede.ao('desistir', () => {
     if (cfg.modo !== 'online' || !jogo || jogo.vencedor != null) return;
@@ -4326,6 +4345,7 @@ window.SS = window.SS || {};
         ${item('simular', '📊', t('menu.simular'), t('teste.simularNota'))}
         ${item('livre', '🛠', t('teste.livre'), t('teste.livreNota'))}
         ${item('deckbot', '🃏', t('teste.deckBot'), t('teste.deckBotNota'))}
+        ${item('regras', '⚖', t('rg.titulo'), regrasModificadas(cfg.regras).length ? t('rg.ativas', { n: regrasModificadas(cfg.regras).length }) : t('rg.notaMenu'))}
       </div>
       <div class="acoes-menu"><button class="btn" data-m="voltar">${t('btn.voltar')}</button></div></div>`,
     ev => {
@@ -4335,10 +4355,47 @@ window.SS = window.SS || {};
       else if (b.dataset.m === 'botxbot') telaBots();
       else if (b.dataset.m === 'simular') simulacao(telaTestes);
       else if (b.dataset.m === 'livre') telaMesaLivre();
+      else if (b.dataset.m === 'regras') telaRegras();
       else if (b.dataset.m === 'deckbot') {
         fecharModal();
         SS.Decks.abrir(telaTestes, { bot: true, opcoes: volta => telaOpcoes(() => { fecharModal(); volta(); }) });
       }
+    });
+  }
+
+  // Modificadores de regras: cada linha troca uma regra (★ = regra oficial).
+  function telaRegras() {
+    const r = cfg.regras;
+    const linha = (chave, ops) => `<div class="opcao"><label>${t('rg.' + chave)}</label><div class="grupo" data-regra="${chave}">${ops.map(([v, txt]) =>
+      `<button data-v="${v}" class="${String(r[chave]) === String(v) ? 'ativo' : ''}">${txt}${String(M.REGRAS_PADRAO[chave]) === String(v) ? ' ★' : ''}</button>`).join('')}</div>
+      <p class="nota">${t('rg.' + chave + 'Nota')}</p></div>`;
+    modal(`<div class="menu-tema regras-teste"><h2 class="titulo-etapa">⚖ ${t('rg.titulo')}</h2><p class="nota">${t('rg.nota')}</p>
+      ${linha('casca', [['todos2', t('rg.casca2')], ['paus1', t('rg.casca1')]])}
+      ${linha('limiteDefesa', [['true', t('rg.limiteSim', { n: M.RESISTENCIA_MAX })], ['false', t('rg.semLimite')]])}
+      ${linha('rainha', [['reiOuValetes', t('rg.rainhaRei')], ['doisSenhores', t('rg.rainhaDois')]])}
+      ${linha('reiSacrificaValete', [['false', t('rg.reiDireto')], ['true', t('rg.reiValete')]])}
+      ${linha('asesRecurso', [['true', t('rg.sim')], ['false', t('rg.nao')]])}
+      ${linha('asesNasLetras', [['false', t('rg.noNumeros')], ['true', t('rg.noLetras')]])}
+      ${linha('bonusNaipe', [['false', t('rg.desligado')], ['true', t('rg.ligado')]])}
+      ${linha('limitePV', [['true', t('rg.pvAte', { n: M.PV_MAX_CURA })], ['false', t('rg.semLimite')]])}
+      <div class="acoes-menu"><button class="btn" data-m="padrao">${t('rg.restaurar')}</button><button class="btn principal" data-m="voltar">${t('btn.voltar')}</button></div></div>`,
+    ev => {
+      const g = ev.target.closest('[data-regra] [data-v]');
+      if (g) {
+        const chave = g.parentElement.dataset.regra, v = g.dataset.v;
+        cfg.regras = M.definirRegras(Object.assign({}, cfg.regras, { [chave]: v === 'true' ? true : v === 'false' ? false : v }));
+        M.definirRegras(null);
+        salvarRegras();
+        return telaRegras();
+      }
+      const b = ev.target.closest('[data-m]');
+      if (!b) return;
+      if (b.dataset.m === 'padrao') {
+        cfg.regras = M.definirRegras(null);
+        salvarRegras();
+        return telaRegras();
+      }
+      if (b.dataset.m === 'voltar') telaTestes();
     });
   }
 
@@ -4433,12 +4490,14 @@ window.SS = window.SS || {};
     $('[data-acao="reiniciar"]').hidden = false;
     usarSemente(cfg.proximaSemente);
     cfg.proximaSemente = null;
+    M.definirRegras(cfg.regras);
     revanche = { minha: false, dele: false };
     palhacos = lv.pal.slice();
     if (estado) return carregarEstadoLivre(estado, true);
     const nomes = palhacos.map(x => P.get(x).nome);
     if (nomes[0] === nomes[1]) nomes[1] += ' 2';
     jogo = M.criarJogo({ nomes, primeiro: 0, decks: [0, 1].map(k => M.cartasDoDeck(M.contagemPadrao(), k)), palhacos });
+    anotarRegras();
     ui = novoUi();
     for (const [p, j] of jogo.jogadores.entries()) {
       if (lv.mao === 'normal') { M.escolherFiguras(jogo, p, Bot.escolherFiguras(jogo, p, 'medio')); jogo.fase = 'abertura'; }
@@ -4658,6 +4717,7 @@ window.SS = window.SS || {};
       <div class="info-carta">${sel ? caixaInfo(sel) : `<p class="dica-carta">${t('menu.cliqueCarta')}</p>`}</div>
       <div class="opcao"><label>${t('menu.seuDeck')}</label>${grupoMenu('deck', decks.map(d => [d.id, `<span class="deck-mini">${SS.Decks.caixaDe(d.id, sel)}</span>${escapar(d.nome)}`]))}
         <p class="nota nota-deck">${notaDeck()}</p></div>
+      ${regrasModificadas(cfg.regras).length && modo !== 'convite' ? `<p class="nota aviso-regras">⚖ ${t('rg.aviso', { n: regrasModificadas(cfg.regras).length })}</p>` : ''}
       <div class="acoes-menu">
         <button class="btn" data-m="voltar">${t('btn.voltar')}</button>
         <button class="btn principal" data-m="confirmar"${sel ? '' : ' disabled'}>${modo === 'convite' ? t('on.entrarConvite', { c: escapar(SS.Rede.codigoDoLink() || '') }) : t('menu.confirmar')}</button>
@@ -4829,6 +4889,7 @@ window.SS = window.SS || {};
       return linhas.join('\n').replace(/<[^>]+>/g, '');
     };
     const rodar = () => {
+      M.definirRegras(cfg.regras);
       s.rodando = true;
       s.feitos = 0;
       s.r = { vit: [0, 0], primeiroVenceu: 0, turnos: 0, empates: 0, erros: 0, palhacos: Object.fromEntries(P.LISTA.map(x => [x.id, { vit: 0, jogos: 0 }])), confrontos: {} };

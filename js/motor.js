@@ -14,6 +14,38 @@ window.SS = window.SS || {};
   const LIMITE_FIGURA = { J: 4, Q: 10, K: 7 };
   const PV_INICIAL = 20;
   const PV_MAX_CURA = 25; // a cura (de qualquer fonte) não passa disso
+
+  // ---------- Modificadores de regras (área de testes) ----------
+  // O padrão é a regra oficial (a do tutorial). Fora do tutorial, a interface pode trocar por outra combinação.
+  //   casca: 'todos2' (Casca grossa: −2 em qualquer defensor do Paumol) | 'paus1' (−1, só nos Naipados de Paus)
+  //   limiteDefesa: true (ninguém aguenta mais que RESISTENCIA_MAX hits) | false (sem limite)
+  //   rainha: 'reiOuValetes' (sacrifica 1 Rei ou 2 Valetes) | 'doisSenhores' (2 Senhores quaisquer)
+  //   reiSacrificaValete: o Rei só entra sacrificando 1 Valete (no lugar dele)
+  //   asesRecurso: os Ases da mão valem como carta de recurso do naipe (cura, compra, +1, Berserk, pares)
+  //   asesNasLetras: os Ases ficam no baralho de Letras (com as figuras), não no de Números
+  //   bonusNaipe: todo Senhor(a) ganha o bônus do naipe do número equipado (Espadas +1 de ataque,
+  //     Paus +1 de defesa, Ouros +1 dado no ataque, Copas tira 1 hit dele no começo do seu turno)
+  //   limitePV: true (a cura não passa de PV_MAX_CURA) | false (sem teto)
+  const REGRAS_PADRAO = Object.freeze({ casca: 'todos2', limiteDefesa: true, rainha: 'reiOuValetes', reiSacrificaValete: false, asesRecurso: true, asesNasLetras: false, bonusNaipe: false, limitePV: true });
+  let REGRAS = Object.assign({}, REGRAS_PADRAO);
+  // Aceita só chaves e valores conhecidos (as regras do dono da sala chegam pela rede).
+  function definirRegras(r) {
+    const novo = Object.assign({}, REGRAS_PADRAO);
+    if (r && typeof r === 'object') {
+      for (const k in REGRAS_PADRAO) {
+        if (!(k in r)) continue;
+        const v = r[k], padrao = REGRAS_PADRAO[k];
+        if (typeof padrao === 'boolean' && typeof v === 'boolean') novo[k] = v;
+        if (k === 'casca' && ['todos2', 'paus1'].includes(v)) novo[k] = v;
+        if (k === 'rainha' && ['reiOuValetes', 'doisSenhores'].includes(v)) novo[k] = v;
+      }
+    }
+    REGRAS = novo;
+    return Object.assign({}, REGRAS);
+  }
+  const regras = () => Object.assign({}, REGRAS);
+  const bonusDoNaipe = (u, naipe) => REGRAS.bonusNaipe && u.tipo === 'senhor' && u.numero.naipe === naipe;
+  const limiteDefesa = () => (REGRAS.limiteDefesa ? RESISTENCIA_MAX : Infinity);
   const ESPACOS = 8;
   const ACOES_POR_TURNO = 3;
   const CUSTO_RAINHA = 1; // ações passivas para sumonar uma Rainha
@@ -51,7 +83,7 @@ window.SS = window.SS || {};
   const ehAs = c => c.rank === 'A';
   const ehNumero = c => !ehFigura(c) && !ehAs(c);
   // Carta que pode ser sacrificada (descartada) num efeito: número ou Ás (o Ás vale 1).
-  const ehSacrificavel = c => ehNumero(c) || ehAs(c);
+  const ehSacrificavel = c => ehNumero(c) || (REGRAS.asesRecurso && ehAs(c));
   const valor = c => (ehAs(c) ? 1 : parseInt(c.rank, 10));
   const nomeCarta = c => (['A', 'J', 'Q', 'K'].includes(c.rank) ? t('carta.' + c.rank) + ' ' : c.rank) + SIMBOLO[c.naipe];
   const nomeNaipe = n => t('naipe.' + n);
@@ -100,8 +132,8 @@ window.SS = window.SS || {};
           nome: nomes[i],
           palhaco,
           pv: palhaco ? PALHACOS[palhaco].pv : PV_INICIAL,
-          letras: embaralhar(cartas.filter(ehFigura)),
-          numeros: embaralhar(cartas.filter(c => !ehFigura(c))),
+          letras: embaralhar(cartas.filter(c => ehFigura(c) || (REGRAS.asesNasLetras && ehAs(c)))),
+          numeros: embaralhar(cartas.filter(c => !ehFigura(c) && !(REGRAS.asesNasLetras && ehAs(c)))),
           mao: [],
           cemiterio: [],
           campo: new Array(ESPACOS).fill(null),
@@ -201,7 +233,7 @@ window.SS = window.SS || {};
   // A cura vai no máximo até PV_MAX_CURA. Com ferida de Copas, não dá para curar
   // acima do PV que sobrou depois do golpe, enquanto o Naipado de Copas viver.
   function tetoCura(j) {
-    let t = PV_MAX_CURA;
+    let t = REGRAS.limitePV ? PV_MAX_CURA : Infinity;
     for (const k in j.feridas) t = Math.min(t, j.feridas[k]);
     return t;
   }
@@ -257,6 +289,7 @@ window.SS = window.SS || {};
     let a = valor(u.numero);
     a += u.atkExtra || 0; // Par de Espadas: +1 de dano permanente
     if (naipado(u) === 'espadas') a++;
+    if (bonusDoNaipe(u, 'espadas')) a++;
     if (asesVizinhos(e, p, i).includes('espadas')) a++;
     return a;
   }
@@ -271,8 +304,9 @@ window.SS = window.SS || {};
     let r = 2;
     r += u.resExtra || 0; // Par de Paus: +1 de defesa permanente
     if (naipado(u) === 'paus') r++;
+    if (bonusDoNaipe(u, 'paus')) r++;
     if (asesVizinhos(e, p, i).includes('paus')) r++;
-    return Math.min(r, RESISTENCIA_MAX);
+    return Math.min(r, limiteDefesa());
   }
 
   function postura(e, p, i) {
@@ -375,6 +409,12 @@ window.SS = window.SS || {};
       }
     }
     registrar(e, t('log.turno', { n: e.turno, j: j.nome }));
+    // Bônus de naipe (modificador): o número de Copas tira 1 hit do Senhor(a) no começo do turno do dono.
+    for (const u of j.campo) {
+      if (!u || !bonusDoNaipe(u, 'copas') || !u.hits) continue;
+      u.hits--;
+      registrar(e, t('log.copasRegenera', { u: nomeUnidade(u) }));
+    }
     // Ás de Copas: cada um em campo cura o dono no começo do turno dele.
     for (const u of j.campo) {
       if (!u || u.tipo !== 'as' || u.naipe !== 'copas') continue;
@@ -444,16 +484,27 @@ window.SS = window.SS || {};
     for (const f of podeSumonar ? figuras : []) {
       for (const n of numeros) {
         if (valor(n) > LIMITE_FIGURA[f.rank]) continue;
+        const aptos = senhores.filter(s => j.campo[s].entrou < e.turno);
         if (f.rank === 'Q') {
           // A Rainha sacrifica 1 Rei ou 2 Valetes seus que já estavam em campo antes deste turno,
           // e entra no lugar do Rei (ou do segundo Valete escolhido).
           if (e.acoes < CUSTO_RAINHA) continue;
-          const aptos = senhores.filter(s => j.campo[s].entrou < e.turno);
+          if (REGRAS.rainha === 'doisSenhores') {
+            // (modificador: 2 Senhores quaisquer; ela entra num espaço vazio ou no lugar de um deles)
+            for (let x = 0; x < aptos.length; x++) for (let y = x + 1; y < aptos.length; y++) {
+              const sa = aptos[x], sb = aptos[y];
+              for (const slot of vazios.concat([sa, sb])) r.push({ tipo: 'sumonar', figura: f.id, numero: n.id, sacrificio: j.campo[sa].uid, sacrificio2: j.campo[sb].uid, slot });
+            }
+            continue;
+          }
           for (const s of aptos) if (j.campo[s].figura.rank === 'K') r.push({ tipo: 'sumonar', figura: f.id, numero: n.id, sacrificio: j.campo[s].uid, sacrificio2: null, slot: s });
           const valetes = aptos.filter(s => j.campo[s].figura.rank === 'J');
           for (const sa of valetes) for (const sb of valetes) {
             if (sa !== sb) r.push({ tipo: 'sumonar', figura: f.id, numero: n.id, sacrificio: j.campo[sa].uid, sacrificio2: j.campo[sb].uid, slot: sb });
           }
+        } else if (f.rank === 'K' && REGRAS.reiSacrificaValete) {
+          // (modificador) O Rei sacrifica 1 Valete que já estava em campo e entra no lugar dele.
+          for (const s of aptos) if (j.campo[s].figura.rank === 'J') r.push({ tipo: 'sumonar', figura: f.id, numero: n.id, sacrificio: j.campo[s].uid, sacrificio2: null, slot: s });
         } else for (const slot of vazios) r.push({ tipo: 'sumonar', figura: f.id, numero: n.id, sacrificio: null, slot });
       }
     }
@@ -505,7 +556,7 @@ window.SS = window.SS || {};
         if (vazios.length) for (const c of j.numeros) if (ehAs(c)) r.push(Object.assign({ as: c.id }, base));
       } else {
         // (Paus no seu Senhor(a) só se ele ainda não estiver no limite de defesa)
-        for (const s of senhores) if (par.naipe !== 'paus' || resistencia(e, p, s) < RESISTENCIA_MAX) r.push(Object.assign({ alvo: j.campo[s].uid }, base));
+        for (const s of senhores) if (par.naipe !== 'paus' || resistencia(e, p, s) < limiteDefesa()) r.push(Object.assign({ alvo: j.campo[s].uid }, base));
         // Contra um inimigo a magia enfraquece: Paus tira 1 de defesa, Espadas tira 1 de ataque
         // (Paus só em quem ainda tem 2 ou mais defesinhas sobrando, para não matar; Espadas, ataque 2 ou mais).
         const op = e.jogadores[1 - p];
@@ -640,25 +691,41 @@ window.SS = window.SS || {};
             if (!s || s.p !== p || s.u.tipo !== 'senhor') throw new Error('Sacrifício inválido');
             if (s.u.entrou >= e.turno) throw new Error('Não pode sacrificar quem entrou neste turno');
           }
-          // 1 Rei sozinho, ou 2 Valetes diferentes; ela entra no lugar do último sacrificado.
-          const rei = sacs.length === 1 && sacs[0].u.figura.rank === 'K';
-          const valetes = sacs.length === 2 && uids[0] !== uids[1] && sacs.every(s => s.u.figura.rank === 'J');
-          if (!rei && !valetes) throw new Error('A Rainha exige 1 Rei ou 2 Valetes');
-          if (a.slot !== sacs[sacs.length - 1].i) throw new Error('A Rainha entra no lugar do Senhor sacrificado');
+          if (REGRAS.rainha === 'doisSenhores') {
+            if (sacs.length !== 2 || uids[0] === uids[1]) throw new Error('A Rainha exige 2 sacrifícios');
+            if (j.campo[a.slot] && !sacs.some(s => s.i === a.slot)) throw new Error('Espaço ocupado');
+          } else {
+            // 1 Rei sozinho, ou 2 Valetes diferentes; ela entra no lugar do último sacrificado.
+            const rei = sacs.length === 1 && sacs[0].u.figura.rank === 'K';
+            const valetes = sacs.length === 2 && uids[0] !== uids[1] && sacs.every(s => s.u.figura.rank === 'J');
+            if (!rei && !valetes) throw new Error('A Rainha exige 1 Rei ou 2 Valetes');
+            if (a.slot !== sacs[sacs.length - 1].i) throw new Error('A Rainha entra no lugar do Senhor sacrificado');
+          }
           registrar(e, t('log.sacrifica', { j: j.nome, us: sacs.map(s => nomeUnidade(s.u)).join(` ${t('e')} `) }));
           for (const uid of uids) {
             const s = localizar(e, uid);
             if (s) morrer(e, s.p, s.i, 'sacrificio');
           }
         }
-        // A Rainha entra no lugar de quem foi sacrificado; os outros podem entrar num espaço ocupado (empurram as cartas).
-        if (f0.rank === 'Q' ? j.campo[a.slot] : !j.campo.includes(null)) throw new Error(f0.rank === 'Q' ? 'Espaço ocupado' : 'Fileira cheia');
+        // (modificador) Rei sacrificando 1 Valete: entra no lugar dele.
+        const reiComSacrificio = f0.rank === 'K' && REGRAS.reiSacrificaValete;
+        if (reiComSacrificio) {
+          const s = a.sacrificio != null && a.sacrificio2 == null ? localizar(e, a.sacrificio) : null;
+          if (!s || s.p !== p || s.u.tipo !== 'senhor' || s.u.figura.rank !== 'J') throw new Error('O Rei exige o sacrifício de 1 Valete');
+          if (s.u.entrou >= e.turno) throw new Error('Não pode sacrificar quem entrou neste turno');
+          if (a.slot !== s.i) throw new Error('O Rei entra no lugar do Valete sacrificado');
+          registrar(e, t('log.sacrificaRei', { j: j.nome, u: nomeUnidade(s.u) }));
+          morrer(e, s.p, s.i, 'sacrificio');
+        }
+        // A Rainha (e o Rei com sacrifício) entra no lugar de quem foi sacrificado; os outros podem entrar num espaço ocupado (empurram as cartas).
+        const noLugar = f0.rank === 'Q' || reiComSacrificio;
+        if (noLugar ? j.campo[a.slot] : !j.campo.includes(null)) throw new Error(noLugar ? 'Espaço ocupado' : 'Fileira cheia');
         const f = tirarDaMao(j, a.figura), n = tirarDaMao(j, a.numero);
         const u = {
           uid: e.proximoUid++, tipo: 'senhor', figura: f, numero: n, hits: 0, ativo: true, atacou: false,
           ataques: f.naipe === n.naipe && f.naipe === 'ouros' ? 2 : 1, entrou: e.turno, bonus: [], berserk: null,
         };
-        if (f.rank === 'Q') j.campo[a.slot] = u;
+        if (noLugar) j.campo[a.slot] = u;
         else inserirNoCampo(j, a.slot, u);
         const nai = naipado(u);
         registrar(e, t('log.sumonou', { j: j.nome, u: nomeUnidade(u), a: ataque(e, p, a.slot), nai: nai ? nomeNaipe(nai) : '' }));
@@ -786,7 +853,7 @@ window.SS = window.SS || {};
           if (!l || l.u.tipo !== 'senhor') throw new Error('Alvo inválido');
           const inimigo = l.p !== p;
           if (inimigo && (a.naipe === 'paus' ? resistencia(e, l.p, l.i) - l.u.hits < 2 : ataqueBase(e, l.p, l.i) < 2)) throw new Error('Esse Senhor(a) já está no mínimo');
-          if (!inimigo && a.naipe === 'paus' && resistencia(e, l.p, l.i) >= RESISTENCIA_MAX) throw new Error('Esse Senhor(a) já está no limite de defesa');
+          if (!inimigo && a.naipe === 'paus' && resistencia(e, l.p, l.i) >= limiteDefesa()) throw new Error('Esse Senhor(a) já está no limite de defesa');
           const d = inimigo ? -1 : 1;
           if (a.naipe === 'paus') l.u.resExtra = (l.u.resExtra || 0) + d;
           else l.u.atkExtra = (l.u.atkExtra || 0) + d;
@@ -887,7 +954,7 @@ window.SS = window.SS || {};
       // Lançalotte (Golpe certeiro): o 1º ataque do turno ganha dado (e ataque) extra.
       const golpe = k === 0 && temPalhaco(j, 'lancalotte') ? PALHACOS.lancalotte : null;
       ataques.push({
-        n: k + 1, atacante: d.atacante, alvo: d.alvo, dados: 1 + extras.length + (golpe ? golpe.dadosPrimeiro : 0) + dadosGuardados(d.atacante),
+        n: k + 1, atacante: d.atacante, alvo: d.alvo, dados: 1 + extras.length + (golpe ? golpe.dadosPrimeiro : 0) + dadosGuardados(d.atacante) + (bonusDoNaipe(localizar(e, d.atacante).u, 'ouros') ? 1 : 0),
         bonusAtaque: golpe ? golpe.ataquePrimeiro : 0, bloqueadores: [], resultado: null,
       });
     });
@@ -1033,6 +1100,8 @@ window.SS = window.SS || {};
     // Cada defensor recebe o dano inteiro (já reduzido pelo bloqueio em grupo).
     const danoPara = b => {
       if (!temPalhaco(D, 'paumol')) return dano;
+      // (modificador 'paus1': só os Naipados de Paus, e 1 a menos)
+      if (REGRAS.casca === 'paus1') return naipado(b.u) === 'paus' ? Math.max(0, dano - 1) : dano;
       if (pm.soPaus && b.u.figura.naipe !== 'paus' && b.u.numero.naipe !== 'paus') return dano;
       return Math.max(0, dano - pm.reducaoDefesa);
     };
@@ -1212,7 +1281,7 @@ window.SS = window.SS || {};
     desistir, REGRAS_DECK, RANKS, contagemPadrao, resumoDeck, validarDeck, cartasDoDeck,
     PALHACOS, CUSTO_TRANSFUSAO, CUSTO_SANGRIA, SACRIFICIOS_RAINHA, SENHORES_POR_TURNO, ASES_POR_TURNO, REDUCAO_POR_DEFENSOR, palhacoDe, limiteMao, ataqueDirecionado,
     NAIPES, SIMBOLO, LIMITE_FIGURA, PV_INICIAL, PV_MAX_CURA, RESISTENCIA_MAX, ESPACOS, ACOES_POR_TURNO, CUSTO_RAINHA, DADO_ATAQUE_TOTAL, LIMITE_MAO,
-    definirRng: f => { rng = f; }, rngAtual: () => rng, voltarAoPrincipal, refletir, paresIguais, contraRefletir, podeContraRefletir, CURA_AS_COPAS, CURA_NAIPADO_COPAS,
+    definirRng: f => { rng = f; }, rngAtual: () => rng, REGRAS_PADRAO, definirRegras, regras, limiteDefesa, voltarAoPrincipal, refletir, paresIguais, contraRefletir, podeContraRefletir, CURA_AS_COPAS, CURA_NAIPADO_COPAS,
     ehFigura, ehAs, ehNumero, ehSacrificavel, valor, nomeCarta, nomeNaipe, nomeUnidade, curaDe, curaPara, naipado,
     BARALHOS, NOME_BARALHO, baralhosDisponiveis, comprarDoTurno,
     criarJogo, registrar, figurasNoBaralho, escolherFiguras, mulligan, confirmarAbertura,

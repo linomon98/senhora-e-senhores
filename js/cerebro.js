@@ -6,8 +6,9 @@ const versao = self.location.search;
 importScripts(...['idioma', 'motor', 'palhacos', 'pesos', 'bot'].map(f => f + '.js' + versao));
 const PERMITIDAS = ['proximaAcao', 'declararAtaques', 'bloquear'];
 self.onmessage = ev => {
-  const { id, fn, args } = ev.data || {};
+  const { id, fn, args, regras } = ev.data || {};
   try {
+    self.SS.Motor.definirRegras(regras); // (as mesmas regras da partida, inclusive os modificadores de teste)
     if (!PERMITIDAS.includes(fn)) throw new Error('função não permitida');
     self.postMessage({ id, r: self.SS.Bot[fn](...args) });
   } catch (erro) {
