@@ -2196,16 +2196,16 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 @media (prefers-reduced-motion: reduce) { #tela-regras.tela-regras-nova::before { animation: none; } }
 .rg-tela { position: relative; z-index: 1; max-width: 1180px; margin: 0 auto; user-select: none; }
 .rg-topo { display: flex; align-items: center; gap: 18px; margin-bottom: 14px; }
-.rg-topo h1 { margin: 0 auto 0 0; padding: 6px 26px 2px; background: #fff; border: 4px solid #141414; border-radius: 18px; box-shadow: 0 7px 0 #141414; font: 400 52px/1 'Marlboro', var(--fonte-titulo); }
+.rg-topo h1 { margin: 0 auto 0 0; padding: 6px 26px 2px; background: #fff; border: 4px solid #141414; border-radius: 18px; box-shadow: 0 7px 0 #141414; font: 400 52px/1 var(--fonte-titulo); }
 .rg-abas { display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-end; padding-left: 14px; }
-.rg-aba { padding: 8px 16px 6px; border: 3px solid #141414; border-bottom: 0; border-radius: 14px 14px 0 0; background: #ececec; color: #141414; font: 400 22px 'Marlboro', var(--fonte-titulo); cursor: pointer; transition: transform .15s cubic-bezier(.3, 1.6, .5, 1); }
+.rg-aba { padding: 8px 16px 6px; border: 3px solid #141414; border-bottom: 0; border-radius: 14px 14px 0 0; background: #ececec; color: #141414; font: 400 22px var(--fonte-titulo); cursor: pointer; transition: transform .15s cubic-bezier(.3, 1.6, .5, 1); }
 .rg-aba:hover { transform: translateY(-3px); }
 .rg-aba.ativa { background: #ffc21a; padding-bottom: 12px; }
 .rg-pagina { background: #fffdf4; border: 4px solid #141414; border-radius: 20px; box-shadow: 0 8px 0 #141414; padding: 22px 30px 26px; font: 15.5px/1.5 var(--fonte-ui); user-select: text; }
 .rg-pagina.entra { animation: rg-pagina-entra .32s cubic-bezier(.3, 1.4, .5, 1); }
 @keyframes rg-pagina-entra { from { transform: translateY(14px); opacity: 0; } }
-.rg-pagina h2 { margin: 0 0 8px; font: 400 46px/1 'Marlboro', var(--fonte-titulo); }
-.rg-pagina h3 { margin: 18px 0 8px; font: 400 28px/1.05 'Marlboro', var(--fonte-titulo); color: #b0101e; }
+.rg-pagina h2 { margin: 0 0 8px; font: 400 46px/1 var(--fonte-titulo); }
+.rg-pagina h3 { margin: 18px 0 8px; font: 400 28px/1.05 var(--fonte-titulo); color: #b0101e; }
 .rg-pagina p { margin: 6px 0; }
 .rg-pagina ul { margin: 4px 0; padding-left: 20px; }
 .rg-centro { text-align: center; }
@@ -2220,8 +2220,8 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 .rg-linha { display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: wrap; }
 .rg-coluna { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
 .rg-coluna small { font-size: 12px; font-weight: 700; }
-.rg-op { font: 400 36px/1 'Marlboro', var(--fonte-titulo); font-style: normal; margin: 0 4px; color: #141414; }
-.rg-numero { font: 400 46px/1 'Marlboro', var(--fonte-titulo); color: #b0101e; }
+.rg-op { font: 400 36px/1 var(--fonte-titulo); font-style: normal; margin: 0 4px; color: #141414; }
+.rg-numero { font: 400 46px/1 var(--fonte-titulo); color: #b0101e; }
 
 /* Cartas, Senhores, cartas de ação, escudos, naipes */
 .rg-c { display: inline-block; flex: none; width: 60px; aspect-ratio: 5 / 7; filter: drop-shadow(2px 3px 0 rgba(0, 0, 0, .35)); }
@@ -2244,18 +2244,18 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 .rg-pal { position: relative; display: inline-block; }
 .rg-pal img { display: block; width: 104px; border-radius: 10px; filter: drop-shadow(3px 4px 0 rgba(20, 20, 20, .45)); }
 .rg-pal.pequeno img { width: 74px; }
-.rg-pv { position: absolute; right: -10px; bottom: -10px; min-width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: #c41e2a; color: #fff; border: 3px solid #141414; font: 400 20px/1 'Marlboro', var(--fonte-titulo); }
+.rg-pv { position: absolute; right: -10px; bottom: -10px; min-width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: #c41e2a; color: #fff; border: 3px solid #141414; font: 400 20px/1 var(--fonte-titulo); }
 .rg-pilha { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
 .rg-pilha .rg-c { width: 70px; }
 .rg-pilha small { margin-top: -54px; margin-bottom: 34px; position: relative; z-index: 1; color: #fff; font: 800 12px var(--fonte-ui); text-shadow: 0 1px 2px #000; }
-.rg-pilha b { font: 400 22px 'Marlboro', var(--fonte-titulo); }
+.rg-pilha b { font: 400 22px var(--fonte-titulo); }
 .rg-pilha em { font-style: normal; font-size: 12px; font-weight: 700; }
 
 /* O turno, os selos, as réguas */
 .rg-passos { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 6px 0; padding: 0; list-style: none; counter-reset: passo; }
 .rg-passos li { counter-increment: passo; position: relative; padding: 12px 10px 10px; background: #fff; border: 2px solid #141414; border-radius: 12px; box-shadow: 0 3px 0 #141414; text-align: center; }
 .rg-passos li::before { content: counter(passo); position: absolute; left: 50%; top: -14px; transform: translateX(-50%); width: 26px; height: 26px; border-radius: 50%; background: #ffc21a; border: 2px solid #141414; font: 800 14px/22px var(--fonte-ui); }
-.rg-passos b { display: block; font: 400 22px/1.1 'Marlboro', var(--fonte-titulo); }
+.rg-passos b { display: block; font: 400 22px/1.1 var(--fonte-titulo); }
 .rg-passos span { font-size: 13px; }
 .rg-caixinhas { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; font-size: 14px; }
 .rg-caixinhas p { margin: 0; padding: 10px 12px; background: #f4eedc; border-radius: 10px; }
@@ -2268,7 +2268,7 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 .rg-escada { display: flex; justify-content: center; align-items: stretch; gap: 6px; flex-wrap: wrap; margin: 10px 0; }
 .rg-escada > .rg-op { align-self: center; }
 .rg-degrau { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 210px; padding: 12px 10px; background: #fff; border: 2px solid #141414; border-radius: 14px; box-shadow: 0 3px 0 #141414; text-align: center; }
-.rg-degrau > b { margin-top: 10px; font: 400 26px/1 'Marlboro', var(--fonte-titulo); }
+.rg-degrau > b { margin-top: 10px; font: 400 26px/1 var(--fonte-titulo); }
 .rg-degrau > em { font-style: normal; font-weight: 800; padding: 0 8px; border-radius: 8px; background: #141414; color: #fff; font-size: 12px; }
 .rg-degrau > span { font-size: 13px; }
 .rg-degrau > small { font-size: 12px; font-weight: 700; color: #b0101e; }
@@ -2298,3 +2298,36 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
   .rg-palhacos { grid-template-columns: 1fr; }
   .rg-palhaco { grid-template-columns: 90px 1fr; }
 }
+
+/* ---------- Efeitos de recursos, magias e Pargias na mesa ---------- */
+.fx { position: absolute; z-index: 66; pointer-events: none; }
+.fx-fantasma { z-index: 52; }
+.fx-texto { white-space: nowrap; font: 400 34px var(--fonte-titulo); color: #fff; -webkit-text-stroke: 4px #141414; paint-order: stroke fill; z-index: 68; }
+.fx-texto.cura, .fx-texto.bom { color: #6dff8a; }
+.fx-texto.espadas { color: #9cc2ff; }
+.fx-texto.berserk { color: #ff5a2a; font-size: 30px; }
+.fx-texto.ruim { color: #ff4a5a; }
+.fx-brasa { border-radius: 50%; mix-blend-mode: screen; }
+.fx-espada { width: 74px; height: 74px; filter: drop-shadow(0 0 10px rgba(120, 170, 255, .95)) drop-shadow(2px 4px 0 rgba(0, 0, 0, .4)); }
+.fx-espada svg { width: 100%; height: 100%; }
+.fx-corte { width: 170px; height: 10px; border-radius: 50%; }
+.fx-corte.azul { background: linear-gradient(90deg, transparent, #fff 25%, #8fb6ff 55%, #2a5fd6 75%, transparent); box-shadow: 0 0 14px 4px rgba(90, 140, 255, .85); }
+.fx-coluna { width: 120px; height: 560px; transform-origin: 50% 100%; border-radius: 60px 60px 20px 20px; mix-blend-mode: screen; }
+.fx-coluna.copas { background: linear-gradient(0deg, rgba(255, 255, 255, .95), rgba(255, 140, 170, .7) 40%, rgba(255, 90, 130, 0)); box-shadow: 0 0 40px 10px rgba(255, 120, 160, .55); }
+.fx-seta { font: 900 30px/1 var(--fonte-ui); -webkit-text-stroke: 2px #141414; paint-order: stroke fill; filter: drop-shadow(0 0 6px rgba(255, 255, 255, .7)); }
+.fx-racha { width: 90px; height: 120px; background:
+  linear-gradient(62deg, transparent 47%, rgba(20, 0, 30, .85) 48% 51%, transparent 52%),
+  linear-gradient(-48deg, transparent 46%, rgba(20, 0, 30, .8) 47% 50%, transparent 51%),
+  linear-gradient(100deg, transparent 48%, rgba(20, 0, 30, .7) 49% 51%, transparent 52%); }
+.fx-vento { width: 120px; height: 10px; border-radius: 10px; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .95), transparent); box-shadow: 0 0 8px rgba(220, 235, 255, .9); }
+.fx-meteoro { width: 64px; height: 64px; border-radius: 50%; z-index: 67;
+  background: radial-gradient(circle at 40% 60%, #fff 0 14%, #ffe27a 26%, #ff8a1e 50%, #c2260b 70%, transparent 74%);
+  box-shadow: 0 0 30px 10px rgba(255, 120, 30, .8); }
+.fx-meteoro::after { content: ''; position: absolute; left: 50%; top: 50%; z-index: -1; width: 44px; height: 250px; margin-left: -22px; transform: rotate(211deg); transform-origin: 50% 0; border-radius: 50%;
+  background: linear-gradient(180deg, rgba(255, 240, 180, .95), rgba(255, 150, 40, .7) 35%, rgba(255, 120, 30, 0)); filter: blur(4px); }
+.fx-cratera { width: 130px; height: 70px; border-radius: 50%; z-index: 51; background: radial-gradient(ellipse, rgba(30, 12, 4, .85), rgba(80, 30, 10, .5) 50%, transparent 72%); }
+.fx-clarao { left: 0; top: 0; width: 1600px; height: 900px; background: radial-gradient(circle at 50% 30%, #fff, #dfe8ff 60%, #b8c8ff); z-index: 65; mix-blend-mode: screen; opacity: 0; }
+.fx-raio { z-index: 69; opacity: 0; }
+.fx-raio path { fill: none; stroke-linejoin: round; stroke-linecap: round; }
+.fx-raio .brilho { stroke: rgba(150, 210, 255, .85); stroke-width: 30; filter: blur(7px); }
+.fx-raio .nucleo { stroke: #fffbe0; stroke-width: 9; filter: drop-shadow(0 0 6px #fff36a); }

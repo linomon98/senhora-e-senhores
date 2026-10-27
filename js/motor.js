@@ -730,6 +730,7 @@ window.SS = window.SS || {};
       gastarOuros(e, p, a.carta);
       l.u.dadosExtra = (l.u.dadosExtra || 0) + 1;
       registrar(e, t('log.dadoExtra', { j: e.jogadores[p].nome, u: nomeUnidade(l.u) }));
+      evento(e, { tipo: 'fx', fx: 'dado', p, alvo: { p, i: l.i, uid: l.u.uid } });
       return;
     }
     if (e.acoes <= 0) throw new Error('Sem ações neste turno');
@@ -857,6 +858,7 @@ window.SS = window.SS || {};
         const qtd = curar(e, p, curaPara(j, c));
         j.cemiterio.push(c);
         registrar(e, t('log.curou', { j: j.nome, c: nomeCarta(c), n: qtd }));
+        evento(e, { tipo: 'fx', fx: 'curar', p, n: qtd });
         break;
       }
       case 'espadas': {
@@ -866,6 +868,7 @@ window.SS = window.SS || {};
         alvo.u.bonus.push(valor(c));
         j.cemiterio.push(c);
         registrar(e, t('log.espadas', { j: j.nome, c: nomeCarta(c), u: nomeUnidade(alvo.u), n: Math.floor(valor(c) / 2) }));
+        evento(e, { tipo: 'fx', fx: 'espadas', p, alvo: { p, i: alvo.i, uid: alvo.u.uid }, n: Math.floor(valor(c) / 2) });
         break;
       }
       case 'paus': {
@@ -875,11 +878,13 @@ window.SS = window.SS || {};
         alvo.u.berserk = { hits: 0, expira: e.turno + 1 };
         j.cemiterio.push(c);
         registrar(e, t('log.paus', { j: j.nome, c: nomeCarta(c), u: nomeUnidade(alvo.u) }));
+        evento(e, { tipo: 'fx', fx: 'berserk', p, alvo: { p, i: alvo.i, uid: alvo.u.uid } });
         break;
       }
       case 'comprar': {
         gastarOuros(e, p, a.carta);
         registrar(e, t('log.ourosCompra', { j: j.nome, b: NOME_BARALHO[a.baralho] }));
+        evento(e, { tipo: 'fx', fx: 'comprar', p, baralho: a.baralho });
         comprar(e, p, 1, a.baralho);
         break;
       }
@@ -895,8 +900,10 @@ window.SS = window.SS || {};
             uid: e.proximoUid++, tipo: 'senhor', figura: f, numero: n, hits: 0, ativo: true, atacou: false,
             ataques: f.naipe === n.naipe && f.naipe === 'ouros' ? 2 : 1, entrou: e.turno, bonus: [], berserk: null,
           };
-          j.campo[espacoCentral(j)] = u;
+          const k = espacoCentral(j);
+          j.campo[k] = u;
           registrar(e, t('log.magiaCopas', { j: j.nome, u: nomeUnidade(u) }));
+          evento(e, { tipo: 'fx', fx: 'reviver', p, alvo: { p, i: k, uid: u.uid } });
         } else if (a.naipe === 'ouros') {
           const k = j.numeros.findIndex(c => c.id === a.as && ehAs(c));
           if (k < 0 || !j.campo.includes(null)) throw new Error('Ás não está no baralho');
@@ -919,6 +926,7 @@ window.SS = window.SS || {};
           if (a.naipe === 'paus') l.u.resExtra = (l.u.resExtra || 0) + d;
           else l.u.atkExtra = (l.u.atkExtra || 0) + d;
           registrar(e, t((a.naipe === 'paus' ? 'log.magiaPaus' : 'log.magiaEspadas') + (inimigo ? 'Inimigo' : ''), { j: j.nome, u: nomeUnidade(l.u) }));
+          evento(e, { tipo: 'fx', fx: 'magiaNaipe', naipe: a.naipe, d, p, alvo: { p: l.p, i: l.i, uid: l.u.uid } });
           if (inimigo) verificarMortes(e); // com menos defesa, os hits que ele já tinha podem bastar
         }
         evento(e, { tipo: 'magia', p, cartas: cs.map(c => Object.assign({}, c)) });
@@ -937,6 +945,7 @@ window.SS = window.SS || {};
           // O Senhor(a) inimigo volta para a mão do dono (figura e número), sem morrer.
           const l = localizar(e, a.alvo);
           if (!l || l.p !== d || l.u.tipo !== 'senhor') throw new Error('Alvo inválido');
+          evento(e, { tipo: 'fx', fx: 'saiDaqui', p, alvo: { p: d, i: l.i, uid: l.u.uid } });
           op.campo[l.i] = null;
           op.mao.push(l.u.figura, l.u.numero);
           delete j.feridas[l.u.uid];
@@ -945,6 +954,9 @@ window.SS = window.SS || {};
           verificarMortes(e);
         } else if (efeito === 'meteoro') {
           registrar(e, t('log.meteoro', { j: j.nome }));
+          const alvos = [];
+          for (const q of [p, d]) e.jogadores[q].campo.forEach((u, i) => { if (u && u.tipo === 'senhor') alvos.push({ p: q, i, uid: u.uid }); });
+          evento(e, { tipo: 'fx', fx: 'meteoro', p, alvos });
           for (const q of [p, d]) for (let i = 0; i < ESPACOS; i++) {
             const u = e.jogadores[q].campo[i];
             if (u && u.tipo === 'senhor') morrer(e, q, i, 'meteoro');
@@ -952,11 +964,13 @@ window.SS = window.SS || {};
         } else {
           if (a.alvo === 'jogador') {
             registrar(e, t('log.raioPalhaco', { j: j.nome, d: op.nome, n: DANO_RAIO_PALHACO }));
+            evento(e, { tipo: 'fx', fx: 'raio', p, jogador: d });
             perderPV(e, d, DANO_RAIO_PALHACO);
           } else {
             const l = localizar(e, a.alvo);
             if (!l || l.p !== d || l.u.tipo !== 'senhor') throw new Error('Alvo inválido');
             registrar(e, t('log.raioSenhor', { j: j.nome, u: nomeUnidade(l.u) }));
+            evento(e, { tipo: 'fx', fx: 'raio', p, alvo: { p: l.p, i: l.i, uid: l.u.uid } });
             aplicarHit(e, l.p, l.i);
           }
         }

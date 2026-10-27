@@ -1358,6 +1358,7 @@ window.SS = window.SS || {};
   function render() {
     if (!jogo) return renderVazio();
     const alvos = alvosClicaveis();
+    guardarFantasmas();
     for (const p of [0, 1]) {
       renderJogador(p, alvos);
       renderCampo(p, alvos);
@@ -1673,20 +1674,317 @@ window.SS = window.SS || {};
   // Acontecimentos anotados pelo motor: magias, curas (Ás de Copas, Naipado de Copas) e Ouros extra do Ás.
   function processarEventos() {
     if (!jogo.eventos || !jogo.eventos.length) return;
-    const lista = jogo.eventos.splice(0);
+    const lista = jogo.eventos.splice(0), fx = [];
     lista.forEach((ev, k) => {
       if (ev.tipo === 'magia') {
         if (ui.magiaFeita && ev.cartas.every(c => ui.magiaFeita.has(c.id))) return; // já animado na hora do clique
         return animarParDestruido(ev.p, ev.cartas);
       }
       if (ev.tipo === 'poder') return animarPoder(ev);
+      if (ev.tipo === 'fx') return fx.push(ev);
       const de = ev.de != null ? elUnidade(ev.de) : null;
       if (!de) return;
       if (ev.tipo === 'cura' || ev.tipo === 'token') setTimeout(() => Som.tocar(ev.tipo === 'cura' ? 'cura' : 'as-ouros'), 250 + k * 180);
       if (ev.tipo === 'cura') voarIcone(de, pvDe(ev.p), `<span>+${ev.n}</span>`, 'bola-cura', 250 + k * 180);
       else if (ev.tipo === 'token') voarToken(de, ev.p, 250 + k * 180);
     });
+    // (depois do laço: a animação do par já marcou quanto tempo leva, e o efeito na mesa espera por ela)
+    fx.forEach(efeitoNaMesa);
   }
+
+  // ---------- Efeitos de cada recurso, magia e Pargia na mesa (para as duas pontas da mesa) ----------
+  // O motor anota { tipo: 'fx', fx, p, alvo | alvos | jogador }. Recursos do oponente esperam a carta de ação
+  // dele aparecer no meio da mesa; magias e Pargias esperam o par se desfazer.
+
+  // Antes de redesenhar: se um alvo vai sumir do campo (Meteoro, Sai daqui, Raio que mata), guarda a cara dele
+  // para uma cópia ficar no lugar até o efeito acabar com ela.
+  function guardarFantasmas() {
+    if (!jogo.eventos || MOVIMENTO_REDUZIDO) return;
+    for (const ev of jogo.eventos) {
+      if (ev.tipo !== 'fx') continue;
+      for (const a of ev.alvos || (ev.alvo ? [ev.alvo] : [])) {
+        if (a.fantasma || M.localizar(jogo, a.uid)) continue;
+        const slot = document.querySelector(`[data-slot="${a.p}:${a.i}"]`);
+        if (slot && slot.querySelector('.unidade')) a.fantasma = { html: slot.innerHTML, caixa: slot.getBoundingClientRect() };
+      }
+    }
+  }
+  function fantasmaDe(a) {
+    if (!a || !a.fantasma) return null;
+    const app = $('#app'), ra = app.getBoundingClientRect(), c = a.fantasma.caixa;
+    const el = document.createElement('div');
+    el.className = 'unidade-voando fx-fantasma';
+    el.innerHTML = a.fantasma.html;
+    Object.assign(el.style, { left: (c.left - ra.left) / escala + 'px', top: (c.top - ra.top) / escala + 'px', width: c.width / escala + 'px', height: c.height / escala + 'px' });
+    app.appendChild(el);
+    return el;
+  }
+  const slotDe = a => (a ? document.querySelector(`[data-slot="${a.p}:${a.i}"]`) : null);
+  const ehRecursoFx = fx => fx === 'curar' || fx === 'espadas' || fx === 'berserk' || fx === 'comprar' || fx === 'dado';
+
+  function efeitoNaMesa(ev) {
+    if (MOVIMENTO_REDUZIDO) return;
+    const atraso = ehRecursoFx(ev.fx) ? (controle(ev.p) === 'humano' ? 0 : 900) : Math.max(0, esperaMagia() - 260);
+    // As cópias das cartas que sumiram entram já (para a carta não piscar fora antes do efeito).
+    const fantasmas = (ev.alvos || (ev.alvo ? [ev.alvo] : [])).map(fantasmaDe);
+    const limpar = ms => setTimeout(() => fantasmas.forEach(f => f && f.remove()), ms);
+    setTimeout(() => {
+      try {
+        const dur = (FX[ev.fx] || (() => 0))(ev, fantasmas) || 0;
+        limpar(dur + 50);
+      } catch (err) { limpar(0); }
+    }, atraso);
+    ui.magiaAte = Math.max(ui.magiaAte || 0, performance.now() + atraso + 900);
+  }
+
+  // Pedaço de efeito solto no #app (some sozinho quando a animação acaba).
+  function peca(classe, x, y, html) {
+    const el = document.createElement('div');
+    el.className = 'fx ' + classe;
+    if (html) el.innerHTML = html;
+    Object.assign(el.style, { left: x + 'px', top: y + 'px' });
+    $('#app').appendChild(el);
+    return el;
+  }
+  function animarPeca(el, quadros, op) {
+    el.animate(quadros, Object.assign({ fill: 'backwards' }, op)).onfinish = () => el.remove();
+    return el;
+  }
+  function chacoalhar(el, forca, dur) {
+    if (!el) return;
+    const q = [];
+    for (let k = 0; k < 7; k++) q.push({ transform: `translate(${((Math.random() * 2 - 1) * forca * (1 - k / 7)).toFixed(1)}px, ${((Math.random() * 2 - 1) * forca * 0.5).toFixed(1)}px) rotate(${((Math.random() * 2 - 1) * forca * 0.4).toFixed(1)}deg)` });
+    q.push({ transform: 'none' });
+    el.animate(q, { duration: dur || 420, composite: 'add' });
+  }
+  function textoSubindo(c, texto, classe) {
+    animarPeca(peca('fx-texto ' + (classe || ''), c.x, c.y - 40, texto), [
+      { transform: 'translate(-50%, 0) scale(.4)', opacity: 0 }, { transform: 'translate(-50%, -16px) scale(1.25)', opacity: 1, offset: .22 },
+      { transform: 'translate(-50%, -26px) scale(1)', opacity: 1, offset: .7 }, { transform: 'translate(-50%, -60px) scale(.9)', opacity: 0 },
+    ], { duration: 1300, easing: 'ease-out' });
+  }
+  // Chamas / brasas subindo (Berserk, Meteoro).
+  function brasas(c, n, cores, largura) {
+    for (let k = 0; k < n; k++) {
+      const el = peca('fx-brasa', c.x + (Math.random() * 2 - 1) * (largura || 40), c.y + 30 - Math.random() * 30);
+      const tam = 8 + Math.random() * 14, cor = cores[k % cores.length];
+      Object.assign(el.style, { width: tam + 'px', height: tam + 'px', background: `radial-gradient(circle, #fff 0 18%, rgb(${cor}) 45%, rgba(${cor}, 0) 72%)` });
+      const sobe = 60 + Math.random() * 80, dx = (Math.random() * 2 - 1) * 22;
+      animarPeca(el, [
+        { transform: 'translate(-50%, -50%) scale(.3)', opacity: 0 }, { transform: 'translate(-50%, -50%) scale(1.1)', opacity: 1, offset: .2 },
+        { transform: `translate(calc(-50% + ${dx.toFixed(0)}px), calc(-50% - ${sobe.toFixed(0)}px)) scale(.3)`, opacity: 0 },
+      ], { duration: 700 + Math.random() * 500, delay: Math.random() * 420, easing: 'cubic-bezier(.3, .6, .5, 1)' });
+    }
+  }
+  // Aura pulsando em volta de um Senhor(a).
+  function aura(el, cor, vezes, dur) {
+    const un = el && (el.querySelector('.unidade') || el);
+    if (!un) return;
+    const q = [{ filter: `drop-shadow(0 0 0 rgba(${cor}, 0))` }];
+    for (let k = 0; k < vezes; k++) q.push({ filter: `drop-shadow(0 0 22px rgba(${cor}, 1)) brightness(1.25)` }, { filter: `drop-shadow(0 0 6px rgba(${cor}, .6))` });
+    q.push({ filter: `drop-shadow(0 0 0 rgba(${cor}, 0))` });
+    un.animate(q, { duration: dur || 1100, easing: 'ease-in-out' });
+  }
+  // Carta que sai da mesa queimando (escurece, brilha e some).
+  function queimar(f, atraso) {
+    if (!f) return;
+    f.animate([
+      { filter: 'none', transform: 'none', opacity: 1 },
+      { filter: 'brightness(3) sepia(1) saturate(4) hue-rotate(-20deg)', transform: 'scale(1.06)', opacity: 1, offset: .2 },
+      { filter: 'brightness(.25) sepia(1)', transform: 'scale(.96) rotate(-3deg)', opacity: .9, offset: .55 },
+      { filter: 'brightness(0)', transform: 'scale(.6) rotate(6deg) translateY(16px)', opacity: 0 },
+    ], { duration: 900, delay: atraso || 0, easing: 'ease-in', fill: 'forwards' });
+  }
+
+  const FX = {
+    // Cura (carta de Copas): corações subindo do Palhaço, onda rosa e o número da cura.
+    curar(ev) {
+      const el = elRetrato(ev.p), c = centroDe(el);
+      if (!c) return 0;
+      naipesSubindo(c, 'copas', 10);
+      ondaEm(c, '255, 90, 120', 2.4);
+      ondaEm(c, '255, 160, 180', 1.7, 160);
+      aura(el, '255, 90, 120', 2, 1100);
+      if (ev.n > 0) textoSubindo(c, '+' + ev.n, 'cura');
+      return 1300;
+    },
+    // +1 de ataque (carta de Espadas): uma espada desce cortando o Senhor(a), faíscas azuis e o bônus.
+    espadas(ev) {
+      const s = slotDe(ev.alvo), c = centroDe(s);
+      if (!c) return 0;
+      const esp = peca('fx-espada', c.x, c.y, '<svg viewBox="0 0 32 32"><path d="M25.5 3.5l3 3-14 14-3-3z" fill="#e6eef8" stroke="#1a2230" stroke-width="1.3" stroke-linejoin="round"/><path d="M8.5 16.5l7 7M10 22l-5.5 5.5" stroke="#c99a34" stroke-width="3" stroke-linecap="round"/></svg>');
+      animarPeca(esp, [
+        { transform: 'translate(-20%, -150%) rotate(-70deg) scale(.6)', opacity: 0 },
+        { transform: 'translate(-20%, -150%) rotate(-70deg) scale(1.2)', opacity: 1, offset: .25 },
+        { transform: 'translate(-80%, -20%) rotate(40deg) scale(1.3)', opacity: 1, offset: .5 },
+        { transform: 'translate(-80%, -20%) rotate(46deg) scale(1.1)', opacity: 0 },
+      ], { duration: 800, easing: 'cubic-bezier(.5, 0, .3, 1)' });
+      const corte = peca('fx-corte azul', c.x, c.y);
+      animarPeca(corte, [
+        { transform: 'translate(-50%, -50%) rotate(-50deg) scaleX(0)', opacity: 1 },
+        { transform: 'translate(-50%, -50%) rotate(-50deg) scaleX(1)', opacity: 1, offset: .35 },
+        { transform: 'translate(-50%, -50%) rotate(-50deg) scaleX(1.1) scaleY(.3)', opacity: 0 },
+      ], { duration: 520, delay: 330, easing: 'ease-out' });
+      setTimeout(() => {
+        particulas(c, 14, false, '110, 160, 255');
+        ondaEm(c, '90, 140, 255', 2.2);
+        aura(s, '90, 140, 255', 1, 700);
+        textoSubindo(c, '+' + (ev.n || 1) + ' ⚔', 'espadas');
+      }, 400);
+      return 1500;
+    },
+    // Berserk (carta de Paus): o Senhor(a) treme de raiva no meio de um fogo vermelho.
+    berserk(ev) {
+      const s = slotDe(ev.alvo), c = centroDe(s);
+      if (!c) return 0;
+      aura(s, '255, 50, 30', 3, 1300);
+      chacoalhar(s, 7, 700);
+      brasas(c, 22, ['255, 70, 30', '255, 150, 40', '255, 220, 90'], 44);
+      ondaEm(c, '255, 60, 30', 2.3);
+      ondaEm(c, '255, 140, 40', 1.8, 220);
+      setTimeout(() => textoSubindo(c, 'BERSERK!', 'berserk'), 200);
+      return 1400;
+    },
+    // Comprar (carta de Ouros): moedas saem do Palhaço e caem no baralho escolhido, que brilha dourado.
+    comprar(ev) {
+      const de = elRetrato(ev.p), alvo = () => pilhaDe(ev.p, ev.baralho) || cemiterioDe(ev.p);
+      for (let k = 0; k < 3; k++) voarIcone(de, alvo, '<img src="arte/naipes/ouros.webp" alt="">', 'token-ouro', k * 110);
+      setTimeout(() => {
+        const c = centroDe(alvo());
+        if (!c) return;
+        ondaEm(c, '255, 207, 77', 1.9);
+        particulas(c, 10, false, '255, 210, 80');
+      }, 1000);
+      return 1300;
+    },
+    // Dado adicional do oponente: o dadinho voa do Palhaço até o Senhor(a) (o seu já voa da carta, no clique).
+    dado(ev) {
+      if (controle(ev.p) === 'humano') return 0;
+      const s = slotDe(ev.alvo);
+      voarIcone(elRetrato(ev.p), () => slotDe(ev.alvo), DADO_IMG, 'dado-voando', 0, () => {
+        const c = centroDe(s);
+        if (c) ondaEm(c, '255, 207, 77', 2);
+      });
+      return 1100;
+    },
+    // Magia de Copas: uma coluna de luz rosa traz o Senhor(a) de volta, com corações subindo.
+    reviver(ev) {
+      const s = slotDe(ev.alvo), c = centroDe(s);
+      if (!c) return 0;
+      animarPeca(peca('fx-coluna copas', c.x, c.y + 80), [
+        { transform: 'translate(-50%, -100%) scaleX(.1)', opacity: 0 }, { transform: 'translate(-50%, -100%) scaleX(1)', opacity: 1, offset: .25 },
+        { transform: 'translate(-50%, -100%) scaleX(.8)', opacity: .8, offset: .7 }, { transform: 'translate(-50%, -100%) scaleX(.1)', opacity: 0 },
+      ], { duration: 1300, easing: 'ease-out' });
+      naipesSubindo(c, 'copas', 8);
+      ondaEm(c, '255, 120, 150', 2.6, 200);
+      aura(s, '255, 150, 180', 2, 1200);
+      return 1400;
+    },
+    // Magia de Espadas ou de Paus: setas do naipe subindo (+1 no seu) ou caindo e rachando (−1 no inimigo).
+    magiaNaipe(ev, [f]) {
+      const s = slotDe(ev.alvo), c = centroDe(s) || (f && centroDe(f));
+      if (!c) return 0;
+      const cor = COR_NAIPE[ev.naipe], sobe = ev.d > 0, simb = ev.naipe === 'paus' ? '🛡' : '⚔';
+      for (let k = 0; k < 4; k++) {
+        const x = c.x + (k - 1.5) * 22, el = peca('fx-seta ' + (sobe ? 'sobe' : 'desce'), x, c.y, sobe ? '▲' : '▼');
+        el.style.color = `rgb(${cor})`;
+        animarPeca(el, sobe
+          ? [{ transform: 'translate(-50%, 30px) scale(.5)', opacity: 0 }, { transform: 'translate(-50%, 0) scale(1.2)', opacity: 1, offset: .3 }, { transform: 'translate(-50%, -70px) scale(.8)', opacity: 0 }]
+          : [{ transform: 'translate(-50%, -80px) scale(.5)', opacity: 0 }, { transform: 'translate(-50%, -30px) scale(1.2)', opacity: 1, offset: .3 }, { transform: 'translate(-50%, 30px) scale(.8)', opacity: 0 }],
+        { duration: 900, delay: k * 90, easing: 'ease-out' });
+      }
+      if (sobe) {
+        naipesSubindo(c, ev.naipe, 5);
+        aura(s, cor, 2, 1000);
+      } else {
+        setTimeout(() => {
+          chacoalhar(s, 6, 400);
+          particulas(c, 10, false, cor);
+          animarPeca(peca('fx-racha', c.x, c.y), [{ transform: 'translate(-50%, -50%) scale(.4)', opacity: 0 }, { transform: 'translate(-50%, -50%) scale(1)', opacity: 1, offset: .2 }, { transform: 'translate(-50%, -50%) scale(1)', opacity: 0 }],
+            { duration: 900, easing: 'ease-out' });
+        }, 300);
+        if (f) queimar(f, 500);
+      }
+      ondaEm(c, cor, 2.3);
+      setTimeout(() => textoSubindo(c, (sobe ? '+1 ' : '−1 ') + simb, sobe ? 'bom' : 'ruim'), 250);
+      return 1500;
+    },
+    // Sai daqui!: um redemoinho de vento gira a carta e a sopra de volta para a mão do dono.
+    saiDaqui(ev, [f]) {
+      const c = f ? centroDe(f) : centroDe(slotDe(ev.alvo));
+      if (!c) return 0;
+      Som.tocar('golpe-no-vento');
+      for (let k = 0; k < 9; k++) {
+        const el = peca('fx-vento', c.x, c.y), ang = k * 40;
+        animarPeca(el, [
+          { transform: `translate(-50%, -50%) rotate(${ang}deg) translateX(70px) scaleX(.2)`, opacity: 0 },
+          { transform: `translate(-50%, -50%) rotate(${ang + 120}deg) translateX(46px) scaleX(1)`, opacity: .95, offset: .4 },
+          { transform: `translate(-50%, -50%) rotate(${ang + 300}deg) translateX(14px) scaleX(.4)`, opacity: 0 },
+        ], { duration: 800, delay: k * 35, easing: 'ease-in' });
+      }
+      if (f) {
+        const mao = centroDe($('#mao-' + ev.alvo.p)) || { x: c.x, y: ev.alvo.p === eu ? 860 : -60 };
+        const dx = mao.x - c.x, dy = mao.y - c.y;
+        f.animate([
+          { transform: 'none', opacity: 1 },
+          { transform: 'rotate(-14deg) scale(1.06)', opacity: 1, offset: .2 },
+          { transform: 'rotate(200deg) scale(.85)', opacity: 1, offset: .55 },
+          { transform: `translate(${dx}px, ${dy}px) rotate(560deg) scale(.3)`, opacity: 0 },
+        ], { duration: 1100, delay: 150, easing: 'cubic-bezier(.5, 0, .7, 1)', fill: 'forwards' });
+      }
+      ondaEm(c, '230, 240, 255', 2.4, 120);
+      return 1350;
+    },
+    // Meteoro: uma bola de fogo cai em cada Senhor(a) da mesa; cada impacto explode e queima a carta.
+    meteoro(ev, fantasmas) {
+      const alvos = ev.alvos.map((a, k) => ({ a, f: fantasmas[k] })).filter(x => x.f);
+      alvos.forEach(({ f }, k) => {
+        const c = centroDe(f), atraso = k * 170, cai = 560;
+        const met = peca('fx-meteoro', c.x, c.y);
+        animarPeca(met, [
+          { transform: 'translate(calc(-50% + 340px), calc(-50% - 560px)) scale(.6)', opacity: 0 },
+          { transform: 'translate(calc(-50% + 306px), calc(-50% - 504px)) scale(.8)', opacity: 1, offset: .1 },
+          { transform: 'translate(-50%, -50%) scale(1.1)', opacity: 1 },
+        ], { duration: cai, delay: atraso, easing: 'cubic-bezier(.55, 0, .9, .6)' });
+        setTimeout(() => {
+          if (k === 0 || k === alvos.length - 1) Som.tocar('impacto-forte');
+          tremor(k === alvos.length - 1 ? 9 : 6);
+          particulas(c, 20, true, '255, 120, 30');
+          ondaEm(c, '255, 110, 30', 3);
+          brasas(c, 12, ['255, 80, 20', '255, 170, 40', '90, 70, 60'], 50);
+          animarPeca(peca('fx-cratera', c.x, c.y + 20), [{ transform: 'translate(-50%, -50%) scale(.3)', opacity: 0 }, { transform: 'translate(-50%, -50%) scale(1)', opacity: .9, offset: .1 }, { transform: 'translate(-50%, -50%) scale(1.05)', opacity: 0 }],
+            { duration: 1800, easing: 'ease-out' });
+          queimar(f, 0);
+        }, atraso + cai);
+      });
+      if (!alvos.length) tremor(6);
+      return alvos.length ? (alvos.length - 1) * 170 + 560 + 950 : 0;
+    },
+    // Raio: o céu clareia e um raio cai no Senhor(a) (1 hit) ou no Palhaço (2 PV).
+    raio(ev, [f]) {
+      const alvoEl = ev.jogador != null ? elRetrato(ev.jogador) : (f || slotDe(ev.alvo)), c = centroDe(alvoEl);
+      if (!c) return 0;
+      const flash = peca('fx-clarao', 0, 0);
+      animarPeca(flash, [{ opacity: 0 }, { opacity: .55, offset: .08 }, { opacity: .1, offset: .2 }, { opacity: .45, offset: .3 }, { opacity: 0 }], { duration: 650 });
+      // zigue-zague do topo da mesa até o alvo
+      const topo = -20, alt = c.y - topo, pts = [[c.x + 40, topo]];
+      for (let k = 1; k < 7; k++) pts.push([c.x + (Math.random() * 2 - 1) * 46 * (1 - k / 8), topo + alt * k / 7]);
+      pts.push([c.x, c.y]);
+      const d = pts.map((q, k) => (k ? 'L' : 'M') + q[0].toFixed(0) + ' ' + q[1].toFixed(0)).join(' ');
+      const svg = peca('fx-raio', 0, 0, `<svg width="1600" height="900" viewBox="0 0 1600 900"><path d="${d}" class="brilho"/><path d="${d}" class="nucleo"/></svg>`);
+      animarPeca(svg, [{ opacity: 0 }, { opacity: 1, offset: .05 }, { opacity: .2, offset: .2 }, { opacity: 1, offset: .3 }, { opacity: 1, offset: .55 }, { opacity: 0 }], { duration: 700 });
+      setTimeout(() => {
+        Som.tocar('impacto-forte');
+        tremor(7);
+        particulas(c, 18, true, '255, 240, 120');
+        ondaEm(c, '255, 245, 150', 2.6);
+        ondaEm(c, '140, 200, 255', 1.8, 120);
+        if (f) queimar(f, 120);
+        else chacoalhar(alvoEl, 8, 450);
+      }, 60);
+      return 1150;
+    },
+  };
 
   // ---------- Cartas voando do baralho (ou do cemitério) para a mão ----------
 
@@ -2675,6 +2973,11 @@ window.SS = window.SS || {};
   // bloqueio. Durante a resolução, o fluxo do combate mostra o duelo nele (ui.duelo).
   function renderCombate() {
     const el = $('#combate');
+    // (o duelo que ficou na tela depois do turno sai antes da hora se um combate novo começar)
+    if (ui.dueloSolto && (jogo.fase === 'bloqueio' || (jogo.fase === 'ataque' && ui.ataques.length))) {
+      ui.dueloSolto = null;
+      ui.duelo = false;
+    }
     if (ui.duelo) return;
     let titulo = '', itens = '';
     if (jogo.fase === 'ataque' && controle(jogo.vez) === 'humano' && ui.ataques.length) {
@@ -2873,6 +3176,7 @@ window.SS = window.SS || {};
   function mostrarDuelo(foto, total, linhas) {
     if (!linhas) Som.tocar('abrir-popup');
     ui.duelo = true;
+    ui.dueloSolto = null;
     const el = $('#combate');
     const depois = linhas != null;
     let resultado = '';
@@ -2885,6 +3189,22 @@ window.SS = window.SS || {};
       <div class="cb-resultado">${depois ? resultado : `<p class="espera">${t(controle(jogo.vez) === 'humano' ? 'cb.joguePeca' : 'cb.rolando')}</p>`}</div>
       <div class="cb-continuar">${depois ? botaoContinuar() : ''}</div>`;
     el.hidden = false;
+  }
+
+  // Último duelo do turno: some sozinho no tempo de sempre (com o fade), sem segurar o jogo.
+  function soltarDuelo(ms) {
+    const marca = ui.dueloSolto = {}, dono = ui;
+    setTimeout(() => {
+      if (dono.dueloSolto !== marca) return;
+      $('#combate').classList.add('saindo');
+      Som.tocar('fechar-popup', { vol: 0.6 });
+    }, ms - 420);
+    setTimeout(() => {
+      if (dono.dueloSolto !== marca) return;
+      dono.dueloSolto = null;
+      dono.duelo = false;
+      if (jogo && ui === dono) render();
+    }, ms);
   }
 
   // Conta o PV para baixo dentro do pop-up, depois do "tremor" de dano.
@@ -3804,13 +4124,15 @@ window.SS = window.SS || {};
         animarPV();
         await tutGancho('duelo', { at, p: jogo.vez }); // o tutorial pode explicar o quadro do ataque antes de ele sumir
         if (id !== partida) return;
-        await esperarContinuar();
+        // Último ataque do turno: o pop-up fica o tempo de sempre, mas o turno já passa enquanto ele está na tela.
+        if (jogo.fase !== 'resolucao' && jogo.vencedor == null && !opcoes.popupContinuar && cfg.modo !== 'tutorial') soltarDuelo(2800);
+        else await esperarContinuar();
       } else await esperar(1200);
       if (id !== partida) return;
       SS.Dados.sumir();
     }
     SS.Dados.definirArena(null);
-    ui.duelo = false;
+    if (!ui.dueloSolto) ui.duelo = false;
     ui.foco = null;
     if (jogo.vencedor != null) return fimDeJogo();
     M.encerrarTurno(jogo);
@@ -4346,12 +4668,12 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 105, data: '27/10/2026',
+    n: 106, data: '27/10/2026',
     novidades: [
+      ['Efeitos na mesa para cada recurso, magia e Pargia (Raio, Meteoro, Sai daqui, Berserk, cura...)', 'Board effects for every resource, magic and Pairgic (Thunderbolt, Meteor, Get out, Berserk, healing...)'],
+      ['O resumo do último ataque não segura mais o turno', 'The last attack summary no longer holds up the turn'],
       ['Tela de Regras nova, com infográficos das cartas', 'New Rules screen, with card infographics'],
       ['Regras oficiais novas: Rei sacrifica 1 Valete, 1 invocação de cada letra, defesa e cura sem limite, Casca grossa −1 nos Naipados de Paus, PV novos', 'New official rules: King sacrifices 1 Jack, 1 summon of each letter, no defense or healing cap, Thick Bark −1 on Clubs Suited, new HP'],
-      ['Pargias: pares de números iguais viram Refletir, Sai daqui!, Meteoro! e Raio do trovão', 'Pairgics: pairs of equal numbers become Reflect, Get out!, Meteor! and Thunderbolt'],
-      ['Sons do Llorenç nas Opções', "Llorenç's sounds in Options"],
     ],
   };
 
