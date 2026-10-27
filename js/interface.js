@@ -1696,7 +1696,7 @@ window.SS = window.SS || {};
   // O motor anota { tipo: 'fx', fx, p, alvo | alvos | jogador }. Recursos do oponente esperam a carta de ação
   // dele aparecer no meio da mesa; magias e Pargias esperam o par se desfazer.
 
-  // Antes de redesenhar: se um alvo vai sumir do campo (Meteoro, Sai daqui, Raio que mata), guarda a cara dele
+  // Antes de redesenhar: se um alvo vai sumir do campo (Meteoro, Sai daqui, Trovão que mata), guarda a cara dele
   // para uma cópia ficar no lugar até o efeito acabar com ela.
   function guardarFantasmas() {
     if (!jogo.eventos || MOVIMENTO_REDUZIDO) return;
@@ -1960,7 +1960,7 @@ window.SS = window.SS || {};
       if (!alvos.length) tremor(6);
       return alvos.length ? (alvos.length - 1) * 170 + 560 + 950 : 0;
     },
-    // Raio: o céu clareia e um raio cai no Senhor(a) (1 hit) ou no Palhaço (2 PV).
+    // Trovão: o céu clareia e um raio cai no Senhor(a) (1 hit) ou no Palhaço (2 PV).
     raio(ev, [f]) {
       const alvoEl = ev.jogador != null ? elRetrato(ev.jogador) : (f || slotDe(ev.alvo)), c = centroDe(alvoEl);
       if (!c) return 0;
@@ -4670,7 +4670,7 @@ window.SS = window.SS || {};
   const BUILD = {
     n: 106, data: '27/10/2026',
     novidades: [
-      ['Efeitos na mesa para cada recurso, magia e Pargia (Raio, Meteoro, Sai daqui, Berserk, cura...)', 'Board effects for every resource, magic and Pairgic (Thunderbolt, Meteor, Get out, Berserk, healing...)'],
+      ['Efeitos na mesa para cada recurso, magia e Pargia (Trovão, Meteoro, Sai daqui, Berserk, cura...)', 'Board effects for every resource, magic and Pairgic (Thunder, Meteor, Get out, Berserk, healing...)'],
       ['O resumo do último ataque não segura mais o turno', 'The last attack summary no longer holds up the turn'],
       ['Tela de Regras nova, com infográficos das cartas', 'New Rules screen, with card infographics'],
       ['Regras oficiais novas: Rei sacrifica 1 Valete, 1 invocação de cada letra, defesa e cura sem limite, Casca grossa −1 nos Naipados de Paus, PV novos', 'New official rules: King sacrifices 1 Jack, 1 summon of each letter, no defense or healing cap, Thick Bark −1 on Clubs Suited, new HP'],

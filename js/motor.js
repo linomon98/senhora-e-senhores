@@ -658,7 +658,7 @@ window.SS = window.SS || {};
   // ataque do adversário bater no próprio dono.
   // Refletir só com pares baixos (Ás, 2 ou 3): incentiva a ter cartas baixas no deck.
   // Pargias (pares de números iguais): 2 a 4 = Refletir (na defesa), 5 a 7 = Sai daqui!, 8 a 10 = Meteoro!,
-  // Ases = Raio do trovão. As três últimas são ações do seu turno (1 ação cada).
+  // Ases = Trovão. As três últimas são ações do seu turno (1 ação cada).
   const VALOR_MIN_REFLEXO = 2, VALOR_MAX_REFLEXO = 4;
   const EFEITO_PARGIA = v => (v === 1 ? 'raio' : v >= 5 && v <= 7 ? 'saiDaqui' : v >= 8 ? 'meteoro' : null);
   const DANO_RAIO_PALHACO = 2;
