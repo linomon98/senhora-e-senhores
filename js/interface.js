@@ -1796,6 +1796,16 @@ window.SS = window.SS || {};
     ], { duration: 900, delay: atraso || 0, easing: 'ease-in', fill: 'forwards' });
   }
 
+  // Sprites dos efeitos: cada arte/efeitos/<nome>.png que existir troca o desenho feito em CSS daquela peça
+  // (a classe sprite-<nome> no <html> liga a troca; o gabarito para desenhar fica em arte/efeitos/gabarito).
+  const SPRITES_FX = ['espada', 'corte', 'brasa', 'coluna', 'seta-sobe', 'seta-desce', 'racha', 'vento', 'meteoro', 'cratera', 'raio'];
+  const temSprite = n => document.documentElement.classList.contains('sprite-' + n);
+  SPRITES_FX.forEach(n => {
+    const img = new Image();
+    img.onload = () => document.documentElement.classList.add('sprite-' + n);
+    img.src = 'arte/efeitos/' + n + '.png';
+  });
+
   const FX = {
     // Cura (carta de Copas): corações subindo do Palhaço, onda rosa e o número da cura.
     curar(ev) {
@@ -1971,7 +1981,10 @@ window.SS = window.SS || {};
       for (let k = 1; k < 7; k++) pts.push([c.x + (Math.random() * 2 - 1) * 46 * (1 - k / 8), topo + alt * k / 7]);
       pts.push([c.x, c.y]);
       const d = pts.map((q, k) => (k ? 'L' : 'M') + q[0].toFixed(0) + ' ' + q[1].toFixed(0)).join(' ');
-      const svg = peca('fx-raio', 0, 0, `<svg width="1600" height="900" viewBox="0 0 1600 900"><path d="${d}" class="brilho"/><path d="${d}" class="nucleo"/></svg>`);
+      // (com o sprite, o desenho do raio é esticado do topo da mesa até o alvo)
+      const svg = temSprite('raio') ? peca('fx-raio-sprite', c.x, topo)
+        : peca('fx-raio', 0, 0, `<svg width="1600" height="900" viewBox="0 0 1600 900"><path d="${d}" class="brilho"/><path d="${d}" class="nucleo"/></svg>`);
+      if (temSprite('raio')) svg.style.height = alt + 'px';
       animarPeca(svg, [{ opacity: 0 }, { opacity: 1, offset: .05 }, { opacity: .2, offset: .2 }, { opacity: 1, offset: .3 }, { opacity: 1, offset: .55 }, { opacity: 0 }], { duration: 700 });
       setTimeout(() => {
         Som.tocar('impacto-forte');

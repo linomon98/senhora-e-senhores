@@ -2331,3 +2331,20 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 .fx-raio path { fill: none; stroke-linejoin: round; stroke-linecap: round; }
 .fx-raio .brilho { stroke: rgba(150, 210, 255, .85); stroke-width: 30; filter: blur(7px); }
 .fx-raio .nucleo { stroke: #fffbe0; stroke-width: 9; filter: drop-shadow(0 0 6px #fff36a); }
+
+/* Sprites desenhados (arte/efeitos/<nome>.png): quando o arquivo existe, ele substitui o desenho em CSS da peça.
+   Os tamanhos aqui são os do gabarito (arte/efeitos/gabarito). */
+.sprite-espada .fx-espada { background: url('arte/efeitos/espada.png') center / 100% 100% no-repeat; filter: drop-shadow(2px 4px 0 rgba(0, 0, 0, .35)); }
+.sprite-espada .fx-espada svg { display: none; }
+.sprite-corte .fx-corte { width: 180px; height: 24px; border-radius: 0; box-shadow: none; background: url('arte/efeitos/corte.png') center / 100% 100% no-repeat; }
+.sprite-brasa .fx-brasa { background: url('arte/efeitos/brasa.png') center / 100% 100% no-repeat !important; mix-blend-mode: normal; border-radius: 0; }
+.sprite-coluna .fx-coluna { border-radius: 0; box-shadow: none; mix-blend-mode: normal; background: url('arte/efeitos/coluna.png') center / 100% 100% no-repeat; }
+.sprite-seta-sobe .fx-seta.sobe, .sprite-seta-desce .fx-seta.desce { width: 30px; height: 36px; font-size: 0; filter: none; background: center / 100% 100% no-repeat; }
+.sprite-seta-sobe .fx-seta.sobe { background-image: url('arte/efeitos/seta-sobe.png'); }
+.sprite-seta-desce .fx-seta.desce { background-image: url('arte/efeitos/seta-desce.png'); }
+.sprite-racha .fx-racha { background: url('arte/efeitos/racha.png') center / 100% 100% no-repeat; }
+.sprite-vento .fx-vento { width: 120px; height: 14px; border-radius: 0; box-shadow: none; background: url('arte/efeitos/vento.png') center / 100% 100% no-repeat; }
+.sprite-meteoro .fx-meteoro { width: 240px; height: 240px; margin: -50px 0 0 50px; border-radius: 0; box-shadow: none; background: url('arte/efeitos/meteoro.png') center / 100% 100% no-repeat; }
+.sprite-meteoro .fx-meteoro::after { display: none; }
+.sprite-cratera .fx-cratera { border-radius: 0; background: url('arte/efeitos/cratera.png') center / 100% 100% no-repeat; }
+.fx-raio-sprite { width: 80px; z-index: 69; opacity: 0; transform: translateX(-50%); background: url('arte/efeitos/raio.png') center / 100% 100% no-repeat; }
