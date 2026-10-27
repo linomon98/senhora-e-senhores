@@ -54,6 +54,15 @@ window.SS = window.SS || {};
   let fonteMusica = null, ganhoMusica = null, faixaAtual = -1;
   const bufFaixas = []; // índice da faixa → AudioBuffer (quando já carregou)
   const buffers = {}; // nome → lista de AudioBuffer (as variações que carregaram)
+  // Pacote de sons: 'lino' (os de sempre) ou 'llorenc' (os que o Llorenç fez, em sons/llorenc/). Os efeitos
+  // que o Llorenç não fez continuam com o som do Lino. Os dele só carregam quando o pacote é escolhido.
+  const LLORENC = {
+    'abrir-popup': 1, clique: 3, 'cobra-chiado': 1, 'comprar-carta': 3, 'dado-6': 1, 'dado-parou': 2, 'dado-rolando': 3, 'declarar-ataque': 1,
+    descartar: 2, embaralhar: 1, 'escolher-palhaco': 1, 'fechar-popup': 1, 'hover-carta': 1, 'palco-entra': 1, 'palco-sai': 1, 'palhaco-dano': 1,
+    'poder-cobranca': 1, 'que-vergonha': 1, 'selecionar-carta': 3, 'senhor-morre': 3, 'soltar-carta': 3, sumonar: 2, 'sumonar-valete': 1, versus: 1,
+  };
+  let pacote = 'lino', llorencCarregado = false;
+  const buffersLlorenc = {};
   const ultimo = {}; // nome → índice da última variação tocada
   const canais = {}; // canal → { fonte, ganho } que está tocando (ex.: o dado rolando, para parar quando ele para)
 
@@ -110,6 +119,7 @@ window.SS = window.SS || {};
           .catch(() => { /* arquivo faltando ou estragado: fica em silêncio */ });
       }
     }
+    if (pacote === 'llorenc') carregarLlorenc();
     ganhoMusica = ctx.createGain();
     ganhoMusica.gain.value = VOLUME_MUSICA * volumeMusica;
     ganhoMusica.connect(ctx.destination); // fora do compressor dos efeitos (para a música não "bombear")
@@ -122,13 +132,29 @@ window.SS = window.SS || {};
     carregarFaixa(primeira).then(() => FAIXAS.forEach((_, k) => { if (k !== primeira) carregarFaixa(k); }));
   }
 
+  function carregarLlorenc() {
+    if (llorencCarregado || !ctx) return;
+    llorencCarregado = true;
+    for (const [nome, n] of Object.entries(LLORENC)) {
+      buffersLlorenc[nome] = [];
+      for (let k = 1; k <= n; k++) {
+        fetch(PASTA + 'llorenc/' + nome + '-' + k + '.mp3' + VERSAO).then(r => (r.ok ? r.arrayBuffer() : null))
+          .then(b => (b ? new Promise((ok, erro) => ctx.decodeAudioData(b, ok, erro)) : null))
+          .then(buf => { if (buf) buffersLlorenc[nome].push(semSilencioInicial(buf)); })
+          .catch(() => { /* faltando: fica o som do Lino */ });
+      }
+    }
+  }
+  // As variações de um som no pacote escolhido (do Llorenç, se ele fez esse; senão, do Lino).
+  const variacoes = nome => (pacote === 'llorenc' && buffersLlorenc[nome] && buffersLlorenc[nome].length ? buffersLlorenc[nome] : buffers[nome]);
+
   // o: { vol (0–1, multiplica o volume do som), canal (um som por canal: o novo corta o anterior), atraso (ms) }
   function tocar(nome, o) {
     o = o || {};
-    if (!ligado.efeitos || !ctx || !buffers[nome] || !buffers[nome].length || VOLUME[nome] === 0) return;
+    const lista = variacoes(nome);
+    if (!ligado.efeitos || !ctx || !lista || !lista.length || VOLUME[nome] === 0) return;
     if (o.atraso) return void setTimeout(() => tocar(nome, Object.assign({}, o, { atraso: 0 })), o.atraso);
     if (ctx.state === 'suspended') ctx.resume();
-    const lista = buffers[nome];
     let k = Math.floor(Math.random() * lista.length);
     if (lista.length > 1 && k === ultimo[nome]) k = (k + 1) % lista.length; // não repete a mesma variação seguida
     ultimo[nome] = k;
@@ -202,8 +228,10 @@ window.SS = window.SS || {};
     tocarMusica();
   }
 
-  // o: { efeitos, musica (liga/desliga), volume (0–100, efeitos), volumeMusica (0–100; 0 desliga a música) }
+  // o: { efeitos, musica (liga/desliga), volume (0–100, efeitos), volumeMusica (0–100; 0 desliga a música), sons ('lino' | 'llorenc') }
   function configurar(o) {
+    pacote = o.sons === 'llorenc' ? 'llorenc' : 'lino';
+    if (pacote === 'llorenc') carregarLlorenc();
     volumeMusica = o.volumeMusica == null ? 0.6 : Math.max(0, Math.min(1, o.volumeMusica / 100));
     ligado = { efeitos: o.efeitos !== false, musica: o.musica !== false && volumeMusica > 0 };
     volume = o.volume == null ? 0.8 : Math.max(0, Math.min(1, o.volume / 100));

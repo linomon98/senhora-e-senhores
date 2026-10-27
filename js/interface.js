@@ -85,7 +85,7 @@ window.SS = window.SS || {};
   // "sacrificios" é um passo de 2 cliques (a Rainha sacrifica 2 Senhores).
   // O espaço na fileira não é um passo: vale o lugar onde a carta foi solta (ou o centro, pelo botão).
   // Magia dos pares: "morto" (Copas, quem volta do cemitério), "as" (Ouros, o Ás do baralho) ou "alvo" (Paus/Espadas).
-  const PASSOS = { sumonar: ['sacrificios'], invocarAs: [], espadas: ['alvo'], paus: ['alvo'], magia: ['morto', 'as', 'alvo'], curar: [], comprar: [], poder: ['alvo'] };
+  const PASSOS = { sumonar: ['sacrificios'], invocarAs: [], espadas: ['alvo'], paus: ['alvo'], magia: ['morto', 'as', 'alvo'], pargia: ['alvo'], curar: [], comprar: [], poder: ['alvo'] };
   const CENTRO_FILEIRA = (M.ESPACOS - 1) / 2;
 
   // Entre as opções que só mudam de espaço, fica a mais perto de onde a carta foi solta.
@@ -156,7 +156,7 @@ window.SS = window.SS || {};
     switch (a.tipo) {
       case 'sumonar': return [a.figura, a.numero];
       case 'invocarAs': return [a.as, a.custo];
-      case 'magia': return a.cartas.slice();
+      case 'magia': case 'pargia': return a.cartas.slice();
       default: return [a.carta];
     }
   }
@@ -304,6 +304,7 @@ window.SS = window.SS || {};
       case 'paus': return t('acao.paus');
       case 'comprar': return t(a.baralho === 'letras' ? 'acao.comprarLetra' : 'acao.comprarNumero');
       case 'magia': return t('acao.magia.' + a.naipe);
+      case 'pargia': return t('acao.pargia.' + a.efeito);
     }
     return tipo;
   }
@@ -313,7 +314,7 @@ window.SS = window.SS || {};
     const cartas = ui.sel.filter(id => !id.startsWith('TOKEN')).map(id => j.mao.find(c => c.id === id)).filter(Boolean);
     const fig = cartas.find(M.ehFigura), num = cartas.find(M.ehNumero), as = cartas.find(M.ehAs);
     if (jogo.acoes <= 0) return t('dica.semAcoes');
-    if (fig && jogo.sumonados >= M.SENHORES_POR_TURNO) return t('dica.umSenhor');
+    if (fig && !M.podeInvocar(jogo, fig.rank)) return t('dica.umSenhor');
     if (as && jogo.asesTurno >= M.ASES_POR_TURNO) return t('dica.umAs');
     if (fig && num && (M.valor(num) < M.faixaFigura(fig.rank)[0] || M.valor(num) > M.faixaFigura(fig.rank)[1])) return t('dica.faixaFigura', { c: M.nomeCarta(fig), a: M.faixaFigura(fig.rank)[0], n: M.faixaFigura(fig.rank)[1] });
     if (fig && num && fig.rank === 'Q') return t('dica.rainhaSacrificio');
@@ -339,6 +340,7 @@ window.SS = window.SS || {};
       if (tipo === 'espadas') return t('passo.espadas');
       if (tipo === 'paus') return t('passo.paus');
       if (tipo === 'magia') return t(ui.pend.cands[0].naipe === 'paus' ? 'passo.magiaPaus' : 'passo.magiaEspadas');
+      if (tipo === 'pargia') return t('passo.pargia.' + ui.pend.cands[0].efeito);
       const poder = palhacoDe(jogo.vez).poder;
       return t('passo.poder', { nome: poder.nome, texto: poder.texto });
     }
@@ -455,7 +457,7 @@ window.SS = window.SS || {};
       const passo = passoAtual();
       for (const a of candidatosPendentes()) {
         if (passo === 'slot') s.add(`slot:${p}:${a.slot}`);
-        else if (passo === 'alvo') s.add('uid:' + a.alvo);
+        else if (passo === 'alvo') s.add(a.alvo === 'jogador' ? 'jogador:' + d : 'uid:' + a.alvo);
         else if (passo === 'sacrificios') {
           const n = (ui.pend.esc.sacrificios || []).length, prox = [a.sacrificio, a.sacrificio2][n];
           if (prox != null) s.add('uid:' + prox);
@@ -500,6 +502,7 @@ window.SS = window.SS || {};
       return;
     }
     const ds = el.dataset;
+    if (ds.alvo && jogo && ui.pend && passoAtual() === 'alvo' && alvosClicaveis().has(ds.alvo)) return escolherParametro('jogador');
     if (ds.acao === 'log' || ds.acao === 'fechar-log') return alternarLog(ds.acao === 'log');
     if (ds.acao === 'menu') return confirmarMenu();
     if (ds.acao === 'desistir') return confirmarDesistir();
@@ -1462,7 +1465,7 @@ window.SS = window.SS || {};
   // Carta da mão do oponente usada como recurso (cura, +1 de ataque, Berserk, compra): antes de sumir da mão,
   // guarda de onde ela sai; depois ela aparece grande no meio da mesa, vira para frente e vai para o cemitério.
   // A carta de ação usada (Curar, +1 de ataque, Berserk, Comprar…) aparece na frente dela, para você saber o que ele fez.
-  const RECURSO = new Set(['curar', 'espadas', 'paus', 'comprar', 'dadoExtra']);
+  const RECURSO = new Set(['curar', 'espadas', 'paus', 'comprar', 'dadoExtra', 'pargia']);
   function antesDeRecurso(a) {
     if (!a || !RECURSO.has(a.tipo) || !jogo || controle(jogo.vez) === 'humano' || MOVIMENTO_REDUZIDO) return null;
     const p = jogo.vez, j = jogo.jogadores[p];
@@ -2399,7 +2402,7 @@ window.SS = window.SS || {};
   // Lançalotte (Golpe certeiro): o 1º ataque do turno ganha +1 de ataque (e +1 dado). Aparece no selo de ataque
   // do Senhor(a) assim que ele é o primeiro atacante escolhido, até o golpe dele ser resolvido.
   function bonusGolpeCerteiro(p, u) {
-    if (!jogo || jogo.vez !== p || jogo.jogadores[p].palhaco !== 'lancalotte') return 0;
+    if (!jogo || jogo.vez !== p || jogo.jogadores[p].palhaco !== 'lancalotte' || !M.passivaAtiva('lancalotte')) return 0;
     if (jogo.fase === 'ataque') return ui.ataques.length && ui.ataques[0].atacante === u.uid ? M.PALHACOS.lancalotte.ataquePrimeiro : 0;
     const at = jogo.combate && jogo.combate.ataques[0];
     return at && at.atacante === u.uid && !at.resultado ? at.bonusAtaque || 0 : 0;
@@ -2499,6 +2502,7 @@ window.SS = window.SS || {};
     if (a.tipo === 'sumonar') return a.sacrificio != null ? 'rainha' : 'sumonar';
     if (a.tipo === 'invocarAs') return 'as';
     if (a.tipo === 'magia') return 'par-' + a.naipe;
+    if (a.tipo === 'pargia') return 'pargia-' + a.efeito;
     if (a.tipo === 'comprar') return a.baralho === 'letras' ? 'comprarLetra' : 'comprarNumero';
     return a.tipo;
   }
@@ -2507,6 +2511,7 @@ window.SS = window.SS || {};
   // O título vem do idioma (a arte não tem texto, por causa da versão em inglês).
   const ARTE_ACAO = { atacar: 'atacar', espadas: 'dano', paus: 'berserk', escudo: 'defesa', curar: 'cura', comprar: 'comprar', reviver: 'cemiterio', sumonar: 'sumonar', rainha: 'sumonar', as: 'sumonar',
     'par-copas': 'cemiterio', 'par-ouros': 'parouros', 'par-paus': 'parpaus', 'par-espadas': 'parespadas', reflexo: 'reflexo',
+    'pargia-saiDaqui': 'tchau', 'pargia-meteoro': 'meteoro', 'pargia-raio': 'raio',
     passar: 'passar', preparar: 'preparar', naoDefender: 'naodefender', naoRefletir: 'naodefender',
     comprarLetra: 'comprarletra', comprarNumero: 'comprarnumero', dado: 'dado' };
   // Cartas ainda sem arte própria (placeholder): moldura vazia + um desenho simples (SVG) no meio.
@@ -2517,7 +2522,8 @@ window.SS = window.SS || {};
     const classeTitulo = titulo.length > 10 && titulo.includes(' ') ? ' duas-linhas' : titulo.length > 7 ? ' longo' : '';
     // Custo (aparece numa caixinha quando o mouse para meio segundo em cima da carta)
     const ck = { sumonar: 'sumonar', rainha: 'rainha', as: 'as', espadas: 'espadas', paus: 'paus', curar: 'curar', comprarLetra: 'comprar', comprarNumero: 'comprar',
-      'par-copas': 'magia', 'par-ouros': 'magia', 'par-paus': 'magia', 'par-espadas': 'magia', dado: 'dado', reflexo: 'reflexo' }[icone];
+      'par-copas': 'magia', 'par-ouros': 'magia', 'par-paus': 'magia', 'par-espadas': 'magia', dado: 'dado', reflexo: 'reflexo',
+      'pargia-saiDaqui': 'pargia', 'pargia-meteoro': 'pargia', 'pargia-raio': 'pargia' }[icone];
     return `<button class="carta-acao arte-${arte} ${extra || ''}" data-acao="${acao}"${ck ? ` data-custo="${escapar(t('custo.' + ck))}"` : ` title="${escapar(sub)}"`}>
       <img src="arte/acoes/${arte}.webp" alt="" draggable="false">${DESENHO_PROVISORIO[icone] ? `<span class="ca-desenho">${DESENHO_PROVISORIO[icone]}</span>` : ''}<b class="ca-titulo${classeTitulo}">${titulo}</b><small class="ca-sub">${sub}</small></button>`;
   };
@@ -2903,7 +2909,7 @@ window.SS = window.SS || {};
   //   popupContinuar: os pop-ups de combate esperam o botão Continuar (padrão: somem sozinhos).
   //   caixaMeio: mostra a caixa de instruções no meio da mesa (padrão: escondida).
   //   efeitos / musica: liga os sons e a música de fundo (padrão: ligados).
-  const OPCOES_PADRAO = { popupContinuar: false, caixaMeio: false, efeitos: true, musica: true, volume: 80, volumeMusica: 60, todasAcoes: false };
+  const OPCOES_PADRAO = { popupContinuar: false, caixaMeio: false, efeitos: true, musica: true, volume: 80, volumeMusica: 60, todasAcoes: false, sons: 'lino' };
   const opcoes = (() => {
     try { return Object.assign({}, OPCOES_PADRAO, JSON.parse(localStorage.getItem('ss-opcoes') || '{}')); } catch (e) { return Object.assign({}, OPCOES_PADRAO); }
   })();
@@ -3525,7 +3531,8 @@ window.SS = window.SS || {};
   const pedidos = new Map();
   function pensar(fn, ...args) {
     const aqui = () => Bot[fn](...args);
-    if (args[2] !== 'profissional' || cerebroQuebrado || typeof Worker !== 'function') return Promise.resolve(aqui());
+    const nomeNivel = args[2] && typeof args[2] === 'object' ? args[2].nome : args[2];
+    if (nomeNivel !== 'profissional' || cerebroQuebrado || typeof Worker !== 'function') return Promise.resolve(aqui());
     try {
       if (!cerebro) {
         const s = document.querySelector('script[src*="js/bot.js"]');
@@ -4332,7 +4339,21 @@ window.SS = window.SS || {};
       } else if (m === 'testes') telaTestes();
       else if (m === 'opcoes') telaOpcoes(telaInicio);
     });
+    // Número da build e as últimas novidades, bem pequenos no canto de baixo.
+    $('#modal').insertAdjacentHTML('beforeend', `<div class="build-info"><b>${t('build.titulo', { n: BUILD.n, d: BUILD.data })}</b>
+      <ul>${BUILD.novidades.map(x => `<li>${x[idioma === 'en' ? 1 : 0]}</li>`).join('')}</ul></div>`);
   }
+
+  // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
+  const BUILD = {
+    n: 103, data: '27/10/2026',
+    novidades: [
+      ['Pargias: pares de números iguais viram Refletir, Sai daqui!, Meteoro! e Raio do trovão', 'Pairgics: pairs of equal numbers become Reflect, Get out!, Meteor! and Thunderbolt'],
+      ['Sons do Llorenç nas Opções', "Llorenç's sounds in Options"],
+      ['Testes: comportamento dos bots, passivas e limite de invocações', 'Tests: bot behavior, passives and summon limits'],
+      ['Segunda música e dados caindo de mais alto', 'Second song and dice falling from higher up'],
+    ],
+  };
 
   // ---------- Área de testes: bot × bot com decks escolhidos, simulação em massa e mesa livre ----------
 
@@ -4345,6 +4366,7 @@ window.SS = window.SS || {};
         ${item('simular', '📊', t('menu.simular'), t('teste.simularNota'))}
         ${item('livre', '🛠', t('teste.livre'), t('teste.livreNota'))}
         ${item('deckbot', '🃏', t('teste.deckBot'), t('teste.deckBotNota'))}
+        ${item('comportamento', '🤖', t('cb.titulo'), P.LISTA.some(x => compModificado(x.id)) ? t('cb.ativos', { l: P.LISTA.filter(x => compModificado(x.id)).map(x => x.nome).join(', ') }) : t('cb.notaMenu'))}
         ${item('regras', '⚖', t('rg.titulo'), regrasModificadas(cfg.regras).length ? t('rg.ativas', { n: regrasModificadas(cfg.regras).length }) : t('rg.notaMenu'))}
       </div>
       <div class="acoes-menu"><button class="btn" data-m="voltar">${t('btn.voltar')}</button></div></div>`,
@@ -4356,6 +4378,7 @@ window.SS = window.SS || {};
       else if (b.dataset.m === 'simular') simulacao(telaTestes);
       else if (b.dataset.m === 'livre') telaMesaLivre();
       else if (b.dataset.m === 'regras') telaRegras();
+      else if (b.dataset.m === 'comportamento') telaComportamento();
       else if (b.dataset.m === 'deckbot') {
         fecharModal();
         SS.Decks.abrir(telaTestes, { bot: true, opcoes: volta => telaOpcoes(() => { fecharModal(); volta(); }) });
@@ -4378,6 +4401,10 @@ window.SS = window.SS || {};
       ${linha('asesNasLetras', [['false', t('rg.noNumeros')], ['true', t('rg.noLetras')]])}
       ${linha('bonusNaipe', [['false', t('rg.desligado')], ['true', t('rg.ligado')]])}
       ${linha('limitePV', [['true', t('rg.pvAte', { n: M.PV_MAX_CURA })], ['false', t('rg.semLimite')]])}
+      ${linha('invocacoes', [['umPorTurno', t('rg.umPorTurno')], ['umPorLetra', t('rg.umPorLetra')], ['ilimitadas', t('rg.ilimitadas')]])}
+      <div class="opcao"><label>${t('rg.semPassiva')}</label><div class="grupo" data-passivas>${P.LISTA.map(pal =>
+        `<button data-pal="${pal.id}" class="${r.semPassiva && r.semPassiva[pal.id] ? '' : 'ativo'}">${SIMB[pal.naipe]} ${pal.passiva.nome}</button>`).join('')}</div>
+        <p class="nota">${t('rg.semPassivaNota')}</p></div>
       <div class="opcao"><label>${t('rg.pv')}</label><div class="rg-sliders">${P.LISTA.map(pal => {
         const v = (r.pv && r.pv[pal.id]) || P.get(pal.id).pvBase;
         return `<div class="rg-slider"><span>${SIMB[pal.naipe]} ${pal.nome}</span><input type="range" min="5" max="40" step="1" value="${v}" data-rg-pv="${pal.id}">
@@ -4391,6 +4418,15 @@ window.SS = window.SS || {};
       }).join('')}</div><p class="nota">${t('rg.faixaNota')}</p></div>
       <div class="acoes-menu"><button class="btn" data-m="padrao">${t('rg.restaurar')}</button><button class="btn principal" data-m="voltar">${t('btn.voltar')}</button></div></div>`,
     ev => {
+      const pv = ev.target.closest('[data-passivas] [data-pal]');
+      if (pv) {
+        const sem = Object.assign({}, cfg.regras.semPassiva);
+        if (sem[pv.dataset.pal]) delete sem[pv.dataset.pal]; else sem[pv.dataset.pal] = true;
+        cfg.regras = M.definirRegras(Object.assign({}, cfg.regras, { semPassiva: sem }));
+        M.definirRegras(null);
+        salvarRegras();
+        return telaRegras();
+      }
       const g = ev.target.closest('[data-regra] [data-v]');
       if (g) {
         const chave = g.parentElement.dataset.regra, v = g.dataset.v;
@@ -4432,7 +4468,64 @@ window.SS = window.SS || {};
   const decksParaEscolha = () => [{ id: 'palhaco', nome: t('menu.deckPalhaco') }].concat(SS.Decks.opcoes());
   const contagemDe = (deck, pal) => (deck === 'palhaco' ? SS.Decks.deckDoBot(pal) : deck === 'padrao' ? M.contagemPadrao() : SS.Decks.contagemPara(deck));
   // Nível de cada bot (no bot × bot da área de testes, cada lado tem o seu).
-  const nivelDe = p => (cfg.modo === 'bots' && cfg.botsCfg ? cfg.botsCfg.nivel[p] : cfg.modo === 'livre' && cfg.livre ? cfg.livre.nivel : cfg.nivel);
+  const nivelBase = p => (cfg.modo === 'bots' && cfg.botsCfg ? cfg.botsCfg.nivel[p] : cfg.modo === 'livre' && cfg.livre ? cfg.livre.nivel : cfg.nivel);
+  // Nível do bot do lado p, com o comportamento configurado para o Palhaço dele (fora do tutorial).
+  const nivelDe = p => (cfg.modo === 'tutorial' || !palhacos ? nivelBase(p) : comportamentoDe(nivelBase(p), palhacos[p]));
+
+  // Comportamento dos bots: cada slider multiplica um grupo de pesos que o bot usa para dar nota à mesa
+  // (100% = o bot de sempre). Valem contra o bot, no Bot × bot, na simulação e na mesa livre.
+  const CHAVE_COMP = 'ss-bot-comportamento';
+  const SLIDERS_BOT = [
+    // chave, mínimo, máximo, padrão, pesos afetados (multiplicados pelo valor/100)
+    ['palhaco', 0, 250, 100, ['pvBaixo', 'pvAlto', 'perigo']],
+    ['senhores', 0, 250, 100, ['uBase', 'uAtk', 'uVida', 'uNaipado', 'uRealeza']],
+    ['cautela', 0, 300, 100, ['uPorUmFio', 'uNaoBloqueia', 'ameaca', 'bloqueadores']],
+    ['guardar', 0, 300, 100, ['maoNum', 'maoAs', 'maoPar', 'maoFigSolta', 'maoNumSolto']],
+    ['ases', 0, 300, 100, ['asBase', 'asVizinho']],
+    ['iniciativa', 0, 300, 100, []], // limiar: quanto melhor a jogada precisa ser para ele agir (alto = mais parado)
+    ['acaso', 0, 100, 0, []], // ruído: escolhas menos previsíveis
+  ];
+  const compBot = (() => { try { return JSON.parse(localStorage.getItem(CHAVE_COMP)) || {}; } catch (e) { return {}; } })();
+  const salvarComp = () => { try { localStorage.setItem(CHAVE_COMP, JSON.stringify(compBot)); } catch (e) { /* só nesta visita */ } };
+  const valorComp = (pal, chave) => { const c = compBot[pal] || {}, s = SLIDERS_BOT.find(x => x[0] === chave); return c[chave] == null ? s[3] : c[chave]; };
+  const compModificado = pal => SLIDERS_BOT.some(([k, , , padrao]) => valorComp(pal, k) !== padrao);
+  function comportamentoDe(nivel, pal) {
+    if (!pal || !compModificado(pal) || !Bot.NIVEIS[nivel]) return nivel;
+    const base = Bot.NIVEIS[nivel], pesos = Object.assign({}, base.pesos);
+    for (const [k, , , padrao, chaves] of SLIDERS_BOT) for (const w of chaves) if (w in pesos) pesos[w] *= valorComp(pal, k) / padrao;
+    return Object.assign({}, base, { nome: nivel, pesos, limiar: base.limiar * valorComp(pal, 'iniciativa') / 100, ruido: base.ruido + valorComp(pal, 'acaso') / 10 });
+  }
+
+  function telaComportamento(palSel) {
+    const pal = palSel || (P.LISTA.find(x => compModificado(x.id)) || P.LISTA[0]).id;
+    const sliders = SLIDERS_BOT.map(([k, min, max, padrao]) => {
+      const v = valorComp(pal, k);
+      return `<div class="opcao"><label>${t('cb.' + k)} <b data-cb-mostra="${k}">${v}%</b></label>
+        <input type="range" min="${min}" max="${max}" step="5" value="${v}" data-cb="${k}">
+        <p class="nota">${t('cb.' + k + 'Nota')} ★ ${padrao}%</p></div>`;
+    }).join('');
+    modal(`<div class="menu-tema comportamento-bot"><h2 class="titulo-etapa">🤖 ${t('cb.titulo')}</h2><p class="nota">${t('cb.nota')}</p>
+      <div class="grupo" data-cb-pal>${P.LISTA.map(x => `<button data-v="${x.id}" class="${x.id === pal ? 'ativo' : ''}">${SIMB[x.naipe]} ${x.nome}${compModificado(x.id) ? ' ✎' : ''}</button>`).join('')}</div>
+      ${sliders}
+      <div class="acoes-menu"><button class="btn" data-m="padrao">${t('cb.restaurar')}</button><button class="btn principal" data-m="voltar">${t('btn.voltar')}</button></div></div>`,
+    ev => {
+      const g = ev.target.closest('[data-cb-pal] [data-v]');
+      if (g) return telaComportamento(g.dataset.v);
+      const b = ev.target.closest('[data-m]');
+      if (!b) return;
+      if (b.dataset.m === 'padrao') { delete compBot[pal]; salvarComp(); return telaComportamento(pal); }
+      if (b.dataset.m === 'voltar') telaTestes();
+    });
+    document.querySelectorAll('#modal [data-cb]').forEach(inp => {
+      inp.oninput = () => { $(`#modal [data-cb-mostra="${inp.dataset.cb}"]`).textContent = inp.value + '%'; };
+      inp.onchange = () => {
+        compBot[pal] = Object.assign({}, compBot[pal], { [inp.dataset.cb]: Number(inp.value) });
+        salvarComp();
+        const botao = $(`#modal [data-cb-pal] [data-v="${pal}"]`);
+        if (botao) botao.textContent = `${SIMB[P.get(pal).naipe]} ${P.get(pal).nome}${compModificado(pal) ? ' ✎' : ''}`;
+      };
+    });
+  }
 
   // Bot × bot: Palhaço, deck e nível de cada lado.
   function telaBots() {
@@ -4682,7 +4775,7 @@ window.SS = window.SS || {};
       case 'acoes': if (jogo.vez === p) jogo.acoes = M.ACOES_POR_TURNO; break;
       case 'vez': {
         if (ui.ocupado || jogo.fase !== 'principal') break;
-        Object.assign(jogo, { vez: p, fase: 'principal', acoes: M.ACOES_POR_TURNO, sumonados: 0, asesTurno: 0, poderUsado: false, combate: null, desafio: null });
+        Object.assign(jogo, { vez: p, fase: 'principal', acoes: M.ACOES_POR_TURNO, sumonados: 0, sumonadosPor: {}, asesTurno: 0, poderUsado: false, combate: null, desafio: null });
         jogo.turno = Math.max(2, jogo.turno + 1);
         for (const u of j.campo) if (u && u.tipo === 'senhor') Object.assign(u, { ativo: true, atacou: false, ataques: M.naipado(u) === 'ouros' ? 2 : 1 });
         ui.sel = []; ui.pend = null; ui.destino = null; ui.ataques = [];
@@ -4707,13 +4800,17 @@ window.SS = window.SS || {};
       <div class="opcao"><label>${t('op.caixa')}</label>${grupoMenu('caixaMeio', [['nao', t('op.caixaOculta')], ['sim', t('op.caixaVisivel')]], opcoes.caixaMeio ? 'sim' : 'nao')}
         <p class="nota">${t('op.caixaNota')}</p></div>
       <div class="opcao"><label>${t('op.efeitos')}</label>${grupoMenu('efeitos', [['sim', t('op.ligado')], ['nao', t('op.desligado')]], opcoes.efeitos ? 'sim' : 'nao')}</div>
+      <div class="opcao"><label>${t('op.sons')}</label>${grupoMenu('sons', [['lino', t('op.sonsLino')], ['llorenc', t('op.sonsLlorenc')]], opcoes.sons)}
+        <p class="nota">${t('op.sonsNota')}</p></div>
       <div class="opcao"><label>${t('op.volume')} <b class="vol-v">${opcoes.volume}%</b></label><input type="range" class="vol-geral" min="0" max="100" step="5" value="${opcoes.volume}"></div>
       <div class="opcao"><label>${t('op.volumeMusica')} <b class="vol-m">${opcoes.volumeMusica}%</b></label><input type="range" class="vol-musica" min="0" max="100" step="5" value="${opcoes.volumeMusica}"></div>
       <div class="acoes-menu"><button class="btn principal" data-m="voltar">${t('btn.voltar')}</button></div></div>`,
     ev => {
       const g = ev.target.closest('[data-grupo] [data-v]');
       if (g) {
-        opcoes[g.closest('[data-grupo]').dataset.grupo] = g.dataset.v === 'sim';
+        const grupoOp = g.closest('[data-grupo]').dataset.grupo;
+        opcoes[grupoOp] = grupoOp === 'sons' ? g.dataset.v : g.dataset.v === 'sim';
+        if (grupoOp === 'sons') setTimeout(() => Som.tocar('clique'), 350); // (amostra do pacote novo)
         aplicarOpcoes();
         if (jogo) render();
         return desenhar();
@@ -4932,7 +5029,7 @@ window.SS = window.SS || {};
         while (s.feitos < s.n && performance.now() < fim) {
           try {
             const par = confrontos[s.feitos % confrontos.length];
-            const r = Bot.partidaAutomatica([s.a, s.b], quemComeca(), 200, {
+            const r = Bot.partidaAutomatica([comportamentoDe(s.a, par[0]), comportamentoDe(s.b, par[1])], quemComeca(), 200, {
               palhacos: par, decks: par.map((x, k) => M.cartasDoDeck(SS.Decks.deckDoBot(x), k)),
             });
             if (r.vencedor == null) s.r.empates++;

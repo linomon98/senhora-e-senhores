@@ -28,7 +28,9 @@ window.SS = window.SS || {};
   //   limitePV: true (a cura não passa de PV_MAX_CURA) | false (sem teto)
   //   pv: { palhaço: PV inicial } (vazio = o PV de cada Palhaço)
   //   faixa: { J: [mín, máx], Q: [...], K: [...] } números que cada figura pode equipar (vazio = 2 até LIMITE_FIGURA)
-  const REGRAS_PADRAO = Object.freeze({ casca: 'todos2', limiteDefesa: true, rainha: 'reiOuValetes', reiSacrificaValete: false, asesRecurso: true, asesNasLetras: false, bonusNaipe: false, limitePV: true, pv: Object.freeze({}), faixa: Object.freeze({}) });
+  //   semPassiva: { palhaço: true } desliga a habilidade passiva dele (o poder continua)
+  //   invocacoes: 'umPorTurno' (1 Senhor(a) por turno) | 'umPorLetra' (1 Valete, 1 Rainha e 1 Rei por turno) | 'ilimitadas'
+  const REGRAS_PADRAO = Object.freeze({ casca: 'todos2', limiteDefesa: true, rainha: 'reiOuValetes', reiSacrificaValete: false, asesRecurso: true, asesNasLetras: false, bonusNaipe: false, limitePV: true, pv: Object.freeze({}), faixa: Object.freeze({}), semPassiva: Object.freeze({}), invocacoes: 'umPorTurno' });
   let REGRAS = Object.assign({}, REGRAS_PADRAO);
   // Aceita só chaves e valores conhecidos (as regras do dono da sala chegam pela rede).
   function definirRegras(r) {
@@ -40,6 +42,11 @@ window.SS = window.SS || {};
         if (typeof padrao === 'boolean' && typeof v === 'boolean') novo[k] = v;
         if (k === 'casca' && ['todos2', 'paus1'].includes(v)) novo[k] = v;
         if (k === 'rainha' && ['reiOuValetes', 'doisSenhores'].includes(v)) novo[k] = v;
+        if (k === 'invocacoes' && ['umPorTurno', 'umPorLetra', 'ilimitadas'].includes(v)) novo[k] = v;
+        if (k === 'semPassiva' && v && typeof v === 'object') {
+          novo.semPassiva = {};
+          for (const pal in PALHACOS) if (v[pal] === true) novo.semPassiva[pal] = true;
+        }
         if (k === 'pv' && v && typeof v === 'object') {
           novo.pv = {};
           for (const pal in PALHACOS) if (Number.isInteger(v[pal]) && v[pal] >= 1 && v[pal] <= 60 && v[pal] !== PALHACOS[pal].pv) novo.pv[pal] = v[pal];
@@ -92,7 +99,11 @@ window.SS = window.SS || {};
   const CURA_NAIPADO_COPAS = 2; // Naipado de Copas que acerta o Palhaço inimigo cura o dono
   const palhacoDe = j => (j && PALHACOS[j.palhaco]) || null;
   const temPalhaco = (j, id) => !!j && j.palhaco === id;
-  const limiteMao = j => (palhacoDe(j) ? palhacoDe(j).limiteMao : LIMITE_MAO);
+  // A passiva do Palhaço vale (os modificadores de teste podem desligar).
+  const passivaAtiva = id => !REGRAS.semPassiva[id];
+  const temPassiva = (j, id) => temPalhaco(j, id) && passivaAtiva(id);
+  // (o limite de 6 cartas do Ourinhos faz parte da passiva dele)
+  const limiteMao = j => (palhacoDe(j) && (j.palhaco !== 'ourinhos' || passivaAtiva('ourinhos')) ? palhacoDe(j).limiteMao : LIMITE_MAO);
 
   let rng = Math.random;
 
@@ -101,12 +112,18 @@ window.SS = window.SS || {};
   const ehNumero = c => !ehFigura(c) && !ehAs(c);
   // Carta que pode ser sacrificada (descartada) num efeito: número ou Ás (o Ás vale 1).
   const ehSacrificavel = c => ehNumero(c) || (REGRAS.asesRecurso && ehAs(c));
+  // Quantas invocações ainda cabem neste turno (a Rainha conta).
+  function podeInvocar(e, rank) {
+    if (REGRAS.invocacoes === 'ilimitadas') return true;
+    if (REGRAS.invocacoes === 'umPorLetra') return !((e.sumonadosPor || {})[rank]);
+    return e.sumonados < SENHORES_POR_TURNO;
+  }
   const valor = c => (ehAs(c) ? 1 : parseInt(c.rank, 10));
   const nomeCarta = c => (['A', 'J', 'Q', 'K'].includes(c.rank) ? t('carta.' + c.rank) + ' ' : c.rank) + SIMBOLO[c.naipe];
   const nomeNaipe = n => t('naipe.' + n);
   const curaDe = c => (valor(c) <= 5 ? 3 : 4); // Copas sozinha: Ás a 5 cura 3, 6 a 10 cura 4
   // Cura de uma carta de Copas para este jogador (Infartitte, Coração forte: +1).
-  const curaPara = (j, c) => curaDe(c) + (j && j.palhaco === 'infartitte' ? PALHACOS.infartitte.curaExtra : 0);
+  const curaPara = (j, c) => curaDe(c) + (temPassiva(j, 'infartitte') ? PALHACOS.infartitte.curaExtra : 0);
 
   function nomeUnidade(u) {
     if (u.tipo === 'as') return nomeCarta(u.carta);
@@ -410,6 +427,7 @@ window.SS = window.SS || {};
     e.combate = null;
     e.poderUsado = false;
     e.sumonados = 0;
+    e.sumonadosPor = {}; // (modificador "1 por letra": quantos de cada figura neste turno)
     e.asesTurno = 0;
     e.desafio = null;
     j.tokens = 0;
@@ -442,7 +460,7 @@ window.SS = window.SS || {};
       }
     }
     // Ourinhos (Juros compostos): compra 2 cartas, escolhendo o monte de cada uma.
-    e.compras = palhacoDe(j) && palhacoDe(j).compraDupla ? 2 : 1;
+    e.compras = palhacoDe(j) && palhacoDe(j).compraDupla && passivaAtiva(j.palhaco) ? 2 : 1;
     if (e.turno === 1) registrar(e, t('log.primeiroTurno', { j: j.nome }));
     else if (!j.letras.length && !j.numeros.length) comprar(e, p, e.compras, 'numeros'); // sem cartas: perde PV
     else e.fase = 'compra'; // o jogador escolhe de qual baralho comprar
@@ -497,8 +515,9 @@ window.SS = window.SS || {};
     });
 
     // Só 1 Senhor(a) por turno (a Rainha conta) e só 1 Ás.
-    const podeSumonar = e.sumonados < SENHORES_POR_TURNO, podeAs = e.asesTurno < ASES_POR_TURNO;
-    for (const f of podeSumonar ? figuras : []) {
+    const podeAs = e.asesTurno < ASES_POR_TURNO;
+    for (const f of figuras) {
+      if (!podeInvocar(e, f.rank)) continue;
       for (const n of numeros) {
         if (foraDaFaixa(f.rank, n)) continue;
         const aptos = senhores.filter(s => j.campo[s].entrou < e.turno);
@@ -561,6 +580,21 @@ window.SS = window.SS || {};
     const ouros = ourosDisponiveis(e, p);
     const fontes = baralhosDisponiveis(e, p);
     for (const o of new Set(ouros)) for (const b of fontes) r.push({ tipo: 'comprar', carta: o, baralho: b });
+    // Pargias do seu turno: par de números iguais (5 a 7, 8 a 10 ou Ases). 1 ação.
+    const op = e.jogadores[1 - p], inimigos = op.campo.filter(u => u && u.tipo === 'senhor').map(u => u.uid);
+    const algumSenhor = j.campo.concat(op.campo).some(u => u && u.tipo === 'senhor');
+    const cartasPar = j.mao.filter(c => ehNumero(c) || ehAs(c));
+    for (let x = 0; x < cartasPar.length; x++) for (let y = x + 1; y < cartasPar.length; y++) {
+      const a = cartasPar[x], b = cartasPar[y];
+      if (a.rank !== b.rank) continue;
+      const efeito = EFEITO_PARGIA(valor(a)), base = { tipo: 'pargia', efeito, cartas: [a.id, b.id].sort() };
+      if (efeito === 'saiDaqui') for (const uid of inimigos) r.push(Object.assign({ alvo: uid }, base));
+      else if (efeito === 'meteoro' && algumSenhor) r.push(base);
+      else if (efeito === 'raio') {
+        for (const uid of inimigos) r.push(Object.assign({ alvo: uid }, base));
+        r.push(Object.assign({ alvo: 'jogador' }, base));
+      }
+    }
     // Magia dos pares: 2 cartas numéricas do mesmo naipe (1 ação).
     //   Copas: traz um Senhor(a) do cemitério direto para o campo (com o mesmo número de antes).
     //   Ouros: pega um Ás do baralho direto para o campo.
@@ -619,9 +653,13 @@ window.SS = window.SS || {};
   // Par de números iguais (ex.: dois 7, de qualquer naipe): na hora de bloquear, o defensor faz um
   // ataque do adversário bater no próprio dono.
   // Refletir só com pares baixos (Ás, 2 ou 3): incentiva a ter cartas baixas no deck.
-  const VALOR_MAX_REFLEXO = 3;
+  // Pargias (pares de números iguais): 2 a 4 = Refletir (na defesa), 5 a 7 = Sai daqui!, 8 a 10 = Meteoro!,
+  // Ases = Raio do trovão. As três últimas são ações do seu turno (1 ação cada).
+  const VALOR_MIN_REFLEXO = 2, VALOR_MAX_REFLEXO = 4;
+  const EFEITO_PARGIA = v => (v === 1 ? 'raio' : v >= 5 && v <= 7 ? 'saiDaqui' : v >= 8 ? 'meteoro' : null);
+  const DANO_RAIO_PALHACO = 2;
   function paresIguais(e, p) {
-    const nums = e.jogadores[p].mao.filter(c => ehSacrificavel(c) && valor(c) <= VALOR_MAX_REFLEXO), r = [];
+    const nums = e.jogadores[p].mao.filter(c => ehNumero(c) && valor(c) >= VALOR_MIN_REFLEXO && valor(c) <= VALOR_MAX_REFLEXO), r = [];
     for (let a = 0; a < nums.length; a++) {
       for (let b = a + 1; b < nums.length; b++) if (nums[a].rank === nums[b].rank) r.push([nums[a].id, nums[b].id].sort());
     }
@@ -634,7 +672,7 @@ window.SS = window.SS || {};
     const at = e.combate.ataques.find(x => x.n === n);
     if (!at || at.refletido) throw new Error('Ataque inválido para refletir');
     const cs = Array.isArray(cartas) && cartas.length === 2 ? cartas.map(id => j.mao.find(c => c.id === id)) : [];
-    if (cs.length !== 2 || !cs[0] || !cs[1] || cs[0] === cs[1] || !ehSacrificavel(cs[0]) || !ehSacrificavel(cs[1]) || cs[0].rank !== cs[1].rank || valor(cs[0]) > VALOR_MAX_REFLEXO) {
+    if (cs.length !== 2 || !cs[0] || !cs[1] || cs[0] === cs[1] || !ehNumero(cs[0]) || !ehNumero(cs[1]) || cs[0].rank !== cs[1].rank || valor(cs[0]) < VALOR_MIN_REFLEXO || valor(cs[0]) > VALOR_MAX_REFLEXO) {
       throw new Error('Par de números inválido');
     }
     evento(e, { tipo: 'magia', p: d, cartas: cs.map(c => Object.assign({}, c)) });
@@ -657,7 +695,7 @@ window.SS = window.SS || {};
     const p = e.vez, j = e.jogadores[p];
     const at = e.combate.ataques[e.combate.indice];
     const cs = Array.isArray(cartas) && cartas.length === 2 ? cartas.map(id => j.mao.find(c => c.id === id)) : [];
-    if (cs.length !== 2 || !cs[0] || !cs[1] || cs[0] === cs[1] || !ehSacrificavel(cs[0]) || !ehSacrificavel(cs[1]) || cs[0].rank !== cs[1].rank || valor(cs[0]) > VALOR_MAX_REFLEXO) {
+    if (cs.length !== 2 || !cs[0] || !cs[1] || cs[0] === cs[1] || !ehNumero(cs[0]) || !ehNumero(cs[1]) || cs[0].rank !== cs[1].rank || valor(cs[0]) < VALOR_MIN_REFLEXO || valor(cs[0]) > VALOR_MAX_REFLEXO) {
       throw new Error('Par de números inválido');
     }
     evento(e, { tipo: 'magia', p, cartas: cs.map(c => Object.assign({}, c)) });
@@ -697,8 +735,10 @@ window.SS = window.SS || {};
       case 'sumonar': {
         const f0 = j.mao.find(c => c.id === a.figura), n0 = j.mao.find(c => c.id === a.numero);
         if (!f0 || !n0 || !ehFigura(f0) || !ehNumero(n0) || foraDaFaixa(f0.rank, n0)) throw new Error('Sumonar inválido');
-        if (e.sumonados >= SENHORES_POR_TURNO) throw new Error('Só 1 Senhor(a) por turno');
+        if (!podeInvocar(e, f0.rank)) throw new Error('Sem invocações neste turno');
         e.sumonados++;
+        e.sumonadosPor = e.sumonadosPor || {};
+        e.sumonadosPor[f0.rank] = (e.sumonadosPor[f0.rank] || 0) + 1;
         if (f0.rank === 'Q') {
           if (e.acoes < CUSTO_RAINHA) throw new Error(`A Rainha custa ${CUSTO_RAINHA} ação`);
           custo = CUSTO_RAINHA;
@@ -881,6 +921,43 @@ window.SS = window.SS || {};
         for (const c of cs) j.cemiterio.push(tirarDaMao(j, c.id));
         break;
       }
+      case 'pargia': {
+        const cs = (Array.isArray(a.cartas) ? a.cartas : []).map(id => j.mao.find(c => c.id === id));
+        if (cs.length !== 2 || !cs[0] || !cs[1] || cs[0] === cs[1] || cs[0].rank !== cs[1].rank || !(ehNumero(cs[0]) || ehAs(cs[0]))) throw new Error('Par inválido');
+        const efeito = EFEITO_PARGIA(valor(cs[0]));
+        if (!efeito || efeito !== a.efeito) throw new Error('Essa Pargia não combina com o par');
+        const d = 1 - p, op = e.jogadores[d];
+        for (const c of cs) j.cemiterio.push(tirarDaMao(j, c.id));
+        evento(e, { tipo: 'magia', p, cartas: cs.map(c => Object.assign({}, c)) });
+        if (efeito === 'saiDaqui') {
+          // O Senhor(a) inimigo volta para a mão do dono (figura e número), sem morrer.
+          const l = localizar(e, a.alvo);
+          if (!l || l.p !== d || l.u.tipo !== 'senhor') throw new Error('Alvo inválido');
+          op.campo[l.i] = null;
+          op.mao.push(l.u.figura, l.u.numero);
+          delete j.feridas[l.u.uid];
+          if (e.desafio === l.u.uid) e.desafio = null;
+          registrar(e, t('log.saiDaqui', { j: j.nome, u: nomeUnidade(l.u), d: op.nome }));
+          verificarMortes(e);
+        } else if (efeito === 'meteoro') {
+          registrar(e, t('log.meteoro', { j: j.nome }));
+          for (const q of [p, d]) for (let i = 0; i < ESPACOS; i++) {
+            const u = e.jogadores[q].campo[i];
+            if (u && u.tipo === 'senhor') morrer(e, q, i, 'meteoro');
+          }
+        } else {
+          if (a.alvo === 'jogador') {
+            registrar(e, t('log.raioPalhaco', { j: j.nome, d: op.nome, n: DANO_RAIO_PALHACO }));
+            perderPV(e, d, DANO_RAIO_PALHACO);
+          } else {
+            const l = localizar(e, a.alvo);
+            if (!l || l.p !== d || l.u.tipo !== 'senhor') throw new Error('Alvo inválido');
+            registrar(e, t('log.raioSenhor', { j: j.nome, u: nomeUnidade(l.u) }));
+            aplicarHit(e, l.p, l.i);
+          }
+        }
+        break;
+      }
       default:
         throw new Error('Ação desconhecida: ' + a.tipo);
     }
@@ -969,7 +1046,7 @@ window.SS = window.SS || {};
       const extras = d.ouros || [];
       for (const o of extras) gastarOuros(e, p, o);
       // Lançalotte (Golpe certeiro): o 1º ataque do turno ganha dado (e ataque) extra.
-      const golpe = k === 0 && temPalhaco(j, 'lancalotte') ? PALHACOS.lancalotte : null;
+      const golpe = k === 0 && temPassiva(j, 'lancalotte') ? PALHACOS.lancalotte : null;
       ataques.push({
         n: k + 1, atacante: d.atacante, alvo: d.alvo, dados: 1 + extras.length + (golpe ? golpe.dadosPrimeiro : 0) + dadosGuardados(d.atacante) + (bonusDoNaipe(localizar(e, d.atacante).u, 'ouros') ? 1 : 0),
         bonusAtaque: golpe ? golpe.ataquePrimeiro : 0, bloqueadores: [], resultado: null,
@@ -1116,7 +1193,7 @@ window.SS = window.SS || {};
     const pm = PALHACOS.paumol;
     // Cada defensor recebe o dano inteiro (já reduzido pelo bloqueio em grupo).
     const danoPara = b => {
-      if (!temPalhaco(D, 'paumol')) return dano;
+      if (!temPassiva(D, 'paumol')) return dano;
       // (modificador 'paus1': só os Naipados de Paus, e 1 a menos)
       if (REGRAS.casca === 'paus1') return naipado(b.u) === 'paus' ? Math.max(0, dano - 1) : dano;
       if (pm.soPaus && b.u.figura.naipe !== 'paus' && b.u.numero.naipe !== 'paus') return dano;
@@ -1298,7 +1375,7 @@ window.SS = window.SS || {};
     desistir, REGRAS_DECK, RANKS, contagemPadrao, resumoDeck, validarDeck, cartasDoDeck,
     PALHACOS, CUSTO_TRANSFUSAO, CUSTO_SANGRIA, SACRIFICIOS_RAINHA, SENHORES_POR_TURNO, ASES_POR_TURNO, REDUCAO_POR_DEFENSOR, palhacoDe, limiteMao, ataqueDirecionado,
     NAIPES, SIMBOLO, LIMITE_FIGURA, PV_INICIAL, PV_MAX_CURA, RESISTENCIA_MAX, ESPACOS, ACOES_POR_TURNO, CUSTO_RAINHA, DADO_ATAQUE_TOTAL, LIMITE_MAO,
-    definirRng: f => { rng = f; }, rngAtual: () => rng, REGRAS_PADRAO, definirRegras, regras, limiteDefesa, faixaFigura, pvInicial, voltarAoPrincipal, refletir, paresIguais, contraRefletir, podeContraRefletir, CURA_AS_COPAS, CURA_NAIPADO_COPAS,
+    definirRng: f => { rng = f; }, rngAtual: () => rng, REGRAS_PADRAO, definirRegras, regras, limiteDefesa, faixaFigura, pvInicial, passivaAtiva, podeInvocar, EFEITO_PARGIA, DANO_RAIO_PALHACO, VALOR_MIN_REFLEXO, VALOR_MAX_REFLEXO, voltarAoPrincipal, refletir, paresIguais, contraRefletir, podeContraRefletir, CURA_AS_COPAS, CURA_NAIPADO_COPAS,
     ehFigura, ehAs, ehNumero, ehSacrificavel, valor, nomeCarta, nomeNaipe, nomeUnidade, curaDe, curaPara, naipado,
     BARALHOS, NOME_BARALHO, baralhosDisponiveis, comprarDoTurno,
     criarJogo, registrar, figurasNoBaralho, escolherFiguras, mulligan, confirmarAbertura,

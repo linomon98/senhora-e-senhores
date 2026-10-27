@@ -8,4 +8,5 @@ que é 6x menor. Som que não existe fica em silêncio.
   e muda o tom um tiquinho para soar menos repetido. Quantas variações cada som tem fica em `js/som.js` (`EFEITOS`).
 - **Volume de cada som:** a mixagem fica em `VOLUME`, em `js/som.js` (`hover-carta` está mudo por enquanto).
 - **Atraso do MP3:** o codificador põe ~46 ms de silêncio no começo; o jogo corta esse silêncio ao carregar.
+- **Sons do Llorenç:** em `llorenc/` (96 kbps, mono), com os mesmos nomes (`nome-1.mp3`, `nome-2.mp3`...). Nas Opções, "Pacote de sons" troca entre os do Lino e os do Llorenç; o que ele não fez continua com o do Lino. Para pôr mais, salve o arquivo lá e acrescente o nome na lista LLORENC do som.js.
 - **Música:** `musica.mp3` e `musica-2.mp3` (96 kbps estéreo, no mesmo volume), tocando uma depois da outra, alternando; volume próprio nas Opções. Para trocar, salve outra com o mesmo nome (ou acrescente o arquivo na lista FAIXAS do som.js).

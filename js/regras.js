@@ -169,9 +169,18 @@ window.SS = window.SS || {};
           <tr><td>♣ Paus</td><td><b>+1 de defesa para sempre</b> num Senhor(a) seu (nenhum Senhor passa de <b>${M.RESISTENCIA_MAX} de defesa</b>), ou <b>-1 de defesa</b> num inimigo (que ainda tenha 2 ou mais de vida sobrando).</td></tr>
           <tr><td>♠ Espadas</td><td><b>+1 de dano para sempre</b> num Senhor(a) seu, ou <b>-1 de ataque</b> num inimigo (com ataque 2 ou mais).</td></tr>
         </table>
-        <h3>Par de Ases, 2 ou 3: Refletir</h3>
-        <p>Duas cartas baixas iguais (<b>dois Ases, dois 2 ou dois 3</b>, de qualquer naipe) servem na <b>defesa</b>: quando o adversário ataca, a carta <b>Refletir</b> aparece pulsando; o par sobe e o resto da mão escurece; clique nas cartas do par para sacrificá-lo e leve a seta roxa até o ataque que quer <b>refletir</b>. O Senhor(a) adversário bate no <b>próprio dono</b> (o dado ainda decide entre cheio e metade). O golpe refletido bate normal (sem bônus nem redução). O par vai para o cemitério.</p>
-        <p><b>Refletir o reflexo:</b> se o seu ataque foi refletido e você tem um par de Ases, 2 ou 3, pode sacrificá-lo antes do dado para mandar o golpe <b>de volta</b> no Palhaço do adversário (sem bloqueio). Só dá para refletir de volta uma vez por ataque.</p>`,
+        <h3>Pargias: pares de números iguais</h3>
+        <p>Duas cartas com o <b>mesmo número</b> (de qualquer naipe) formam uma <b>Pargia</b>. O que ela faz depende do número:</p>
+        <table class="tabela-regras">
+          <tr><th>Par</th><th>Pargia</th></tr>
+          <tr><td>2 a 4</td><td><b>Refletir!</b> Na defesa (sem gastar ação), manda um ataque de volta no próprio dono. Veja abaixo.</td></tr>
+          <tr><td>5 a 7</td><td><b>Sai daqui!</b> No seu turno (1 ação), um Senhor(a) inimigo volta para a mão do dono (figura e número).</td></tr>
+          <tr><td>8 a 10</td><td><b>Meteoro!</b> No seu turno (1 ação), destrói <b>todos</b> os Senhores da mesa, inclusive os seus.</td></tr>
+          <tr><td>Ases</td><td><b>Raio do trovão</b>. No seu turno (1 ação), escolha com a seta roxa: 1 hit num Senhor(a) inimigo, <b>ou</b> 2 PV no Palhaço do oponente.</td></tr>
+        </table>
+        <h3>Par de 2, 3 ou 4: Refletir</h3>
+        <p>Duas cartas baixas iguais (<b>dois 2, dois 3 ou dois 4</b>, de qualquer naipe) servem na <b>defesa</b>: quando o adversário ataca, a carta <b>Refletir</b> aparece pulsando; o par sobe e o resto da mão escurece; clique nas cartas do par para sacrificá-lo e leve a seta roxa até o ataque que quer <b>refletir</b>. O Senhor(a) adversário bate no <b>próprio dono</b> (o dado ainda decide entre cheio e metade). O golpe refletido bate normal (sem bônus nem redução). O par vai para o cemitério.</p>
+        <p><b>Refletir o reflexo:</b> se o seu ataque foi refletido e você tem um par de 2, 3 ou 4, pode sacrificá-lo antes do dado para mandar o golpe <b>de volta</b> no Palhaço do adversário (sem bloqueio). Só dá para refletir de volta uma vez por ataque.</p>`,
     },
     {
       id: 'palhacos', titulo: 'Palhaços',
@@ -370,9 +379,18 @@ window.SS = window.SS || {};
           <tr><td>♣ Clubs</td><td><b>+1 defense for good</b> on one of your Gentlemen (no Gentleman goes above <b>${M.RESISTENCIA_MAX} defense</b>), or <b>-1 defense</b> on an enemy (that still has 2 or more life left).</td></tr>
           <tr><td>♠ Spades</td><td><b>+1 damage for good</b> on one of your Gentlemen, or <b>-1 attack</b> on an enemy (with attack 2 or more).</td></tr>
         </table>
-        <h3>Pair of Aces, 2s or 3s: Reflect</h3>
-        <p>Two equal low cards (<b>two Aces, two 2s or two 3s</b>, any suits) work on <b>defense</b>: when the opponent attacks, the <b>Reflect</b> card shows up pulsing; the pair rises and the rest of your hand dims; click the pair to sacrifice it and bring the purple arrow to the attack you want to <b>reflect</b>. The enemy Gentleman hits its <b>own owner</b> (the die still decides full or half). The reflected blow hits normally (no bonus or reduction). The pair goes to the graveyard.</p>
-        <p><b>Reflect the reflection:</b> if your attack was reflected and you hold a pair of Aces, 2s or 3s, you may sacrifice it before the roll to send the blow <b>back</b> at the opponent's Jester (no blocking). An attack can only be reflected back once.</p>`,
+        <h3>Pairgics: pairs of equal numbers</h3>
+        <p>Two cards with the <b>same number</b> (any suits) make a <b>Pairgic</b>. What it does depends on the number:</p>
+        <table class="tabela-regras">
+          <tr><th>Pair</th><th>Pairgic</th></tr>
+          <tr><td>2 to 4</td><td><b>Reflect!</b> On defense (no action), sends an attack back at its own owner. See below.</td></tr>
+          <tr><td>5 to 7</td><td><b>Get out!</b> On your turn (1 action), an enemy Gentleman goes back to its owner's hand (face card and number).</td></tr>
+          <tr><td>8 to 10</td><td><b>Meteor!</b> On your turn (1 action), destroys <b>every</b> Gentleman on the table, yours included.</td></tr>
+          <tr><td>Aces</td><td><b>Thunderbolt</b>. On your turn (1 action), choose with the purple arrow: 1 hit on an enemy Gentleman, <b>or</b> 2 HP on the opponent's Jester.</td></tr>
+        </table>
+        <h3>Pair of 2s, 3s or 4s: Reflect</h3>
+        <p>Two equal low cards (<b>two 2s, two 3s or two 4s</b>, any suits) work on <b>defense</b>: when the opponent attacks, the <b>Reflect</b> card shows up pulsing; the pair rises and the rest of your hand dims; click the pair to sacrifice it and bring the purple arrow to the attack you want to <b>reflect</b>. The enemy Gentleman hits its <b>own owner</b> (the die still decides full or half). The reflected blow hits normally (no bonus or reduction). The pair goes to the graveyard.</p>
+        <p><b>Reflect the reflection:</b> if your attack was reflected and you hold a pair of 2s, 3s or 4s, you may sacrifice it before the roll to send the blow <b>back</b> at the opponent's Jester (no blocking). An attack can only be reflected back once.</p>`,
     },
     {
       id: 'palhacos', titulo: 'Jesters',

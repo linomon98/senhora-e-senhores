@@ -410,7 +410,7 @@
           'To summon the <b>Queen</b> you have to make <b>sacrifices</b>, because she is very strong: either you sacrifice <b>2 Jacks</b> on the field, or <b>1 King</b>.'] },
         { foco: ['#campo-0', '#mao-0'], permitir: [maoSel(0, 'Q', 'paus'), maoSel(0, '10', 'paus'), '[data-acao^="tipo:sumonar"]'],
           alvo: api => { const ui = api.ui(), j = api.jogo().jogadores[0]; return ui.sel.length > 1 ? '[data-acao^="tipo:sumonar"]' : ui.sel.includes(idNaMao(j, 'Q', 'paus')) ? maoSel(0, '10', 'paus')(api) : maoSel(0, 'Q', 'paus')(api); },
-          fala: ['Selecione o <b>10</b> e a <b>Rainha de Paus</b>, e depois a carta <b>Invocar Rainha</b>.', 'Select the <b>10</b> and the <b>Queen of Clubs</b>, then the <b>Summon Queen</b> card.'],
+          fala: ['Selecione o <b>10</b> e a <b>Rainha de Paus</b>, e depois a carta <b>Invocar</b>.', 'Select the <b>10</b> and the <b>Queen of Clubs</b>, then the <b>Summon Queen</b> card.'],
           esperar: api => !!(api.ui().pend && api.ui().pend.passos.includes('sacrificios')) || !!unidadeFig(api.jogo(), 0, 'Q') },
         { foco: slotFig(0, 'K'), alvo: slotFig(0, 'K'), permitir: [slotFig(0, 'K')],
           fala: ['Clique no <b>Rei</b> para sacrificá-lo.', 'Click the <b>King</b> to sacrifice him.'],
