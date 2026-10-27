@@ -2184,3 +2184,117 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 #velocidade[hidden] { display: none; }
 #velocidade button { padding: 3px 10px; border: 2px solid #141414; border-radius: 9px; background: #fff; font: 800 14px var(--fonte-ui); color: #141414; cursor: pointer; }
 #velocidade button.ativo { background: #ffc21a; }
+
+/* ---------- Tela de Regras: folha branca sobre o feltro verde, com os naipes descendo devagar ---------- */
+#tela-regras.tela-regras-nova { padding: 18px 16px 40px; color: #141414; }
+#tela-regras.tela-regras-nova::before {
+  content: ''; position: fixed; left: 0; top: -36vh; width: 100vw; height: calc(100vh + 36vh); pointer-events: none; z-index: 0;
+  background: url('arte/menu/naipes.webp') 0 0 / 32.16vh 36vh repeat; mix-blend-mode: multiply; opacity: .28;
+  animation: rg-naipes-descem 30s linear infinite; will-change: transform;
+}
+@keyframes rg-naipes-descem { to { transform: translateY(36vh); } }
+@media (prefers-reduced-motion: reduce) { #tela-regras.tela-regras-nova::before { animation: none; } }
+.rg-tela { position: relative; z-index: 1; max-width: 1180px; margin: 0 auto; user-select: none; }
+.rg-topo { display: flex; align-items: center; gap: 18px; margin-bottom: 14px; }
+.rg-topo h1 { margin: 0 auto 0 0; padding: 6px 26px 2px; background: #fff; border: 4px solid #141414; border-radius: 18px; box-shadow: 0 7px 0 #141414; font: 400 52px/1 'Marlboro', var(--fonte-titulo); }
+.rg-abas { display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-end; padding-left: 14px; }
+.rg-aba { padding: 8px 16px 6px; border: 3px solid #141414; border-bottom: 0; border-radius: 14px 14px 0 0; background: #ececec; color: #141414; font: 400 22px 'Marlboro', var(--fonte-titulo); cursor: pointer; transition: transform .15s cubic-bezier(.3, 1.6, .5, 1); }
+.rg-aba:hover { transform: translateY(-3px); }
+.rg-aba.ativa { background: #ffc21a; padding-bottom: 12px; }
+.rg-pagina { background: #fffdf4; border: 4px solid #141414; border-radius: 20px; box-shadow: 0 8px 0 #141414; padding: 22px 30px 26px; font: 15.5px/1.5 var(--fonte-ui); user-select: text; }
+.rg-pagina.entra { animation: rg-pagina-entra .32s cubic-bezier(.3, 1.4, .5, 1); }
+@keyframes rg-pagina-entra { from { transform: translateY(14px); opacity: 0; } }
+.rg-pagina h2 { margin: 0 0 8px; font: 400 46px/1 'Marlboro', var(--fonte-titulo); }
+.rg-pagina h3 { margin: 18px 0 8px; font: 400 28px/1.05 'Marlboro', var(--fonte-titulo); color: #b0101e; }
+.rg-pagina p { margin: 6px 0; }
+.rg-pagina ul { margin: 4px 0; padding-left: 20px; }
+.rg-centro { text-align: center; }
+
+/* Blocos: figura + explicação */
+.rg-bloco { display: grid; grid-template-columns: minmax(250px, 42%) 1fr; gap: 6px 20px; align-items: center; margin: 12px 0; padding: 12px 16px; background: #f4eedc; border: 2px solid #141414; border-radius: 14px; }
+.rg-bloco > h3 { grid-column: 1 / -1; margin: 0 0 4px; }
+.rg-figura { display: flex; justify-content: center; align-items: center; gap: 6px; flex-wrap: wrap; min-height: 90px; }
+.rg-grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 8px 0; }
+.rg-grade .rg-bloco { margin: 0; grid-template-columns: 1fr; text-align: center; align-content: start; }
+.rg-grade .rg-bloco .rg-texto { font-size: 14px; }
+.rg-linha { display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rg-coluna { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
+.rg-coluna small { font-size: 12px; font-weight: 700; }
+.rg-op { font: 400 36px/1 'Marlboro', var(--fonte-titulo); font-style: normal; margin: 0 4px; color: #141414; }
+.rg-numero { font: 400 46px/1 'Marlboro', var(--fonte-titulo); color: #b0101e; }
+
+/* Cartas, Senhores, cartas de ação, escudos, naipes */
+.rg-c { display: inline-block; flex: none; width: 60px; aspect-ratio: 5 / 7; filter: drop-shadow(2px 3px 0 rgba(0, 0, 0, .35)); }
+.rg-c svg { display: block; width: 100%; height: 100%; border-radius: 7%; }
+.rg-c .carta.dorso { display: block; width: 100%; height: 100%; border-radius: 7%; border: 2px solid #141414; box-sizing: border-box; }
+.rg-c.as { width: 52px; }
+.rg-senhor { position: relative; display: inline-block; flex: none; width: 80px; height: 104px; }
+.rg-senhor .rg-c { position: absolute; width: 60px; }
+.rg-senhor .num { right: 0; top: 0; transform: rotate(7deg); }
+.rg-senhor .fig { left: 0; top: 12px; }
+.rg-senhor .rg-atk { position: absolute; left: 50%; bottom: -10px; transform: translateX(-50%); padding: 1px 8px; border-radius: 9px; background: #141414; color: #fff; font: 800 13px/18px var(--fonte-ui); white-space: nowrap; z-index: 2; }
+.rg-senhor.defende .fig { outline: 3px solid #2a5fd6; outline-offset: 1px; border-radius: 6px; }
+.rg-naipe { width: 34px; height: 34px; object-fit: contain; vertical-align: middle; }
+.rg-escudos { display: inline-flex; gap: 2px; }
+.rg-escudos img { width: 22px; height: auto; }
+.rg-escudos img.apagado { filter: grayscale(1) brightness(.35); opacity: .55; }
+.rg-acao { position: relative; display: inline-block; flex: none; width: 96px; aspect-ratio: 300 / 402; filter: drop-shadow(3px 4px 0 rgba(5, 18, 2, .45)); }
+.rg-acao img { display: block; width: 100%; height: 100%; }
+.rg-acao b { position: absolute; left: 12%; right: 12%; top: 12%; text-align: center; font: 400 14px/1 var(--fonte-titulo); color: #141414; text-shadow: 0 1px 0 rgba(255, 255, 255, .9); }
+.rg-pal { position: relative; display: inline-block; }
+.rg-pal img { display: block; width: 104px; border-radius: 10px; filter: drop-shadow(3px 4px 0 rgba(20, 20, 20, .45)); }
+.rg-pal.pequeno img { width: 74px; }
+.rg-pv { position: absolute; right: -10px; bottom: -10px; min-width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: #c41e2a; color: #fff; border: 3px solid #141414; font: 400 20px/1 'Marlboro', var(--fonte-titulo); }
+.rg-pilha { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
+.rg-pilha .rg-c { width: 70px; }
+.rg-pilha small { margin-top: -54px; margin-bottom: 34px; position: relative; z-index: 1; color: #fff; font: 800 12px var(--fonte-ui); text-shadow: 0 1px 2px #000; }
+.rg-pilha b { font: 400 22px 'Marlboro', var(--fonte-titulo); }
+.rg-pilha em { font-style: normal; font-size: 12px; font-weight: 700; }
+
+/* O turno, os selos, as réguas */
+.rg-passos { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 6px 0; padding: 0; list-style: none; counter-reset: passo; }
+.rg-passos li { counter-increment: passo; position: relative; padding: 12px 10px 10px; background: #fff; border: 2px solid #141414; border-radius: 12px; box-shadow: 0 3px 0 #141414; text-align: center; }
+.rg-passos li::before { content: counter(passo); position: absolute; left: 50%; top: -14px; transform: translateX(-50%); width: 26px; height: 26px; border-radius: 50%; background: #ffc21a; border: 2px solid #141414; font: 800 14px/22px var(--fonte-ui); }
+.rg-passos b { display: block; font: 400 22px/1.1 'Marlboro', var(--fonte-titulo); }
+.rg-passos span { font-size: 13px; }
+.rg-caixinhas { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; font-size: 14px; }
+.rg-caixinhas p { margin: 0; padding: 10px 12px; background: #f4eedc; border-radius: 10px; }
+.rg-selos { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin: 8px 0; }
+#tela-regras .selo-golpe { position: relative; }
+.rg-reguas { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; margin: 8px 0; }
+#tela-regras .regua-defesa { position: relative; width: 250px; }
+
+/* Escada das figuras */
+.rg-escada { display: flex; justify-content: center; align-items: stretch; gap: 6px; flex-wrap: wrap; margin: 10px 0; }
+.rg-escada > .rg-op { align-self: center; }
+.rg-degrau { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 210px; padding: 12px 10px; background: #fff; border: 2px solid #141414; border-radius: 14px; box-shadow: 0 3px 0 #141414; text-align: center; }
+.rg-degrau > b { margin-top: 10px; font: 400 26px/1 'Marlboro', var(--fonte-titulo); }
+.rg-degrau > em { font-style: normal; font-weight: 800; padding: 0 8px; border-radius: 8px; background: #141414; color: #fff; font-size: 12px; }
+.rg-degrau > span { font-size: 13px; }
+.rg-degrau > small { font-size: 12px; font-weight: 700; color: #b0101e; }
+
+/* Palhaços */
+.rg-palhacos { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 14px; margin-top: 10px; }
+.rg-palhaco { display: grid; grid-template-columns: 120px 1fr; gap: 16px; align-items: start; padding: 14px; border: 3px solid #141414; border-radius: 16px; box-shadow: 0 4px 0 #141414; }
+.rg-palhaco.cor-azul { background: #e3ecff; } .rg-palhaco.cor-vermelho { background: #ffe5e5; }
+.rg-palhaco.cor-verde { background: #e3f6e0; } .rg-palhaco.cor-dourado { background: #fff3cc; }
+.rg-palhaco h3 { margin: 0 0 6px; color: #141414; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.rg-palhaco h3 small { font: 600 13px var(--fonte-ui); opacity: .7; }
+.rg-palhaco p { font-size: 14px; }
+.rg-tag { display: inline-block; padding: 0 7px; border-radius: 7px; border: 2px solid #141414; font: 800 11px/16px var(--fonte-ui); text-transform: uppercase; }
+.rg-tag.passiva { background: #ffffff; } .rg-tag.poder { background: #ffc21a; }
+.rg-plano { font-style: italic; opacity: .8; }
+
+/* Montagem de deck */
+.rg-deck .maco.cx { --u: .95px; }
+.rg-copias { position: relative; }
+.rg-copias b { position: absolute; right: -10px; top: -10px; padding: 2px 7px; border-radius: 10px; background: #141414; color: #fff; font: 800 13px var(--fonte-ui); }
+.rg-aba-naipe { display: inline-grid; place-items: center; width: 62px; height: 54px; border: 3px solid #141414; border-bottom: 0; border-radius: 12px 12px 0 0; }
+.rg-aba-naipe.paus { background: #08a010; } .rg-aba-naipe.copas { background: #e64545; } .rg-aba-naipe.espadas { background: #1f56d8; } .rg-aba-naipe.ouros { background: #f5b528; }
+
+@media (max-width: 760px) {
+  .rg-bloco { grid-template-columns: 1fr; }
+  .rg-passos, .rg-caixinhas { grid-template-columns: 1fr; }
+  .rg-palhacos { grid-template-columns: 1fr; }
+  .rg-palhaco { grid-template-columns: 90px 1fr; }
+}

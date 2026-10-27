@@ -4346,12 +4346,12 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 104, data: '27/10/2026',
+    n: 105, data: '27/10/2026',
     novidades: [
+      ['Tela de Regras nova, com infográficos das cartas', 'New Rules screen, with card infographics'],
       ['Regras oficiais novas: Rei sacrifica 1 Valete, 1 invocação de cada letra, defesa e cura sem limite, Casca grossa −1 nos Naipados de Paus, PV novos', 'New official rules: King sacrifices 1 Jack, 1 summon of each letter, no defense or healing cap, Thick Bark −1 on Clubs Suited, new HP'],
       ['Pargias: pares de números iguais viram Refletir, Sai daqui!, Meteoro! e Raio do trovão', 'Pairgics: pairs of equal numbers become Reflect, Get out!, Meteor! and Thunderbolt'],
       ['Sons do Llorenç nas Opções', "Llorenç's sounds in Options"],
-      ['Testes: comportamento dos bots, passivas e limite de invocações', 'Tests: bot behavior, passives and summon limits'],
     ],
   };
 

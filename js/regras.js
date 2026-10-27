@@ -1,433 +1,191 @@
-/* Regras do jogo, divididas por tema, para a tela "Regras do jogo" do menu.
-   Os números (PV, limites, custos) vêm do motor, então ficam sempre iguais às regras em uso. */
+/* Tela "Regras do jogo": 6 abas com infográficos feitos das próprias cartas do jogo (cartas, Senhores montados,
+   cartas de ação, o selo do dado e a régua de defesa). Os números (PV, limites) vêm do motor e dos Palhaços,
+   então ficam iguais às regras oficiais em uso. Cada texto vem nos dois idiomas: x(pt, en). */
 window.SS = window.SS || {};
 (function (SS) {
   'use strict';
-  const M = SS.Motor;
+  const M = SS.Motor, C = SS.Cartas;
   const R = M.REGRAS_DECK;
+  let EN = false;
+  const x = (pt, en) => (EN ? en : pt);
 
+  // ---------- Peças dos infográficos ----------
+  const carta = (rank, naipe, cls) => `<span class="rg-c${cls ? ' ' + cls : ''}">${C.frente({ rank, naipe })}</span>`;
+  const dorso = cor => `<span class="rg-c"><span class="carta dorso ${cor}"></span></span>`;
+  // Senhor(a) montado(a): o número fica atrás da figura, como na mesa.
+  const senhor = (fig, num, atk, extra) => `<span class="rg-senhor${extra ? ' ' + extra : ''}">${carta(num[0], num[1], 'num')}${carta(fig[0], fig[1], 'fig')}${atk != null ? `<b class="rg-atk">⚔ ${atk}</b>` : ''}</span>`;
+  const op = s => `<i class="rg-op">${s}</i>`;
+  const naipe = n => `<img class="rg-naipe" src="arte/naipes/${n}.webp" alt="" draggable="false">`;
+  const escudos = (n, apagados) => `<span class="rg-escudos">${Array.from({ length: n }, (_, k) => `<img class="${k >= n - (apagados || 0) ? 'apagado' : ''}" src="arte/icones/escudo.webp" alt="" draggable="false">`).join('')}</span>`;
+  const acao = (arte, titulo) => `<span class="rg-acao"><img src="arte/acoes/${arte}.webp" alt="" draggable="false"><b>${titulo}</b></span>`;
+  const DADO = '<img class="dado-img" src="arte/icones/dado.webp" alt="" draggable="false">';
+  const selo = (tipo, n, titulo, conta) => `<div class="selo-golpe ${tipo}"><span class="sg-dado">${DADO}<b>${n}</b></span><span class="sg-texto"><b class="sg-titulo">${titulo}</b>${conta ? `<span class="sg-conta">${conta}</span>` : ''}</span></div>`;
+  const regua = (atk, dano, resultado, titulo) => {
+    const max = Math.max(atk * 1.6, (dano || 0) + 1, atk + 2), pct = v => Math.min(100, Math.max(0, (v / max) * 100));
+    const metade = String(atk / 2).replace('.', EN ? '.' : ',');
+    return `<div class="regua-defesa caiu ${resultado || ''}">${titulo ? `<b class="rg-resultado">${titulo}</b>` : ''}<div class="rg-barra">`
+      + `<i class="rg-ignora" style="width:${pct(atk / 2)}%"><span>${x('ignora', 'ignore')}</span></i><i class="rg-hit" style="width:${pct(atk) - pct(atk / 2)}%"><span>1 hit</span></i><i class="rg-pesado"><span>2 hits</span></i>`
+      + `<em class="rg-marca" style="left:${pct(atk / 2)}%">${metade}</em><em class="rg-marca" style="left:${pct(atk)}%">${atk}</em>`
+      + (dano != null ? `<span class="rg-seta" style="--ate:${pct(dano)}%"><b>${dano}</b></span>` : '') + '</div></div>';
+  };
+  // Bloco do infográfico: a figura em cima (ou ao lado) e a explicação.
+  const bloco = (titulo, figura, texto, cls) => `<div class="rg-bloco${cls ? ' ' + cls : ''}">${titulo ? `<h3>${titulo}</h3>` : ''}<div class="rg-figura">${figura}</div><div class="rg-texto">${texto}</div></div>`;
+  const grade = itens => `<div class="rg-grade">${itens.join('')}</div>`;
+
+  // ---------- Abas ----------
   const TEMAS = [
     {
-      id: 'visao', titulo: 'Visão geral',
-      html: () => `
-        <h3>Objetivo</h3>
-        <p>Reduzir os Pontos de Vida (PV) do oponente a <b>0</b>. Cada jogador começa com <b>${M.PV_INICIAL} PV</b> (alguns Palhaços mudam isso). A cura não tem teto (só a ferida de um Naipado de Copas inimigo limita).</p>
-        <h3>Componentes</h3>
-        <ul>
-          <li><b>Baralho de Letras</b> (${R.letras} cartas): Valetes, Rainhas e Reis. São as <b>figuras</b>.</li>
-          <li><b>Baralho de Números</b> (${R.numeros} cartas): Ás a 10.</li>
-          <li><b>Campo</b>: uma fileira de <b>${M.ESPACOS} espaços</b> para cada jogador. Uma carta colocada nunca muda de espaço.</li>
-          <li><b>Cemitério</b>: cartas usadas, sacrificadas e mortas.</li>
-          <li>Dado de 6 faces.</li>
-        </ul>
-        <h3>A ideia</h3>
-        <p>Você junta <b>1 figura + 1 número</b> para criar um <b>Senhor(a)</b>, a criatura do jogo. O número é o ataque dele(a). As cartas numéricas também podem ser usadas sozinhas, como magias, pelo efeito do naipe. Os <b>Ases</b> viram totens que fortalecem os vizinhos.</p>`,
+      id: 'visao', titulo: () => x('Visão geral', 'Overview'),
+      html: () => {
+        const pals = SS.Palhacos.LISTA;
+        return `
+        ${bloco(x('O objetivo', 'The goal'),
+          `<div class="rg-linha">${pals.slice(0, 2).map(p => `<span class="rg-pal"><img src="${p.carta}" alt="" draggable="false"><b class="rg-pv">${p.pvBase}</b></span>`).join(op('⚔'))}</div>`,
+          x(`Cada jogador tem um <b>Palhaço</b> com PV. <b>Zere o PV do Palhaço inimigo</b> e você vence. Você bate nele com os seus <b>Senhores e Senhoras</b>, que defendem você também.`,
+            `Each player has a <b>Jester</b> with HP. <b>Bring the enemy Jester's HP to zero</b> and you win. You hit him with your <b>Ladies and Gentlemen</b>, who also defend you.`))}
+        ${bloco(x('Dois baralhos', 'Two decks'),
+          `<div class="rg-linha"><span class="rg-pilha">${dorso('vermelho')}<small>J Q K</small><b>${x('Letras', 'Faces')}</b><em>${x('até', 'up to')} ${R.letras}</em></span>
+            <span class="rg-pilha">${dorso('vermelho')}<small>A–10</small><b>${x('Números', 'Numbers')}</b><em>${x('até', 'up to')} ${R.numeros}</em></span></div>`,
+          x(`O baralho de <b>Letras</b> tem as figuras (Valete, Rainha e Rei). O de <b>Números</b> tem do Ás ao 10. No começo do turno você compra 1 carta do baralho que quiser.`,
+            `The <b>Faces</b> deck holds the face cards (Jack, Queen and King). The <b>Numbers</b> deck goes from Ace to 10. At the start of your turn you draw 1 card from the deck you want.`))}
+        ${bloco(x('A ideia', 'The idea'),
+          `<div class="rg-linha">${carta('K', 'paus')}${op('+')}${carta('6', 'paus')}${op('=')}${senhor(['K', 'paus'], ['6', 'paus'], 6)}</div>`,
+          x(`<b>1 figura + 1 número</b> viram um <b>Senhor(a)</b>: o número é o ataque dele(a). Os números também servem sozinhos como <b>recursos</b> (curar, comprar, +1 de ataque...), e os pares de números viram <b>magias</b>.`,
+            `<b>1 face card + 1 number</b> become a <b>Gentleman</b>: the number is its attack. Numbers also work alone as <b>resources</b> (heal, draw, +1 attack...), and pairs of numbers become <b>spells</b>.`))}
+        <h3>${x('O turno', 'The turn')}</h3>
+        <ol class="rg-passos">
+          <li><b>${x('Acorda', 'Wake up')}</b><span>${x('Os seus Senhores virados voltam a ficar ativos.', 'Your flipped Gentlemen become ready again.')}</span></li>
+          <li><b>${x('Compra', 'Draw')}</b><span>${x('1 carta de Letras ou de Números (o Ourinhos compra 2).', '1 card from Faces or Numbers (Ourinhos draws 2).')}</span></li>
+          <li><b>${M.ACOES_POR_TURNO} ${x('ações', 'actions')}</b><span>${x('Invocar, usar recursos, magias, o poder do Palhaço.', 'Summon, use resources, spells, the Jester\'s power.')}</span></li>
+          <li><b>${x('Ataque', 'Attack')}</b><span>${x('Prepare o ataque, escolha os alvos e role o dado.', 'Prepare the attack, choose targets and roll the die.')}</span></li>
+          <li><b>${x('Fim', 'End')}</b><span>${x(`Quem atacou vira para baixo; mais de ${M.LIMITE_MAO} cartas na mão, descarte.`, `Whoever attacked flips face down; more than ${M.LIMITE_MAO} cards in hand, discard.`)}</span></li>
+        </ol>
+        <div class="rg-caixinhas">
+          <p><b>${x('Começo:', 'Setup:')}</b> ${x('cada um escolhe 3 figuras e compra 4 números (dá para trocar os números uma vez, o mulligan). Quem começa é decidido no dado; no 1º turno, quem começa não compra e não ataca.', 'each player picks 3 face cards and draws 4 numbers (you can swap the numbers once, the mulligan). The die decides who starts; on turn 1, the starting player neither draws nor attacks.')}</p>
+          <p><b>${x('Fim de jogo:', 'Game end:')}</b> ${x(`quem chega a 0 PV perde. Comprar com os dois baralhos vazios custa ${2} PV por carta.`, `reaching 0 HP loses. Drawing with both decks empty costs ${2} HP per card.`)}</p>
+        </div>`;
+      },
     },
     {
-      id: 'turno', titulo: 'Preparação e turno',
+      id: 'invocar', titulo: () => x('Invocações', 'Summoning'),
       html: () => `
-        <h3>Preparação</h3>
-        <ul>
-          <li>Cada jogador escolhe <b>3 figuras</b> do baralho de Letras para a mão e compra <b>4 cartas</b> do baralho de Números.</li>
-          <li><b>Mulligan</b> (uma vez): devolve as 4 cartas numéricas, embaralha e compra 3. As figuras escolhidas ficam.</li>
-          <li><b>Quem começa:</b> sempre no dado: cada jogador joga o seu e começa quem tirar mais (empate, joga de novo). No primeiro turno, quem começa <b>não compra e não ataca</b>.</li>
-        </ul>
-        <h3>Ordem do turno</h3>
-        <ol>
-          <li><b>Reativação:</b> seus Senhores virados para baixo voltam a ficar ativos.</li>
-          <li><b>Compra:</b> compre <b>1 carta</b> do baralho que escolher: Letras ou Números. Se os dois estiverem vazios, perca 2 PV. O <b>Ourinhos</b> não escolhe: compra sozinho 1 Letra e 1 Número.</li>
-          <li><b>${M.ACOES_POR_TURNO} ações</b>, em qualquer ordem: invocar, invocar Ás, usar o efeito de uma carta numérica. Por turno, no máximo <b>1 Valete, 1 Rainha e 1 Rei</b> invocados (dá para invocar um de cada) e <b>${M.ASES_POR_TURNO} Ás</b>.</li>
-          <li><b>Ação ofensiva:</b> ataque com os Senhores aptos.</li>
-          <li><b>Fim do turno:</b> quem atacou vira para baixo, os efeitos de "1 turno" acabam e, com mais de ${M.LIMITE_MAO} cartas na mão, você descarta o excesso.</li>
-        </ol>`,
+        ${bloco(x('Letra + número', 'Letter + number'),
+          `<div class="rg-linha">${carta('J', 'copas')}${op('+')}${carta('3', 'espadas')}${op('=')}${senhor(['J', 'copas'], ['3', 'espadas'], 3)}</div>`,
+          x(`Invocar gasta <b>1 ação</b>: junte uma figura e uma carta numérica da mão. O <b>número é o ataque</b>, e cada figura só aceita alguns números. Por turno, dá para invocar <b>1 Valete, 1 Rainha e 1 Rei</b>.`,
+            `Summoning costs <b>1 action</b>: put a face card and a number card from your hand together. The <b>number is the attack</b>, and each face card only takes some numbers. Each turn you can summon <b>1 Jack, 1 Queen and 1 King</b>.`))}
+        <h3>${x('As figuras e os sacrifícios', 'Face cards and sacrifices')}</h3>
+        <p>${x('As figuras mais fortes entram no lugar de outras: o Valete vira Rei, e o Rei (ou dois Valetes) vira Rainha. Quem é sacrificado precisa já estar em campo antes deste turno.', 'Stronger face cards enter in place of others: a Jack becomes a King, and a King (or two Jacks) becomes a Queen. Whoever is sacrificed must already be on the field before this turn.')}</p>
+        <div class="rg-escada">
+          <div class="rg-degrau">${senhor(['J', 'espadas'], ['4', 'espadas'], 4)}<b>${x('Valete', 'Jack')}</b><em>2–4</em>
+            <span><b>${x('Ímpeto', 'Haste')}:</b> ${x('ataca no mesmo turno em que entra.', 'attacks the same turn it enters.')}</span><small>${x('Entra direto.', 'Enters directly.')}</small></div>
+          ${op('→')}
+          <div class="rg-degrau">${senhor(['K', 'espadas'], ['7', 'espadas'], 7)}<b>${x('Rei', 'King')}</b><em>2–7</em>
+            <span><b>${x('Ordem real', 'Royal order')}:</b> ${x('pode atacar um Senhor(a) inimigo, que é obrigado a defender.', 'may attack an enemy Gentleman, who must defend.')}</span><small>${x('Sacrifica 1 Valete e fica no lugar dele.', 'Sacrifices 1 Jack and takes its place.')}</small></div>
+          ${op('→')}
+          <div class="rg-degrau">${senhor(['Q', 'espadas'], ['10', 'espadas'], 10)}<b>${x('Rainha', 'Queen')}</b><em>2–10</em>
+            <span><b>${x('Atropelar', 'Trample')}:</b> ${x('se matar quem defendeu, o dano que sobra vai no Palhaço.', 'if she kills the defender, the leftover damage hits the Jester.')}</span><small>${x('Sacrifica 1 Rei ou 2 Valetes e fica no lugar.', 'Sacrifices 1 King or 2 Jacks and takes the place.')}</small></div>
+        </div>
+        ${bloco(x('Vida: os escudinhos', 'Life: the little shields'),
+          `<div class="rg-linha"><span class="rg-coluna">${escudos(2)}<small>${x('saudável', 'healthy')}</small></span><span class="rg-coluna">${escudos(2, 1)}<small>${x('1 hit: deitado', '1 hit: lying down')}</small></span><span class="rg-coluna">${escudos(3)}<small>${x('Naipado de Paus', 'Clubs Suited')}</small></span></div>`,
+          x(`Cada Senhor(a) aguenta <b>2 hits</b>; cada hit apaga um escudo e a carta deita. Naipado de Paus, Ás de Paus vizinho e Par de Paus dão escudos a mais (sem limite).`,
+            `Each Gentleman takes <b>2 hits</b>; each hit turns a shield off and the card lies down. Clubs Suited, a neighboring Ace of Clubs and the Pair of Clubs give extra shields (no limit).`))}
+        <h3>${x('Naipados: figura e número do mesmo naipe', 'Suited: face card and number of the same suit')}</h3>
+        ${grade([
+          bloco('', `${senhor(['J', 'paus'], ['4', 'paus'], 4)}${naipe('paus')}`, x('<b>Paus:</b> aguenta 3 hits.', '<b>Clubs:</b> takes 3 hits.'), 'rg-mini'),
+          bloco('', `${senhor(['K', 'espadas'], ['5', 'espadas'], 6)}${naipe('espadas')}`, x('<b>Espadas:</b> +1 de ataque fixo.', '<b>Spades:</b> +1 permanent attack.'), 'rg-mini'),
+          bloco('', `${senhor(['K', 'copas'], ['7', 'copas'], 7)}${naipe('copas')}`, x(`<b>Copas:</b> quando acerta o Palhaço inimigo, você cura ${M.CURA_NAIPADO_COPAS} PV, e o inimigo não cura acima do PV que sobrou enquanto ele viver.`, `<b>Hearts:</b> when it hits the enemy Jester, you heal ${M.CURA_NAIPADO_COPAS} HP, and the enemy can't heal above the HP left while it lives.`), 'rg-mini'),
+          bloco('', `${senhor(['J', 'ouros'], ['3', 'ouros'], 3)}${naipe('ouros')}`, x('<b>Ouros:</b> ataca 2 vezes por turno.', '<b>Diamonds:</b> attacks twice per turn.'), 'rg-mini'),
+        ])}
+        <h3>${x('Ases: os totens', 'Aces: the totems')}</h3>
+        ${bloco('',
+          `<div class="rg-linha">${senhor(['K', 'paus'], ['6', 'copas'], 6)}${carta('A', 'paus', 'as')}${senhor(['J', 'espadas'], ['3', 'copas'], 3)}</div>`,
+          x(`Invocar um Ás gasta 1 ação e 1 número do <b>mesmo naipe</b> (1 Ás por turno). Ele ocupa um espaço, não ataca nem defende, morre com 1 golpe e dá bônus aos <b>vizinhos</b>. Ele pode entrar entre duas cartas, empurrando-as.`,
+            `Summoning an Ace costs 1 action and 1 number of the <b>same suit</b> (1 Ace per turn). It takes a space, neither attacks nor blocks, dies to 1 hit and gives a bonus to its <b>neighbors</b>. It can enter between two cards, pushing them aside.`))}
+        ${grade([
+          bloco('', carta('A', 'paus'), x('<b>Paus:</b> vizinhos aguentam +1 hit.', '<b>Clubs:</b> neighbors take +1 hit.'), 'rg-mini'),
+          bloco('', carta('A', 'espadas'), x('<b>Espadas:</b> vizinhos +1 de ataque.', '<b>Spades:</b> neighbors +1 attack.'), 'rg-mini'),
+          bloco('', carta('A', 'ouros'), x('<b>Ouros:</b> vale 1 Ouros extra por turno.', '<b>Diamonds:</b> counts as 1 extra Diamond per turn.'), 'rg-mini'),
+          bloco('', carta('A', 'copas'), x(`<b>Copas:</b> cura ${M.CURA_AS_COPAS} PV no começo do seu turno.`, `<b>Hearts:</b> heals ${M.CURA_AS_COPAS} HP at the start of your turn.`), 'rg-mini'),
+        ])}`,
     },
     {
-      id: 'senhores', titulo: 'Senhores e Senhoras',
+      id: 'combate', titulo: () => x('Ataque e defesa', 'Attack and defense'),
       html: () => `
-        <h3>Invocar (1 ação)</h3>
-        <p>Junte 1 figura + 1 número (2 a 10) num espaço vazio. O <b>número é o ataque</b>.</p>
-        <table class="tabela-regras">
-          <tr><th>Figura</th><th>Equipa</th><th>Custo</th><th>Habilidade</th></tr>
-          <tr><td><b>Valete</b></td><td>2 a 4</td><td>1 ação</td><td><b>Ímpeto:</b> ataca no mesmo turno em que entra.</td></tr>
-          <tr><td><b>Rainha</b></td><td>2 a 10</td><td>${M.CUSTO_RAINHA} ação + sacrifício de <b>1 Rei</b> ou <b>2 Valetes</b> seus que já estavam em campo antes deste turno. Ela entra no lugar do Rei (ou do segundo Valete).</td><td><b>Atropelar:</b> se matar quem bloqueou, o dano que sobra vai para o PV.</td></tr>
-          <tr><td><b>Rei</b></td><td>2 a 7</td><td>1 ação + sacrifício de <b>1 Valete</b> seu que já estava em campo antes deste turno. O Rei entra no lugar dele.</td><td><b>Ordem real:</b> ao atacar, pode escolher como alvo um Senhor(a) inimigo. O alvo é obrigado a defender, e outros Senhores ativos do dono podem entrar junto para ajudar.</td></tr>
-        </table>
-        <h3>Vida e posição da carta</h3>
-        <p>Um Senhor(a) comum aguenta <b>2 hits</b>. A posição da carta mostra quanto falta:</p>
-        <ul>
-          <li><b>Vertical:</b> saudável.</li>
-          <li><b>Diagonal:</b> ferido(a), mas aguenta mais de 1 hit (só com Naipado de Paus ou Ás de Paus vizinho).</li>
-          <li><b>Horizontal:</b> o próximo hit mata.</li>
-          <li><b>Virado para baixo:</b> atacou e não pode bloquear até o próximo turno do dono.</li>
-        </ul>
-        <table class="tabela-regras">
-          <tr><th>Situação</th><th>Hits para morrer</th></tr>
-          <tr><td>Padrão</td><td>2</td></tr>
-          <tr><td>Ao lado de um Ás de Paus</td><td>3</td></tr>
-          <tr><td>Naipado de Paus</td><td>3</td></tr>
-          <tr><td>Naipado de Paus ao lado de um Ás de Paus</td><td>4</td></tr>
-        </table>`,
+        ${bloco(x('Quem ataca e onde', 'Who attacks and where'),
+          `<div class="rg-linha">${senhor(['J', 'copas'], ['4', 'espadas'], 4)}${op('➜')}<span class="rg-pal pequeno"><img src="${SS.Palhacos.LISTA[2].carta}" alt="" draggable="false"></span></div>`,
+          x(`Cada Senhor(a) ativo(a) ataca <b>1 vez por turno</b>, se entrou num turno anterior (o Valete ataca já no turno em que entra). O alvo é o <b>Palhaço</b> inimigo ou um <b>Ás</b> dele; o Rei também pode mirar um Senhor(a). Quem atacou vira para baixo no fim do turno e não defende no turno do oponente.`,
+            `Each ready Gentleman attacks <b>once per turn</b>, if it entered on an earlier turn (the Jack already attacks on the turn it enters). The target is the enemy <b>Jester</b> or one of his <b>Aces</b>; the King may also aim at a Gentleman. Whoever attacked flips face down at the end of the turn and can't defend on the opponent's turn.`))}
+        <h3>${x('O dado decide o dano', 'The die decides the damage')}</h3>
+        <div class="rg-selos">${selo('cheio', 5, x('Dano cheio!', 'Full damage!'), '⚔ 6')}${selo('metade', 3, x('Metade!', 'Half!'), '<s>⚔ 6</s> → ⚔ 3')}${selo('errou', 1, x('Errou!', 'Miss!'))}</div>
+        <p class="rg-centro">${x(`<b>${M.DADO_ATAQUE_TOTAL} a 6</b>: dano cheio · <b>2 ou 3</b>: metade, arredondada para baixo · <b>1</b>: errou, ninguém leva hit (nem o contra-ataque). Na partida, esse selo aparece depois de cada rolagem.`, `<b>${M.DADO_ATAQUE_TOTAL} to 6</b>: full damage · <b>2 or 3</b>: half, rounded down · <b>1</b>: miss, nobody takes a hit (not even the counterattack). In a match, this badge shows up after every roll.`)}</p>
+        <h3>${x('Defender: a régua', 'Defending: the gauge')}</h3>
+        <p>${x('Quem defende compara o dano com a <b>própria carta equipada</b>. Para um defensor com 6:', 'The defender compares the damage with <b>its own equipped card</b>. For a defender with 6:')}</p>
+        <div class="rg-reguas">${regua(6, 2, 'ignorou', x('Ignorou!', 'Shrugged off!'))}${regua(6, 5, 'hit', '1 hit')}${regua(6, 8, 'pesado', '2 hits!')}</div>
+        <p class="rg-centro">${x('Menos da metade: não machuca · até o valor dele: 1 hit · passou do valor dele: 2 hits. Vários Senhores podem defender o mesmo atacante: cada defensor a mais tira 1 do ataque dele.', 'Under half: no harm · up to its value: 1 hit · over its value: 2 hits. Several Gentlemen can block the same attacker: each extra defender takes 1 off its attack.')}</p>
+        ${bloco(x('Contra-ataque', 'Counterattack'),
+          `<div class="rg-linha">${senhor(['J', 'copas'], ['4', 'copas'], 4)}${op('⚔')}${senhor(['K', 'espadas'], ['6', 'paus'], 6, 'defende')}${op('=')}<span class="rg-coluna">${escudos(2, 1)}<small>${x('o Valete leva 1 hit', 'the Jack takes 1 hit')}</small></span></div>`,
+          x(`Se o <b>número de quem ataca for menor</b> que o de quem defende, o atacante leva <b>1 hit</b>, sem dado. Aqui o 4 do Valete é menor que o 6 do Rei: mesmo que o golpe seja ignorado, o Valete se machuca.`,
+            `If the <b>attacker's number is lower</b> than the defender's, the attacker takes <b>1 hit</b>, no die needed. Here the Jack's 4 is lower than the King's 6: even if the blow is shrugged off, the Jack gets hurt.`))}
+        ${bloco(x('Atropelar (Rainha)', 'Trample (Queen)'),
+          `<div class="rg-linha">${senhor(['Q', 'ouros'], ['10', 'ouros'], 10)}${op('⚔')}${senhor(['K', 'copas'], ['6', 'copas'], 6, 'defende')}${op('➜')}<b class="rg-numero">4</b></div>`,
+          x(`A Rainha com 10 tira 5 (10 de dano) contra um Rei com 6: o Rei morre e os <b>4</b> que sobram (10 − 6) vão no Palhaço.`,
+            `The Queen with 10 rolls 5 (10 damage) against a King with 6: the King dies and the <b>4</b> left over (10 − 6) hit the Jester.`))}`,
     },
     {
-      id: 'naipados', titulo: 'Naipados',
+      id: 'recursos', titulo: () => x('Recursos e Pargias', 'Resources and Pairgics'),
       html: () => `
-        <p>Quando a figura e o número têm o <b>mesmo naipe</b>, nasce um(a) <b>Senhor(a) Naipado(a)</b>, com um poder extra:</p>
-        <table class="tabela-regras">
-          <tr><th>Naipe</th><th>Poder</th></tr>
-          <tr><td>♣ Paus</td><td>Aguenta 3 hits (4 ao lado de um Ás de Paus).</td></tr>
-          <tr><td>♠ Espadas</td><td>+1 de ataque fixo.</td></tr>
-          <tr><td>♥ Copas</td><td><b>Cura:</b> quando ele(a) acerta o PV do Palhaço inimigo, você cura <b>${M.CURA_NAIPADO_COPAS} PV</b>.</td></tr>
-          <tr><td>♦ Ouros</td><td>Ataca 2 vezes por turno (os dois ataques são declarados juntos).</td></tr>
-        </table>
-        <p class="exemplo"><b>Exemplo:</b> Rei de Copas + 7 de Copas vira um Rei Naipado de Copas com ataque 7.</p>`,
+        <h3>${x('Recursos: uma carta numérica sozinha (1 ação)', 'Resources: a single number card (1 action)')}</h3>
+        ${grade([
+          bloco('', `${carta('6', 'copas')}${acao('cura', x('Curar', 'Heal'))}`, x('<b>Copas:</b> cura PV (Ás a 5 cura 3, 6 a 10 cura 4).', '<b>Hearts:</b> heals HP (Ace to 5 heals 3, 6 to 10 heals 4).'), 'recurso'),
+          bloco('', `${carta('4', 'ouros')}${acao('comprar', x('Comprar', 'Draw'))}`, x('<b>Ouros:</b> troque por 1 carta do baralho que quiser.', '<b>Diamonds:</b> swap it for 1 card from the deck you want.'), 'recurso'),
+          bloco('', `${carta('2', 'ouros')}${acao('dado', x('Dado adicional', 'Extra die'))}`, x('<b>Ouros no ataque:</b> +1 dado para um Senhor(a); vale o maior.', '<b>Diamonds on attack:</b> +1 die for a Gentleman; the highest counts.'), 'recurso'),
+          bloco('', `${carta('5', 'espadas')}${acao('dano', '+1')}`, x('<b>Espadas:</b> +1 de ataque no turno (no dado 6, vira metade do valor da carta).', '<b>Spades:</b> +1 attack this turn (on a 6, it becomes half the card\'s value).'), 'recurso'),
+          bloco('', `${carta('7', 'paus')}${acao('berserk', 'Berserk')}`, x('<b>Paus:</b> Berserk: um Senhor(a) ferido(a) se levanta até o fim do próximo turno do oponente; se levar hit nesse tempo, morre.', '<b>Clubs:</b> Berserk: a wounded Gentleman stands up until the end of the opponent\'s next turn; if hit meanwhile, it dies.'), 'recurso'),
+        ])}
+        <h3>${x('Pares do mesmo naipe (1 ação)', 'Pairs of the same suit (1 action)')}</h3>
+        ${grade([
+          bloco('', `${carta('3', 'copas')}${carta('8', 'copas')}${acao('cemiterio', x('Reviver', 'Revive'))}`, x('<b>Copas:</b> um Senhor(a) seu do cemitério volta direto para o campo.', '<b>Hearts:</b> one of your Gentlemen comes back from the graveyard straight to the field.'), 'par'),
+          bloco('', `${carta('2', 'ouros')}${carta('9', 'ouros')}${acao('parouros', x('Buscar Ás', 'Fetch Ace'))}`, x('<b>Ouros:</b> escolha um Ás do seu baralho e leve a seta até o espaço onde ele entra.', '<b>Diamonds:</b> pick an Ace from your deck and drag the arrow to the space where it enters.'), 'par'),
+          bloco('', `${carta('4', 'paus')}${carta('6', 'paus')}${acao('parpaus', x('Defesa', 'Defense'))}`, x('<b>Paus:</b> +1 de defesa para sempre num Senhor(a) seu, ou −1 num inimigo.', '<b>Clubs:</b> +1 defense for good on one of your Gentlemen, or −1 on an enemy.'), 'par'),
+          bloco('', `${carta('5', 'espadas')}${carta('10', 'espadas')}${acao('parespadas', x('Dano', 'Damage'))}`, x('<b>Espadas:</b> +1 de dano para sempre num Senhor(a) seu, ou −1 de ataque num inimigo.', '<b>Spades:</b> +1 damage for good on one of your Gentlemen, or −1 attack on an enemy.'), 'par'),
+        ])}
+        <h3>${x('Pargias: pares de números iguais', 'Pairgics: pairs of equal numbers')}</h3>
+        <p>${x('Dois números iguais, de qualquer naipe. O que a Pargia faz depende do número; as que pedem alvo usam a seta roxa saindo da carta.', 'Two equal numbers, any suits. What the Pairgic does depends on the number; the ones that need a target use the purple arrow coming out of the card.')}</p>
+        ${grade([
+          bloco('', `${carta('3', 'copas')}${carta('3', 'paus')}${acao('reflexo', x('Refletir!', 'Reflect!'))}`, x('<b>2 a 4 · Refletir!</b> Na defesa, sem gastar ação: um atacante bate no próprio dono.', '<b>2 to 4 · Reflect!</b> On defense, no action: an attacker hits its own owner.'), 'par'),
+          bloco('', `${carta('6', 'ouros')}${carta('6', 'espadas')}${acao('tchau', x('Sai daqui!', 'Get out!'))}`, x('<b>5 a 7 · Sai daqui!</b> No seu turno (1 ação): um Senhor(a) inimigo volta para a mão do dono.', '<b>5 to 7 · Get out!</b> On your turn (1 action): an enemy Gentleman goes back to its owner\'s hand.'), 'par'),
+          bloco('', `${carta('9', 'copas')}${carta('9', 'paus')}${acao('meteoro', x('Meteoro!', 'Meteor!'))}`, x('<b>8 a 10 · Meteoro!</b> No seu turno (1 ação): destrói <b>todos</b> os Senhores da mesa, os seus também.', '<b>8 to 10 · Meteor!</b> On your turn (1 action): destroys <b>every</b> Gentleman on the table, yours too.'), 'par'),
+          bloco('', `${carta('A', 'espadas')}${carta('A', 'ouros')}${acao('raio', x('Raio do trovão', 'Thunderbolt'))}`, x(`<b>Ases · Raio do trovão.</b> No seu turno (1 ação): 1 hit num Senhor(a) inimigo <b>ou</b> ${M.DANO_RAIO_PALHACO} PV no Palhaço.`, `<b>Aces · Thunderbolt.</b> On your turn (1 action): 1 hit on an enemy Gentleman <b>or</b> ${M.DANO_RAIO_PALHACO} HP on the Jester.`), 'par'),
+        ])}
+        <p class="rg-centro"><small>${x('Refletir o reflexo: se o seu ataque foi refletido e você tem um par de 2 a 4, dá para mandar o golpe de volta no Palhaço do adversário (1 vez por ataque).', 'Reflect the reflection: if your attack was reflected and you hold a pair of 2 to 4, you can send the blow back at the opponent\'s Jester (once per attack).')}</small></p>`,
     },
     {
-      id: 'ataque', titulo: 'Ataque',
+      id: 'palhacos', titulo: () => x('Palhaços', 'Jesters'),
       html: () => `
-        <ul>
-          <li>Cada Senhor(a) apto(a) ataca <b>1 vez por turno</b> (o Naipado de Ouros, 2). Só ataca quem entrou em turno anterior, exceto o Valete.</li>
-          <li>O alvo é o <b>jogador</b> oponente ou um <b>Ás</b> dele. O <b>Rei</b> também pode mirar um <b>Senhor(a)</b> inimigo: o alvo é obrigado a defender, com as regras de bloqueio e contra-ataque (mesmo se estiver virado), e outros Senhores ativos do dono podem entrar junto para ajudar.</li>
-          <li>Você escolhe a <b>ordem</b> dos ataques; eles são resolvidos um por vez. Se o alvo de um ataque (um Ás ou um Senhor) cair antes da vez dele, o golpe vai <b>direto no Palhaço</b> adversário (quem foi bloquear continua no caminho).</li>
-        </ul>
-        <h3>Rolagem</h3>
-        <table class="tabela-regras">
-          <tr><th>Dado</th><th>Dano</th></tr>
-          <tr><td>${M.DADO_ATAQUE_TOTAL} a 6</td><td>Ataque cheio</td></tr>
-          <tr><td>1 a ${M.DADO_ATAQUE_TOTAL - 1}</td><td>Metade do ataque, arredondada para baixo</td></tr>
-        </table>
-        <ul>
-          <li><b>Ouros no ataque:</b> cada Ouros gasto dá +1 dado; vale o maior resultado. Selecione um Ouros na mão e use a carta <b>Dado adicional</b>: a seta escolhe o Senhor(a) que rola o dado a mais.</li>
-          <li><b>Cartas de ação no ataque:</b> depois de Preparar ataque (e antes de confirmar), você ainda pode jogar cartas da mão; os ataques já marcados continuam.</li>
-          <li><b>Espadas:</b> +1 de ataque no turno; se o dado der 6, o bônus vira metade do valor da carta de Espadas (crítico).</li>
-          <li><b>Sem bloqueio:</b> o dano vai direto no PV. Se o alvo era um Ás, ele é destruído.</li>
-          <li><b>Errou!:</b> se o maior dado for <b>1</b>, o golpe passa no vento, contra quem for: <b>ninguém leva hit</b>, nem o contra-ataque (que vergonha!).</li>
-        </ul>
-        <p class="exemplo"><b>Exemplo:</b> Rainha com 8 ataca e ninguém bloqueia. Rolou 3 = meio ataque = <b>4 de dano</b> no PV.</p>
-        <p>Quem atacou fica <b>virado para baixo no fim do turno</b> e não pode bloquear no turno seguinte do oponente.</p>`,
+        <p>${x('Cada Palhaço tem PV próprios, uma <b>passiva</b> (vale a partida toda) e um <b>poder</b> (1 ação, 1 vez por turno, pelo botão ao lado dele). Cada um tem também um deck temático do seu naipe.', 'Each Jester has its own HP, a <b>passive</b> (lasts the whole match) and a <b>power</b> (1 action, once per turn, with the button next to him). Each one also has a themed deck of its suit.')}</p>
+        <div class="rg-palhacos">${SS.Palhacos.LISTA.map(p => `<div class="rg-palhaco cor-${p.cor}">
+          <span class="rg-pal"><img src="${p.carta}" alt="" draggable="false"><b class="rg-pv">${p.pvBase}</b></span>
+          <div><h3>${naipe(p.naipe)} ${p.nome} <small>${p.titulo}</small></h3>
+            <p><b class="rg-tag passiva">${x('Passiva', 'Passive')}</b> <b>${p.passiva.nome}:</b> ${p.passiva.texto}</p>
+            <p><b class="rg-tag poder">${x('Poder', 'Power')}</b> <b>${p.poder.nome}:</b> ${p.poder.texto}</p>
+            <p class="rg-plano">${p.plano}</p></div></div>`).join('')}</div>`,
     },
     {
-      id: 'defesa', titulo: 'Defesa e contra-ataque',
+      id: 'deck', titulo: () => x('Montagem de deck', 'Deck building'),
       html: () => `
-        <h3>Bloqueio</h3>
-        <ul>
-          <li>Cada Senhor(a) <b>ativo(a)</b> bloqueia 1 atacante. Ases não bloqueiam.</li>
-          <li>Dois ou mais Senhores podem bloquear <b>o mesmo atacante</b>: cada defensor a mais <b>tira 1 do ataque</b> dele (2 defensores: −1; 3: −2). Cada defensor recebe o dano inteiro (já reduzido) e o compara com o próprio ataque.</li>
-          <li>No ataque do Rei contra um Senhor(a), o <b>alvo defende obrigatoriamente</b>, e outros Senhores ativos podem entrar para <b>ajudar</b> (cada ajudante tira 1 do ataque do Rei, e os ataques de todos somam no contra-ataque).</li>
-        </ul>
-        <h3>O golpe contra quem bloqueia</h3>
-        <p>Compare o <b>dano</b> com o <b>ataque do bloqueador</b>. Para um bloqueador com ataque 6:</p>
-        <table class="tabela-regras">
-          <tr><th>Dano</th><th>Resultado</th></tr>
-          <tr><td>0 a 2 (menos da metade)</td><td>Golpe <b>ignorado</b></td></tr>
-          <tr><td>3 a 6</td><td>Leva <b>1 hit</b></td></tr>
-          <tr><td>7 ou mais (passou do ataque dele)</td><td>Leva <b>2 hits</b> (quem aguenta 3 ou mais sobrevive)</td></tr>
-        </table>
-        <h3>Contra-ataque (não usa dado)</h3>
-        <p>Se o <b>número do atacante for menor</b> que o do bloqueador (ou a soma dos bloqueadores), o atacante leva <b>1 hit</b>. Bônus fixos e Espadas contam.</p>
-        <p class="exemplo"><b>Exemplo:</b> Valete com 4 ataca, Rei com 6 bloqueia. Mesmo que o golpe seja ignorado, 4 é menor que 6, então o Valete leva 1 hit.</p>
-        <h3>Atropelar (Rainha)</h3>
-        <p>Se a Rainha matar quem bloqueou, o PV recebe <b>dano − ataque do bloqueador</b>.</p>
-        <p class="exemplo"><b>Exemplo:</b> Rainha com 10 rola 5 (10 de dano) contra Rei com 6: o Rei morre e passam <b>4</b> para o PV.</p>`,
-    },
-    {
-      id: 'efeitos', titulo: 'Efeitos dos naipes',
-      html: () => `
-        <p>Uma carta numérica usada sozinha gasta <b>1 ação</b> e vai para o cemitério. O <b>Ás</b> também serve como carta de sacrifício (vale 1): nos efeitos de naipe, no Ouros e nas magias dos pares.</p>
-        <table class="tabela-regras">
-          <tr><th>Naipe</th><th>Efeito</th></tr>
-          <tr><td>♥ Copas</td><td>Cura PV: Ás a 5 cura 3, 6 a 10 cura 4.</td></tr>
-          <tr><td>♦ Ouros</td><td>Descarte 1 para comprar 1 carta (do baralho que escolher). No ataque, +1 dado.</td></tr>
-          <tr><td>♠ Espadas</td><td>+1 de ataque a um Senhor(a) até o fim do turno; no 6, vira metade do valor da carta.</td></tr>
-          <tr><td>♣ Paus</td><td><b>Berserk:</b> um Senhor(a) ferido(a) volta à vertical até o fim do próximo turno do oponente. Se levar 1 hit nesse tempo, morre quando o efeito acabar; com 2 hits, morre na hora.</td></tr>
-        </table>`,
-    },
-    {
-      id: 'ases', titulo: 'Ases (totens)',
-      html: () => `
-        <ul>
-          <li><b>Invocação (1 ação):</b> sacrifique 1 carta numérica do mesmo naipe do Ás.</li>
-          <li>O Ás ocupa 1 espaço e afeta os <b>vizinhos</b> (esquerda e direita).</li>
-          <li><b>Empurrar:</b> o Ás pode entrar no lugar de uma carta da sua fileira, empurrando as cartas para o lado do espaço vazio mais próximo (precisa haver um espaço vazio). Assim dá para colocá-lo entre dois Senhores.</li>
-          <li>Não ataca, não bloqueia e morre com <b>1 golpe</b>. Um Senhor(a) do dono pode bloquear para protegê-lo.</li>
-        </ul>
-        <table class="tabela-regras">
-          <tr><th>Ás</th><th>Efeito</th></tr>
-          <tr><td>♣ Paus</td><td>Vizinhos ganham +1 de resistência (cria o estado diagonal).</td></tr>
-          <tr><td>♠ Espadas</td><td>Vizinhos ganham +1 de ataque fixo.</td></tr>
-          <tr><td>♦ Ouros</td><td>Vale 1 Ouros extra por turno.</td></tr>
-          <tr><td>♥ Copas</td><td><b>Cura:</b> no começo de cada turno seu, você cura ${M.CURA_AS_COPAS} PV (cada Ás de Copas em campo).</td></tr>
-        </table>`,
-    },
-    {
-      id: 'magia', titulo: 'Magia dos pares',
-      html: () => `
-        <p>Duas cartas <b>numéricas do mesmo naipe</b> (2 a 10, ou Ás) viram uma magia: <b>1 ação</b>, e as duas vão para o cemitério.</p>
-        <table class="tabela-regras">
-          <tr><th>Par</th><th>Magia</th></tr>
-          <tr><td>♥ Copas</td><td><b>Reviver:</b> um Senhor(a) seu do cemitério volta <b>direto para o campo</b>, com o mesmo número que tinha.</td></tr>
-          <tr><td>♦ Ouros</td><td><b>Buscar Ás:</b> escolha um Ás do seu baralho de Números e ponha <b>direto no campo</b>.</td></tr>
-          <tr><td>♣ Paus</td><td><b>+1 de defesa para sempre</b> num Senhor(a) seu (não há limite de defesa), ou <b>-1 de defesa</b> num inimigo (que ainda tenha 2 ou mais de vida sobrando).</td></tr>
-          <tr><td>♠ Espadas</td><td><b>+1 de dano para sempre</b> num Senhor(a) seu, ou <b>-1 de ataque</b> num inimigo (com ataque 2 ou mais).</td></tr>
-        </table>
-        <h3>Pargias: pares de números iguais</h3>
-        <p>Duas cartas com o <b>mesmo número</b> (de qualquer naipe) formam uma <b>Pargia</b>. O que ela faz depende do número:</p>
-        <table class="tabela-regras">
-          <tr><th>Par</th><th>Pargia</th></tr>
-          <tr><td>2 a 4</td><td><b>Refletir!</b> Na defesa (sem gastar ação), manda um ataque de volta no próprio dono. Veja abaixo.</td></tr>
-          <tr><td>5 a 7</td><td><b>Sai daqui!</b> No seu turno (1 ação), um Senhor(a) inimigo volta para a mão do dono (figura e número).</td></tr>
-          <tr><td>8 a 10</td><td><b>Meteoro!</b> No seu turno (1 ação), destrói <b>todos</b> os Senhores da mesa, inclusive os seus.</td></tr>
-          <tr><td>Ases</td><td><b>Raio do trovão</b>. No seu turno (1 ação), escolha com a seta roxa: 1 hit num Senhor(a) inimigo, <b>ou</b> 2 PV no Palhaço do oponente.</td></tr>
-        </table>
-        <h3>Par de 2, 3 ou 4: Refletir</h3>
-        <p>Duas cartas baixas iguais (<b>dois 2, dois 3 ou dois 4</b>, de qualquer naipe) servem na <b>defesa</b>: quando o adversário ataca, a carta <b>Refletir</b> aparece pulsando; o par sobe e o resto da mão escurece; clique nas cartas do par para sacrificá-lo e leve a seta roxa até o ataque que quer <b>refletir</b>. O Senhor(a) adversário bate no <b>próprio dono</b> (o dado ainda decide entre cheio e metade). O golpe refletido bate normal (sem bônus nem redução). O par vai para o cemitério.</p>
-        <p><b>Refletir o reflexo:</b> se o seu ataque foi refletido e você tem um par de 2, 3 ou 4, pode sacrificá-lo antes do dado para mandar o golpe <b>de volta</b> no Palhaço do adversário (sem bloqueio). Só dá para refletir de volta uma vez por ataque.</p>`,
-    },
-    {
-      id: 'palhacos', titulo: 'Palhaços',
-      html: () => `
-        <p>Cada jogador escolhe um <b>Palhaço</b>, que é o seu "herói": ele fica no centro da mesa, mostra o seu PV e é o alvo dos ataques diretos. Cada um tem uma <b>passiva</b> (vale a partida toda) e um <b>poder</b> (1 ação, 1 vez por turno, botão ao lado do Palhaço).</p>
-        <table class="tabela-regras">
-          <tr><th>Palhaço</th><th>Passiva</th><th>Poder</th></tr>
-          ${SS.Palhacos.LISTA.map(p => `<tr><td><b>${M.SIMBOLO[p.naipe]} ${p.nome}</b><br><small>${p.titulo}</small></td><td><b>${p.passiva.nome}:</b> ${p.passiva.texto}</td>
-            <td>${p.poder ? `<b>${p.poder.nome}:</b> ${p.poder.texto}` : `<b>${p.custo.nome}:</b> ${p.custo.texto}`}</td></tr>`).join('')}
-        </table>
-        <p><b>Quem começa:</b> sempre no dado. Cada jogador joga o seu e começa quem tirar mais.</p>
-        <p class="nota">Cada Palhaço tem um deck temático do seu naipe, que pode ser trocado por um deck montado por você.</p>`,
-    },
-    {
-      id: 'deck', titulo: 'Montagem de deck',
-      html: () => `
-        <ul>
-          <li>Baralho de Letras com <b>no máximo ${R.letras}</b> figuras e baralho de Números com <b>no máximo ${R.numeros}</b> cartas. Não há mínimo: um deck menor deixa as melhores cartas mais frequentes, mas acaba antes (comprar de baralho vazio custa 2 PV por carta).</li>
-          <li>Na montagem, você pode trocar o naipe de qualquer carta.</li>
-          <li>Até <b>${R.copias} cópias</b> da mesma carta (mesmo valor e naipe), e qualquer mistura de naipes.</li>
-        </ul>
-        <p class="nota">Em "Montar decks" estão o deck padrão (um baralho comum) e os decks de cada Palhaço, prontos para servir de base.</p>`,
-    },
-    {
-      id: 'fim', titulo: 'Fim de jogo e limites',
-      html: () => `
-        <ul>
-          <li>Quem chegar a <b>0 PV</b> perde.</li>
-          <li><b>Baralhos vazios:</b> se precisar comprar e os dois estiverem vazios, perca 2 PV por compra.</li>
-          <li><b>Limite de mão:</b> ${M.LIMITE_MAO} cartas no fim do turno; o excesso vai para o cemitério.</li>
-          <li>Você pode <b>desistir</b> a qualquer momento pelo botão no canto superior esquerdo da mesa. O registro da partida fica no botão do canto superior direito.</li>
-        </ul>`,
+        ${bloco(x('Os limites', 'The limits'),
+          `<div class="rg-linha"><span class="rg-deck">${SS.Decks.caixa({ tampa: 'roxo', icone: 'cavaleiro', corIcone: 'amarelo' }, x('Meu deck', 'My deck'))}</span>
+            <span class="rg-copias">${carta('4', 'espadas')}<b>×${R.copias}</b></span></div>`,
+          x(`<ul><li>Até <b>${R.letras} figuras</b> no baralho de Letras e até <b>${R.numeros} cartas</b> no de Números.</li><li>Até <b>${R.copias} cópias</b> da mesma carta (mesmo valor e naipe), em qualquer mistura de naipes.</li><li>Não há mínimo: um deck menor traz as melhores cartas mais vezes, mas acaba antes (comprar com os baralhos vazios custa 2 PV por carta).</li></ul>`,
+            `<ul><li>Up to <b>${R.letras} face cards</b> in the Faces deck and up to <b>${R.numeros} cards</b> in the Numbers deck.</li><li>Up to <b>${R.copias} copies</b> of the same card (same value and suit), in any mix of suits.</li><li>There is no minimum: a smaller deck brings your best cards more often, but runs out sooner (drawing with both decks empty costs 2 HP per card).</li></ul>`))}
+        ${bloco(x('No Deckbuilder', 'In the Deckbuilder'),
+          `<div class="rg-linha">${['paus', 'copas', 'espadas', 'ouros'].map(n => `<span class="rg-aba-naipe ${n}">${naipe(n)}</span>`).join('')}</div>`,
+          x(`Você tem <b>4 espaços</b> para os seus decks, cada um com uma caixinha personalizada (nome, cor da tampa, ícone). Embaixo ficam todas as cartas, em abas de naipe: clique para pôr no deck, botão direito para tirar. Os decks prontos de cada Palhaço servem de base para copiar e mexer. Antes da partida, você escolhe com qual deck vai jogar.`,
+            `You have <b>4 slots</b> for your decks, each with a custom box (name, lid color, icon). All cards sit below in suit tabs: click to add to the deck, right-click to remove. Each Jester's ready-made deck works as a base to copy and tweak. Before a match, you choose which deck to play.`))}`,
     },
   ];
 
-  const TEMAS_EN = [
-    {
-      id: 'visao', titulo: 'Overview',
-      html: () => `
-        <h3>Goal</h3>
-        <p>Reduce your opponent's Hit Points (HP) to <b>0</b>. Each player starts with <b>${M.PV_INICIAL} HP</b> (some Jesters change this). Healing has no cap (only the wound from an enemy Hearts Suited limits it).</p>
-        <h3>Components</h3>
-        <ul>
-          <li><b>Faces deck</b> (${R.letras} cards): Jacks, Queens and Kings. These are the <b>face cards</b>.</li>
-          <li><b>Numbers deck</b> (${R.numeros} cards): Ace to 10.</li>
-          <li><b>Field</b>: a row of <b>${M.ESPACOS} slots</b> for each player. A card placed there never changes slot.</li>
-          <li><b>Graveyard</b>: used, sacrificed and dead cards.</li>
-          <li>A 6-sided die.</li>
-        </ul>
-        <h3>The idea</h3>
-        <p>You combine <b>1 face card + 1 number</b> to create a <b>Gentleman</b>, the game's creature. The number is its attack. Number cards can also be played alone, like spells, for their suit effect. <b>Aces</b> become totems that strengthen their neighbors.</p>`,
-    },
-    {
-      id: 'turno', titulo: 'Setup and turn',
-      html: () => `
-        <h3>Setup</h3>
-        <ul>
-          <li>Each player chooses <b>3 face cards</b> from the Faces deck for their hand and draws <b>4 cards</b> from the Numbers deck.</li>
-          <li><b>Mulligan</b> (once): return the 4 number cards, shuffle and draw 3. The chosen face cards stay.</li>
-          <li><b>Who goes first:</b> always by the die: each player throws one and the higher roll goes first (on a tie, roll again). On the first turn, the first player <b>doesn't draw and doesn't attack</b>.</li>
-        </ul>
-        <h3>Turn order</h3>
-        <ol>
-          <li><b>Ready:</b> your face-down Gentlemen become ready again.</li>
-          <li><b>Draw:</b> draw <b>1 card</b> from the deck of your choice: Faces or Numbers. If both are empty, lose 2 HP. <b>Ourinhos</b> does not choose: it automatically draws 1 Face and 1 Number.</li>
-          <li><b>${M.ACOES_POR_TURNO} actions</b>, in any order: summon, invoke an Ace, use a number card's effect. Each turn, at most <b>1 Jack, 1 Queen and 1 King</b> summoned (you can summon one of each) and <b>${M.ASES_POR_TURNO} Ace</b>.</li>
-          <li><b>Offensive action:</b> attack with your ready Gentlemen.</li>
-          <li><b>End of turn:</b> attackers flip face down, "1 turn" effects end and, with more than ${M.LIMITE_MAO} cards in hand, you discard the extra.</li>
-        </ol>`,
-    },
-    {
-      id: 'senhores', titulo: 'Gentlemen',
-      html: () => `
-        <h3>Summon (1 action)</h3>
-        <p>Put 1 face card + 1 number (2 to 10) into an empty slot. The <b>number is the attack</b>.</p>
-        <table class="tabela-regras">
-          <tr><th>Face card</th><th>Equips</th><th>Cost</th><th>Ability</th></tr>
-          <tr><td><b>Jack</b></td><td>2 to 4</td><td>1 action</td><td><b>Haste:</b> attacks the same turn it enters.</td></tr>
-          <tr><td><b>Queen</b></td><td>2 to 10</td><td>${M.CUSTO_RAINHA} action + sacrifice <b>1 King</b> or <b>2 Jacks</b> of yours that were already on the field before this turn. She takes the King's place (or the second Jack's).</td><td><b>Trample:</b> if it kills its blocker, the leftover damage goes to HP.</td></tr>
-          <tr><td><b>King</b></td><td>2 to 7</td><td>1 action + sacrifice <b>1 Jack</b> of yours that was already on the field before this turn. The King takes its place.</td><td><b>Royal Order:</b> when attacking, may target an enemy Gentleman. The target must defend, and its owner's other ready Gentlemen can join to help.</td></tr>
-        </table>
-        <h3>Health and card position</h3>
-        <p>A regular Gentleman survives <b>2 hits</b>. The card's position shows how much is left:</p>
-        <ul>
-          <li><b>Upright:</b> healthy.</li>
-          <li><b>Diagonal:</b> wounded, but survives more than 1 hit (only with Suited Clubs or a neighboring Ace of Clubs).</li>
-          <li><b>Sideways:</b> the next hit kills.</li>
-          <li><b>Face down:</b> attacked and can't block until its owner's next turn.</li>
-        </ul>
-        <table class="tabela-regras">
-          <tr><th>Situation</th><th>Hits to die</th></tr>
-          <tr><td>Default</td><td>2</td></tr>
-          <tr><td>Next to an Ace of Clubs</td><td>3</td></tr>
-          <tr><td>Suited Clubs</td><td>3</td></tr>
-          <tr><td>Suited Clubs next to an Ace of Clubs</td><td>4</td></tr>
-        </table>`,
-    },
-    {
-      id: 'naipados', titulo: 'Suited Gentlemen',
-      html: () => `
-        <p>When the face card and the number share the <b>same suit</b>, a <b>Suited Gentleman</b> is born, with an extra power:</p>
-        <table class="tabela-regras">
-          <tr><th>Suit</th><th>Power</th></tr>
-          <tr><td>♣ Clubs</td><td>Survives 3 hits (4 next to an Ace of Clubs).</td></tr>
-          <tr><td>♠ Spades</td><td>+1 permanent attack.</td></tr>
-          <tr><td>♥ Hearts</td><td><b>Heal:</b> when it hits the enemy Jester's HP, you heal <b>${M.CURA_NAIPADO_COPAS} HP</b>.</td></tr>
-          <tr><td>♦ Diamonds</td><td>Attacks twice per turn (both attacks are declared together).</td></tr>
-        </table>
-        <p class="exemplo"><b>Example:</b> King of Hearts + 7 of Hearts becomes a Suited King of Hearts with attack 7.</p>`,
-    },
-    {
-      id: 'ataque', titulo: 'Attack',
-      html: () => `
-        <ul>
-          <li>Each ready Gentleman attacks <b>once per turn</b> (Suited Diamonds, twice). Only Gentlemen that entered on an earlier turn can attack, except the Jack.</li>
-          <li>The target is the opposing <b>player</b> or one of their <b>Aces</b>. The <b>King</b> can also target an enemy <b>Gentleman</b>: the target must defend, with the block and counterattack rules (even if face down), and its owner's other ready Gentlemen can join to help.</li>
-          <li>You choose the <b>order</b> of the attacks; they are resolved one at a time. If an attack's target (an Ace or a Gentleman) falls before its turn, the blow goes <b>straight to the enemy Jester</b> (any blockers stay in the way).</li>
-        </ul>
-        <h3>Roll</h3>
-        <table class="tabela-regras">
-          <tr><th>Die</th><th>Damage</th></tr>
-          <tr><td>${M.DADO_ATAQUE_TOTAL} to 6</td><td>Full attack</td></tr>
-          <tr><td>1 to ${M.DADO_ATAQUE_TOTAL - 1}</td><td>Half the attack, rounded down</td></tr>
-        </table>
-        <ul>
-          <li><b>Diamonds on attack:</b> each Diamond spent gives +1 die; the highest result counts. Select a Diamond in your hand and use the <b>Extra die</b> card: the arrow picks the Gentleman that rolls the extra die.</li>
-          <li><b>Action cards while attacking:</b> after Prepare attack (and before confirming) you can still play cards from your hand; the attacks you marked stay.</li>
-          <li><b>Spades:</b> +1 attack this turn; if the die shows 6, the bonus becomes half the Spades card's value (critical).</li>
-          <li><b>Unblocked:</b> the damage goes straight to HP. If the target was an Ace, it is destroyed.</li>
-          <li><b>Miss!:</b> if the highest die is <b>1</b>, the blow hits only air, whoever the target: <b>nobody takes a hit</b>, not even the counterattack (shame on you!).</li>
-        </ul>
-        <p class="exemplo"><b>Example:</b> a Queen with 8 attacks and no one blocks. Rolled 3 = half attack = <b>4 damage</b> to HP.</p>
-        <p>Attackers flip <b>face down at the end of the turn</b> and can't block on the opponent's next turn.</p>`,
-    },
-    {
-      id: 'defesa', titulo: 'Defense and counterattack',
-      html: () => `
-        <h3>Blocking</h3>
-        <ul>
-          <li>Each <b>ready</b> Gentleman blocks 1 attacker. Aces don't block.</li>
-          <li>Two or more Gentlemen can block <b>the same attacker</b>: each extra defender <b>lowers its attack by 1</b> (2 defenders: −1; 3: −2). Each defender takes the full (already reduced) damage and compares it with its own attack.</li>
-          <li>When the King attacks a Gentleman, the <b>target must defend</b>, and other ready Gentlemen can join to <b>help</b> (each helper lowers the King's attack by 1, and all their attacks add up for the counterattack).</li>
-        </ul>
-        <h3>The blow against the blocker</h3>
-        <p>Compare the <b>damage</b> with the <b>blocker's attack</b>. For a blocker with attack 6:</p>
-        <table class="tabela-regras">
-          <tr><th>Damage</th><th>Result</th></tr>
-          <tr><td>0 to 2 (less than half)</td><td>Blow <b>ignored</b></td></tr>
-          <tr><td>3 to 6</td><td>Takes <b>1 hit</b></td></tr>
-          <tr><td>7 or more (more than its attack)</td><td>Takes <b>2 hits</b> (those that take 3 or more survive)</td></tr>
-        </table>
-        <h3>Counterattack (no die)</h3>
-        <p>If the <b>attacker's number is lower</b> than the blocker's (or the blockers' sum), the attacker takes <b>1 hit</b>. Permanent bonuses and Spades count.</p>
-        <p class="exemplo"><b>Example:</b> a Jack with 4 attacks, a King with 6 blocks. Even if the blow is ignored, 4 is less than 6, so the Jack takes 1 hit.</p>
-        <h3>Trample (Queen)</h3>
-        <p>If the Queen kills its blocker, HP takes <b>damage − blocker's attack</b>.</p>
-        <p class="exemplo"><b>Example:</b> a Queen with 10 rolls 5 (10 damage) against a King with 6: the King dies and <b>4</b> goes through to HP.</p>`,
-    },
-    {
-      id: 'efeitos', titulo: 'Suit effects',
-      html: () => `
-        <p>A number card played alone costs <b>1 action</b> and goes to the graveyard. An <b>Ace</b> also works as a sacrifice card (worth 1): in suit effects, Diamonds and pair magic.</p>
-        <table class="tabela-regras">
-          <tr><th>Suit</th><th>Effect</th></tr>
-          <tr><td>♥ Hearts</td><td>Heals HP: Ace to 5 heals 3, 6 to 10 heals 4.</td></tr>
-          <tr><td>♦ Diamonds</td><td>Discard 1 to draw 1 card (from the deck of your choice). On attack, +1 die.</td></tr>
-          <tr><td>♠ Spades</td><td>+1 attack to a Gentleman until end of turn; on a 6, it becomes half the card's value.</td></tr>
-          <tr><td>♣ Clubs</td><td><b>Berserk:</b> a wounded Gentleman returns upright until the end of the opponent's next turn. If it takes 1 hit in that time, it dies when the effect ends; with 2 hits, it dies instantly.</td></tr>
-        </table>`,
-    },
-    {
-      id: 'ases', titulo: 'Aces (totems)',
-      html: () => `
-        <ul>
-          <li><b>Invocation (1 action):</b> sacrifice 1 number card of the same suit as the Ace.</li>
-          <li>The Ace takes 1 slot and affects its <b>neighbors</b> (left and right).</li>
-          <li><b>Push:</b> the Ace can enter in place of a card in your row, pushing cards toward the nearest empty slot (there must be an empty slot). This way you can place it between two Gentlemen.</li>
-          <li>It doesn't attack, doesn't block and dies to <b>1 blow</b>. One of its owner's Gentlemen can block to protect it.</li>
-        </ul>
-        <table class="tabela-regras">
-          <tr><th>Ace</th><th>Effect</th></tr>
-          <tr><td>♣ Clubs</td><td>Neighbors get +1 toughness (creates the diagonal state).</td></tr>
-          <tr><td>♠ Spades</td><td>Neighbors get +1 permanent attack.</td></tr>
-          <tr><td>♦ Diamonds</td><td>Counts as 1 extra Diamond per turn.</td></tr>
-          <tr><td>♥ Hearts</td><td><b>Heal:</b> at the start of each of your turns, you heal ${M.CURA_AS_COPAS} HP (each Ace of Hearts on the field).</td></tr>
-        </table>`,
-    },
-    {
-      id: 'magia', titulo: 'Pair magic',
-      html: () => `
-        <p>Two <b>number cards of the same suit</b> (2 to 10, or an Ace) become a spell: <b>1 action</b>, and both go to the graveyard.</p>
-        <table class="tabela-regras">
-          <tr><th>Pair</th><th>Spell</th></tr>
-          <tr><td>♥ Hearts</td><td><b>Revive:</b> one of your Gentlemen in the graveyard comes back <b>straight to the field</b>, with the same number it had.</td></tr>
-          <tr><td>♦ Diamonds</td><td><b>Fetch Ace:</b> pick an Ace from your Numbers deck and put it <b>straight onto the field</b>.</td></tr>
-          <tr><td>♣ Clubs</td><td><b>+1 defense for good</b> on one of your Gentlemen (there is no defense limit), or <b>-1 defense</b> on an enemy (that still has 2 or more life left).</td></tr>
-          <tr><td>♠ Spades</td><td><b>+1 damage for good</b> on one of your Gentlemen, or <b>-1 attack</b> on an enemy (with attack 2 or more).</td></tr>
-        </table>
-        <h3>Pairgics: pairs of equal numbers</h3>
-        <p>Two cards with the <b>same number</b> (any suits) make a <b>Pairgic</b>. What it does depends on the number:</p>
-        <table class="tabela-regras">
-          <tr><th>Pair</th><th>Pairgic</th></tr>
-          <tr><td>2 to 4</td><td><b>Reflect!</b> On defense (no action), sends an attack back at its own owner. See below.</td></tr>
-          <tr><td>5 to 7</td><td><b>Get out!</b> On your turn (1 action), an enemy Gentleman goes back to its owner's hand (face card and number).</td></tr>
-          <tr><td>8 to 10</td><td><b>Meteor!</b> On your turn (1 action), destroys <b>every</b> Gentleman on the table, yours included.</td></tr>
-          <tr><td>Aces</td><td><b>Thunderbolt</b>. On your turn (1 action), choose with the purple arrow: 1 hit on an enemy Gentleman, <b>or</b> 2 HP on the opponent's Jester.</td></tr>
-        </table>
-        <h3>Pair of 2s, 3s or 4s: Reflect</h3>
-        <p>Two equal low cards (<b>two 2s, two 3s or two 4s</b>, any suits) work on <b>defense</b>: when the opponent attacks, the <b>Reflect</b> card shows up pulsing; the pair rises and the rest of your hand dims; click the pair to sacrifice it and bring the purple arrow to the attack you want to <b>reflect</b>. The enemy Gentleman hits its <b>own owner</b> (the die still decides full or half). The reflected blow hits normally (no bonus or reduction). The pair goes to the graveyard.</p>
-        <p><b>Reflect the reflection:</b> if your attack was reflected and you hold a pair of 2s, 3s or 4s, you may sacrifice it before the roll to send the blow <b>back</b> at the opponent's Jester (no blocking). An attack can only be reflected back once.</p>`,
-    },
-    {
-      id: 'palhacos', titulo: 'Jesters',
-      html: () => `
-        <p>Each player chooses a <b>Jester</b>, their "hero": it sits in the middle of the table, shows your HP and is the target of direct attacks. Each one has a <b>passive</b> (lasts the whole match) and a <b>power</b> (1 action, once per turn, button next to the Jester).</p>
-        <table class="tabela-regras">
-          <tr><th>Jester</th><th>Passive</th><th>Power</th></tr>
-          ${SS.Palhacos.LISTA.map(p => `<tr><td><b>${M.SIMBOLO[p.naipe]} ${p.nome}</b><br><small>${p.titulo}</small></td><td><b>${p.passiva.nome}:</b> ${p.passiva.texto}</td>
-            <td>${p.poder ? `<b>${p.poder.nome}:</b> ${p.poder.texto}` : `<b>${p.custo.nome}:</b> ${p.custo.texto}`}</td></tr>`).join('')}
-        </table>
-        <p><b>Who goes first:</b> always by the die. Each player throws one and the higher roll goes first.</p>
-        <p class="nota">Each Jester has a themed deck of its suit, which you can swap for a deck you build.</p>`,
-    },
-    {
-      id: 'deck', titulo: 'Deck building',
-      html: () => `
-        <ul>
-          <li>A Faces deck with <b>at most ${R.letras}</b> face cards and a Numbers deck with <b>at most ${R.numeros}</b> cards. There is no minimum: a smaller deck makes your best cards show up more often, but runs out sooner (drawing from an empty deck costs 2 HP per card).</li>
-          <li>When building, you can change the suit of any card.</li>
-          <li>Up to <b>${R.copias} copies</b> of the same card (same value and suit), and any mix of suits.</li>
-        </ul>
-        <p class="nota">In "Build decks" you will find the default deck (a standard deck of cards) and each Jester's deck, ready to use as a base.</p>`,
-    },
-    {
-      id: 'fim', titulo: 'Game end and limits',
-      html: () => `
-        <ul>
-          <li>Whoever reaches <b>0 HP</b> loses.</li>
-          <li><b>Empty decks:</b> if you have to draw and both are empty, lose 2 HP per draw.</li>
-          <li><b>Hand limit:</b> ${M.LIMITE_MAO} cards at end of turn; the extra goes to the graveyard.</li>
-          <li>You can <b>concede</b> at any time with the button in the top-left corner of the table. The match log is behind the button in the top-right corner.</li>
-        </ul>`,
-    },
-  ];
-
-  const temas = () => (SS.Idioma && SS.Idioma.atual() === 'en' ? TEMAS_EN : TEMAS);
-
+  // ---------- Tela ----------
   let atual = 'visao', aoVoltar = null;
 
   function tela() {
@@ -435,22 +193,20 @@ window.SS = window.SS || {};
     if (!el) {
       el = document.createElement('div');
       el.id = 'tela-regras';
-      el.className = 'tela';
+      el.className = 'tela tela-regras-nova';
       document.body.appendChild(el);
       el.addEventListener('click', aoClicar);
     }
     return el;
   }
 
-  function desenhar() {
-    const lista = temas(), tr = SS.Idioma.t;
-    const tema = lista.find(t => t.id === atual);
-    tela().innerHTML = `<div class="tela-caixa regras">
-      <div class="tela-cabecalho"><h1>${tr('menu.regras')}</h1><button class="btn principal" data-regra-cmd="voltar">${tr('btn.voltarMenu')}</button></div>
-      <div class="deck-layout">
-        <nav class="slots">${lista.map(t => `<button class="slot${t.id === atual ? ' atual' : ''}" data-tema="${t.id}"><b>${t.titulo}</b></button>`).join('')}</nav>
-        <section class="editor texto-regras"><h2>${tema.titulo}</h2>${tema.html()}</section>
-      </div></div>`;
+  function desenhar(animar) {
+    EN = SS.Idioma && SS.Idioma.atual() === 'en';
+    const tr = SS.Idioma.t, tema = TEMAS.find(t => t.id === atual);
+    tela().innerHTML = `<div class="rg-tela">
+      <div class="rg-topo"><button class="db-btn" data-regra-cmd="voltar">← ${tr('btn.voltarMenu')}</button><h1>${tr('menu.regras')}</h1></div>
+      <nav class="rg-abas">${TEMAS.map(t => `<button class="rg-aba${t.id === atual ? ' ativa' : ''}" data-tema="${t.id}">${t.titulo()}</button>`).join('')}</nav>
+      <section class="rg-pagina${animar ? ' entra' : ''}"><h2>${tema.titulo()}</h2>${tema.html()}</section></div>`;
   }
 
   function aoClicar(ev) {
@@ -461,9 +217,10 @@ window.SS = window.SS || {};
       return;
     }
     const b = ev.target.closest('[data-tema]');
-    if (b) {
+    if (b && b.dataset.tema !== atual) {
       atual = b.dataset.tema;
-      desenhar();
+      desenhar(true);
+      tela().scrollTop = 0;
     }
   }
 
