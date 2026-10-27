@@ -30,7 +30,11 @@ window.SS = window.SS || {};
   //   faixa: { J: [mín, máx], Q: [...], K: [...] } números que cada figura pode equipar (vazio = 2 até LIMITE_FIGURA)
   //   semPassiva: { palhaço: true } desliga a habilidade passiva dele (o poder continua)
   //   invocacoes: 'umPorTurno' (1 Senhor(a) por turno) | 'umPorLetra' (1 Valete, 1 Rainha e 1 Rei por turno) | 'ilimitadas'
-  const REGRAS_PADRAO = Object.freeze({ casca: 'todos2', limiteDefesa: true, rainha: 'reiOuValetes', reiSacrificaValete: false, asesRecurso: true, asesNasLetras: false, bonusNaipe: false, limitePV: true, pv: Object.freeze({}), faixa: Object.freeze({}), semPassiva: Object.freeze({}), invocacoes: 'umPorTurno' });
+  // Regras oficiais (27/10/2026): Casca grossa −1 só nos Naipados de Paus, defesa sem limite, Rei sacrifica 1 Valete,
+  // cura sem teto e 1 invocação de cada letra por turno.
+  const REGRAS_PADRAO = Object.freeze({ casca: 'paus1', limiteDefesa: false, rainha: 'reiOuValetes', reiSacrificaValete: true, asesRecurso: true, asesNasLetras: false, bonusNaipe: false, limitePV: false, pv: Object.freeze({}), faixa: Object.freeze({}), semPassiva: Object.freeze({}), invocacoes: 'umPorLetra' });
+  // O tutorial continua ensinando as regras de antes (o roteiro dele foi feito com elas).
+  const REGRAS_TUTORIAL = Object.freeze({ casca: 'todos2', limiteDefesa: true, rainha: 'reiOuValetes', reiSacrificaValete: false, asesRecurso: true, asesNasLetras: false, bonusNaipe: false, limitePV: true, pv: Object.freeze({ infartitte: 24, paumol: 22, ourinhos: 12 }), faixa: Object.freeze({}), semPassiva: Object.freeze({}), invocacoes: 'umPorTurno' });
   let REGRAS = Object.assign({}, REGRAS_PADRAO);
   // Aceita só chaves e valores conhecidos (as regras do dono da sala chegam pela rede).
   function definirRegras(r) {
@@ -85,9 +89,9 @@ window.SS = window.SS || {};
   // Compra do turno: 1 carta do baralho que o jogador escolher; o Ourinhos (compraDupla) compra 2, escolhendo o monte de cada.
   const PALHACOS = {
     lancalotte: { naipe: 'espadas', pv: 19, limiteMao: 7, poder: 'desafio', dadosPrimeiro: 1, ataquePrimeiro: 1 },
-    infartitte: { naipe: 'copas', pv: 24, limiteMao: 7, poder: 'transfusao', curaExtra: 1 },
-    paumol: { naipe: 'paus', pv: 22, limiteMao: 7, poder: 'vigilia', reducaoDefesa: 2, soPaus: false },
-    ourinhos: { naipe: 'ouros', pv: 12, limiteMao: 6, poder: 'roubo', compraDupla: true }, // rouba 1 carta da mão do oponente
+    infartitte: { naipe: 'copas', pv: 17, limiteMao: 7, poder: 'transfusao', curaExtra: 1 },
+    paumol: { naipe: 'paus', pv: 20, limiteMao: 7, poder: 'vigilia', reducaoDefesa: 2, soPaus: false },
+    ourinhos: { naipe: 'ouros', pv: 16, limiteMao: 6, poder: 'roubo', compraDupla: true }, // rouba 1 carta da mão do oponente
   };
   const SENHORES_POR_TURNO = 1; // Senhores que dá para sumonar por turno (a Rainha conta)
   const ASES_POR_TURNO = 1; // Ases (totens) que dá para invocar por turno
@@ -1375,7 +1379,7 @@ window.SS = window.SS || {};
     desistir, REGRAS_DECK, RANKS, contagemPadrao, resumoDeck, validarDeck, cartasDoDeck,
     PALHACOS, CUSTO_TRANSFUSAO, CUSTO_SANGRIA, SACRIFICIOS_RAINHA, SENHORES_POR_TURNO, ASES_POR_TURNO, REDUCAO_POR_DEFENSOR, palhacoDe, limiteMao, ataqueDirecionado,
     NAIPES, SIMBOLO, LIMITE_FIGURA, PV_INICIAL, PV_MAX_CURA, RESISTENCIA_MAX, ESPACOS, ACOES_POR_TURNO, CUSTO_RAINHA, DADO_ATAQUE_TOTAL, LIMITE_MAO,
-    definirRng: f => { rng = f; }, rngAtual: () => rng, REGRAS_PADRAO, definirRegras, regras, limiteDefesa, faixaFigura, pvInicial, passivaAtiva, podeInvocar, EFEITO_PARGIA, DANO_RAIO_PALHACO, VALOR_MIN_REFLEXO, VALOR_MAX_REFLEXO, voltarAoPrincipal, refletir, paresIguais, contraRefletir, podeContraRefletir, CURA_AS_COPAS, CURA_NAIPADO_COPAS,
+    definirRng: f => { rng = f; }, rngAtual: () => rng, REGRAS_PADRAO, REGRAS_TUTORIAL, definirRegras, regras, limiteDefesa, faixaFigura, pvInicial, passivaAtiva, podeInvocar, EFEITO_PARGIA, DANO_RAIO_PALHACO, VALOR_MIN_REFLEXO, VALOR_MAX_REFLEXO, voltarAoPrincipal, refletir, paresIguais, contraRefletir, podeContraRefletir, CURA_AS_COPAS, CURA_NAIPADO_COPAS,
     ehFigura, ehAs, ehNumero, ehSacrificavel, valor, nomeCarta, nomeNaipe, nomeUnidade, curaDe, curaPara, naipado,
     BARALHOS, NOME_BARALHO, baralhosDisponiveis, comprarDoTurno,
     criarJogo, registrar, figurasNoBaralho, escolherFiguras, mulligan, confirmarAbertura,

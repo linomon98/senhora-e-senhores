@@ -11,7 +11,7 @@ window.SS = window.SS || {};
       id: 'visao', titulo: 'Visão geral',
       html: () => `
         <h3>Objetivo</h3>
-        <p>Reduzir os Pontos de Vida (PV) do oponente a <b>0</b>. Cada jogador começa com <b>${M.PV_INICIAL} PV</b> (alguns Palhaços mudam isso), e a cura vai no máximo até <b>${M.PV_MAX_CURA} PV</b>.</p>
+        <p>Reduzir os Pontos de Vida (PV) do oponente a <b>0</b>. Cada jogador começa com <b>${M.PV_INICIAL} PV</b> (alguns Palhaços mudam isso). A cura não tem teto (só a ferida de um Naipado de Copas inimigo limita).</p>
         <h3>Componentes</h3>
         <ul>
           <li><b>Baralho de Letras</b> (${R.letras} cartas): Valetes, Rainhas e Reis. São as <b>figuras</b>.</li>
@@ -36,7 +36,7 @@ window.SS = window.SS || {};
         <ol>
           <li><b>Reativação:</b> seus Senhores virados para baixo voltam a ficar ativos.</li>
           <li><b>Compra:</b> compre <b>1 carta</b> do baralho que escolher: Letras ou Números. Se os dois estiverem vazios, perca 2 PV. O <b>Ourinhos</b> não escolhe: compra sozinho 1 Letra e 1 Número.</li>
-          <li><b>${M.ACOES_POR_TURNO} ações</b>, em qualquer ordem: invocar, invocar Ás, usar o efeito de uma carta numérica. No máximo <b>${M.SENHORES_POR_TURNO} Senhor(a)</b> invocado(a) e <b>${M.ASES_POR_TURNO} Ás</b> invocado por turno.</li>
+          <li><b>${M.ACOES_POR_TURNO} ações</b>, em qualquer ordem: invocar, invocar Ás, usar o efeito de uma carta numérica. Por turno, no máximo <b>1 Valete, 1 Rainha e 1 Rei</b> invocados (dá para invocar um de cada) e <b>${M.ASES_POR_TURNO} Ás</b>.</li>
           <li><b>Ação ofensiva:</b> ataque com os Senhores aptos.</li>
           <li><b>Fim do turno:</b> quem atacou vira para baixo, os efeitos de "1 turno" acabam e, com mais de ${M.LIMITE_MAO} cartas na mão, você descarta o excesso.</li>
         </ol>`,
@@ -50,7 +50,7 @@ window.SS = window.SS || {};
           <tr><th>Figura</th><th>Equipa</th><th>Custo</th><th>Habilidade</th></tr>
           <tr><td><b>Valete</b></td><td>2 a 4</td><td>1 ação</td><td><b>Ímpeto:</b> ataca no mesmo turno em que entra.</td></tr>
           <tr><td><b>Rainha</b></td><td>2 a 10</td><td>${M.CUSTO_RAINHA} ação + sacrifício de <b>1 Rei</b> ou <b>2 Valetes</b> seus que já estavam em campo antes deste turno. Ela entra no lugar do Rei (ou do segundo Valete).</td><td><b>Atropelar:</b> se matar quem bloqueou, o dano que sobra vai para o PV.</td></tr>
-          <tr><td><b>Rei</b></td><td>2 a 7</td><td>1 ação</td><td><b>Ordem real:</b> ao atacar, pode escolher como alvo um Senhor(a) inimigo. O alvo é obrigado a defender, e outros Senhores ativos do dono podem entrar junto para ajudar.</td></tr>
+          <tr><td><b>Rei</b></td><td>2 a 7</td><td>1 ação + sacrifício de <b>1 Valete</b> seu que já estava em campo antes deste turno. O Rei entra no lugar dele.</td><td><b>Ordem real:</b> ao atacar, pode escolher como alvo um Senhor(a) inimigo. O alvo é obrigado a defender, e outros Senhores ativos do dono podem entrar junto para ajudar.</td></tr>
         </table>
         <h3>Vida e posição da carta</h3>
         <p>Um Senhor(a) comum aguenta <b>2 hits</b>. A posição da carta mostra quanto falta:</p>
@@ -135,7 +135,7 @@ window.SS = window.SS || {};
         <p>Uma carta numérica usada sozinha gasta <b>1 ação</b> e vai para o cemitério. O <b>Ás</b> também serve como carta de sacrifício (vale 1): nos efeitos de naipe, no Ouros e nas magias dos pares.</p>
         <table class="tabela-regras">
           <tr><th>Naipe</th><th>Efeito</th></tr>
-          <tr><td>♥ Copas</td><td>Cura PV: Ás a 5 cura 3, 6 a 10 cura 4. No máximo até ${M.PV_MAX_CURA} PV.</td></tr>
+          <tr><td>♥ Copas</td><td>Cura PV: Ás a 5 cura 3, 6 a 10 cura 4.</td></tr>
           <tr><td>♦ Ouros</td><td>Descarte 1 para comprar 1 carta (do baralho que escolher). No ataque, +1 dado.</td></tr>
           <tr><td>♠ Espadas</td><td>+1 de ataque a um Senhor(a) até o fim do turno; no 6, vira metade do valor da carta.</td></tr>
           <tr><td>♣ Paus</td><td><b>Berserk:</b> um Senhor(a) ferido(a) volta à vertical até o fim do próximo turno do oponente. Se levar 1 hit nesse tempo, morre quando o efeito acabar; com 2 hits, morre na hora.</td></tr>
@@ -166,7 +166,7 @@ window.SS = window.SS || {};
           <tr><th>Par</th><th>Magia</th></tr>
           <tr><td>♥ Copas</td><td><b>Reviver:</b> um Senhor(a) seu do cemitério volta <b>direto para o campo</b>, com o mesmo número que tinha.</td></tr>
           <tr><td>♦ Ouros</td><td><b>Buscar Ás:</b> escolha um Ás do seu baralho de Números e ponha <b>direto no campo</b>.</td></tr>
-          <tr><td>♣ Paus</td><td><b>+1 de defesa para sempre</b> num Senhor(a) seu (nenhum Senhor passa de <b>${M.RESISTENCIA_MAX} de defesa</b>), ou <b>-1 de defesa</b> num inimigo (que ainda tenha 2 ou mais de vida sobrando).</td></tr>
+          <tr><td>♣ Paus</td><td><b>+1 de defesa para sempre</b> num Senhor(a) seu (não há limite de defesa), ou <b>-1 de defesa</b> num inimigo (que ainda tenha 2 ou mais de vida sobrando).</td></tr>
           <tr><td>♠ Espadas</td><td><b>+1 de dano para sempre</b> num Senhor(a) seu, ou <b>-1 de ataque</b> num inimigo (com ataque 2 ou mais).</td></tr>
         </table>
         <h3>Pargias: pares de números iguais</h3>
@@ -221,7 +221,7 @@ window.SS = window.SS || {};
       id: 'visao', titulo: 'Overview',
       html: () => `
         <h3>Goal</h3>
-        <p>Reduce your opponent's Hit Points (HP) to <b>0</b>. Each player starts with <b>${M.PV_INICIAL} HP</b> (some Jesters change this), and there healing goes up to <b>${M.PV_MAX_CURA} HP</b> at most.</p>
+        <p>Reduce your opponent's Hit Points (HP) to <b>0</b>. Each player starts with <b>${M.PV_INICIAL} HP</b> (some Jesters change this). Healing has no cap (only the wound from an enemy Hearts Suited limits it).</p>
         <h3>Components</h3>
         <ul>
           <li><b>Faces deck</b> (${R.letras} cards): Jacks, Queens and Kings. These are the <b>face cards</b>.</li>
@@ -246,7 +246,7 @@ window.SS = window.SS || {};
         <ol>
           <li><b>Ready:</b> your face-down Gentlemen become ready again.</li>
           <li><b>Draw:</b> draw <b>1 card</b> from the deck of your choice: Faces or Numbers. If both are empty, lose 2 HP. <b>Ourinhos</b> does not choose: it automatically draws 1 Face and 1 Number.</li>
-          <li><b>${M.ACOES_POR_TURNO} actions</b>, in any order: summon, invoke an Ace, use a number card's effect. At most <b>${M.SENHORES_POR_TURNO} Gentleman</b> summoned and <b>${M.ASES_POR_TURNO} Ace</b> invoked per turn.</li>
+          <li><b>${M.ACOES_POR_TURNO} actions</b>, in any order: summon, invoke an Ace, use a number card's effect. Each turn, at most <b>1 Jack, 1 Queen and 1 King</b> summoned (you can summon one of each) and <b>${M.ASES_POR_TURNO} Ace</b>.</li>
           <li><b>Offensive action:</b> attack with your ready Gentlemen.</li>
           <li><b>End of turn:</b> attackers flip face down, "1 turn" effects end and, with more than ${M.LIMITE_MAO} cards in hand, you discard the extra.</li>
         </ol>`,
@@ -260,7 +260,7 @@ window.SS = window.SS || {};
           <tr><th>Face card</th><th>Equips</th><th>Cost</th><th>Ability</th></tr>
           <tr><td><b>Jack</b></td><td>2 to 4</td><td>1 action</td><td><b>Haste:</b> attacks the same turn it enters.</td></tr>
           <tr><td><b>Queen</b></td><td>2 to 10</td><td>${M.CUSTO_RAINHA} action + sacrifice <b>1 King</b> or <b>2 Jacks</b> of yours that were already on the field before this turn. She takes the King's place (or the second Jack's).</td><td><b>Trample:</b> if it kills its blocker, the leftover damage goes to HP.</td></tr>
-          <tr><td><b>King</b></td><td>2 to 7</td><td>1 action</td><td><b>Royal Order:</b> when attacking, may target an enemy Gentleman. The target must defend, and its owner's other ready Gentlemen can join to help.</td></tr>
+          <tr><td><b>King</b></td><td>2 to 7</td><td>1 action + sacrifice <b>1 Jack</b> of yours that was already on the field before this turn. The King takes its place.</td><td><b>Royal Order:</b> when attacking, may target an enemy Gentleman. The target must defend, and its owner's other ready Gentlemen can join to help.</td></tr>
         </table>
         <h3>Health and card position</h3>
         <p>A regular Gentleman survives <b>2 hits</b>. The card's position shows how much is left:</p>
@@ -345,7 +345,7 @@ window.SS = window.SS || {};
         <p>A number card played alone costs <b>1 action</b> and goes to the graveyard. An <b>Ace</b> also works as a sacrifice card (worth 1): in suit effects, Diamonds and pair magic.</p>
         <table class="tabela-regras">
           <tr><th>Suit</th><th>Effect</th></tr>
-          <tr><td>♥ Hearts</td><td>Heals HP: Ace to 5 heals 3, 6 to 10 heals 4. Up to ${M.PV_MAX_CURA} HP at most.</td></tr>
+          <tr><td>♥ Hearts</td><td>Heals HP: Ace to 5 heals 3, 6 to 10 heals 4.</td></tr>
           <tr><td>♦ Diamonds</td><td>Discard 1 to draw 1 card (from the deck of your choice). On attack, +1 die.</td></tr>
           <tr><td>♠ Spades</td><td>+1 attack to a Gentleman until end of turn; on a 6, it becomes half the card's value.</td></tr>
           <tr><td>♣ Clubs</td><td><b>Berserk:</b> a wounded Gentleman returns upright until the end of the opponent's next turn. If it takes 1 hit in that time, it dies when the effect ends; with 2 hits, it dies instantly.</td></tr>
@@ -376,7 +376,7 @@ window.SS = window.SS || {};
           <tr><th>Pair</th><th>Spell</th></tr>
           <tr><td>♥ Hearts</td><td><b>Revive:</b> one of your Gentlemen in the graveyard comes back <b>straight to the field</b>, with the same number it had.</td></tr>
           <tr><td>♦ Diamonds</td><td><b>Fetch Ace:</b> pick an Ace from your Numbers deck and put it <b>straight onto the field</b>.</td></tr>
-          <tr><td>♣ Clubs</td><td><b>+1 defense for good</b> on one of your Gentlemen (no Gentleman goes above <b>${M.RESISTENCIA_MAX} defense</b>), or <b>-1 defense</b> on an enemy (that still has 2 or more life left).</td></tr>
+          <tr><td>♣ Clubs</td><td><b>+1 defense for good</b> on one of your Gentlemen (there is no defense limit), or <b>-1 defense</b> on an enemy (that still has 2 or more life left).</td></tr>
           <tr><td>♠ Spades</td><td><b>+1 damage for good</b> on one of your Gentlemen, or <b>-1 attack</b> on an enemy (with attack 2 or more).</td></tr>
         </table>
         <h3>Pairgics: pairs of equal numbers</h3>

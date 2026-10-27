@@ -76,13 +76,13 @@ window.SS = window.SS || {};
     infartitte: {
       pt: {
         titulo: 'o coração teimoso',
-        passiva: { nome: 'Coração forte', texto: 'Suas cartas de Copas curam +1 PV (o que paga a Transfusão). Começa com 24 PV.' },
+        passiva: { nome: 'Coração forte', texto: 'Suas cartas de Copas curam +1 PV (o que paga a Transfusão). Começa com 17 PV.' },
         poder: { nome: 'Transfusão', texto: 'Pague 2 PV para tirar 1 hit de um Senhor(a) seu, ou 4 PV para dar 1 hit num Senhor(a) inimigo.' },
         plano: 'Aguenta e drena: Reis seguram a linha, Copas cura, Naipados de Copas aplicam ferida.',
       },
       en: {
         titulo: 'the stubborn heart',
-        passiva: { nome: 'Strong Heart', texto: 'Your Hearts cards heal +1 HP (which pays for Transfusion). Starts with 24 HP.' },
+        passiva: { nome: 'Strong Heart', texto: 'Your Hearts cards heal +1 HP (which pays for Transfusion). Starts with 17 HP.' },
         poder: { nome: 'Transfusion', texto: 'Pay 2 HP to remove 1 hit from one of your Gentlemen, or 4 HP to deal 1 hit to an enemy Gentleman.' },
         plano: 'Endures and drains: Kings hold the line, Hearts heal, Suited Hearts inflict wounds.',
       },
@@ -90,13 +90,13 @@ window.SS = window.SS || {};
     paumol: {
       pt: {
         titulo: 'o muro',
-        passiva: { nome: 'Casca grossa', texto: 'Seus Senhores recebem 2 de dano a menos ao defender. Começa com 22 PV.' },
+        passiva: { nome: 'Casca grossa', texto: 'Seus Naipados de Paus recebem 1 de dano a menos ao defender. Começa com 20 PV.' },
         poder: { nome: 'Vigília', texto: 'Escolha 1 Senhor(a) seu: ele(a) não vira para baixo no fim deste turno (ataca e ainda pode bloquear).' },
         plano: 'Ninguém passa: Naipados de Paus aguentam 3 hits e Ases de Paus deixam a fileira mais resistente.',
       },
       en: {
         titulo: 'the wall',
-        passiva: { nome: 'Thick Bark', texto: 'Your Gentlemen take 2 less damage when defending. Starts with 22 HP.' },
+        passiva: { nome: 'Thick Bark', texto: 'Your Clubs Suited take 1 less damage when defending. Starts with 20 HP.' },
         poder: { nome: 'Vigil', texto: "Choose 1 of your Gentlemen: it doesn't flip face down at the end of this turn (it attacks and can still block)." },
         plano: 'None shall pass: Suited Clubs survive 3 hits and Aces of Clubs make the row sturdier.',
       },
@@ -104,13 +104,13 @@ window.SS = window.SS || {};
     ourinhos: {
       pt: {
         titulo: 'o banqueiro',
-        passiva: { nome: 'Juros compostos', texto: 'No começo do turno, compra 2 cartas, escolhendo de qual monte vem cada uma (os outros compram só 1). Limite de mão de 6 cartas. Começa com 12 PV.' },
+        passiva: { nome: 'Juros compostos', texto: 'No começo do turno, compra 2 cartas, escolhendo de qual monte vem cada uma (os outros compram só 1). Limite de mão de 6 cartas. Começa com 16 PV.' },
         poder: { nome: 'Cobrança', texto: 'Pague 2 PV para roubar 1 carta sorteada da mão do oponente.' },
         plano: 'Rouba e acumula: tira as cartas do oponente e usa Valetes Naipados de Ouros, que atacam 2 vezes no mesmo turno.',
       },
       en: {
         titulo: 'the banker',
-        passiva: { nome: 'Compound Interest', texto: 'At the start of the turn, draws 2 cards, choosing the pile for each one (the others draw only 1). Hand limit of 6 cards. Starts with 12 HP.' },
+        passiva: { nome: 'Compound Interest', texto: 'At the start of the turn, draws 2 cards, choosing the pile for each one (the others draw only 1). Hand limit of 6 cards. Starts with 16 HP.' },
         poder: { nome: 'Debt Collection', texto: "Pay 2 HP to steal 1 random card from the opponent's hand." },
         plano: "Steals and hoards: takes the opponent's cards and uses Suited Jacks of Diamonds, which attack twice in the same turn.",
       },
