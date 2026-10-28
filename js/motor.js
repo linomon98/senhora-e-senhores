@@ -16,7 +16,7 @@ window.SS = window.SS || {};
   const PV_MAX_CURA = 25; // a cura (de qualquer fonte) não passa disso
 
   // ---------- Modificadores de regras (área de testes) ----------
-  // O padrão é a regra oficial (a do tutorial). Fora do tutorial, a interface pode trocar por outra combinação.
+  // O padrão é a regra oficial (a do tutorial também). Fora do tutorial, a interface pode trocar por outra combinação.
   //   casca: 'todos2' (Casca grossa: −2 em qualquer defensor do Paumol) | 'paus1' (−1, só nos Naipados de Paus)
   //   limiteDefesa: true (ninguém aguenta mais que RESISTENCIA_MAX hits) | false (sem limite)
   //   rainha: 'reiOuValetes' (sacrifica 1 Rei ou 2 Valetes) | 'doisSenhores' (2 Senhores quaisquer)
@@ -35,8 +35,6 @@ window.SS = window.SS || {};
   // Regras oficiais (27/10/2026): Casca grossa −1 só nos Naipados de Paus, defesa sem limite, Rei sacrifica 1 Valete,
   // cura sem teto e 1 invocação de cada letra por turno.
   const REGRAS_PADRAO = Object.freeze({ casca: 'paus1', limiteDefesa: false, rainha: 'reiOuValetes', reiSacrificaValete: true, asesRecurso: true, asesNasLetras: false, bonusNaipe: false, limitePV: false, pv: Object.freeze({}), faixa: Object.freeze({}), semPassiva: Object.freeze({}), invocacoes: 'umPorLetra', passivaOurinhos: 'dividendos', todosCompram2: false });
-  // O tutorial continua ensinando as regras de antes (o roteiro dele foi feito com elas).
-  const REGRAS_TUTORIAL = Object.freeze({ casca: 'todos2', limiteDefesa: true, rainha: 'reiOuValetes', reiSacrificaValete: false, asesRecurso: true, asesNasLetras: false, bonusNaipe: false, limitePV: true, pv: Object.freeze({ infartitte: 24, paumol: 22, ourinhos: 12 }), faixa: Object.freeze({}), semPassiva: Object.freeze({}), invocacoes: 'umPorTurno', passivaOurinhos: 'juros', todosCompram2: false });
   let REGRAS = Object.assign({}, REGRAS_PADRAO);
   // Aceita só chaves e valores conhecidos (as regras do dono da sala chegam pela rede).
   function definirRegras(r) {
@@ -1413,7 +1411,7 @@ window.SS = window.SS || {};
     desistir, REGRAS_DECK, RANKS, contagemPadrao, resumoDeck, validarDeck, cartasDoDeck,
     PALHACOS, CUSTO_TRANSFUSAO, CUSTO_SANGRIA, SACRIFICIOS_RAINHA, SENHORES_POR_TURNO, ASES_POR_TURNO, REDUCAO_POR_DEFENSOR, palhacoDe, limiteMao, ataqueDirecionado,
     NAIPES, SIMBOLO, LIMITE_FIGURA, PV_INICIAL, PV_MAX_CURA, RESISTENCIA_MAX, ESPACOS, ACOES_POR_TURNO, CUSTO_RAINHA, DADO_ATAQUE_TOTAL, LIMITE_MAO,
-    definirRng: f => { rng = f; }, rngAtual: () => rng, REGRAS_PADRAO, REGRAS_TUTORIAL, definirRegras, regras, limiteDefesa, faixaFigura, pvInicial, passivaAtiva, podeInvocar, EFEITO_PARGIA, DANO_RAIO_PALHACO, VALOR_MIN_REFLEXO, VALOR_MAX_REFLEXO, voltarAoPrincipal, refletir, paresIguais, contraRefletir, podeContraRefletir, CURA_AS_COPAS, CURA_NAIPADO_COPAS,
+    definirRng: f => { rng = f; }, rngAtual: () => rng, REGRAS_PADRAO, definirRegras, regras, limiteDefesa, faixaFigura, pvInicial, passivaAtiva, podeInvocar, EFEITO_PARGIA, DANO_RAIO_PALHACO, VALOR_MIN_REFLEXO, VALOR_MAX_REFLEXO, voltarAoPrincipal, refletir, paresIguais, contraRefletir, podeContraRefletir, CURA_AS_COPAS, CURA_NAIPADO_COPAS,
     ehFigura, ehAs, ehNumero, ehSacrificavel, valor, nomeCarta, nomeNaipe, nomeUnidade, curaDe, curaPara, naipado,
     BARALHOS, NOME_BARALHO, baralhosDisponiveis, comprarDoTurno,
     criarJogo, registrar, figurasNoBaralho, escolherFiguras, mulligan, confirmarAbertura,

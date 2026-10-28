@@ -1652,6 +1652,11 @@ body.tut-pulsa-seta #setas .seta .linha { animation: tut-pulsa-linha .6s ease-in
 #tut .tut-conta b { font: 400 24px var(--fonte-titulo); color: #1d2a12 !important; }
 #tut .tut-conta small { font-size: 11px; color: #4a4a3a; }
 #tut .tut-conta > span { font: 400 34px var(--fonte-titulo); color: #b0101e; }
+#tut .tut-escada { margin: 10px 0 2px; gap: 2px; }
+#tut .tut-escada .rg-op { font-size: 26px; margin: 0 2px; }
+#tut .tut-cartinha { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; }
+#tut .tut-cartinha .rg-c { width: 54px; }
+#tut .tut-cartinha small { font: 800 11px var(--fonte-ui); color: #1d2a12; white-space: nowrap; }
 #tut .tut-ok { margin: 6px 0 0; text-align: center; font-weight: 800; color: #1b7a1b; }
 
 /* =====================================================================================

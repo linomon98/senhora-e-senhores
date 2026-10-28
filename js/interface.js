@@ -3483,6 +3483,7 @@ window.SS = window.SS || {};
     const ids = await escolherFigurasModal();
     M.escolherFiguras(jogo, eu, ids);
     render();
+    await tutGancho('mulligan');
     if (await decidirMulliganModal()) M.mulligan(jogo, eu);
     else M.confirmarAbertura(jogo, eu);
     fecharModal();
@@ -3778,21 +3779,22 @@ window.SS = window.SS || {};
     const deCima = p !== eu;
     // Mesa livre: o Editor pode forçar o resultado de todos os dados (1 a 6).
     if (cfg.modo === 'livre' && cfg.livre && cfg.livre.dado) return SS.Dados.mostrar(Array(n).fill(cfg.livre.dado), corDe(p), deCima);
-    // Tutorial: a aula pode combinar o resultado do dado de antes (o oponente "tira 5"), ou um por atacante
-    // (tutDadoPor). Com tutSemUm, você joga o dado normalmente, mas um 1 é rolado de novo sozinho.
+    // Tutorial: a aula combina os dados do oponente: o de antes (ele "tira 5") ou um por atacante (tutDadoPor).
+    // Os seus dados são de verdade. No sorteio de quem começa, o oponente sempre tira mais que você
+    // (se você tirar 6, ele empata e os dois jogam de novo).
     if (cfg.modo === 'tutorial') {
+      if (ui.tutSorteio) {
+        if (controle(p) === 'humano') {
+          const r = await SS.Dados.jogar(n, corDe(p));
+          ui.tutSorteio = r[0];
+          return r;
+        }
+        const meu = ui.tutSorteio === true ? 1 : ui.tutSorteio;
+        return SS.Dados.mostrar([meu >= 6 ? 6 : meu + 1 + Math.floor(Math.random() * (6 - meu))], corDe(p), deCima);
+      }
       const v = ui.tutDado || (ui.tutDadoPor && ui.tutAt ? ui.tutDadoPor(ui.tutAt) : null);
       ui.tutDado = null;
       if (v) return SS.Dados.mostrar(Array(n).fill(v), corDe(p), deCima);
-      if (ui.tutSemUm && controle(p) === 'humano') {
-        let r = await SS.Dados.jogar(n, corDe(p));
-        if (r.includes(1)) {
-          await esperar(500);
-          SS.Dados.sumir();
-          r = await SS.Dados.mostrar(r.map(x => (x === 1 ? 2 + Math.floor(Math.random() * 5) : x)), corDe(p), deCima);
-        }
-        return r;
-      }
     }
     if (controle(p) === 'humano') {
       const r = await SS.Dados.jogar(n, corDe(p));
@@ -4052,8 +4054,10 @@ window.SS = window.SS || {};
       if (controle(d) === 'bot') {
         await esperar(500);
         if (id !== partida) return;
-        if (!oponenteParado(d)) for (const rf of Bot.refletir(jogo, d)) M.refletir(jogo, rf.n, rf.cartas);
-        const mapa = oponenteParado(d) ? {} : await pensar('bloquear', jogo, d, nivelDe(d));
+        // (no tutorial, o oponente só faz o que a aula manda: não defende nem reflete por conta própria)
+        const parado = oponenteParado(d) || cfg.modo === 'tutorial';
+        if (!parado) for (const rf of Bot.refletir(jogo, d)) M.refletir(jogo, rf.n, rf.cartas);
+        const mapa = parado ? {} : await pensar('bloquear', jogo, d, nivelDe(d));
         if (id !== partida) return;
         M.definirBloqueios(jogo, mapa);
       } else if (!M.bloqueadoresAptos(jogo).length && !podeRefletir) {
@@ -4202,14 +4206,15 @@ window.SS = window.SS || {};
   // Pontos em que a aula do tutorial pode segurar o jogo (fora do tutorial, segue direto).
   const tutGancho = (nome, dados) => (cfg.modo === 'tutorial' && SS.Tutorial ? SS.Tutorial.gancho(nome, dados) : Promise.resolve());
 
-  // Partida montada para uma aula: mãos e Palhaços definidos pela aula, sem sorteio nem abertura.
-  function iniciarTutorial(n) {
+  // Partida de uma aula: com as regras oficiais e o começo de sempre (sorteio no dado e abertura). A aula escolhe os
+  // Palhaços, arruma os baralhos e joga pelo oponente.
+  async function iniciarTutorial(n) {
     const aula = SS.Tutorial && SS.Tutorial.aula(n);
     if (!aula) return;
     cfg.modo = 'tutorial';
     cfg.aula = n;
-    M.definirRegras(M.REGRAS_TUTORIAL); // o tutorial segue as regras com que o roteiro dele foi feito
-    partida++;
+    M.definirRegras(null); // regras oficiais
+    const id = ++partida;
     prepararMesa();
     Som.musica('partida');
     fecharModal();
@@ -4230,10 +4235,9 @@ window.SS = window.SS || {};
     palhacos = aula.palhacos.slice();
     const nomes = palhacos.map(x => P.get(x).nome);
     const decks = [0, 1].map(k => M.cartasDoDeck(M.contagemPadrao(), k));
+    // Mesa provisória só para mostrar os Palhaços durante a conversa e o sorteio.
     jogo = M.criarJogo({ nomes, primeiro: 0, decks, palhacos });
     ui = novoUi();
-    aula.montar(jogo);
-    M.registrar(jogo, `${nomes[0]} × ${nomes[1]}.`);
     render();
     SS.Tutorial.comecar(n, {
       jogo: () => jogo, ui: () => ui, render,
@@ -4251,6 +4255,34 @@ window.SS = window.SS || {};
       soltarDica: () => { if (ui) ui.dicaFixa = false; $('#dica').hidden = true; },
       negar: (sel, texto) => negar(sel && document.querySelector(sel), texto, []),
     });
+    await tutGancho('mesa');
+    if (id !== partida) return;
+    ui.tutSorteio = true;
+    const dadosInicio = await sorteioNoDado(id, nomes);
+    if (!dadosInicio) return;
+    const primeiro = dadosInicio[0] > dadosInicio[1] ? 0 : 1;
+    await tutGancho('depoisSorteio', { dados: dadosInicio });
+    if (id !== partida) return;
+    jogo = M.criarJogo({ nomes, primeiro, decks, palhacos });
+    ui = novoUi();
+    maoVista = [null, null];
+    campoVisto = [null, null];
+    posCampo = [{}, {}];
+    M.registrar(jogo, `${nomes[0]} × ${nomes[1]}.`);
+    M.registrar(jogo, t('log.inicioDados', { a: nomes[0], da: dadosInicio[0], b: nomes[1], db: dadosInicio[1], j: nomes[primeiro] }));
+    render();
+    mostrarAnuncio(anuncioInicio(primeiro, dadosInicio) + botaoContinuar(), 'inicio');
+    setTimeout(() => { if (id === partida) Som.tocar('impacto-medio'); }, 980);
+    await esperarContinuar(2600);
+    if (id !== partida) return;
+    esconderAnuncio();
+    aula.preparar(jogo); // (os baralhos da aula e a abertura do oponente)
+    render();
+    await tutGancho('abertura');
+    if (id !== partida) return;
+    await aberturaHumana();
+    if (id !== partida) return;
+    proximoTurno(id);
   }
 
   // Turno do oponente no tutorial: a aula faz as jogadas dele; depois ele ataca com quem puder.
@@ -4709,12 +4741,12 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 109, data: '27/10/2026',
+    n: 110, data: '28/10/2026',
     novidades: [
+      ['Tutorial novo, com as regras oficiais: começa no sorteio do dado e na escolha das figuras, e ensina o Ímpeto, o Rei sacrificando o Valete e a Ordem real', 'New tutorial with the official rules: it starts with the dice roll-off and the face card pick, and teaches Haste, the King sacrificing a Jack and the Royal order'],
       ['Cartas com fundo e naipes desenhados à mão (4 variações de fundo)', 'Cards with hand-drawn backgrounds and suits (4 background variations)'],
       ['Ourinhos tem passiva nova, Dividendos: ao acertar o Palhaço inimigo, compra 1 carta (1 vez por turno). Os Juros compostos ficam nos modificadores', 'Ourinhos has a new passive, Dividends: when he hits the enemy Jester, he draws 1 card (once per turn). Compound Interest stays in the modifiers'],
       ['Bots mais espertos em todos os níveis: treinados nas regras novas, guardam pares e recursos, e o Difícil planeja o turno', 'Smarter bots at every level: trained on the new rules, they keep pairs and resources, and Hard plans its turn'],
-      ['Decks temáticos novos (VALETES, Mi Corazon, REIeQUEEN, DAD??) e PV novos: Infartitte 24, Ourinhos 16', 'New themed decks (VALETES, Mi Corazon, REIeQUEEN, DAD??) and new HP: Infartitte 24, Ourinhos 16'],
     ],
   };
 
