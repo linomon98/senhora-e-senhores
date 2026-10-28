@@ -1,16 +1,28 @@
 /* Bot de "Senhora e Senhores".
    O bot escolhe, a cada momento, a jogada que deixa a mesa com a melhor "nota" (avaliar). Ataques e
    bloqueios são decididos pelo valor esperado de todas as rolagens possíveis.
-   - Fácil: pesos feitos à mão (o antigo Difícil).
-   - Médio: meio caminho entre os pesos feitos à mão e os aprendidos.
-   - Difícil: pesos aprendidos por autojogo (1ª rodada de treino).
-   - Profissional: pesos treinados + simulação: antes de cada jogada, testa as melhores opções jogando o
-     resto do turno e o turno do rival várias vezes (sem espiar a mão do rival). */
+   Todos os níveis usam os pesos treinados nas regras novas (js/pesos.js: PESOS_NOVOS).
+   - Fácil: escolhas com bastante acaso.
+   - Médio: sempre a melhor jogada da hora.
+   - Difícil: planeja a sequência de jogadas do turno (a melhor 2ª jogada depois de cada 1ª).
+   - Profissional: como o Difícil, olhando mais opções em cada passo. */
 window.SS = window.SS || {};
 (function (SS) {
   'use strict';
   const M = SS.Motor;
-  const clonar = typeof structuredClone === 'function' ? structuredClone : o => JSON.parse(JSON.stringify(o));
+  const copiar = typeof structuredClone === 'function' ? structuredClone : o => JSON.parse(JSON.stringify(o));
+  // Cópia da mesa para o bot pensar: sem o registro (log), que não muda nenhuma decisão e pesa para copiar.
+  const clonar = e => {
+    const log = e.log;
+    e.log = [];
+    try {
+      const c = copiar(e);
+      c.mudo = true;
+      return c;
+    } finally {
+      e.log = log;
+    }
+  };
 
   // Pesos da avaliação da mesa. PESOS_BASE são os pesos feitos à mão (o bot "clássico");
   // os níveis de cima usam pesos aprendidos por autojogo (js/pesos.js, gerados por ferramentas/treino.js).
@@ -21,20 +33,27 @@ window.SS = window.SS || {};
     maoNum: 0.04, maoAs: 1.6, maoPar: 3.4, maoFigSolta: 1, maoNumSolto: 1,
     opMao: 1.2, ferida: 2, deckPouco: 1,
     ameaca: 0, bloqueadores: 0, // extras que o aprendizado pode descobrir (começam desligados)
+    // Cartas guardadas na mão também valem (sem isso o bot gasta qualquer recurso por um ganho mínimo):
+    // pares de números iguais (Pargia, Refletir), Ouros (dados extras, compras) e Copas (cura).
+    maoParIgual: 2.5, maoOuros: 0.4, maoCopas: 0.3,
   };
   const PESOS_APRENDIDOS = Object.assign({}, PESOS_BASE, SS.PESOS_APRENDIDOS || {});
   const PESOS_PRO = Object.assign({}, PESOS_APRENDIDOS, SS.PESOS_PRO || {});
-  const PESOS_MEDIO = {};
-  for (const k in PESOS_BASE) PESOS_MEDIO[k] = (PESOS_BASE[k] + PESOS_APRENDIDOS[k]) / 2;
+  // Pesos treinados nas regras e decks novos (27/10/2026); sem eles (pesos.js antigo), ficam os aprendidos.
+  const PESOS_NOVOS = Object.assign({}, PESOS_APRENDIDOS, SS.PESOS_NOVOS || {});
+  const LIMIAR = SS.LIMIAR_NOVO != null ? SS.LIMIAR_NOVO : 0.15;
   // Pesos em uso na decisão atual (as decisões são síncronas, então dá para trocar por nível).
   let W = PESOS_BASE;
 
   // Níveis. profundidade 2 = planeja a sequência de jogadas do turno (melhor 2ª jogada depois de cada 1ª).
   const NIVEIS = {
-    facil: { pesos: PESOS_BASE, ruido: 0, limiar: 0.15, alvosAs: true, ourosDados: true, pares: true, profundidade: 1 },
-    medio: { pesos: PESOS_MEDIO, ruido: 0, limiar: 0.15, alvosAs: true, ourosDados: true, pares: true, profundidade: 1 },
-    dificil: { pesos: PESOS_APRENDIDOS, ruido: 0, limiar: 0.15, alvosAs: true, ourosDados: true, pares: true, profundidade: 1 },
-    profissional: { pesos: PESOS_PRO, ruido: 0, limiar: 0.15, alvosAs: true, ourosDados: true, pares: true, profundidade: 1, simulacoes: 6, largura: 4, politica: 'dificil' },
+    // (Medido em 27/10/2026: simular o resto do turno, como fazia o Profissional antigo, deixava o bot mais fraco
+    // que o Difícil — a sorte dos dados pesa mais que as poucas simulações. A força agora vem dos pesos treinados
+    // e de planejar a sequência de jogadas do turno.)
+    facil: { pesos: PESOS_NOVOS, ruido: 5, limiar: LIMIAR, alvosAs: true, ourosDados: true, pares: true, profundidade: 1 },
+    medio: { pesos: PESOS_NOVOS, ruido: 0, limiar: LIMIAR, alvosAs: true, ourosDados: true, pares: true, profundidade: 1 },
+    dificil: { pesos: PESOS_NOVOS, ruido: 0, limiar: LIMIAR, alvosAs: true, ourosDados: true, pares: true, profundidade: 2, largura: 3 },
+    profissional: { pesos: PESOS_NOVOS, ruido: 0, limiar: LIMIAR, alvosAs: true, ourosDados: true, pares: true, profundidade: 2, largura: 5 },
   };
   // Configuração de um nível (aceita também um objeto de configuração pronto, usado no treino).
   const configDe = nivel => (typeof nivel === 'object' ? nivel : NIVEIS[nivel] || NIVEIS.medio);
@@ -103,7 +122,8 @@ window.SS = window.SS || {};
     const pv = (q, x) => { F.pvBaixo += q * Math.min(x, 14); F.pvAlto += q * Math.max(0, x - 14); F.perigo -= q * (x <= 6 ? 7 - x : 0); };
     pv(1, eu.pv);
     pv(-1, op.pv);
-    if (e.vez === p && e.desafio != null) F.desafio = 1; // Desafio! do Lançalotte armado para o ataque
+    // Desafio! do Lançalotte armado para o ataque (só vale se algum Senhor(a) dele ainda pode atacar)
+    if (e.vez === p && e.desafio != null && eu.campo.some((u, i) => u && u.tipo === 'senhor' && M.podeAtacar(e, p, i))) F.desafio = 1;
     for (const [q, s] of [[p, 1], [1 - p, -1]]) {
       const j = e.jogadores[q];
       for (let i = 0; i < M.ESPACOS; i++) {
@@ -141,6 +161,14 @@ window.SS = window.SS || {};
     }
     const pares = Math.min(figuras, numeros);
     F.maoPar = pares;
+    const porValor = {};
+    for (const c of eu.mao) {
+      if (M.ehFigura(c)) continue;
+      porValor[c.rank] = (porValor[c.rank] || 0) + 1;
+      if (c.naipe === 'ouros') F.maoOuros++;
+      else if (c.naipe === 'copas') F.maoCopas++;
+    }
+    for (const r in porValor) F.maoParIgual += Math.floor(porValor[r] / 2);
     F.maoFigSolta = figuras - pares;
     F.maoNumSolto = numeros - pares;
     F.opMao = -op.mao.length;
@@ -235,8 +263,11 @@ window.SS = window.SS || {};
     op.numeros = pn.slice(resto.length);
   }
 
-  // Valor médio da jogada a: aplica, joga até o fim do turno do rival (com a política do Difícil) e avalia.
-  function simular(e, p, a, cfg, sementes) {
+  const novasSementes = cfg => Array.from({ length: cfg.simulacoes }, () => (Math.random() * 2 ** 32) >>> 0);
+
+  // Valor médio de uma decisão: aplica (aplicar(c) na cópia da mesa), joga até o fim do turno do rival
+  // (com a política do Difícil) e avalia do ponto de vista de p.
+  function simular(e, p, aplicar, cfg, sementes) {
     const politica = configDe(cfg.politica || 'dificil');
     const rngMotor = M.rngAtual(), aleatorio = Math.random;
     let soma = 0;
@@ -248,13 +279,13 @@ window.SS = window.SS || {};
         try {
           const c = clonar(e);
           determinizar(c, p);
-          M.aplicarAcao(c, a);
+          aplicar(c);
           jogarAte(c, [politica, politica], e.turno + 2);
           usar(cfg);
           soma += avaliar(c, p);
         } catch (erro) {
-          usar(cfg); // simulação que travou (não deve acontecer): vale a mesa de agora
-          soma += avaliar(e, p);
+          usar(cfg); // decisão ilegal ou simulação que travou: nunca é a escolhida
+          soma -= 1e9;
         }
       }
     } finally {
@@ -286,7 +317,7 @@ window.SS = window.SS || {};
     }
     // Simulação: as melhores jogadas (e "parar e atacar") são testadas jogando o resto do turno e o turno
     // do rival várias vezes; vence a que deixa a mesa melhor, em média.
-    if (cfg.simulacoes) {
+    if (cfg.simulacoes && cfg.simularPrincipal !== false) {
       notas.sort((x, y) => y.v - x.v);
       const cands = [{ a: { tipo: 'atacar' } }], vistos = new Set();
       for (const n of notas) {
@@ -296,10 +327,10 @@ window.SS = window.SS || {};
         vistos.add(k);
         cands.push(n);
       }
-      const sementes = Array.from({ length: cfg.simulacoes }, () => (Math.random() * 2 ** 32) >>> 0);
+      const sementes = novasSementes(cfg);
       let melhorS = cands[0], melhorV = -Infinity;
       for (const n of cands) {
-        const v = simular(e, p, n.a, cfg, sementes);
+        const v = simular(e, p, c => M.aplicarAcao(c, n.a), cfg, sementes);
         if (v > melhorV) {
           melhorV = v;
           melhorS = n;
@@ -384,7 +415,7 @@ window.SS = window.SS || {};
     for (const uid of aptos.slice().sort((a, b) => forca(e, b) - forca(e, a))) {
       const u = M.localizar(e, uid).u;
       for (let t = 0; t < u.ataques; t++) {
-        let melhor = null, mv = base + cfg.limiar;
+        let melhor = null, mv = base + (cfg.limiarAtaque != null ? cfg.limiarAtaque : cfg.limiar);
         const todos = M.alvosPossiveis(e, uid);
         const alvos = cfg.alvosAs ? todos : todos.filter(a => a === 'jogador' || (u.figura.rank === 'K' && M.localizar(e, a).u.tipo === 'senhor'));
         for (const alvo of alvos) {
@@ -403,7 +434,39 @@ window.SS = window.SS || {};
         ourosLivres = removerItens(ourosLivres, melhor.ouros);
       }
     }
-    return plano;
+    return cfg.simulacoes && cfg.simularCombate ? melhorPlano(e, p, plano, cfg) : plano;
+  }
+
+  // Profissional: compara o plano de ataque com versões mais cautelosas (sem um dos ataques, ou sem atacar),
+  // simulando o combate e o turno seguinte do rival.
+  function melhorPlano(e, p, plano, cfg) {
+    if (!plano.length) return plano;
+    const cands = [plano, []];
+    if (plano.length > 1) for (let k = 0; k < plano.length && cands.length < 6; k++) cands.push(plano.filter((_, j) => j !== k));
+    return melhorPorSimulacao(e, p, cands, pl => c => M.declararAtaques(c, pl), cfg);
+  }
+
+  // Profissional: compara os bloqueios escolhidos com não bloquear (todos ou um de cada vez).
+  function melhorBloqueio(e, d, mapa, cfg) {
+    const nums = Object.keys(mapa), comBloqueio = nums.filter(n => mapa[n].length);
+    if (!comBloqueio.length) return mapa;
+    const cands = [mapa, Object.fromEntries(nums.map(n => [n, []]))];
+    if (comBloqueio.length > 1) for (const n of comBloqueio) if (cands.length < 6) cands.push(Object.assign({}, mapa, { [n]: [] }));
+    return melhorPorSimulacao(e, d, cands, m => c => M.definirBloqueios(c, m), cfg);
+  }
+
+  function melhorPorSimulacao(e, p, cands, aplicador, cfg) {
+    const sementes = novasSementes(cfg);
+    let melhor = cands[0], mv = -Infinity;
+    for (const x of cands) {
+      const v = simular(e, p, aplicador(x), cfg, sementes);
+      if (v > mv) {
+        mv = v;
+        melhor = x;
+      }
+    }
+    usar(cfg);
+    return melhor;
   }
 
   // Par de números iguais na mão: o bot reflete os ataques mais fortes (o golpe volta no dono do atacante).
@@ -455,7 +518,7 @@ window.SS = window.SS || {};
       mapa[at.n] = melhor;
       marcar(melhor);
     }
-    return mapa;
+    return cfg.simulacoes && cfg.simularCombate ? melhorBloqueio(e, d, mapa, cfg) : mapa;
   }
 
   // ---------- Abertura e descarte ----------
@@ -479,10 +542,25 @@ window.SS = window.SS || {};
     return nums.length < 2 || !nums.some(c => M.valor(c) <= 7);
   }
 
-  function descartar(e, p) {
-    const mao = e.jogadores[p].mao;
-    const n = mao.length - M.limiteMao(e.jogadores[p]);
-    return mao.slice().sort((a, b) => valorCarta(a) - valorCarta(b)).slice(0, n).map(c => c.id);
+  // Descarte: tira, uma a uma, a carta cuja falta menos piora a nota da mesa (assim guarda pares e recursos).
+  function descartar(e, p, nivel) {
+    usar(configDe(nivel));
+    const j = e.jogadores[p], n = j.mao.length - M.limiteMao(j), fora = [];
+    const c = clonar(e), mao = c.jogadores[p].mao;
+    for (let k = 0; k < n; k++) {
+      let melhor = 0, mv = -Infinity;
+      for (let i = 0; i < mao.length; i++) {
+        const tirada = mao.splice(i, 1)[0];
+        const v = avaliar(c, p) - valorCarta(tirada) * 0.01; // (empate: sai a carta mais fraca)
+        mao.splice(i, 0, tirada);
+        if (v > mv) {
+          mv = v;
+          melhor = i;
+        }
+      }
+      fora.push(mao.splice(melhor, 1)[0].id);
+    }
+    return fora;
   }
 
   // ---------- Partida completa sem interface (para testar o equilíbrio) ----------
@@ -509,7 +587,7 @@ window.SS = window.SS || {};
       for (let g = 0; g < 12 && e.fase === 'principal'; g++) M.aplicarAcao(e, proximaAcao(e, p, niveis[p]));
       if (e.vencedor != null) break;
       if (e.fase === 'principal') M.aplicarAcao(e, { tipo: 'atacar' });
-      M.declararAtaques(e, declararAtaques(e, p, niveis[p]));
+      if (e.fase === 'ataque') M.declararAtaques(e, declararAtaques(e, p, niveis[p]));
       if (e.fase === 'bloqueio') {
         for (const rf of refletir(e, 1 - p)) M.refletir(e, rf.n, rf.cartas);
         M.definirBloqueios(e, bloquear(e, 1 - p, niveis[1 - p]));
@@ -521,9 +599,9 @@ window.SS = window.SS || {};
       }
       if (e.vencedor != null) break;
       M.encerrarTurno(e);
-      if (e.fase === 'descarte') M.descartar(e, descartar(e, e.vez));
+      if (e.fase === 'descarte') M.descartar(e, descartar(e, e.vez, niveis[e.vez]));
     }
   }
 
-  SS.Bot = { proximaAcao, escolherBaralho, declararAtaques, bloquear, refletir, contraRefletir, descartar, escolherFiguras, querMulligan, partidaAutomatica, avaliar, caracteristicas, PESOS_BASE, PESOS_APRENDIDOS, PESOS_PRO, NIVEIS };
+  SS.Bot = { proximaAcao, escolherBaralho, declararAtaques, bloquear, refletir, contraRefletir, descartar, escolherFiguras, querMulligan, partidaAutomatica, avaliar, caracteristicas, PESOS_BASE, PESOS_APRENDIDOS, PESOS_PRO, PESOS_NOVOS, NIVEIS };
 })(window.SS);

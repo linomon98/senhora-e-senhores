@@ -21,3 +21,11 @@ window.SS.PESOS_PRO = {
   opMao: 0.644, ferida: 3.44, deckPouco: 0.522,
   ameaca: -0.038, bloqueadores: 0.183,
 };
+
+/* Pesos novos (27/10/2026), treinados nas regras oficiais novas e com os decks temáticos novos: estratégia evolutiva
+   (80 iterações de 576 partidas, sorte comum entre as variações), a partir dos pesos aprendidos acima.
+   Usados por todos os níveis (ver bot.js). Venceram o Difícil antigo em 59% de 300 partidas (60% contra o publicado). */
+window.SS.PESOS_NOVOS = {
+  pvBaixo: 2.326, pvAlto: 0.443, perigo: 2.52, desafio: 1.283, asBase: 2.837, asVizinho: 1.543, uBase: 0.777, uAtk: 2.008, uVida: 1.042, uNaipado: 1.556, uRealeza: 0.9, uPorUmFio: 1.215, uNaoBloqueia: 0.585, uVigilia: 0.383, uBonus: 1.156, maoNum: -0.217, maoAs: 1.261, maoPar: 6.983, maoFigSolta: 0.492, maoNumSolto: 0.733, opMao: 0.708, ferida: 3.027, deckPouco: 0.571, ameaca: 0.036, bloqueadores: 0.133, maoParIgual: 2.584, maoOuros: 0.296, maoCopas: 0.286,
+};
+window.SS.LIMIAR_NOVO = 0.055;

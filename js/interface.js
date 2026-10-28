@@ -4150,7 +4150,7 @@ window.SS = window.SS || {};
     if (jogo.vencedor != null) return fimDeJogo();
     M.encerrarTurno(jogo);
     if (jogo.fase === 'descarte') {
-      if (controle(jogo.vez) === 'bot') M.descartar(jogo, Bot.descartar(jogo, jogo.vez));
+      if (controle(jogo.vez) === 'bot') M.descartar(jogo, Bot.descartar(jogo, jogo.vez, nivelDe(jogo.vez)));
       else if (controle(jogo.vez) === 'remoto') {
         const m = await SS.Rede.esperar(['descarte']);
         if (id !== partida) return;
@@ -4681,11 +4681,11 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 106, data: '27/10/2026',
+    n: 107, data: '27/10/2026',
     novidades: [
+      ['Bots mais espertos em todos os níveis: treinados nas regras novas, guardam pares e recursos, e o Difícil planeja o turno', 'Smarter bots at every level: trained on the new rules, they keep pairs and resources, and Hard plans its turn'],
+      ['Decks temáticos novos (VALETES, Mi Corazon, REIeQUEEN, DAD??) e PV novos: Infartitte 24, Ourinhos 14', 'New themed decks (VALETES, Mi Corazon, REIeQUEEN, DAD??) and new HP: Infartitte 24, Ourinhos 14'],
       ['Efeitos na mesa para cada recurso, magia e Pargia (Trovão, Meteoro, Sai daqui, Berserk, cura...)', 'Board effects for every resource, magic and Pairgic (Thunder, Meteor, Get out, Berserk, healing...)'],
-      ['O resumo do último ataque não segura mais o turno', 'The last attack summary no longer holds up the turn'],
-      ['Tela de Regras nova, com infográficos das cartas', 'New Rules screen, with card infographics'],
       ['Regras oficiais novas: Rei sacrifica 1 Valete, 1 invocação de cada letra, defesa e cura sem limite, Casca grossa −1 nos Naipados de Paus, PV novos', 'New official rules: King sacrifices 1 Jack, 1 summon of each letter, no defense or healing cap, Thick Bark −1 on Clubs Suited, new HP'],
     ],
   };
@@ -4815,7 +4815,7 @@ window.SS = window.SS || {};
     ['palhaco', 0, 250, 100, ['pvBaixo', 'pvAlto', 'perigo']],
     ['senhores', 0, 250, 100, ['uBase', 'uAtk', 'uVida', 'uNaipado', 'uRealeza']],
     ['cautela', 0, 300, 100, ['uPorUmFio', 'uNaoBloqueia', 'ameaca', 'bloqueadores']],
-    ['guardar', 0, 300, 100, ['maoNum', 'maoAs', 'maoPar', 'maoFigSolta', 'maoNumSolto']],
+    ['guardar', 0, 300, 100, ['maoNum', 'maoAs', 'maoPar', 'maoFigSolta', 'maoNumSolto', 'maoParIgual', 'maoOuros', 'maoCopas']],
     ['ases', 0, 300, 100, ['asBase', 'asVizinho']],
     ['iniciativa', 0, 300, 100, []], // limiar: quanto melhor a jogada precisa ser para ele agir (alto = mais parado)
     ['acaso', 0, 100, 0, []], // ruído: escolhas menos previsíveis

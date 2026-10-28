@@ -89,9 +89,9 @@ window.SS = window.SS || {};
   // Compra do turno: 1 carta do baralho que o jogador escolher; o Ourinhos (compraDupla) compra 2, escolhendo o monte de cada.
   const PALHACOS = {
     lancalotte: { naipe: 'espadas', pv: 19, limiteMao: 7, poder: 'desafio', dadosPrimeiro: 1, ataquePrimeiro: 1 },
-    infartitte: { naipe: 'copas', pv: 17, limiteMao: 7, poder: 'transfusao', curaExtra: 1 },
+    infartitte: { naipe: 'copas', pv: 24, limiteMao: 7, poder: 'transfusao', curaExtra: 1 },
     paumol: { naipe: 'paus', pv: 20, limiteMao: 7, poder: 'vigilia', reducaoDefesa: 2, soPaus: false },
-    ourinhos: { naipe: 'ouros', pv: 16, limiteMao: 6, poder: 'roubo', compraDupla: true }, // rouba 1 carta da mão do oponente
+    ourinhos: { naipe: 'ouros', pv: 14, limiteMao: 6, poder: 'roubo', compraDupla: true }, // rouba 1 carta da mão do oponente
   };
   const SENHORES_POR_TURNO = 1; // Senhores que dá para sumonar por turno (a Rainha conta)
   const ASES_POR_TURNO = 1; // Ases (totens) que dá para invocar por turno

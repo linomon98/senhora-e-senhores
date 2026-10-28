@@ -5,54 +5,46 @@ window.SS = window.SS || {};
   'use strict';
 
   // Decks temáticos: até 12 figuras e 40 números, até 6 cópias da mesma carta.
-  // Calibrados com o simulador (558 partidas: todos os Palhaços entre 45% e 54% de vitórias).
+  // São os decks que o Leonardo montou para cada Palhaço (27/10/2026), com a caixinha de cada um.
   const LISTA = [
     {
-      // Duelista: Valetes de Espadas (entram atacando) com Espadas de 2 a 4 (Naipados, +1 de ataque),
-      // Reis de Espadas para mirar Senhores, Ases de Espadas (+1 aos vizinhos) e Espadas altas para o bônus de +1.
+      // Valetes e Reis de Espadas com Espadas baixas (Naipados entram atacando) e Ouros para os dados extras.
       id: 'lancalotte', nome: 'Lançalotte', naipe: 'espadas', cor: 'azul',
+      caixa: { nome: 'VALETES', visual: { tampa: 'azul', icone: 'espada', corIcone: 'azul' } },
       deck: {
-        'J-espadas': 4, 'J-copas': 1, 'J-ouros': 1, 'Q-espadas': 2, 'K-espadas': 3, 'K-ouros': 1,
-        '2-espadas': 4, '3-espadas': 4, '4-espadas': 4, '5-espadas': 4, '8-espadas': 2, '9-espadas': 2, '10-espadas': 2, 'A-espadas': 2,
-        '2-ouros': 2, '3-ouros': 2, '4-ouros': 2,
-        '5-copas': 2, '6-copas': 1, '7-copas': 2, '9-copas': 1,
-        '6-paus': 2, '7-paus': 2,
+        'J-espadas': 6, 'K-espadas': 6,
+        'A-espadas': 6, '3-espadas': 6, '4-espadas': 6, '7-espadas': 6,
+        'A-ouros': 6, '4-ouros': 6, '7-ouros': 4,
       },
     },
     {
-      // Coração teimoso: Reis de Copas Naipados (ferida) e muita cura de Copas, que paga a Transfusão
-      // (2 PV para tirar 1 hit de um aliado, 4 PV para dar 1 hit num inimigo). Ases de Copas: vampiro.
+      // Figuras de Copas Naipadas (ferida) e muita Copas para curar e pagar a Transfusão; Ouros para dados extras.
       id: 'infartitte', nome: 'Infartitte', naipe: 'copas', cor: 'vermelho',
+      caixa: { nome: 'Mi Corazon', visual: { tampa: 'vermelho', icone: 'cura', corIcone: 'vermelho' } },
       deck: {
-        'K-copas': 5, 'Q-copas': 2, 'J-copas': 2, 'K-paus': 1, 'K-espadas': 1, 'J-espadas': 1,
-        '3-copas': 2, '4-copas': 2, '5-copas': 3, '6-copas': 4, '7-copas': 4, '8-copas': 2, '9-copas': 2, '10-copas': 2, 'A-copas': 3,
-        '5-paus': 2, '6-paus': 2, '7-paus': 2, '8-paus': 1,
-        '5-espadas': 2, '7-espadas': 2, '9-espadas': 1,
-        '3-ouros': 2, '4-ouros': 2,
+        'J-copas': 3, 'Q-copas': 2, 'K-copas': 4, 'J-ouros': 3,
+        'A-copas': 3, '2-copas': 2, '4-copas': 6, '7-copas': 6, '10-copas': 6,
+        'A-ouros': 5, '4-ouros': 6, '6-ouros': 6,
       },
     },
     {
-      // Muro: 5 Reis de Paus e Valetes de Paus Naipados (aguentam 3 hits) e 5 Ases de Paus,
-      // que dão +1 de resistência aos vizinhos (um Naipado de Paus ao lado aguenta 4).
+      // Reis e Rainhas de Paus Naipados (aguentam muito) com Paus para fechar a fileira; Ouros para dados extras.
       id: 'paumol', nome: 'Paumol', naipe: 'paus', cor: 'verde',
+      caixa: { nome: 'REIeQUEEN', visual: { tampa: 'verde', icone: 'cavaleiro', corIcone: 'verde' } },
       deck: {
-        'K-paus': 5, 'J-paus': 3, 'Q-paus': 2, 'K-copas': 1, 'J-ouros': 1,
-        '2-paus': 2, '3-paus': 2, '4-paus': 3, '5-paus': 3, '6-paus': 3, '7-paus': 3, '8-paus': 2, '9-paus': 1, '10-paus': 1, 'A-paus': 5,
-        '4-copas': 2, '6-copas': 2, '8-copas': 1,
-        '5-espadas': 2, '7-espadas': 2,
-        '2-ouros': 2, '3-ouros': 2, '5-ouros': 2,
+        'J-paus': 6, 'Q-paus': 2, 'K-paus': 4,
+        '3-paus': 6, '4-paus': 6, '7-paus': 6, '10-paus': 6,
+        'A-ouros': 6, '4-ouros': 6, '6-ouros': 4,
       },
     },
     {
-      // Banqueiro ladrão: Valetes de Ouros Naipados (atacam 2 vezes no mesmo turno), Ouros baixos
-      // para trocar cartas e ganhar dados extras, e a Cobrança para roubar as cartas do oponente.
+      // Valetes e Reis de Ouros (Naipados atacam 2 vezes) com muitos Ouros para dados e compras; Paus baixos e Ases de Paus.
       id: 'ourinhos', nome: 'Ourinhos', naipe: 'ouros', cor: 'dourado',
+      caixa: { nome: 'DAD??', visual: { tampa: 'amarelo', icone: 'dados', corIcone: 'amarelo' } },
       deck: {
-        'J-ouros': 4, 'Q-ouros': 2, 'K-ouros': 2, 'J-espadas': 1, 'J-copas': 1, 'K-paus': 1, 'Q-espadas': 1,
-        '2-ouros': 3, '3-ouros': 3, '4-ouros': 3, '5-ouros': 3, '6-ouros': 2, '7-ouros': 2, '9-ouros': 1, '10-ouros': 1, 'A-ouros': 3,
-        '4-espadas': 2, '8-espadas': 2, '10-espadas': 1,
-        '3-copas': 2, '5-copas': 2, '7-copas': 2,
-        '4-paus': 2, '5-paus': 2, '6-paus': 2, '7-paus': 2,
+        'J-ouros': 6, 'K-ouros': 6,
+        'A-paus': 6, '3-paus': 4, '4-paus': 6,
+        'A-ouros': 6, '4-ouros': 6, '6-ouros': 6, '7-ouros': 6,
       },
     },
   ];
@@ -64,27 +56,27 @@ window.SS = window.SS || {};
         titulo: 'o duelista',
         passiva: { nome: 'Golpe certeiro', texto: 'O 1º ataque de cada turno ganha +1 dado (vale o maior) e +1 de ataque. Começa com 19 PV.' },
         poder: { nome: 'Desafio!', texto: 'Escolha um Senhor(a) inimigo ativo: neste turno ele(a) é obrigado(a) a bloquear o seu primeiro ataque (se puder).' },
-        plano: 'Ataca cedo e forte: Valetes entram atacando, Rainhas fecham o jogo, Naipados de Espadas ganham +1.',
+        plano: 'Ataca cedo e forte: Valetes entram atacando, Reis miram os Senhores inimigos e Ouros compram dados extras.',
       },
       en: {
         titulo: 'the duelist',
         passiva: { nome: 'True Strike', texto: 'The 1st attack each turn gets +1 die (the highest counts) and +1 attack. Starts with 19 HP.' },
         poder: { nome: 'Challenge!', texto: 'Choose a ready enemy Gentleman: this turn it must block your first attack (if it can).' },
-        plano: 'Attacks early and hard: Jacks come in swinging, Queens close the game, Suited Spades get +1.',
+        plano: 'Attacks early and hard: Jacks come in swinging, Kings aim at enemy Gentlemen and Diamonds buy extra dice.',
       },
     },
     infartitte: {
       pt: {
         titulo: 'o coração teimoso',
-        passiva: { nome: 'Coração forte', texto: 'Suas cartas de Copas curam +1 PV (o que paga a Transfusão). Começa com 17 PV.' },
+        passiva: { nome: 'Coração forte', texto: 'Suas cartas de Copas curam +1 PV (o que paga a Transfusão). Começa com 24 PV.' },
         poder: { nome: 'Transfusão', texto: 'Pague 2 PV para tirar 1 hit de um Senhor(a) seu, ou 4 PV para dar 1 hit num Senhor(a) inimigo.' },
-        plano: 'Aguenta e drena: Reis seguram a linha, Copas cura, Naipados de Copas aplicam ferida.',
+        plano: 'Aguenta e drena: figuras de Copas aplicam ferida, Copas cura e Ouros dão dados extras.',
       },
       en: {
         titulo: 'the stubborn heart',
-        passiva: { nome: 'Strong Heart', texto: 'Your Hearts cards heal +1 HP (which pays for Transfusion). Starts with 17 HP.' },
+        passiva: { nome: 'Strong Heart', texto: 'Your Hearts cards heal +1 HP (which pays for Transfusion). Starts with 24 HP.' },
         poder: { nome: 'Transfusion', texto: 'Pay 2 HP to remove 1 hit from one of your Gentlemen, or 4 HP to deal 1 hit to an enemy Gentleman.' },
-        plano: 'Endures and drains: Kings hold the line, Hearts heal, Suited Hearts inflict wounds.',
+        plano: 'Endures and drains: Hearts face cards inflict wounds, Hearts heal and Diamonds give extra dice.',
       },
     },
     paumol: {
@@ -92,27 +84,27 @@ window.SS = window.SS || {};
         titulo: 'o muro',
         passiva: { nome: 'Casca grossa', texto: 'Seus Naipados de Paus recebem 1 de dano a menos ao defender. Começa com 20 PV.' },
         poder: { nome: 'Vigília', texto: 'Escolha 1 Senhor(a) seu: ele(a) não vira para baixo no fim deste turno (ataca e ainda pode bloquear).' },
-        plano: 'Ninguém passa: Naipados de Paus aguentam 3 hits e Ases de Paus deixam a fileira mais resistente.',
+        plano: 'Ninguém passa: Reis e Rainhas de Paus Naipados seguram a fileira e Ouros dão dados extras.',
       },
       en: {
         titulo: 'the wall',
         passiva: { nome: 'Thick Bark', texto: 'Your Clubs Suited take 1 less damage when defending. Starts with 20 HP.' },
         poder: { nome: 'Vigil', texto: "Choose 1 of your Gentlemen: it doesn't flip face down at the end of this turn (it attacks and can still block)." },
-        plano: 'None shall pass: Suited Clubs survive 3 hits and Aces of Clubs make the row sturdier.',
+        plano: 'None shall pass: Suited Clubs Kings and Queens hold the row and Diamonds give extra dice.',
       },
     },
     ourinhos: {
       pt: {
         titulo: 'o banqueiro',
-        passiva: { nome: 'Juros compostos', texto: 'No começo do turno, compra 2 cartas, escolhendo de qual monte vem cada uma (os outros compram só 1). Limite de mão de 6 cartas. Começa com 16 PV.' },
+        passiva: { nome: 'Juros compostos', texto: 'No começo do turno, compra 2 cartas, escolhendo de qual monte vem cada uma (os outros compram só 1). Limite de mão de 6 cartas. Começa com 14 PV.' },
         poder: { nome: 'Cobrança', texto: 'Pague 2 PV para roubar 1 carta sorteada da mão do oponente.' },
-        plano: 'Rouba e acumula: tira as cartas do oponente e usa Valetes Naipados de Ouros, que atacam 2 vezes no mesmo turno.',
+        plano: 'Rouba e acumula: Valetes e Reis Naipados de Ouros (atacam 2 vezes) e muitos Ouros para dados e compras.',
       },
       en: {
         titulo: 'the banker',
-        passiva: { nome: 'Compound Interest', texto: 'At the start of the turn, draws 2 cards, choosing the pile for each one (the others draw only 1). Hand limit of 6 cards. Starts with 16 HP.' },
+        passiva: { nome: 'Compound Interest', texto: 'At the start of the turn, draws 2 cards, choosing the pile for each one (the others draw only 1). Hand limit of 6 cards. Starts with 14 HP.' },
         poder: { nome: 'Debt Collection', texto: "Pay 2 HP to steal 1 random card from the opponent's hand." },
-        plano: "Steals and hoards: takes the opponent's cards and uses Suited Jacks of Diamonds, which attack twice in the same turn.",
+        plano: "Steals and hoards: Suited Jacks and Kings of Diamonds (attack twice) and lots of Diamonds for dice and draws.",
       },
     },
   };

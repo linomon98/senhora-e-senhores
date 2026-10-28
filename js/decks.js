@@ -45,11 +45,14 @@ window.SS = window.SS || {};
       ${icone}${nome != null ? `<span class="maco-nome" style="font-size:calc(${tamanhoNome(nome)} * var(--u))">${escapar(nome)}</span>` : ''}
       <span class="maco-tampa cx-tampa"><img src="arte/menu/tampa-pb.webp" alt="" draggable="false"></span></span>`;
   }
+  // Caixinha do deck temático de um Palhaço (a que veio com o deck dele; sem ela, a cor e o naipe do Palhaço).
+  const visualTematico = p => (p.caixa && p.caixa.visual) || { tampa: COR_NAIPE[p.naipe], icone: 'naipe-' + p.naipe, corIcone: 'original' };
+
   // Caixinha de um deck pelo id usado na escolha antes da partida ('palhaco', 'padrao' ou o número do espaço).
   function caixaDe(id, palhaco) {
     if (id === 'palhaco') {
       const p = palhaco && SS.Palhacos.get(palhaco);
-      return caixa(p ? { tampa: COR_NAIPE[p.naipe], icone: 'naipe-' + p.naipe, corIcone: 'original' } : { tampa: 'roxo', icone: 'joker', corIcone: 'original' }, null);
+      return caixa(p ? visualTematico(p) : { tampa: 'roxo', icone: 'joker', corIcone: 'original' }, null);
     }
     if (id === 'padrao') return caixa({ tampa: 'marrom', icone: 'ases', corIcone: 'original' }, null);
     const k = Number(id), s = carregar()[k];
@@ -191,8 +194,8 @@ window.SS = window.SS || {};
   // nos decks de bot, os prontos são sempre os temáticos (servem de base).
   function prontos() {
     return SS.Palhacos.LISTA.map(p => {
-      const tematico = { id: p.id, nome: tr('dk.deckDe', { p: p.nome }), curto: p.nome, sub: p.plano, cont: p.deck,
-        visual: { tampa: COR_NAIPE[p.naipe], icone: 'naipe-' + p.naipe, corIcone: 'original' } };
+      const tematico = { id: p.id, nome: tr('dk.deckDe', { p: p.nome }) + (p.caixa ? ' · ' + p.caixa.nome : ''), curto: p.caixa ? p.caixa.nome : p.nome, sub: p.plano, cont: p.deck,
+        visual: visualTematico(p) };
       const b = palBot ? null : doBot(p.id), s = b && b.padrao != null ? b.slots[b.padrao] : null;
       if (!valido(s)) return tematico;
       return Object.assign(tematico, { nome: tr('dk.deckDe', { p: p.nome }) + ' · ' + (s.nome || `Deck ${b.padrao + 1}`), curto: s.nome || p.nome,
