@@ -4127,7 +4127,9 @@ window.SS = window.SS || {};
       const foto = capturarDuelo(at);
       const temDuelo = !!foto.atacante;
       // O duelo aparece no painel da direita (dentro do tabuleiro); os dados rolam soltos pela mesa.
-      if (temDuelo) mostrarDuelo(foto, total, null);
+      // (com o resumo do ataque anterior ainda na tela, o bot já rola sem trocar o quadro: o resumo novo entra no lugar
+      // quando este golpe se resolver; quem joga o dado aqui é você, então o quadro avisa para jogar)
+      if (temDuelo && !(ui.dueloSolto && controle(jogo.vez) !== 'humano')) mostrarDuelo(foto, total, null);
       SS.Dados.definirArena($('#mesa'));
       ui.tutAt = at;
       await tutGancho('antesDado', { at, p: jogo.vez });
@@ -4161,8 +4163,9 @@ window.SS = window.SS || {};
         animarPV();
         await tutGancho('duelo', { at, p: jogo.vez }); // o tutorial pode explicar o quadro do ataque antes de ele sumir
         if (id !== partida) return;
-        // Último ataque do turno: o pop-up fica o tempo de sempre, mas o turno já passa enquanto ele está na tela.
-        if (jogo.fase !== 'resolucao' && jogo.vencedor == null && !opcoes.popupContinuar && cfg.modo !== 'tutorial') soltarDuelo(2800);
+        // O pop-up fica o tempo de sempre, mas o jogo não espera por ele: o próximo ataque (ou o próximo turno) já começa
+        // enquanto ele está na tela.
+        if (jogo.vencedor == null && !opcoes.popupContinuar && cfg.modo !== 'tutorial') soltarDuelo(2800);
         else await esperarContinuar();
       } else await esperar(1200);
       if (id !== partida) return;
