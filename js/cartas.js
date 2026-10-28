@@ -26,7 +26,7 @@ window.SS = window.SS || {};
   // Borda preta na beirada da carta: a do desenho é fina demais (cerca de 1 px numa carta da mão) e sumia.
   const BORDA = '<rect x="2.2" y="2.2" width="195.6" height="275.6" rx="15" fill="none" stroke="#141414" stroke-width="4.5"/>';
   // Versão das imagens das cartas (trocar quando um arquivo mudar com o mesmo nome, para o navegador não usar o antigo).
-  const V_ARTE = '?v=3';
+  const V_ARTE = '?v=4';
 
   // Fundo da carta: uma das 4 variações desenhadas, sempre a mesma para a mesma carta (rank + naipe).
   const FUNDOS = ['a', 'b', 'c', 'd'];
