@@ -4685,7 +4685,7 @@ window.SS = window.SS || {};
     novidades: [
       ['Ourinhos tem passiva nova, Dividendos: ao acertar o Palhaço inimigo, compra 1 carta (1 vez por turno). Os Juros compostos ficam nos modificadores', 'Ourinhos has a new passive, Dividends: when he hits the enemy Jester, he draws 1 card (once per turn). Compound Interest stays in the modifiers'],
       ['Bots mais espertos em todos os níveis: treinados nas regras novas, guardam pares e recursos, e o Difícil planeja o turno', 'Smarter bots at every level: trained on the new rules, they keep pairs and resources, and Hard plans its turn'],
-      ['Decks temáticos novos (VALETES, Mi Corazon, REIeQUEEN, DAD??) e PV novos: Infartitte 24, Ourinhos 14', 'New themed decks (VALETES, Mi Corazon, REIeQUEEN, DAD??) and new HP: Infartitte 24, Ourinhos 14'],
+      ['Decks temáticos novos (VALETES, Mi Corazon, REIeQUEEN, DAD??) e PV novos: Infartitte 24, Ourinhos 16', 'New themed decks (VALETES, Mi Corazon, REIeQUEEN, DAD??) and new HP: Infartitte 24, Ourinhos 16'],
       ['Efeitos na mesa para cada recurso, magia e Pargia (Trovão, Meteoro, Sai daqui, Berserk, cura...)', 'Board effects for every resource, magic and Pairgic (Thunder, Meteor, Get out, Berserk, healing...)'],
     ],
   };
