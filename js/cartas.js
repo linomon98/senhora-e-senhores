@@ -1,4 +1,5 @@
-/* Desenho das cartas: placeholders no padrão clássico de baralho.
+/* Desenho das cartas: fundo desenhado (4 variações, arte/cartas/fundo-*.webp), naipes desenhados (arte/naipes)
+   nas posições clássicas do baralho.
    Para usar a arte final de uma carta, registre a imagem em SS.ARTE
    (chave = rank-naipe), por exemplo no fim deste arquivo:
      SS.ARTE['Q-copas'] = 'arte/rainha-de-copas.png';
@@ -11,16 +12,19 @@ window.SS = window.SS || {};
 
   // Cada naipe com a sua cor: Copas vermelho, Ouros amarelo, Paus verde, Espadas azul.
   const COR = { copas: '#d0202e', ouros: '#d49a06', paus: '#1c8a3a', espadas: '#1f55c8' };
-  const FORMA = {
-    copas: '<path d="M50 92C22 70 4 52 4 31 4 15 16 5 29 5c10 0 17 6 21 14 4-8 11-14 21-14 13 0 25 10 25 26 0 21-18 39-46 61z"/>',
-    ouros: '<path d="M50 3 88 50 50 97 12 50z"/>',
-    espadas: '<path d="M50 4C63 24 96 40 96 63c0 13-10 22-22 22-9 0-16-4-20-10 1 10 5 17 13 23H33c8-6 12-13 13-23-4 6-11 10-20 10C14 85 4 76 4 63 4 40 37 24 50 4z"/>',
-    paus: '<circle cx="50" cy="27" r="20"/><circle cx="25" cy="57" r="20"/><circle cx="75" cy="57" r="20"/><path d="M45 50c0 22-5 36-13 46h36c-8-10-13-24-13-46z"/>',
-  };
 
+  // Naipe desenhado (a imagem tem uma margem em volta do desenho, por isso sai um pouco maior que tam).
   function pip(naipe, cx, cy, tam, invertido) {
-    const rot = invertido ? ` rotate(180 ${tam / 2} ${tam / 2})` : '';
-    return `<g transform="translate(${cx - tam / 2} ${cy - tam / 2})${rot} scale(${tam / 100})" fill="${COR[naipe]}">${FORMA[naipe]}</g>`;
+    const t = tam * 1.18, rot = invertido ? ` transform="rotate(180 ${cx} ${cy})"` : '';
+    return `<image href="arte/naipes/${naipe}.webp" x="${(cx - t / 2).toFixed(1)}" y="${(cy - t / 2).toFixed(1)}" width="${t.toFixed(1)}" height="${t.toFixed(1)}"${rot}/>`;
+  }
+
+  // Fundo da carta: uma das 4 variações desenhadas, sempre a mesma para a mesma carta (rank + naipe).
+  const FUNDOS = ['a', 'b', 'c', 'd'];
+  function fundo(chave) {
+    let h = 0;
+    for (const ch of chave) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    return `<image href="arte/cartas/fundo-${FUNDOS[h % FUNDOS.length]}.webp" x="0" y="0" width="200" height="280" preserveAspectRatio="none"/>`;
   }
 
   // Posições clássicas dos naipes no miolo (carta de 200 x 280).
@@ -41,7 +45,8 @@ window.SS = window.SS || {};
 
   function canto(c) {
     const dez = c.rank === '10';
-    return `<text x="22" y="42" font-size="${dez ? 29 : 34}"${dez ? ' letter-spacing="-3"' : ''} text-anchor="middle" fill="${COR[c.naipe]}" font-family="${FONTE}" font-weight="700">${c.rank}</text>${pip(c.naipe, 22, 64, 26, false)}`;
+    // (na faixa lateral da moldura do fundo, abaixo da borda de cima)
+    return `<text x="23" y="60" font-size="${dez ? 22 : 28}"${dez ? ' letter-spacing="-3"' : ''} text-anchor="middle" fill="${COR[c.naipe]}" font-family="${FONTE}" font-weight="700">${c.rank}</text>${pip(c.naipe, 23, 78, 22, false)}`;
   }
 
   const GLIFO = { J: '♞', Q: '♛', K: '♚' };
@@ -53,9 +58,9 @@ window.SS = window.SS || {};
       ${pip(c.naipe, 64, 64, 32, false)}
       <text x="136" y="71" font-size="26" text-anchor="middle" fill="${cor}" font-family="${FONTE}" font-weight="700">${c.rank}</text>
       <text x="100" y="129" font-size="11" letter-spacing="2" text-anchor="middle" fill="${cor}" opacity=".8" font-family="${FONTE}">${nomeFace(c.rank)}</text>`;
-    return `<rect x="34" y="34" width="132" height="212" rx="4" fill="#f1e4c3" stroke="${cor}" stroke-width="2.5"/>
-      <rect x="40" y="40" width="120" height="200" rx="2" fill="none" stroke="#d1b779" stroke-width="1.5"/>
-      <line x1="40" y1="140" x2="160" y2="140" stroke="#d1b779" stroke-width="1.5"/>
+    return `<rect x="38" y="34" width="124" height="212" rx="4" fill="#f1e4c3" fill-opacity=".45" stroke="${cor}" stroke-width="2.5"/>
+      <rect x="44" y="40" width="112" height="200" rx="2" fill="none" stroke="#d1b779" stroke-width="1.5"/>
+      <line x1="44" y1="140" x2="156" y2="140" stroke="#d1b779" stroke-width="1.5"/>
       <g>${metade}</g><g transform="rotate(180 100 140)">${metade}</g>`;
   }
 
@@ -72,7 +77,7 @@ window.SS = window.SS || {};
     else if (c.rank === 'A') corpo = pip(c.naipe, 100, 140, 92, false);
     else corpo = LAYOUT[c.rank].map(([x, y]) => pip(c.naipe, x, y, 34, y > 140)).join('');
     const svg = `<svg class="svg-carta" viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg">
-      <rect x="1.5" y="1.5" width="197" height="277" rx="14" fill="#fdfbf3" stroke="#bdb59f" stroke-width="2"/>
+      ${fundo(chave)}
       ${corpo}<g>${canto(c)}</g><g transform="rotate(180 100 140)">${canto(c)}</g></svg>`;
     if (!arte) cache[ck] = svg;
     return svg;
