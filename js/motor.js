@@ -29,12 +29,13 @@ window.SS = window.SS || {};
   //   pv: { palhaço: PV inicial } (vazio = o PV de cada Palhaço)
   //   faixa: { J: [mín, máx], Q: [...], K: [...] } números que cada figura pode equipar (vazio = 2 até LIMITE_FIGURA)
   //   semPassiva: { palhaço: true } desliga a habilidade passiva dele (o poder continua)
+  //   passivaOurinhos: 'dividendos' (oficial desde 27/10/2026) ou 'juros' (Juros compostos, a passiva antiga, para testes)
   //   invocacoes: 'umPorTurno' (1 Senhor(a) por turno) | 'umPorLetra' (1 Valete, 1 Rainha e 1 Rei por turno) | 'ilimitadas'
   // Regras oficiais (27/10/2026): Casca grossa −1 só nos Naipados de Paus, defesa sem limite, Rei sacrifica 1 Valete,
   // cura sem teto e 1 invocação de cada letra por turno.
-  const REGRAS_PADRAO = Object.freeze({ casca: 'paus1', limiteDefesa: false, rainha: 'reiOuValetes', reiSacrificaValete: true, asesRecurso: true, asesNasLetras: false, bonusNaipe: false, limitePV: false, pv: Object.freeze({}), faixa: Object.freeze({}), semPassiva: Object.freeze({}), invocacoes: 'umPorLetra' });
+  const REGRAS_PADRAO = Object.freeze({ casca: 'paus1', limiteDefesa: false, rainha: 'reiOuValetes', reiSacrificaValete: true, asesRecurso: true, asesNasLetras: false, bonusNaipe: false, limitePV: false, pv: Object.freeze({}), faixa: Object.freeze({}), semPassiva: Object.freeze({}), invocacoes: 'umPorLetra', passivaOurinhos: 'dividendos' });
   // O tutorial continua ensinando as regras de antes (o roteiro dele foi feito com elas).
-  const REGRAS_TUTORIAL = Object.freeze({ casca: 'todos2', limiteDefesa: true, rainha: 'reiOuValetes', reiSacrificaValete: false, asesRecurso: true, asesNasLetras: false, bonusNaipe: false, limitePV: true, pv: Object.freeze({ infartitte: 24, paumol: 22, ourinhos: 12 }), faixa: Object.freeze({}), semPassiva: Object.freeze({}), invocacoes: 'umPorTurno' });
+  const REGRAS_TUTORIAL = Object.freeze({ casca: 'todos2', limiteDefesa: true, rainha: 'reiOuValetes', reiSacrificaValete: false, asesRecurso: true, asesNasLetras: false, bonusNaipe: false, limitePV: true, pv: Object.freeze({ infartitte: 24, paumol: 22, ourinhos: 12 }), faixa: Object.freeze({}), semPassiva: Object.freeze({}), invocacoes: 'umPorTurno', passivaOurinhos: 'juros' });
   let REGRAS = Object.assign({}, REGRAS_PADRAO);
   // Aceita só chaves e valores conhecidos (as regras do dono da sala chegam pela rede).
   function definirRegras(r) {
@@ -47,6 +48,7 @@ window.SS = window.SS || {};
         if (k === 'casca' && ['todos2', 'paus1'].includes(v)) novo[k] = v;
         if (k === 'rainha' && ['reiOuValetes', 'doisSenhores'].includes(v)) novo[k] = v;
         if (k === 'invocacoes' && ['umPorTurno', 'umPorLetra', 'ilimitadas'].includes(v)) novo[k] = v;
+        if (k === 'passivaOurinhos' && ['dividendos', 'juros'].includes(v)) novo[k] = v;
         if (k === 'semPassiva' && v && typeof v === 'object') {
           novo.semPassiva = {};
           for (const pal in PALHACOS) if (v[pal] === true) novo.semPassiva[pal] = true;
@@ -86,7 +88,8 @@ window.SS = window.SS || {};
   // dadosPrimeiro/ataquePrimeiro: bônus do 1º ataque do turno (Lançalotte);
   // reducaoDefesa: dano a menos em quem defende; soPaus: só Senhores com carta de Paus (Paumol).
   // Valores calibrados com o simulador.
-  // Compra do turno: 1 carta do baralho que o jogador escolher; o Ourinhos (compraDupla) compra 2, escolhendo o monte de cada.
+  // Compra do turno: 1 carta do baralho que o jogador escolher; o Ourinhos com Juros compostos (compraDupla, só nos testes)
+  // compra 2, escolhendo o monte de cada.
   const PALHACOS = {
     lancalotte: { naipe: 'espadas', pv: 19, limiteMao: 7, poder: 'desafio', dadosPrimeiro: 1, ataquePrimeiro: 1 },
     infartitte: { naipe: 'copas', pv: 24, limiteMao: 7, poder: 'transfusao', curaExtra: 1 },
@@ -106,8 +109,10 @@ window.SS = window.SS || {};
   // A passiva do Palhaço vale (os modificadores de teste podem desligar).
   const passivaAtiva = id => !REGRAS.semPassiva[id];
   const temPassiva = (j, id) => temPalhaco(j, id) && passivaAtiva(id);
-  // (o limite de 6 cartas do Ourinhos faz parte da passiva dele)
-  const limiteMao = j => (palhacoDe(j) && (j.palhaco !== 'ourinhos' || passivaAtiva('ourinhos')) ? palhacoDe(j).limiteMao : LIMITE_MAO);
+  // Passiva do Ourinhos em uso: Dividendos (oficial) ou Juros compostos (testes).
+  const jurosCompostos = () => REGRAS.passivaOurinhos === 'juros' && passivaAtiva('ourinhos');
+  // (o limite de 6 cartas do Ourinhos faz parte dos Juros compostos; com Dividendos ele tem o limite normal)
+  const limiteMao = j => (palhacoDe(j) && (j.palhaco !== 'ourinhos' || jurosCompostos()) ? palhacoDe(j).limiteMao : LIMITE_MAO);
 
   let rng = Math.random;
 
@@ -403,12 +408,24 @@ window.SS = window.SS || {};
     else registrar(e, t('log.hit', { u: nomeUnidade(u) }));
   }
 
+  // Dividendos (Ourinhos): 1 vez por turno, quando um Senhor(a) dele causa dano no Palhaço inimigo, compra 1 carta
+  // de Números (de Letras, se Números acabou). Com os dois baralhos vazios, não compra (e não perde PV por isso).
+  function dividendos(e, p) {
+    const j = e.jogadores[p];
+    if (!temPassiva(j, 'ourinhos') || REGRAS.passivaOurinhos !== 'dividendos' || e.dividendo) return;
+    if (!j.letras.length && !j.numeros.length) return;
+    e.dividendo = true;
+    comprar(e, p, 1, 'numeros');
+    registrar(e, t('log.dividendos', { j: j.nome }));
+  }
+
   function danoAoJogador(e, p, locA, dano) {
     if (dano <= 0) return;
     const d = 1 - p, D = e.jogadores[d];
     const perdido = Math.min(dano, D.pv);
     registrar(e, t('log.perdeuPV', { j: D.nome, n: perdido }));
     perderPV(e, d, dano);
+    if (e.vencedor == null && perdido > 0) dividendos(e, p);
     if (e.vencedor != null || !locA) return;
     const u = locA.u;
     // Naipado de Copas: quando acerta o Palhaço inimigo, cura o próprio dono.
@@ -430,6 +447,7 @@ window.SS = window.SS || {};
     e.acoes = ACOES_POR_TURNO;
     e.combate = null;
     e.poderUsado = false;
+    e.dividendo = false; // (Dividendos do Ourinhos: 1 vez por turno)
     e.sumonados = 0;
     e.sumonadosPor = {}; // (modificador "1 por letra": quantos de cada figura neste turno)
     e.asesTurno = 0;
@@ -463,8 +481,8 @@ window.SS = window.SS || {};
         evento(e, { tipo: 'cura', p, n: c, de: u.uid });
       }
     }
-    // Ourinhos (Juros compostos): compra 2 cartas, escolhendo o monte de cada uma.
-    e.compras = palhacoDe(j) && palhacoDe(j).compraDupla && passivaAtiva(j.palhaco) ? 2 : 1;
+    // Ourinhos com Juros compostos (testes): compra 2 cartas, escolhendo o monte de cada uma.
+    e.compras = palhacoDe(j) && palhacoDe(j).compraDupla && jurosCompostos() ? 2 : 1;
     if (e.turno === 1) registrar(e, t('log.primeiroTurno', { j: j.nome }));
     else if (!j.letras.length && !j.numeros.length) comprar(e, p, e.compras, 'numeros'); // sem cartas: perde PV
     else e.fase = 'compra'; // o jogador escolhe de qual baralho comprar

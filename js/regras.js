@@ -55,7 +55,7 @@ window.SS = window.SS || {};
         <h3>${x('O turno', 'The turn')}</h3>
         <ol class="rg-passos">
           <li><b>${x('Acorda', 'Wake up')}</b><span>${x('Os seus Senhores virados voltam a ficar ativos.', 'Your flipped Gentlemen become ready again.')}</span></li>
-          <li><b>${x('Compra', 'Draw')}</b><span>${x('1 carta de Letras ou de Números (o Ourinhos compra 2).', '1 card from Faces or Numbers (Ourinhos draws 2).')}</span></li>
+          <li><b>${x('Compra', 'Draw')}</b><span>${x('1 carta de Letras ou de Números.', '1 card from Faces or Numbers.')}</span></li>
           <li><b>${M.ACOES_POR_TURNO} ${x('ações', 'actions')}</b><span>${x('Invocar, usar recursos, magias, o poder do Palhaço.', 'Summon, use resources, spells, the Jester\'s power.')}</span></li>
           <li><b>${x('Ataque', 'Attack')}</b><span>${x('Prepare o ataque, escolha os alvos e role o dado.', 'Prepare the attack, choose targets and roll the die.')}</span></li>
           <li><b>${x('Fim', 'End')}</b><span>${x(`Quem atacou vira para baixo; mais de ${M.LIMITE_MAO} cartas na mão, descarte.`, `Whoever attacked flips face down; more than ${M.LIMITE_MAO} cards in hand, discard.`)}</span></li>

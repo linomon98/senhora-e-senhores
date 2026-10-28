@@ -96,13 +96,13 @@ window.SS = window.SS || {};
     ourinhos: {
       pt: {
         titulo: 'o banqueiro',
-        passiva: { nome: 'Juros compostos', texto: 'No começo do turno, compra 2 cartas, escolhendo de qual monte vem cada uma (os outros compram só 1). Limite de mão de 6 cartas. Começa com 14 PV.' },
+        passiva: { nome: 'Dividendos', texto: 'Uma vez por turno, quando um Senhor(a) seu causa dano no Palhaço inimigo, compra 1 carta de Números. Começa com 14 PV.' },
         poder: { nome: 'Cobrança', texto: 'Pague 2 PV para roubar 1 carta sorteada da mão do oponente.' },
         plano: 'Rouba e acumula: Valetes e Reis Naipados de Ouros (atacam 2 vezes) e muitos Ouros para dados e compras.',
       },
       en: {
         titulo: 'the banker',
-        passiva: { nome: 'Compound Interest', texto: 'At the start of the turn, draws 2 cards, choosing the pile for each one (the others draw only 1). Hand limit of 6 cards. Starts with 14 HP.' },
+        passiva: { nome: 'Dividends', texto: 'Once per turn, when one of your Gentlemen deals damage to the enemy Jester, draw 1 Numbers card. Starts with 14 HP.' },
         poder: { nome: 'Debt Collection', texto: "Pay 2 HP to steal 1 random card from the opponent's hand." },
         plano: "Steals and hoards: Suited Jacks and Kings of Diamonds (attack twice) and lots of Diamonds for dice and draws.",
       },

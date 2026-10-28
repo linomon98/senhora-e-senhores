@@ -4681,12 +4681,12 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 107, data: '27/10/2026',
+    n: 108, data: '27/10/2026',
     novidades: [
+      ['Ourinhos tem passiva nova, Dividendos: ao acertar o Palhaço inimigo, compra 1 carta (1 vez por turno). Os Juros compostos ficam nos modificadores', 'Ourinhos has a new passive, Dividends: when he hits the enemy Jester, he draws 1 card (once per turn). Compound Interest stays in the modifiers'],
       ['Bots mais espertos em todos os níveis: treinados nas regras novas, guardam pares e recursos, e o Difícil planeja o turno', 'Smarter bots at every level: trained on the new rules, they keep pairs and resources, and Hard plans its turn'],
       ['Decks temáticos novos (VALETES, Mi Corazon, REIeQUEEN, DAD??) e PV novos: Infartitte 24, Ourinhos 14', 'New themed decks (VALETES, Mi Corazon, REIeQUEEN, DAD??) and new HP: Infartitte 24, Ourinhos 14'],
       ['Efeitos na mesa para cada recurso, magia e Pargia (Trovão, Meteoro, Sai daqui, Berserk, cura...)', 'Board effects for every resource, magic and Pairgic (Thunder, Meteor, Get out, Berserk, healing...)'],
-      ['Regras oficiais novas: Rei sacrifica 1 Valete, 1 invocação de cada letra, defesa e cura sem limite, Casca grossa −1 nos Naipados de Paus, PV novos', 'New official rules: King sacrifices 1 Jack, 1 summon of each letter, no defense or healing cap, Thick Bark −1 on Clubs Suited, new HP'],
     ],
   };
 
@@ -4737,6 +4737,7 @@ window.SS = window.SS || {};
       ${linha('bonusNaipe', [['false', t('rg.desligado')], ['true', t('rg.ligado')]])}
       ${linha('limitePV', [['true', t('rg.pvAte', { n: M.PV_MAX_CURA })], ['false', t('rg.semLimite')]])}
       ${linha('invocacoes', [['umPorTurno', t('rg.umPorTurno')], ['umPorLetra', t('rg.umPorLetra')], ['ilimitadas', t('rg.ilimitadas')]])}
+      ${linha('passivaOurinhos', [['dividendos', t('rg.dividendos')], ['juros', t('rg.juros')]])}
       <div class="opcao"><label>${t('rg.semPassiva')}</label><div class="grupo" data-passivas>${P.LISTA.map(pal =>
         `<button data-pal="${pal.id}" class="${r.semPassiva && r.semPassiva[pal.id] ? '' : 'ativo'}">${SIMB[pal.naipe]} ${pal.passiva.nome}</button>`).join('')}</div>
         <p class="nota">${t('rg.semPassivaNota')}</p></div>
