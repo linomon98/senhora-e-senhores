@@ -1257,7 +1257,7 @@ window.SS = window.SS || {};
 
   function dicaUnidade(p, i, u) {
     if (u.tipo === 'as') {
-      return { titulo: M.nomeCarta(u.carta), sub: t('dc.totem'), linhas: [PODER_AS[u.naipe], t('dc.asNaoAtaca'), t('dc.asAlvo')] };
+      return { titulo: M.nomeCarta(u.carta), sub: t('dc.totem'), linhas: [PODER_AS[u.naipe], t('dc.asNaoAtaca'), t('dc.asAlvo')], arte: [u.carta] };
     }
     const nai = M.naipado(u), atk = M.ataque(jogo, p, i), res = M.resistencia(jogo, p, i), post = M.postura(jogo, p, i);
     const vizinhos = [i - 1, i + 1].map(k => jogo.jogadores[p].campo[k]).filter(w => w && w.tipo === 'as').map(w => w.naipe);
@@ -1284,7 +1284,7 @@ window.SS = window.SS || {};
     else if (jogo.vez === p && M.podeAtacar(jogo, p, i)) linhas.push(t('du.pronto', { n: u.ataques }));
     else if (jogo.vez === p && u.entrou === jogo.turno && u.figura.rank !== 'J') linhas.push(t('du.entrou'));
     linhas.push(`<span class="dica-regra">${t('du.regraBloqueio')}</span>`);
-    return { titulo: M.nomeUnidade(u), sub: nai ? t('du.subNaipado', { n: NOME_NAIPE[nai] }) : t('du.sub'), linhas };
+    return { titulo: M.nomeUnidade(u), sub: nai ? t('du.subNaipado', { n: NOME_NAIPE[nai] }) : t('du.sub'), linhas, arte: [u.figura, u.numero] };
   }
 
   function dicaPara(el) {
@@ -1343,7 +1343,12 @@ window.SS = window.SS || {};
       caixa.hidden = true;
       return;
     }
-    caixa.innerHTML = `<div class="dica-titulo">${escapar(d.titulo)}</div>${d.sub ? `<div class="dica-sub">${escapar(d.sub)}</div>` : ''}${d.linhas.filter(Boolean).map(l => `<p>${l}</p>`).join('')}`;
+    const texto = `<div class="dica-titulo">${escapar(d.titulo)}</div>${d.sub ? `<div class="dica-sub">${escapar(d.sub)}</div>` : ''}${d.linhas.filter(Boolean).map(l => `<p>${l}</p>`).join('')}`;
+    // Cartas em campo: a arte em tamanho grande ao lado do texto (a figura grande, o número encaixado no canto dela).
+    caixa.classList.toggle('com-arte', !!d.arte);
+    caixa.innerHTML = d.arte
+      ? `<div class="dica-arte${d.arte.length > 1 ? ' senhor' : ''}">${d.arte.map((c, k) => `<div class="carta${k ? ' numero' : ''}">${C.frente(c)}</div>`).join('')}</div><div class="dica-texto">${texto}</div>`
+      : texto;
     caixa.hidden = false;
     const w = caixa.offsetWidth, h = caixa.offsetHeight;
     let x = ev.clientX + 18, y = ev.clientY + 18;
