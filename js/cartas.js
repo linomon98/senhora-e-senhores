@@ -11,6 +11,7 @@ window.SS = window.SS || {};
 
   SS.ARTE = SS.ARTE || {};
   SS.ARTE['J-espadas'] = 'arte/cartas/senhores/J-espadas.webp';
+  SS.ARTE['J-copas'] = 'arte/cartas/senhores/J-copas.webp';
 
   // Cada naipe com a sua cor: Copas vermelho, Ouros amarelo, Paus verde, Espadas azul.
   const COR = { copas: '#d0202e', ouros: '#d49a06', paus: '#1c8a3a', espadas: '#1f55c8' };
