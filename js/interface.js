@@ -2712,8 +2712,26 @@ window.SS = window.SS || {};
 
   // Seloinhos presos na carta enquanto o poder vale: espada azul (desafiado pelo Lançalotte) e
   // paus verde (Vigília do Paumol).
-  const selosPoder = u => (jogo.desafio === u.uid ? '<img class="selo-poder selo-desafio" src="arte/naipes/espadas.webp" alt="" draggable="false">' : '')
-    + (u.vigilia ? '<img class="selo-poder selo-vigilia" src="arte/naipes/paus.webp" alt="" draggable="false">' : '');
+  // Selos que aparecem na carta (dado guardado, Desafio, Vigília): a animação de entrada toca só na primeira vez que
+  // cada um aparece. A mesa é redesenhada a cada clique; o atraso negativo deixa a animação continuar de onde estava.
+  let selosVistos = {};
+  const DURACAO_SELO = 450;
+  function entradaSelo(chave) {
+    const agora = performance.now();
+    if (selosVistos[chave] == null) selosVistos[chave] = agora;
+    const passou = agora - selosVistos[chave];
+    return passou < DURACAO_SELO ? { cls: ' entra', estilo: ` style="animation-delay:${-passou.toFixed(0)}ms"` } : { cls: '', estilo: '' };
+  }
+  const seloPoder = (u, tipo, naipe) => {
+    const e = entradaSelo(u.uid + ':' + tipo);
+    return `<img class="selo-poder selo-${tipo}${e.cls}"${e.estilo} src="arte/naipes/${naipe}.webp" alt="" draggable="false">`;
+  };
+  const selosPoder = u => (jogo.desafio === u.uid ? seloPoder(u, 'desafio', 'espadas') : '') + (u.vigilia ? seloPoder(u, 'vigilia', 'paus') : '');
+  function seloDado(u) {
+    if (!u.dadosExtra) return '';
+    const e = entradaSelo(u.uid + ':dado:' + u.dadosExtra); // (cada dado novo guardado entra de novo)
+    return `<div class="selo-dado${e.cls}"${e.estilo} title="${t('ui.dadoExtra', { n: u.dadosExtra })}">${DADO_IMG}${u.dadosExtra > 1 ? '<b>×' + u.dadosExtra + '</b>' : ''}</div>`;
+  }
 
   // Lançalotte (Golpe certeiro): o 1º ataque do turno ganha +1 de ataque (e +1 dado). Aparece no selo de ataque
   // do Senhor(a) assim que ele é o primeiro atacante escolhido, até o golpe dele ser resolvido.
@@ -2753,7 +2771,7 @@ window.SS = window.SS || {};
       <div class="pilha-senhor${estiloGiro(u, post)}"><div class="carta numero">${C.frente(u.numero)}</div><div class="carta figura">${C.frente(u.figura)}</div></div>
       <div class="selo-vida">${vida}</div>
       <div class="selo-atk">⚔ ${atk}${atk > base ? `<small>+${atk - base}</small>` : ''}${bonusGolpeCerteiro(p, u) ? `<small class="bonus-lanca">+${bonusGolpeCerteiro(p, u)}♠</small>` : ''}</div>
-      ${u.dadosExtra ? `<div class="selo-dado" title="${t('ui.dadoExtra', { n: u.dadosExtra })}">${DADO_IMG}${u.dadosExtra > 1 ? '<b>×' + u.dadosExtra + '</b>' : ''}</div>` : ''}
+      ${seloDado(u)}
       ${nai ? `<div class="selo-naipado">${SIMB[nai]}</div>` : ''}${tagsUnidade(u)}${selosPoder(u)}</div>`;
   }
 
@@ -3673,6 +3691,7 @@ window.SS = window.SS || {};
     SS.Dados.cancelar();
     posturaAnterior = {};
     viradoAnterior = {};
+    selosVistos = {};
     maoVista = [null, null];
     campoVisto = [null, null];
     posCampo = [{}, {}];
@@ -4195,6 +4214,7 @@ window.SS = window.SS || {};
     SS.Dados.cancelar();
     posturaAnterior = {};
     viradoAnterior = {};
+    selosVistos = {};
     maoVista = [null, null];
     campoVisto = [null, null];
     posCampo = [{}, {}];
@@ -4945,6 +4965,7 @@ window.SS = window.SS || {};
     SS.Dados.cancelar();
     posturaAnterior = {};
     viradoAnterior = {};
+    selosVistos = {};
     maoVista = [null, null];
     campoVisto = [null, null];
     posCampo = [{}, {}];
@@ -4983,6 +5004,7 @@ window.SS = window.SS || {};
     esconderAnuncio();
     posturaAnterior = {};
     viradoAnterior = {};
+    selosVistos = {};
     maoVista = [null, null];
     campoVisto = [null, null];
     posCampo = [{}, {}];

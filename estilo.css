@@ -1416,11 +1416,11 @@ html.sem-caixa-meio #faixa .caixa-faixa { display: none; }
 }
 .selo-poder {
   position: absolute; top: -12px; right: -10px; z-index: 6; width: 30px; height: auto; pointer-events: none;
-  filter: drop-shadow(0 0 2px #fff) drop-shadow(0 2px 4px rgba(0, 0, 0, .5)); animation: selo-entra .45s cubic-bezier(.3, 1.6, .5, 1) backwards, selo-balanca 1.8s ease-in-out .45s infinite alternate;
+  filter: drop-shadow(0 0 2px #fff) drop-shadow(0 2px 4px rgba(0, 0, 0, .5));
 }
+.selo-poder.entra, .selo-dado.entra { animation: selo-entra .45s cubic-bezier(.3, 1.6, .5, 1) backwards; }
 .selo-vigilia { right: auto; left: -10px; }
 @keyframes selo-entra { from { transform: scale(0) rotate(-40deg); } }
-@keyframes selo-balanca { from { transform: rotate(-10deg); } to { transform: rotate(10deg); } }
 
 /* ---------- Decorações do cenário (js/decoracao.js) ---------- */
 .decoracoes { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
@@ -1821,7 +1821,7 @@ body.tut-pulsa-seta #setas .seta .linha { animation: tut-pulsa-linha .6s ease-in
 /* Dado adicional guardado no Senhor(a) */
 .selo-dado {
   position: absolute; right: -10px; top: 18px; z-index: 4; padding: 1px 5px; border-radius: 9px; font: 800 15px/1.2 var(--fonte-ui);
-  background: #fffdf4; border: 2px solid #141414; box-shadow: 0 2px 0 #141414; animation: selo-entra .35s cubic-bezier(.3, 1.6, .5, 1);
+  background: #fffdf4; border: 2px solid #141414; box-shadow: 0 2px 0 #141414;
 }
 .dado-voando span { font-size: 34px; filter: drop-shadow(0 3px 0 rgba(0, 0, 0, .5)); }
 .dano-voando { position: absolute; z-index: 60; pointer-events: none; font: 400 38px var(--fonte-titulo); color: #ff3b3b; -webkit-text-stroke: 4px #141414; paint-order: stroke fill; }
@@ -1887,7 +1887,7 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 /* ---------- Dado adicional guardado: o dado desenhado ---------- */
 .selo-dado { display: inline-flex; align-items: center; gap: 2px; padding: 1px 3px; }
 .selo-dado .dado-img { width: 22px; height: auto; display: block; }
-.selo-dado b { font: 800 13px var(--fonte-ui); }
+.selo-dado b { font: 900 14px var(--fonte-ui); color: #f5b41f; -webkit-text-stroke: 3px #141414; paint-order: stroke fill; }
 .dado-voando .dado-img { width: 46px; height: auto; display: block; filter: drop-shadow(2px 4px 0 rgba(0, 0, 0, .5)); }
 
 /* ---------- Selo do dado: cheio (verde), metade (amarelo), errou (vermelho) ---------- */
