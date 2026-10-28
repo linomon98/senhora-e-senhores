@@ -17,15 +17,23 @@ window.SS = window.SS || {};
   // Naipe desenhado (a imagem tem uma margem em volta do desenho, por isso sai um pouco maior que tam).
   function pip(naipe, cx, cy, tam, invertido) {
     const t = tam * 1.18, rot = invertido ? ` transform="rotate(180 ${cx} ${cy})"` : '';
-    return `<image href="arte/naipes/${naipe}.webp" x="${(cx - t / 2).toFixed(1)}" y="${(cy - t / 2).toFixed(1)}" width="${t.toFixed(1)}" height="${t.toFixed(1)}"${rot}/>`;
+    return `<image href="arte/naipes/${naipe}.webp${V_ARTE}" x="${(cx - t / 2).toFixed(1)}" y="${(cy - t / 2).toFixed(1)}" width="${t.toFixed(1)}" height="${t.toFixed(1)}"${rot}/>`;
   }
+
+  // O desenho passa um pouco da carta (os cantos arredondados dele ficam de fora) e o canto da própria carta o corta (CSS):
+  // assim a borda preta encosta na borda da carta, sem sobra transparente.
+  const SANGRIA = 'x="-5" y="-6" width="210" height="292" preserveAspectRatio="none"';
+  // Borda preta na beirada da carta: a do desenho é fina demais (cerca de 1 px numa carta da mão) e sumia.
+  const BORDA = '<rect x="2.2" y="2.2" width="195.6" height="275.6" rx="15" fill="none" stroke="#141414" stroke-width="4.5"/>';
+  // Versão das imagens das cartas (trocar quando um arquivo mudar com o mesmo nome, para o navegador não usar o antigo).
+  const V_ARTE = '?v=3';
 
   // Fundo da carta: uma das 4 variações desenhadas, sempre a mesma para a mesma carta (rank + naipe).
   const FUNDOS = ['a', 'b', 'c', 'd'];
   function fundo(chave) {
     let h = 0;
     for (const ch of chave) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-    return `<image href="arte/cartas/fundo-${FUNDOS[h % FUNDOS.length]}.webp" x="0" y="0" width="200" height="280" preserveAspectRatio="none"/>`;
+    return `<image href="arte/cartas/fundo-${FUNDOS[h % FUNDOS.length]}.webp${V_ARTE}" ${SANGRIA}/>`;
   }
 
   // Posições clássicas dos naipes no miolo (carta de 200 x 280).
@@ -46,8 +54,9 @@ window.SS = window.SS || {};
 
   function canto(c) {
     const dez = c.rank === '10';
-    // (na faixa lateral da moldura do fundo, entre a borda de fora e o quadro de dentro)
-    return `<text x="15" y="50" font-size="${dez ? 19 : 24}"${dez ? ' letter-spacing="-3"' : ''} text-anchor="middle" fill="${COR[c.naipe]}" font-family="${FONTE}" font-weight="700">${c.rank}</text>${pip(c.naipe, 15, 67, 19, false)}`;
+    // (na faixa lateral da moldura do fundo, logo abaixo da borda de cima: na pilha do Senhor, a figura cobre o número
+    // abaixo de y ≈ 66, e o índice precisa aparecer inteiro acima disso)
+    return `<text x="15" y="41" font-size="${dez ? 19 : 24}"${dez ? ' letter-spacing="-3"' : ''} text-anchor="middle" fill="${COR[c.naipe]}" font-family="${FONTE}" font-weight="700">${c.rank}</text>${pip(c.naipe, 15, 56, 17, false)}`;
   }
 
   const GLIFO = { J: '♞', Q: '♛', K: '♚' };
@@ -73,13 +82,13 @@ window.SS = window.SS || {};
     const ck = chave + (SS.Idioma ? ':' + SS.Idioma.atual() : '');
     if (!arte && cache[ck]) return cache[ck];
     let corpo;
-    if (arte) corpo = `<image href="${arte}" x="0" y="0" width="200" height="280" preserveAspectRatio="none"/>`;
+    if (arte) corpo = `<image href="${arte}${V_ARTE}" ${SANGRIA}/>`;
     else if (c.rank === 'J' || c.rank === 'Q' || c.rank === 'K') corpo = figura(c);
     else if (c.rank === 'A') corpo = pip(c.naipe, 100, 140, 92, false);
     else corpo = LAYOUT[c.rank].map(([x, y]) => pip(c.naipe, x, y, 34, y > 140)).join('');
     const svg = `<svg class="svg-carta" viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg">
       ${fundo(chave)}
-      ${corpo}<g>${canto(c)}</g><g transform="rotate(180 100 140)">${canto(c)}</g></svg>`;
+      ${corpo}${BORDA}<g>${canto(c)}</g><g transform="rotate(180 100 140)">${canto(c)}</g></svg>`;
     if (!arte) cache[ck] = svg;
     return svg;
   }

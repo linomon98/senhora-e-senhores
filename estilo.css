@@ -68,6 +68,7 @@ html, body {
 .carta .svg-carta { display: block; width: 100%; height: 100%; }
 /* Frente: o fundo desenhado ocupa a carta inteira, com cantos próprios (sem o creme por trás). Dorso e pilha vazia não mudam. */
 .carta:not(.dorso):not(.vazia):has(> .svg-carta) { background: none; }
+.carta > .svg-carta { border-radius: inherit; overflow: hidden; }
 .carta.dorso { background-size: 100% 100%; }
 .carta.dorso.vermelho { background-image: var(--dorso-vermelho); }
 .carta.dorso.azul { background-image: var(--dorso-azul); }
