@@ -45,8 +45,8 @@ window.SS = window.SS || {};
 
   function canto(c) {
     const dez = c.rank === '10';
-    // (na faixa lateral da moldura do fundo, abaixo da borda de cima)
-    return `<text x="23" y="60" font-size="${dez ? 22 : 28}"${dez ? ' letter-spacing="-3"' : ''} text-anchor="middle" fill="${COR[c.naipe]}" font-family="${FONTE}" font-weight="700">${c.rank}</text>${pip(c.naipe, 23, 78, 22, false)}`;
+    // (na faixa lateral da moldura do fundo, entre a borda de fora e o quadro de dentro)
+    return `<text x="15" y="50" font-size="${dez ? 19 : 24}"${dez ? ' letter-spacing="-3"' : ''} text-anchor="middle" fill="${COR[c.naipe]}" font-family="${FONTE}" font-weight="700">${c.rank}</text>${pip(c.naipe, 15, 67, 19, false)}`;
   }
 
   const GLIFO = { J: '♞', Q: '♛', K: '♚' };
