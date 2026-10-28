@@ -1,14 +1,15 @@
 /* Desenho das cartas: fundo desenhado (4 variações, arte/cartas/fundo-*.webp), naipes desenhados (arte/naipes)
-   nas posições clássicas do baralho.
-   Para usar a arte final de uma carta, registre a imagem em SS.ARTE
-   (chave = rank-naipe), por exemplo no fim deste arquivo:
-     SS.ARTE['Q-copas'] = 'arte/rainha-de-copas.png';
-   A imagem ocupa o miolo da carta; os índices dos cantos continuam desenhados. */
+   nas posições clássicas do baralho. As figuras com arte própria (arte/cartas/senhores/<rank>-<naipe>.webp) usam o desenho
+   no lugar do placeholder; a letra e o naipe dos cantos continuam por cima.
+   Para usar a arte final de uma carta, registre a imagem em SS.ARTE (chave = rank-naipe), como as de baixo.
+   A arte é desenhada no mesmo quadro do template do fundo (1792 × 2400) e recortada como ele, na borda preta
+   (x 92–1682, y 102–2301), para ocupar a carta inteira: assim o desenho pode passar por cima da moldura. */
 window.SS = window.SS || {};
 (function (SS) {
   'use strict';
 
   SS.ARTE = SS.ARTE || {};
+  SS.ARTE['J-espadas'] = 'arte/cartas/senhores/J-espadas.webp';
 
   // Cada naipe com a sua cor: Copas vermelho, Ouros amarelo, Paus verde, Espadas azul.
   const COR = { copas: '#d0202e', ouros: '#d49a06', paus: '#1c8a3a', espadas: '#1f55c8' };
@@ -72,7 +73,7 @@ window.SS = window.SS || {};
     const ck = chave + (SS.Idioma ? ':' + SS.Idioma.atual() : '');
     if (!arte && cache[ck]) return cache[ck];
     let corpo;
-    if (arte) corpo = `<image href="${arte}" x="34" y="34" width="132" height="212" preserveAspectRatio="xMidYMid slice"/>`;
+    if (arte) corpo = `<image href="${arte}" x="0" y="0" width="200" height="280" preserveAspectRatio="none"/>`;
     else if (c.rank === 'J' || c.rank === 'Q' || c.rank === 'K') corpo = figura(c);
     else if (c.rank === 'A') corpo = pip(c.naipe, 100, 140, 92, false);
     else corpo = LAYOUT[c.rank].map(([x, y]) => pip(c.naipe, x, y, 34, y > 140)).join('');
