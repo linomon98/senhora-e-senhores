@@ -4743,6 +4743,7 @@ window.SS = window.SS || {};
       ${linha('limitePV', [['true', t('rg.pvAte', { n: M.PV_MAX_CURA })], ['false', t('rg.semLimite')]])}
       ${linha('invocacoes', [['umPorTurno', t('rg.umPorTurno')], ['umPorLetra', t('rg.umPorLetra')], ['ilimitadas', t('rg.ilimitadas')]])}
       ${linha('passivaOurinhos', [['dividendos', t('rg.dividendos')], ['juros', t('rg.juros')]])}
+      ${linha('todosCompram2', [['false', t('rg.desligado')], ['true', t('rg.ligado')]])}
       <div class="opcao"><label>${t('rg.semPassiva')}</label><div class="grupo" data-passivas>${P.LISTA.map(pal =>
         `<button data-pal="${pal.id}" class="${r.semPassiva && r.semPassiva[pal.id] ? '' : 'ativo'}">${SIMB[pal.naipe]} ${pal.passiva.nome}</button>`).join('')}</div>
         <p class="nota">${t('rg.semPassivaNota')}</p></div>

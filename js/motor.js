@@ -29,13 +29,14 @@ window.SS = window.SS || {};
   //   pv: { palhaço: PV inicial } (vazio = o PV de cada Palhaço)
   //   faixa: { J: [mín, máx], Q: [...], K: [...] } números que cada figura pode equipar (vazio = 2 até LIMITE_FIGURA)
   //   semPassiva: { palhaço: true } desliga a habilidade passiva dele (o poder continua)
+  //   todosCompram2: todo mundo compra 2 cartas no começo do turno (só para testes)
   //   passivaOurinhos: 'dividendos' (oficial desde 27/10/2026) ou 'juros' (Juros compostos, a passiva antiga, para testes)
   //   invocacoes: 'umPorTurno' (1 Senhor(a) por turno) | 'umPorLetra' (1 Valete, 1 Rainha e 1 Rei por turno) | 'ilimitadas'
   // Regras oficiais (27/10/2026): Casca grossa −1 só nos Naipados de Paus, defesa sem limite, Rei sacrifica 1 Valete,
   // cura sem teto e 1 invocação de cada letra por turno.
-  const REGRAS_PADRAO = Object.freeze({ casca: 'paus1', limiteDefesa: false, rainha: 'reiOuValetes', reiSacrificaValete: true, asesRecurso: true, asesNasLetras: false, bonusNaipe: false, limitePV: false, pv: Object.freeze({}), faixa: Object.freeze({}), semPassiva: Object.freeze({}), invocacoes: 'umPorLetra', passivaOurinhos: 'dividendos' });
+  const REGRAS_PADRAO = Object.freeze({ casca: 'paus1', limiteDefesa: false, rainha: 'reiOuValetes', reiSacrificaValete: true, asesRecurso: true, asesNasLetras: false, bonusNaipe: false, limitePV: false, pv: Object.freeze({}), faixa: Object.freeze({}), semPassiva: Object.freeze({}), invocacoes: 'umPorLetra', passivaOurinhos: 'dividendos', todosCompram2: false });
   // O tutorial continua ensinando as regras de antes (o roteiro dele foi feito com elas).
-  const REGRAS_TUTORIAL = Object.freeze({ casca: 'todos2', limiteDefesa: true, rainha: 'reiOuValetes', reiSacrificaValete: false, asesRecurso: true, asesNasLetras: false, bonusNaipe: false, limitePV: true, pv: Object.freeze({ infartitte: 24, paumol: 22, ourinhos: 12 }), faixa: Object.freeze({}), semPassiva: Object.freeze({}), invocacoes: 'umPorTurno', passivaOurinhos: 'juros' });
+  const REGRAS_TUTORIAL = Object.freeze({ casca: 'todos2', limiteDefesa: true, rainha: 'reiOuValetes', reiSacrificaValete: false, asesRecurso: true, asesNasLetras: false, bonusNaipe: false, limitePV: true, pv: Object.freeze({ infartitte: 24, paumol: 22, ourinhos: 12 }), faixa: Object.freeze({}), semPassiva: Object.freeze({}), invocacoes: 'umPorTurno', passivaOurinhos: 'juros', todosCompram2: false });
   let REGRAS = Object.assign({}, REGRAS_PADRAO);
   // Aceita só chaves e valores conhecidos (as regras do dono da sala chegam pela rede).
   function definirRegras(r) {
@@ -482,7 +483,8 @@ window.SS = window.SS || {};
       }
     }
     // Ourinhos com Juros compostos (testes): compra 2 cartas, escolhendo o monte de cada uma.
-    e.compras = palhacoDe(j) && palhacoDe(j).compraDupla && jurosCompostos() ? 2 : 1;
+    // (o modificador de teste "todos compram 2" vale para todos os Palhaços)
+    e.compras = REGRAS.todosCompram2 || (palhacoDe(j) && palhacoDe(j).compraDupla && jurosCompostos()) ? 2 : 1;
     if (e.turno === 1) registrar(e, t('log.primeiroTurno', { j: j.nome }));
     else if (!j.letras.length && !j.numeros.length) comprar(e, p, e.compras, 'numeros'); // sem cartas: perde PV
     else e.fase = 'compra'; // o jogador escolhe de qual baralho comprar
