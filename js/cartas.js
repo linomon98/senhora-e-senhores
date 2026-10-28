@@ -2,8 +2,9 @@
    nas posições clássicas do baralho. As figuras com arte própria (arte/cartas/senhores/<rank>-<naipe>.webp) usam o desenho
    no lugar do placeholder; a letra e o naipe dos cantos continuam por cima.
    Para usar a arte final de uma carta, registre a imagem em SS.ARTE (chave = rank-naipe), como as de baixo.
-   A arte é desenhada no mesmo quadro do template do fundo (1792 × 2400) e recortada como ele, na borda preta
-   (x 92–1682, y 102–2301), para ocupar a carta inteira: assim o desenho pode passar por cima da moldura. */
+   A arte é desenhada no mesmo quadro do template do fundo (1792 × 2400) e convertida no tamanho da carta (600 × 830) com o
+   quadro do template (x 92–1682, y 102–2301) ocupando a carta inteira, assim o desenho passa por cima da moldura como no
+   template. Se o desenho sair da carta, a conversão o encolhe só o necessário para caber inteiro (dentro da borda preta). */
 window.SS = window.SS || {};
 (function (SS) {
   'use strict';
@@ -26,7 +27,7 @@ window.SS = window.SS || {};
   // Borda preta na beirada da carta: a do desenho é fina demais (cerca de 1 px numa carta da mão) e sumia.
   const BORDA = '<rect x="2.2" y="2.2" width="195.6" height="275.6" rx="15" fill="none" stroke="#141414" stroke-width="4.5"/>';
   // Versão das imagens das cartas (trocar quando um arquivo mudar com o mesmo nome, para o navegador não usar o antigo).
-  const V_ARTE = '?v=4';
+  const V_ARTE = '?v=5';
 
   // Fundo da carta: uma das 4 variações desenhadas, sempre a mesma para a mesma carta (rank + naipe).
   const FUNDOS = ['a', 'b', 'c', 'd'];
@@ -82,7 +83,8 @@ window.SS = window.SS || {};
     const ck = chave + (SS.Idioma ? ':' + SS.Idioma.atual() : '');
     if (!arte && cache[ck]) return cache[ck];
     let corpo;
-    if (arte) corpo = `<image href="${arte}${V_ARTE}" ${SANGRIA}/>`;
+    // (a arte não passa da carta: já vem convertida para caber inteira, sem corte)
+    if (arte) corpo = `<image href="${arte}${V_ARTE}" x="0" y="0" width="200" height="280" preserveAspectRatio="none"/>`;
     else if (c.rank === 'J' || c.rank === 'Q' || c.rank === 'K') corpo = figura(c);
     else if (c.rank === 'A') corpo = pip(c.naipe, 100, 140, 92, false);
     else corpo = LAYOUT[c.rank].map(([x, y]) => pip(c.naipe, x, y, 34, y > 140)).join('');
