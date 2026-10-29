@@ -94,7 +94,8 @@ window.SS = window.SS || {};
       cena.add(chao);
 
       mundo = new CANNON.World();
-      mundo.gravity.set(0, -75, 0);
+      // (o dado tem 2,1 de lado: com 75 ele caía como na Lua; 260 dá uma queda pesada, de dado de verdade, ainda legível)
+      mundo.gravity.set(0, -260, 0);
       mundo.broadphase = new CANNON.NaiveBroadphase();
       mundo.solver.iterations = 14;
       mundo.allowSleep = true;
@@ -260,8 +261,8 @@ window.SS = window.SS || {};
       const corpo = new CANNON.Body({ mass: 1, material: matDado, shape: new CANNON.Box(new CANNON.Vec3(TAM / 2, TAM / 2, TAM / 2)) });
       corpo.sleepSpeedLimit = 0.2;
       corpo.sleepTimeLimit = 0.3;
-      corpo.linearDamping = 0.2;
-      corpo.angularDamping = 0.2;
+      corpo.linearDamping = 0.04;
+      corpo.angularDamping = 0.1;
       // Arremesso a partir do canto inferior direito (o seu lado da mesa) ou superior (oponente).
       const z0 = dentroZ(deCima ? L.minZ + 3 * f + k * 2.6 * f : L.maxZ - 3 * f - k * 2.6 * f);
       corpo.position.set(L.maxX - TAM - k * 0.8 * f, (TAM === TAM_BANDEJA ? 5 : 11) + k * 2.4, z0);
@@ -289,8 +290,8 @@ window.SS = window.SS || {};
     const corpo = new CANNON.Body({ mass: 1, material: matDado, shape: new CANNON.Box(new CANNON.Vec3(TAM / 2, TAM / 2, TAM / 2)) });
     corpo.sleepSpeedLimit = 0.2;
     corpo.sleepTimeLimit = 0.3;
-    corpo.linearDamping = 0.2;
-    corpo.angularDamping = 0.2;
+    corpo.linearDamping = 0.04; // (quase sem "ar": quem freia o dado é o feltro)
+    corpo.angularDamping = 0.1;
     corpo.position.set(x, y, z);
     return corpo;
   }
@@ -467,6 +468,20 @@ window.SS = window.SS || {};
     });
   }
 
+  // Altura (de 1 a 0) de um dado que cai e quica no feltro, no tempo k de 0 a 1: cada trecho é uma parábola,
+  // e cada quique sobe ~1/4 do anterior (até ~55% do tempo; o resto é o dado rolando no chão).
+  function quique(k) {
+    const T = [0.26, 0.13, 0.065], H = [1, 0.22, 0.05];
+    let t = k;
+    if (t < T[0]) { const u = t / T[0]; return 1 - u * u; }
+    t -= T[0];
+    for (let i = 1; i < T.length; i++) {
+      if (t < T[i]) { const u = (t / T[i]) * 2 - 1; return H[i] * (1 - u * u); }
+      t -= T[i];
+    }
+    return 0;
+  }
+
   // Dado de um jogador remoto: o resultado já veio pela rede, então o dado rola (sem física,
   // numa trajetória animada) e cai mostrando exatamente aqueles valores.
   function rolarPara(valores, cor, deCima) {
@@ -477,7 +492,7 @@ window.SS = window.SS || {};
     montarParedes();
     const mats = materiais(cor);
     mats.forEach(m => { m.opacity = 1; });
-    const L = limites, dur = TAM === TAM_BANDEJA ? 1300 : 1600, alto = TAM === TAM_BANDEJA ? 1 : 1.6, inicio = performance.now();
+    const L = limites, dur = TAM === TAM_BANDEJA ? 1100 : 1300, alto = TAM === TAM_BANDEJA ? 1 : 1.6, inicio = performance.now();
     const cima = new THREE.Vector3(0, 1, 0);
     const voos = valores.map((v, k) => {
       const malha = new THREE.Mesh(new THREE.BoxGeometry(TAM, TAM, TAM), mats);
@@ -503,8 +518,8 @@ window.SS = window.SS || {};
         const k = Math.min(1, (agora - inicio) / dur), e = 1 - Math.pow(1 - k, 3);
         for (const d of voos) {
           d.malha.position.lerpVectors(d.de, d.para, e);
-          // Dois quiques que vão diminuindo até parar.
-          d.malha.position.y = TAM / 2 + Math.abs(Math.cos(e * Math.PI * 2.5)) * (1 - e) * 6 * alto;
+          // Cai acelerando (parábola, como com gravidade) e dá dois quiques baixos e rápidos antes de rolar até parar.
+          d.malha.position.y = TAM / 2 + quique(k) * (d.de.y - TAM / 2);
           const giro = new THREE.Quaternion().setFromAxisAngle(d.eixo, (1 - e) * d.voltas * Math.PI);
           d.malha.quaternion.copy(d.final).multiply(giro);
         }
