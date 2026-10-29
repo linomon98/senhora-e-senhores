@@ -1759,6 +1759,8 @@ body.tut-pulsa-seta #setas .seta .linha { animation: tut-pulsa-linha .6s ease-in
 
 /* ---------- Área de testes ---------- */
 .lista-testes { display: grid; gap: 12px; margin: 16px auto 4px; width: min(560px, 100%); }
+.testes .gravidade-dado { width: min(560px, 100%); margin: 14px auto 0; }
+.testes .gravidade-dado input { width: 100%; }
 .btn-teste {
   display: grid; gap: 4px; text-align: left; padding: 14px 18px; cursor: pointer; color: #141414; background: #fff;
   border: 3px solid #141414; border-radius: 14px; box-shadow: 0 5px 0 #141414; transition: transform .12s, box-shadow .12s;

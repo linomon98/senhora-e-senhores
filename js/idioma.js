@@ -610,6 +610,8 @@ window.SS = window.SS || {};
     'menu.regrasCurto': ['Regras', 'Rules'],
     'menu.testes': ['Testes', 'Tests'],
     'teste.titulo': ['Testes', 'Tests'],
+    'teste.gravidade': ['Gravidade do dado', 'Dice gravity'],
+    'teste.gravidadeNota': ['100% ★ = a padrão (dado pesado). Menos = mais leve e lento (uns 30% é a antiga, "da Lua"); mais = cai mais rápido. Vale neste navegador.', '100% ★ = default (heavy die). Lower = lighter and slower (about 30% is the old "moon" one); higher = falls faster. Applies on this browser.'],
     'teste.botxbot': ['Bot × bot', 'Bot vs bot'],
     'teste.botxbotNota': ['Escolha o Palhaço, o deck e o nível de cada bot e assista à partida.', "Pick each bot's Jester, deck and level, then watch the match."],
     'teste.simularNota': ['Centenas de partidas de bots, de uma vez, para ver o equilíbrio dos Palhaços.', 'Hundreds of bot matches at once, to check how balanced the Jesters are.'],

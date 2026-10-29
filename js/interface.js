@@ -4752,6 +4752,11 @@ window.SS = window.SS || {};
 
   // ---------- Área de testes: bot × bot com decks escolhidos, simulação em massa e mesa livre ----------
 
+  // Gravidade do dado (área de testes), em % da padrão; fica guardada neste navegador.
+  let gravidadeDado = (() => { try { return Number(localStorage.getItem('ss-gravidade-dado')) || 100; } catch (e) { return 100; } })();
+  SS.Dados.definirGravidade(gravidadeDado);
+  const textoGravidade = () => gravidadeDado + '%' + (gravidadeDado === 100 ? ' ★' : '');
+
   function telaTestes() {
     const item = (m, icone, titulo, nota) => `<button class="btn-teste" data-m="${m}"><b>${icone} ${titulo}</b><span>${nota}</span></button>`;
     modal(`<div class="menu-tema testes">
@@ -4764,6 +4769,9 @@ window.SS = window.SS || {};
         ${item('comportamento', '🤖', t('cb.titulo'), P.LISTA.some(x => compModificado(x.id)) ? t('cb.ativos', { l: P.LISTA.filter(x => compModificado(x.id)).map(x => x.nome).join(', ') }) : t('cb.notaMenu'))}
         ${item('regras', '⚖', t('rg.titulo'), regrasModificadas(cfg.regras).length ? t('rg.ativas', { n: regrasModificadas(cfg.regras).length }) : t('rg.notaMenu'))}
       </div>
+      <div class="opcao gravidade-dado"><label>🎲 ${t('teste.gravidade')} <b class="grav-v">${textoGravidade()}</b></label>
+        <input type="range" class="grav-dado" min="20" max="250" step="5" value="${gravidadeDado}">
+        <p class="nota">${t('teste.gravidadeNota')}</p></div>
       <div class="acoes-menu"><button class="btn" data-m="voltar">${t('btn.voltar')}</button></div></div>`,
     ev => {
       const b = ev.target.closest('[data-m]');
@@ -4778,6 +4786,12 @@ window.SS = window.SS || {};
         fecharModal();
         SS.Decks.abrir(telaTestes, { bot: true, opcoes: volta => telaOpcoes(() => { fecharModal(); volta(); }) });
       }
+    });
+    $('#modal .grav-dado').addEventListener('input', ev => {
+      gravidadeDado = Number(ev.target.value);
+      SS.Dados.definirGravidade(gravidadeDado);
+      $('#modal .grav-v').textContent = textoGravidade();
+      try { localStorage.setItem('ss-gravidade-dado', String(gravidadeDado)); } catch (e) { /* fica só nesta visita */ }
     });
   }
 

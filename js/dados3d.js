@@ -15,6 +15,10 @@ window.SS = window.SS || {};
   const VALORES_FACE = [1, 6, 2, 5, 3, 4];
   const NORMAIS = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
   const TAM_MESA = 2.1, TAM_BANDEJA = 1.55;
+  // Gravidade (o dado tem 2,1 de lado: com 75 ele caía como na Lua; 260 dá uma queda pesada, de dado de verdade,
+  // ainda legível). Dá para mudar na área de testes.
+  const GRAVIDADE_PADRAO = 260;
+  let gravidade = GRAVIDADE_PADRAO;
   let TAM = TAM_MESA;
   // Bandeja: elemento da página onde os dados rolam (null = a tela toda).
   let arena = null;
@@ -94,8 +98,7 @@ window.SS = window.SS || {};
       cena.add(chao);
 
       mundo = new CANNON.World();
-      // (o dado tem 2,1 de lado: com 75 ele caía como na Lua; 260 dá uma queda pesada, de dado de verdade, ainda legível)
-      mundo.gravity.set(0, -260, 0);
+      mundo.gravity.set(0, -gravidade, 0);
       mundo.broadphase = new CANNON.NaiveBroadphase();
       mundo.solver.iterations = 14;
       mundo.allowSleep = true;
@@ -492,7 +495,9 @@ window.SS = window.SS || {};
     montarParedes();
     const mats = materiais(cor);
     mats.forEach(m => { m.opacity = 1; });
-    const L = limites, dur = TAM === TAM_BANDEJA ? 1100 : 1300, alto = TAM === TAM_BANDEJA ? 1 : 1.6, inicio = performance.now();
+    // (o dado animado também acompanha a gravidade: mais leve, demora mais para cair e quicar)
+    const lento = Math.min(2.2, Math.max(0.6, Math.sqrt(GRAVIDADE_PADRAO / gravidade)));
+    const L = limites, dur = (TAM === TAM_BANDEJA ? 1100 : 1300) * lento, alto = TAM === TAM_BANDEJA ? 1 : 1.6, inicio = performance.now();
     const cima = new THREE.Vector3(0, 1, 0);
     const voos = valores.map((v, k) => {
       const malha = new THREE.Mesh(new THREE.BoxGeometry(TAM, TAM, TAM), mats);
@@ -578,6 +583,12 @@ window.SS = window.SS || {};
 
   SS.Dados = {
     iniciar, rolar, sumir, cancelar, temFisica: () => pronto,
+    // Gravidade do dado (área de testes): em % da padrão.
+    GRAVIDADE_PADRAO,
+    definirGravidade: pct => {
+      gravidade = GRAVIDADE_PADRAO * Math.max(0.1, Number(pct) || 100) / 100;
+      if (mundo) mundo.gravity.set(0, -gravidade, 0);
+    },
     definirArena: el => { arena = el || null; },
     // Mostra um dado jogado por outra pessoa (multiplayer), terminando nos valores dados.
     mostrar: (valores, cor, deCima) => (iniciar() ? rolarPara(valores, cor, !!deCima) : rolarPara2D(valores, cor)),
