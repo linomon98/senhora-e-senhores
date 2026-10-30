@@ -3409,20 +3409,36 @@ window.SS = window.SS || {};
   // jogadores são aplicadas na mesma ordem nas duas telas, para o sorteio dar igual.
   // Palco de cartas (abertura, mulligan e descarte): a mesa escurece, as cartas voam de um lugar da mesa
   // (baralho, mão) até o meio, o jogador escolhe e, no fim, elas voam para onde vão (baralho, mão, cemitério).
-  // o: { titulo, sub, cartas, origem(), qtd (0 = só olhar), botao(n), botoes: [{ m, rotulo, secundario }],
-  //      destino(id, escolhida, m) } → Promise { ids, m }
+  // o: { titulo, sub, cartas, origem(), qtd (0 = só olhar), botao(n), botoes: [{ m, rotulo, secundario, comSel }],
+  //      destino(id, escolhida, m), livre(id) } → Promise { ids, m }
+  // Com "livre", escolhe quantas quiser entre as cartas em que livre(id) é true; os botões com comSel(n) mudam o
+  // texto conforme a escolha e ficam apagados sem nenhuma carta escolhida.
   function palcoCartas(o) {
     return new Promise(resolver => {
       const esc = [];
       let saindo = false;
       modal(`<div class="palco-cartas">
           <h2 class="palco-titulo">${o.titulo}</h2>${o.sub ? `<p class="palco-sub">${o.sub}</p>` : ''}
-          <div class="palco-fila">${o.cartas.map(c => `<div class="carta grande palco-carta${o.qtd ? ' clicavel' : ''}" data-pc="${c.id}">${C.frente(c)}</div>`).join('')}</div>
-          <div class="palco-botoes">${o.qtd ? `<button class="palco-btn" data-m="ok" disabled>${o.botao(0)}</button>` : ''}${(o.botoes || []).map(b => `<button class="palco-btn${b.secundario ? ' secundario' : ''}" data-m="${b.m}">${b.rotulo}</button>`).join('')}</div>
+          <div class="palco-fila">${o.cartas.map(c => `<div class="carta grande palco-carta${o.qtd || (o.livre && o.livre(c.id)) ? ' clicavel' : ''}" data-pc="${c.id}">${C.frente(c)}</div>`).join('')}</div>
+          <div class="palco-botoes">${o.qtd ? `<button class="palco-btn" data-m="ok" disabled>${o.botao(0)}</button>` : ''}${(o.botoes || []).map(b => `<button class="palco-btn${b.secundario ? ' secundario' : ''}" data-m="${b.m}"${b.comSel ? ' disabled' : ''}>${b.comSel ? b.comSel(0) : b.rotulo}</button>`).join('')}</div>
         </div>`,
       ev => {
         if (saindo) return;
         const carta = ev.target.closest('[data-pc]');
+        if (carta && o.livre) {
+          const id = carta.dataset.pc, k = esc.indexOf(id);
+          if (!o.livre(id)) return;
+          if (k >= 0) { esc.splice(k, 1); Som.tocar('clique'); }
+          else { esc.push(id); Som.tocar('selecionar-carta'); }
+          carta.classList.toggle('selecionada', esc.includes(id));
+          for (const b of o.botoes || []) {
+            if (!b.comSel) continue;
+            const el = $(`#modal [data-m="${b.m}"]`);
+            el.textContent = b.comSel(esc.length);
+            el.disabled = !esc.length;
+          }
+          return;
+        }
         if (carta && o.qtd) {
           const id = carta.dataset.pc, k = esc.indexOf(id);
           if (k >= 0) { esc.splice(k, 1); Som.tocar('clique'); }
@@ -3465,7 +3481,7 @@ window.SS = window.SS || {};
 
   // Cada carta voa para o seu destino; o resto do palco some junto.
   function sairPalco(o, esc, m) {
-    Som.tocar(m === 'mulligan' ? 'embaralhar' : 'palco-sai');
+    Som.tocar(m === 'trocar' ? 'embaralhar' : 'palco-sai');
     const els = [...$('#modal').querySelectorAll('.palco-carta')];
     for (const sel of ['.palco-titulo', '.palco-sub', '.palco-botoes']) {
       const el = $('#modal ' + sel);
@@ -3507,17 +3523,26 @@ window.SS = window.SS || {};
     return r.ids;
   }
 
+  // Mulligan: você escolhe quais números da mão inicial trocar (vão para o fundo do baralho e vêm outros do topo),
+  // até M.TROCAS_MULLIGAN vezes. Cada troca é aplicada na hora (aqui) e a mão nova volta para o palco.
+  // Devolve a lista das trocas feitas (cada uma, os ids trocados), para o online repetir na tela do amigo.
   async function decidirMulliganModal() {
-    const r = await palcoCartas({
-      titulo: t('ab.suaMao'), sub: t('ab.mulliganNota'), cartas: jogo.jogadores[eu].mao, qtd: 0,
-      origem: id => cartaNaMao(eu, id),
-      botoes: [{ m: 'manter', rotulo: t('ab.manter') }, { m: 'mulligan', rotulo: 'Mulligan', secundario: true }],
-      destino: (id, _, m) => {
-        const c = jogo.jogadores[eu].mao.find(x => x.id === id);
-        return m === 'mulligan' && c && !M.ehFigura(c) ? pilhaDe(eu, 'numeros') : cartaNaMao(eu, id);
-      },
-    });
-    return r.m === 'mulligan';
+    const j = jogo.jogadores[eu], trocas = [];
+    for (;;) {
+      const restam = M.TROCAS_MULLIGAN - j.abertura.trocas;
+      const trocavel = id => { const c = j.mao.find(x => x.id === id); return !!c && restam > 0 && !j.abertura.figuras.includes(id) && (M.ehNumero(c) || M.ehAs(c)); };
+      const r = await palcoCartas({
+        titulo: t('ab.suaMao'), sub: t(restam > 0 ? 'ab.mulliganNota' : 'ab.mulliganFim', { n: restam }), cartas: j.mao, qtd: 0, livre: trocavel,
+        origem: id => (trocas.length && trocas[trocas.length - 1].includes(id) ? pilhaDe(eu, 'numeros') : cartaNaMao(eu, id)),
+        botoes: [{ m: 'manter', rotulo: t('ab.manter') }].concat(restam > 0 ? [{ m: 'trocar', comSel: n => t('ab.trocar', { n }), secundario: true }] : []),
+        destino: (id, escolhida, m) => (m === 'trocar' && escolhida ? pilhaDe(eu, 'numeros') : cartaNaMao(eu, id)),
+      });
+      if (r.m !== 'trocar' || !r.ids.length) break;
+      M.mulligan(jogo, eu, r.ids);
+      trocas.push(r.ids.slice());
+      render();
+    }
+    return trocas;
   }
 
   async function aberturaHumana() {
@@ -3525,8 +3550,8 @@ window.SS = window.SS || {};
     M.escolherFiguras(jogo, eu, ids);
     render();
     await tutGancho('mulligan');
-    if (await decidirMulliganModal()) M.mulligan(jogo, eu);
-    else M.confirmarAbertura(jogo, eu);
+    await decidirMulliganModal();
+    M.confirmarAbertura(jogo, eu);
     fecharModal();
   }
 
@@ -3546,16 +3571,16 @@ window.SS = window.SS || {};
     if (!Array.isArray(dele.ids)) { jogadaInvalida(dele.ids); return false; }
     if (!aplicarRemoto(() => { for (const p of [0, 1]) M.escolherFiguras(jogo, p, p === eu ? minhas : dele.ids); })) return false;
     render();
-    const mull = await decidirMulliganModal();
+    // (as minhas trocas já foram aplicadas aqui, uma a uma; as do amigo chegam todas juntas no fim)
+    const minhasTrocas = await decidirMulliganModal();
     if (id !== partida) return false;
-    SS.Rede.enviar({ t: 'mulligan', sim: mull });
+    SS.Rede.enviar({ t: 'mulligan', trocas: minhasTrocas });
     modalEspera();
     const dele2 = await SS.Rede.esperar(['mulligan']);
     if (id !== partida) return false;
-    for (const p of [0, 1]) {
-      if (p === eu ? mull : dele2.sim === true) M.mulligan(jogo, p);
-      else M.confirmarAbertura(jogo, p);
-    }
+    const trocasDele = Array.isArray(dele2.trocas) ? dele2.trocas : [];
+    if (!aplicarRemoto(() => { for (const ids of trocasDele) M.mulligan(jogo, 1 - eu, ids); })) return false;
+    for (const p of [0, 1]) M.confirmarAbertura(jogo, p);
     fecharModal();
     return true;
   }
@@ -3797,8 +3822,9 @@ window.SS = window.SS || {};
       for (const p of [1, 0]) {
         if (controle(p) !== 'bot') continue;
         M.escolherFiguras(jogo, p, Bot.escolherFiguras(jogo, p, nivelDe(p)));
-        if (Bot.querMulligan(jogo, p, nivelDe(p))) M.mulligan(jogo, p);
-        else M.confirmarAbertura(jogo, p);
+        const troca = Bot.querMulligan(jogo, p, nivelDe(p));
+        if (troca.length) M.mulligan(jogo, p, troca);
+        M.confirmarAbertura(jogo, p);
       }
       if (controle(0) === 'humano') {
         await aberturaHumana();
@@ -4784,6 +4810,8 @@ window.SS = window.SS || {};
   const BUILD = {
     n: 111, data: '30/10/2026',
     novidades: [
+      ['Mulligan novo: escolha quais números trocar (vão para o fundo do baralho e vêm outros do topo), até 3 vezes', 'New mulligan: pick which numbers to swap (they go to the bottom of the deck and new ones come from the top), up to 3 times'],
+      ['Valete de Ouros espelhado e Valete de Copas um pouco menor, para não cobrir o naipe do canto', 'Jack of Diamonds mirrored and Jack of Hearts a bit smaller, so they no longer cover the corner suit'],
       ['Deckbuilder: caixas mais largas (a Rainha não sai mais da borda) e a carta destacada fica destacada ao pôr ou tirar, sem o leque fechar e abrir', 'Deckbuilder: wider boxes (the Queen no longer sticks out) and the highlighted card stays highlighted when adding or removing, without the fan closing and reopening'],
       ['Deckbuilder: a carta com o mouse em cima afasta as vizinhas para aparecer inteira, e as Letras ficam na ordem Valete, Rei, Rainha também em cima', 'Deckbuilder: the hovered card pushes its neighbors aside so it shows in full, and the Letters go Jack, King, Queen up top too'],
       ['Meteoro: agora derruba também os Ases da mesa, e quem está em Berserk aguenta', 'Meteor: now also knocks down the Aces on the table, and Berserk Gentlemen hold on'],
@@ -5087,7 +5115,7 @@ window.SS = window.SS || {};
     ui = novoUi();
     for (const [p, j] of jogo.jogadores.entries()) {
       if (lv.mao === 'normal') { M.escolherFiguras(jogo, p, Bot.escolherFiguras(jogo, p, 'medio')); jogo.fase = 'abertura'; }
-      j.abertura = { figuras: [], mulligan: false, pronto: true };
+      j.abertura = { figuras: [], trocas: 0, pronto: true };
     }
     // Turno 2: quem joga primeiro já pode atacar (no turno 1 não pode).
     Object.assign(jogo, { turno: 2, vez: 0, fase: 'principal', acoes: M.ACOES_POR_TURNO, sumonados: 0, asesTurno: 0, poderUsado: false });

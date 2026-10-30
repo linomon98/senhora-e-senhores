@@ -61,7 +61,7 @@ window.SS = window.SS || {};
           <li><b>${x('Fim', 'End')}</b><span>${x(`Quem atacou vira para baixo; mais de ${M.LIMITE_MAO} cartas na mão, descarte.`, `Whoever attacked flips face down; more than ${M.LIMITE_MAO} cards in hand, discard.`)}</span></li>
         </ol>
         <div class="rg-caixinhas">
-          <p><b>${x('Começo:', 'Setup:')}</b> ${x('cada um escolhe 3 figuras e compra 4 números (dá para trocar os números uma vez, o mulligan). Quem começa é decidido no dado; no 1º turno, quem começa não compra e não ataca.', 'each player picks 3 face cards and draws 4 numbers (you can swap the numbers once, the mulligan). The die decides who starts; on turn 1, the starting player neither draws nor attacks.')}</p>
+          <p><b>${x('Começo:', 'Setup:')}</b> ${x('cada um escolhe 3 figuras e compra 4 números (no mulligan, dá para trocar os números que quiser, até 3 vezes: eles vão para o fundo do baralho e vêm outros). Quem começa é decidido no dado; no 1º turno, quem começa não compra e não ataca.', 'each player picks 3 face cards and draws 4 numbers (with the mulligan you can swap any numbers, up to 3 times: they go to the bottom of the deck and new ones come in). The die decides who starts; on turn 1, the starting player neither draws nor attacks.')}</p>
           <p><b>${x('Fim de jogo:', 'Game end:')}</b> ${x(`quem chega a 0 PV perde. Comprar com os dois baralhos vazios custa ${2} PV por carta.`, `reaching 0 HP loses. Drawing with both decks empty costs ${2} HP per card.`)}</p>
         </div>`;
       },

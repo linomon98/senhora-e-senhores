@@ -537,9 +537,12 @@ window.SS = window.SS || {};
     return escolha;
   }
 
+  // Mulligan do bot (devolve os ids a trocar): troca os números e Ases quando a mão não tem pelo menos 2 números
+  // com algum até 7; senão, nada.
   function querMulligan(e, p) {
-    const nums = e.jogadores[p].mao.filter(M.ehNumero);
-    return nums.length < 2 || !nums.some(c => M.valor(c) <= 7);
+    const j = e.jogadores[p], nums = j.mao.filter(M.ehNumero);
+    if (j.abertura.trocas > 0 || !(nums.length < 2 || !nums.some(c => M.valor(c) <= 7))) return [];
+    return j.mao.filter(c => !j.abertura.figuras.includes(c.id) && (M.ehNumero(c) || M.ehAs(c))).map(c => c.id);
   }
 
   // Descarte: tira, uma a uma, a carta cuja falta menos piora a nota da mesa (assim guarda pares e recursos).
@@ -571,8 +574,9 @@ window.SS = window.SS || {};
     const e = M.criarJogo({ nomes: ['Bot A', 'Bot B'], primeiro, palhacos: o.palhacos, decks: o.decks });
     for (const p of [0, 1]) {
       M.escolherFiguras(e, p, escolherFiguras(e, p, niveis[p]));
-      if (querMulligan(e, p, niveis[p])) M.mulligan(e, p);
-      else M.confirmarAbertura(e, p);
+      const troca = querMulligan(e, p, niveis[p]);
+      if (troca.length) M.mulligan(e, p, troca);
+      M.confirmarAbertura(e, p);
     }
     jogarAte(e, niveis, limiteTurnos || 200);
     return { vencedor: e.vencedor, turnos: e.turno, primeiro, estado: e };

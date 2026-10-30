@@ -182,7 +182,7 @@ window.SS = window.SS || {};
           feridas: {}, // uid do Naipado de Copas inimigo -> PV máximo até onde dá para curar
           mortos: [], // Senhores que morreram (figura + número), para o Par de Copas trazer de volta
           tokens: 0, // Ouros extras do Ás de Ouros neste turno
-          abertura: { figuras: [], mulligan: false, pronto: false },
+          abertura: { figuras: [], trocas: 0, pronto: false },
         };
       }),
       primeiro,
@@ -234,17 +234,24 @@ window.SS = window.SS || {};
     comprar(e, p, 4, 'numeros');
   }
 
-  function mulligan(e, p) {
+  // Mulligan: até TROCAS_MULLIGAN vezes, o jogador escolhe quais cartas de número da mão inicial troca. Elas vão para
+  // o fundo do baralho de Números e ele compra a mesma quantidade do topo (sem embaralhar: assim a ordem em que as
+  // trocas dos dois jogadores são aplicadas não muda nada, e o online fica igual nas duas telas).
+  const TROCAS_MULLIGAN = 3;
+  function mulligan(e, p, ids) {
     const j = e.jogadores[p];
-    if (j.abertura.mulligan || j.abertura.pronto) throw new Error('Mulligan indisponível');
-    const devolver = j.mao.filter(c => !j.abertura.figuras.includes(c.id));
-    j.mao = j.mao.filter(c => j.abertura.figuras.includes(c.id));
-    j.numeros.push(...devolver);
-    embaralhar(j.numeros);
-    comprar(e, p, 3, 'numeros');
-    j.abertura.mulligan = true;
-    registrar(e, t('log.mulligan', { j: j.nome }));
-    confirmarAbertura(e, p);
+    if (j.abertura.pronto || j.abertura.trocas >= TROCAS_MULLIGAN) throw new Error('Mulligan indisponível');
+    if (!Array.isArray(ids) || !ids.length || new Set(ids).size !== ids.length) throw new Error('Escolha as cartas para trocar');
+    const devolver = ids.map(id => {
+      const c = j.mao.find(x => x.id === id);
+      if (!c || j.abertura.figuras.includes(id) || (!ehNumero(c) && !ehAs(c))) throw new Error('Carta inválida para trocar: ' + id);
+      return c;
+    });
+    j.mao = j.mao.filter(c => !ids.includes(c.id));
+    j.numeros.unshift(...devolver);
+    comprar(e, p, devolver.length, 'numeros');
+    j.abertura.trocas++;
+    registrar(e, t('log.mulligan', { j: j.nome, n: devolver.length }));
   }
 
   function confirmarAbertura(e, p) {
@@ -1420,7 +1427,7 @@ window.SS = window.SS || {};
     definirRng: f => { rng = f; }, rngAtual: () => rng, REGRAS_PADRAO, definirRegras, regras, limiteDefesa, faixaFigura, pvInicial, passivaAtiva, podeInvocar, EFEITO_PARGIA, DANO_RAIO_PALHACO, VALOR_MIN_REFLEXO, VALOR_MAX_REFLEXO, voltarAoPrincipal, refletir, paresIguais, contraRefletir, podeContraRefletir, CURA_AS_COPAS, CURA_NAIPADO_COPAS,
     ehFigura, ehAs, ehNumero, ehSacrificavel, valor, nomeCarta, nomeNaipe, nomeUnidade, curaDe, curaPara, naipado,
     BARALHOS, NOME_BARALHO, baralhosDisponiveis, comprarDoTurno,
-    criarJogo, registrar, figurasNoBaralho, escolherFiguras, mulligan, confirmarAbertura,
+    criarJogo, registrar, figurasNoBaralho, escolherFiguras, mulligan, TROCAS_MULLIGAN, confirmarAbertura,
     localizar, tetoCura, ataque, ataqueBase, resistencia, postura, podeAtacar,
     acoesLegais, aplicarAcao, ourosDisponiveis,
     atacantesAptos, alvosPossiveis, capacidadeBloqueio, bloqueadoresAptos,
