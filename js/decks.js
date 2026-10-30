@@ -12,6 +12,8 @@ window.SS = window.SS || {};
   const tr = (k, p) => SS.Idioma.t(k, p);
   const FIGURAS = ['J', 'Q', 'K'];
   const NUMEROS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+  // Coleção embaixo: do Ás ao 10 e depois as Letras pela ordem de força (Valete, Rei, Rainha).
+  const ORDEM_COLECAO = NUMEROS.concat(['J', 'K', 'Q']);
 
   // ---------- Caixinhas: cores e ícones ----------
 
@@ -257,10 +259,10 @@ window.SS = window.SS || {};
   // Embaixo: todas as cartas do naipe da aba. Clique põe no baralho, botão direito tira.
   function colecao(d) {
     const R = M.REGRAS_DECK, r = M.resumoDeck(d ? d.cont : {});
-    const cartas = FIGURAS.concat(NUMEROS).map(rank => {
+    const cartas = ORDEM_COLECAO.map(rank => {
       const chave = chaveDe(rank, aba), n = d ? d.cont[chave] || 0 : 0;
       const cheio = !(d && d.leitura) && (n >= R.copias || (FIGURAS.includes(rank) ? r.letras >= R.letras : r.numeros >= R.numeros));
-      return `<span class="db-colecao-carta${n ? ' tem' : ''}${cheio ? ' cheia' : ''}${n >= R.copias ? ' max' : ''}" data-por="${chave}" title="${nomeCarta(rank, aba)}" style="--i:${FIGURAS.concat(NUMEROS).indexOf(rank)}">
+      return `<span class="db-colecao-carta${n ? ' tem' : ''}${cheio ? ' cheia' : ''}${n >= R.copias ? ' max' : ''}" data-por="${chave}" title="${nomeCarta(rank, aba)}" style="--i:${ORDEM_COLECAO.indexOf(rank)}">
         <b class="db-qtd">${n}/${R.copias}</b>${face(rank, aba)}</span>`;
     }).join('');
     return `<div class="db-abas">${NAIPES.map(n => `<button class="db-aba ${n}${n === aba ? ' ativa' + (animar === 'aba' ? ' pula' : '') : ''}" data-aba="${n}" title="${tr('naipe.' + n)}">
@@ -401,10 +403,11 @@ window.SS = window.SS || {};
     guardar();
     desenhar();
     if (delta > 0) {
-      // Entrando: voa da coleção até o lugar dela no baralho, que aparece quando a carta chega.
+      // Entrando: voa da coleção até o lugar dela no baralho. Carta nova só aparece quando a voadora chega;
+      // mais uma cópia de uma que já estava lá: ela continua à vista e só pula.
       const alvo = naTela(chave);
       voar(chave, antes, caixaDoEl(alvo), true);
-      if (alvo && !MOVIMENTO_REDUZIDO) alvo.animate([{ opacity: 0 }, { opacity: 0, offset: .99 }, { opacity: 1 }], { duration: 400 });
+      if (alvo && !n0 && !MOVIMENTO_REDUZIDO) alvo.animate([{ opacity: 0 }, { opacity: 0, offset: .99 }, { opacity: 1 }], { duration: 400 });
       pular(alvo, 400);
     } else {
       // Saindo: volta para a coleção (ou para a aba do naipe, se ela estiver fechada).
