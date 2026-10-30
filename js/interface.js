@@ -83,9 +83,10 @@ window.SS = window.SS || {};
   const ANGULO = { vertical: 0, diagonal: 45, horizontal: 90 };
   // Parâmetros que o jogador escolhe clicando na mesa, em ordem, para cada tipo de ação.
   // "sacrificios" é um passo de 2 cliques (a Rainha sacrifica 2 Senhores).
-  // O espaço na fileira não é um passo: vale o lugar onde a carta foi solta (ou o centro, pelo botão).
+  // O espaço na fileira ("slot") só é perguntado (com a setinha) quando a carta não foi solta num lugar
+  // e ainda sobra mais de um lugar possível.
   // Magia dos pares: "morto" (Copas, quem volta do cemitério), "as" (Ouros, o Ás do baralho) ou "alvo" (Paus/Espadas).
-  const PASSOS = { sumonar: ['sacrificios'], invocarAs: [], espadas: ['alvo'], paus: ['alvo'], magia: ['morto', 'as', 'alvo'], pargia: ['alvo'], curar: [], comprar: [], poder: ['alvo'] };
+  const PASSOS = { sumonar: ['sacrificios', 'slot'], invocarAs: ['slot'], espadas: ['alvo'], paus: ['alvo'], magia: ['morto', 'as', 'alvo'], pargia: ['alvo'], curar: [], comprar: [], poder: ['alvo'] };
   const CENTRO_FILEIRA = (M.ESPACOS - 1) / 2;
 
   // Entre as opções que só mudam de espaço, fica a mais perto de onde a carta foi solta.
@@ -182,20 +183,43 @@ window.SS = window.SS || {};
 
   function iniciarPendente(chave, destino) {
     const tipo = chave.split('/')[0];
-    const cands = candidatosSelecao().filter(a => chaveAcao(a) === chave);
+    let cands = candidatosSelecao().filter(a => chaveAcao(a) === chave);
     if (!cands.length) return;
+    // Rei/Rainha solto em cima de um Senhor(a) seu: é ele que vai no sacrifício (ela entra no lugar dele).
+    if (destino != null && cands.some(a => a.sacrificio != null)) {
+      const ali = cands.filter(a => a.slot === destino);
+      if (ali.length) cands = ali;
+    }
     const tem = (a, ps) => (ps === 'sacrificios' ? a.sacrificio != null : a[ps] != null);
     ui.destino = null;
     ui.pend = { tipo, cands, passos: PASSOS[tipo].filter(ps => cands.some(a => tem(a, ps))), k: 0, esc: {}, destino };
-    // Carta que escolhe um Senhor(a): fica brilhando roxo e a seta sai dela até o alvo.
+    pularPassosDecididos();
+    // Carta que escolhe um Senhor(a) ou o lugar no campo: fica brilhando roxo e a seta sai dela.
     const botao = ui.ultimoBotao && ui.ultimoBotao.isConnected && ui.ultimoBotao.matches('.carta-acao') ? ui.ultimoBotao : null;
-    if (botao && ui.pend.passos[0] === 'alvo') {
-      const c = centroDe(botao);
+    const primeiro = passoAtual();
+    if ((botao && primeiro === 'alvo') || primeiro === 'slot' || primeiro === 'sacrificios') {
+      const origem = botao || document.querySelector(`#mao-${jogo.vez} [data-mao="${cands[0].figura || cands[0].as}"]`);
+      const c = centroDe(origem) || { x: 800, y: 700 };
       ui.pend.seta = { de: { x: c.x, y: c.y - 46 }, chave, rotulo: rotuloTipo(cands[0].tipo, cands[0]), icone: iconeDaAcao(cands[0]) };
       ui.mouse = Object.assign({}, ui.pend.seta.de);
       Som.tocar('mira-seta');
     }
     avancarPendente();
+  }
+
+  // Passos que já estão resolvidos: o lugar, quando a carta foi solta num lugar ou só sobra um; os sacrifícios,
+  // quando a carta foi solta em cima de quem vai ser sacrificado e não há outro jeito.
+  function pularPassosDecididos() {
+    const pd = ui.pend;
+    for (;;) {
+      const passo = pd.passos[pd.k], restam = candidatosPendentes();
+      if (passo === 'slot' && (pd.destino != null || new Set(restam.map(a => a.slot)).size <= 1)) pd.k++;
+      else if (passo === 'sacrificios' && pd.destino != null && !(pd.esc.sacrificios || []).length
+        && new Set(restam.map(a => a.sacrificio + '|' + a.sacrificio2)).size === 1) {
+        pd.esc.sacrificios = [restam[0].sacrificio, restam[0].sacrificio2].filter(x => x != null);
+        pd.k++;
+      } else return;
+    }
   }
 
   // Poder do Palhaço: escolhe o alvo clicando na mesa.
@@ -212,6 +236,7 @@ window.SS = window.SS || {};
 
   function avancarPendente() {
     const pd = ui.pend;
+    pularPassosDecididos();
     if (pd.k < pd.passos.length) {
       if (pd.passos[pd.k] === 'morto') return escolherMorto();
       if (pd.passos[pd.k] === 'as') return escolherAsDoBaralho();
@@ -656,6 +681,11 @@ window.SS = window.SS || {};
     }
     // Mirando o Ás: o espaço ocupado debaixo do mouse já abre caminho, mostrando para onde as cartas vão.
     if (jogo && ui.miraAs) abrirEspaco(jogo.vez, espacoDoAs(ev.target));
+    // Escolhendo o lugar do Ás: a mesma prévia, só nos lugares que valem.
+    else if (jogo && ui.pend && passoAtual() === 'slot') {
+      const i = espacoDoAs(ev.target);
+      abrirEspaco(jogo.vez, i != null && alvosClicaveis().has(`slot:${jogo.vez}:${i}`) ? i : null);
+    }
     atualizarDica(ev);
   }
 
@@ -752,9 +782,9 @@ window.SS = window.SS || {};
   // Com a opção ligada (e nada selecionado), aparece uma carta para cada ação que a sua mão permite. Clicando
   // numa delas, as cartas da mão que servem para ela pulsam (o resto escurece) e você escolhe quais usar;
   // quando a escolha fecha uma jogada, segue o caminho normal (alvo, sacrifícios, lugar no campo…).
-  // Invocar Senhor e invocar Ás dividem a mesma carta "Invocar" (a Rainha, com sacrifícios, tem a dela).
+  // Toda invocação (Senhor, Rei ou Rainha com sacrifício, Ás) divide a mesma carta "Invocar".
   const GRUPO_INVOCAR = 'sumonar|sumonar';
-  const grupoDaAcao = a => (a.tipo === 'magia' ? 'magia:' + a.naipe : a.tipo === 'invocarAs' ? GRUPO_INVOCAR : iconeDaAcao(a) + '|' + chaveAcao(a));
+  const grupoDaAcao = a => (a.tipo === 'magia' ? 'magia:' + a.naipe : ehColocacao(a) ? GRUPO_INVOCAR : iconeDaAcao(a) + '|' + chaveAcao(a));
   function acoesDoGrupo(grupo) {
     if (grupo === 'dado') return [];
     return M.acoesLegais(jogo).filter(a => a.tipo !== 'atacar' && a.tipo !== 'poder' && grupoDaAcao(a) === grupo);
@@ -867,6 +897,8 @@ window.SS = window.SS || {};
     }
     const i = dest.i;
     if (i == null || !legais.some(a => ehColocacao(a) && chaveCartas(a).includes(id))) return null;
+    // Rei/Rainha em cima de um Senhor(a) que pode ser sacrificado por ele(a): o Senhor(a) brilha como alvo.
+    if (dest.tipo === 'unidade' && legais.some(a => a.tipo === 'sumonar' && a.sacrificio != null && a.figura === id && a.slot === i)) return { campo: i, sacrificio: true };
     return { campo: i };
   }
 
@@ -896,7 +928,7 @@ window.SS = window.SS || {};
     const dest = destinoEm(ev.clientX, ev.clientY);
     const ef = efeitoDoDestino(a.id, dest);
     a.dest = ef ? dest : null;
-    marcarDestino(ef ? dest : null, !!ef && !!ef.acao);
+    marcarDestino(ef ? dest : null, !!ef && (!!ef.acao || !!ef.sacrificio));
   }
 
   // Mostra onde a carta vai cair: um brilho no lugar da fileira (os espaços não aparecem) ou no alvo.
@@ -1163,7 +1195,7 @@ window.SS = window.SS || {};
   }
 
   const mirandoPoder = () => !!(ui && ui.pend && ui.pend.tipo === 'poder' && passoAtual() === 'alvo');
-  const mirandoCarta = () => !!(ui && ui.pend && ui.pend.seta && passoAtual() === 'alvo');
+  const mirandoCarta = () => !!(ui && ui.pend && ui.pend.seta && ['alvo', 'slot', 'sacrificios'].includes(passoAtual()));
   const mirandoSeta = () => !!(ui && ((ui.reflexoModo && ui.reflexoModo.etapa === 'alvo') || mirandoPoder() || mirandoCarta() || ui.miraDado || ui.miraAs || (ui.miraRei != null && humanoAtaca())));
 
   function desenharSetas() {
@@ -4741,8 +4773,10 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 110, data: '28/10/2026',
+    n: 111, data: '30/10/2026',
     novidades: [
+      ['Uma carta Invocar só para Valete, Rei, Rainha e Ás; ao usar a carta, uma setinha deixa você escolher o lugar no campo', 'A single Summon card for Jack, King, Queen and Ace; when you use it, a little arrow lets you pick the spot on the field'],
+      ['Arraste o Rei ou a Rainha (com o número já selecionado) para cima do Senhor(a) a sacrificar: o sacrifício acontece sozinho', 'Drag the King or Queen (with the number already selected) onto the Gentleman to sacrifice: the sacrifice happens on its own'],
       ['Tutorial novo, com as regras oficiais: começa no sorteio do dado e na escolha das figuras, e ensina o Ímpeto, o Rei sacrificando o Valete e a Ordem real', 'New tutorial with the official rules: it starts with the dice roll-off and the face card pick, and teaches Haste, the King sacrificing a Jack and the Royal order'],
       ['Cartas com fundo e naipes desenhados à mão (4 variações de fundo)', 'Cards with hand-drawn backgrounds and suits (4 background variations)'],
       ['Ourinhos tem passiva nova, Dividendos: ao acertar o Palhaço inimigo, compra 1 carta (1 vez por turno). Os Juros compostos ficam nos modificadores', 'Ourinhos has a new passive, Dividends: when he hits the enemy Jester, he draws 1 card (once per turn). Compound Interest stays in the modifiers'],
