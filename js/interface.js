@@ -3110,39 +3110,66 @@ window.SS = window.SS || {};
     return `polygon(${topo.concat(base).join(', ')})`;
   }
 
+  // Quase tudo em imagem: as próprias cartas do jogo, as artes das ações, escudos e o dado; texto só nos rótulos curtos.
   function colinhaHtml() {
     const en = SS.Idioma.atual() === 'en', x = (pt, ing) => (en ? ing : pt);
-    const n = s => `<img class="cola-n" src="arte/naipes/${s}.webp" alt="" draggable="false">`;
-    const R = M.regras(), faixa = r => M.faixaFigura(r).join('–'), acao = x('1 ação', '1 action');
+    const c = (r, n, cls) => `<span class="cola-c${cls ? ' ' + cls : ''}">${C.frente({ rank: r, naipe: n })}</span>`;
+    const ic = arte => `<img class="cola-ic" src="arte/acoes/${arte}.webp" alt="" draggable="false">`;
+    const np = n => `<img class="cola-n" src="arte/naipes/${n}.webp" alt="" draggable="false">`;
+    const esc = (n, apagados) => `<span class="cola-esc">${Array.from({ length: n }, (_, k) => `<img class="${k >= n - (apagados || 0) ? 'apagado' : ''}" src="arte/icones/escudo.webp" alt="" draggable="false">`).join('')}</span>`;
+    const dado = '<img class="cola-dado" src="arte/icones/dado.webp" alt="" draggable="false">';
+    const atk = '<span class="cola-atk">⚔</span>';
+    const op = t => `<i class="cola-op">${t}</i>`;
+    const linha = (fig, rot) => `<div class="cola-linha"><span class="cola-fig">${fig}</span><b class="cola-rot">${rot}</b></div>`;
+    const bloco = (titulo, linhas) => `<section><h3>${titulo}</h3>${linhas.join('')}</section>`;
+    const R = M.regras(), faixa = r => M.faixaFigura(r).join('–');
     return `<h2>${x('Colinha', 'Crib sheet')} <small>${x('(não conta pro professor)', "(don't tell the teacher)")}</small></h2>
       <div class="cola-cols">
-        <section><h3>${x('Senhor = letra + número', 'Gentleman = face + number')}</h3>
-          <p class="cola-obs">${x('o número é o ataque', 'the number is the attack')} · ${acao}</p>
-          <ul><li><b>J</b> ${faixa('J')} · ${x('entra direto', 'enters directly')} · <i>${x('Ímpeto', 'Haste')}</i>: ${x('ataca no mesmo turno', 'attacks the same turn')}</li>
-            <li><b>K</b> ${faixa('K')} · ${R.reiSacrificaValete ? x('sacrifica 1 J', 'sacrifices 1 J') : x('entra direto', 'enters directly')} · <i>${x('Ordem real', 'Royal order')}</i>: ${x('ataca um Senhor, que tem que defender', 'attacks a Gentleman, who must block')}</li>
-            <li><b>Q</b> ${faixa('Q')} · ${R.rainha === 'doisSenhores' ? x('sacrifica 2 Senhores', 'sacrifices 2 Gentlemen') : x('sacrifica 1 K ou 2 J', 'sacrifices 1 K or 2 J')} · <i>${x('Atropelar', 'Trample')}</i>: ${x('o que sobra vai no Palhaço', 'leftover hits the Jester')}</li></ul>
-          <p class="cola-obs">${x('quem é sacrificado já estava em campo antes do turno', 'the sacrificed one was on the field before this turn')}</p></section>
-        <section><h3>${x('Naipado', 'Suited')} <small>${x('letra e número do mesmo naipe', 'face and number of the same suit')}</small></h3>
-          <ul class="cola-naipes"><li>${n('paus')} ${x('aguenta 3 hits', 'takes 3 hits')}</li><li>${n('espadas')} +1 ${x('de ataque', 'attack')}</li>
-            <li>${n('copas')} ${x(`acertou o Palhaço: +${M.CURA_NAIPADO_COPAS} PV`, `hits the Jester: +${M.CURA_NAIPADO_COPAS} HP`)}</li><li>${n('ouros')} ${x('ataca 2 vezes', 'attacks twice')}</li></ul></section>
-        <section><h3>${x('Ás = totem', 'Ace = totem')} <small>${x('+ 1 número do mesmo naipe · 1 por turno', '+ 1 number of the same suit · 1 per turn')}</small></h3>
-          <ul class="cola-naipes"><li>${n('paus')} ${x('vizinhos +1 hit', 'neighbors +1 hit')}</li><li>${n('espadas')} ${x('vizinhos +1 de ataque', 'neighbors +1 attack')}</li>
-            <li>${n('copas')} ${x(`+${M.CURA_AS_COPAS} PV por turno`, `+${M.CURA_AS_COPAS} HP per turn`)}</li><li>${n('ouros')} ${x('+1 Ouros por turno', '+1 Diamond per turn')}</li></ul>
-          <p class="cola-obs">${x('não ataca, não defende, cai com 1 golpe', "doesn't attack or block, falls to 1 hit")}</p></section>
-        <section><h3>${x('1 número sozinho', 'A single number')} <small>${acao}</small></h3>
-          <ul class="cola-naipes"><li>${n('copas')} ${x('cura 3 (A–5) ou 4 (6–10)', 'heals 3 (A–5) or 4 (6–10)')}</li><li>${n('ouros')} ${x('compra 1 · ou +1 dado no ataque', 'draw 1 · or +1 die on attack')}</li>
-            <li>${n('espadas')} ${x('+1 de ataque no turno', '+1 attack this turn')}</li><li>${n('paus')} Berserk: ${x('o ferido levanta', 'the wounded one stands up')}</li></ul></section>
-        <section><h3>${x('Par do mesmo naipe', 'Pair of the same suit')} <small>${acao}</small></h3>
-          <ul class="cola-naipes"><li>${n('copas')} ${x('revive 1 Senhor', 'revives 1 Gentleman')}</li><li>${n('ouros')} ${x('busca 1 Ás do baralho', 'fetches 1 Ace from the deck')}</li>
-            <li>${n('paus')} ${x('±1 de defesa', '±1 defense')}</li><li>${n('espadas')} ${x('±1 de dano', '±1 damage')}</li></ul></section>
-        <section><h3>${x('Pargia', 'Pairgic')} <small>${x('2 números iguais, qualquer naipe', '2 equal numbers, any suit')}</small></h3>
-          <ul><li><b>2–4</b> ${x('Refletir! (na defesa, de graça)', 'Reflect! (on defense, free)')}</li><li><b>5–7</b> ${x('Sai daqui! (volta pra mão)', 'Get out! (back to hand)')}</li>
-            <li><b>8–10</b> ${x('Meteoro! (limpa a mesa)', 'Meteor! (clears the table)')}</li><li><b>A+A</b> ${x(`Trovão (1 hit ou ${M.DANO_RAIO_PALHACO} PV)`, `Thunder (1 hit or ${M.DANO_RAIO_PALHACO} HP)`)}</li></ul></section>
-        <section><h3>${x('Dado', 'Die')}</h3>
-          <ul><li><b>${M.DADO_ATAQUE_TOTAL}–6</b> ${x('dano cheio', 'full damage')}</li><li><b>2–3</b> ${x('metade', 'half')}</li><li><b>1</b> ${x('errou', 'miss')}</li></ul></section>
-        <section><h3>${x('Defesa', 'Defense')} <small>${x('dano contra o número de quem defende', 'damage against the defender\'s number')}</small></h3>
-          <ul><li>${x('menos da metade: nada', 'under half: nothing')}</li><li>${x('até o número: 1 hit', 'up to the number: 1 hit')}</li><li>${x('passou: 2 hits', 'over: 2 hits')}</li>
-            <li>${x('atacante com número menor leva 1 hit', 'an attacker with a lower number takes 1 hit')}</li></ul></section>
+        ${bloco(x('Senhores', 'Gentlemen'), [
+          linha(`${c('J', 'espadas')}${op('+')}${c('3', 'copas')}`, `${faixa('J')} · ${x('ataca já', 'attacks now')}`),
+          linha(`${c('K', 'paus')}${op('+')}${c('7', 'copas')}${R.reiSacrificaValete ? op('✕') + c('J', 'ouros', 'cola-sac') : ''}`, `${faixa('K')} · ${x('ordem real', 'royal order')}`),
+          linha(`${c('Q', 'copas')}${op('+')}${c('10', 'ouros')}${op('✕')}${c('K', 'espadas', 'cola-sac')}${op(x('ou', 'or'))}${c('J', 'paus', 'cola-sac')}${c('J', 'copas', 'cola-sac')}`, `${faixa('Q')} · ${x('atropela', 'tramples')}`),
+        ])}
+        ${bloco(x('Naipado', 'Suited'), [
+          linha(`${c('J', 'paus')}${c('4', 'paus')}`, esc(3)),
+          linha(`${c('K', 'espadas')}${c('5', 'espadas')}`, `+1 ${atk}`),
+          linha(`${c('K', 'copas')}${c('7', 'copas')}`, `+${M.CURA_NAIPADO_COPAS} ${np('copas')}`),
+          linha(`${c('J', 'ouros')}${c('3', 'ouros')}`, `${atk} ×2`),
+        ])}
+        ${bloco(x('Ás (totem)', 'Ace (totem)'), [
+          linha(`${c('A', 'paus')}${c('2', 'paus')}`, `↔ +${esc(1)}`),
+          linha(`${c('A', 'espadas')}${c('2', 'espadas')}`, `↔ +1 ${atk}`),
+          linha(`${c('A', 'copas')}${c('2', 'copas')}`, `+${M.CURA_AS_COPAS} ${np('copas')} / ${x('turno', 'turn')}`),
+          linha(`${c('A', 'ouros')}${c('2', 'ouros')}`, `+1 ${np('ouros')} / ${x('turno', 'turn')}`),
+        ])}
+        ${bloco(x('1 carta', '1 card'), [
+          linha(`${c('6', 'copas')}${op('→')}${ic('cura')}`, `+3 / +4 ${np('copas')}`),
+          linha(`${c('4', 'ouros')}${op('→')}${ic('comprar')}${ic('dado')}`, `+1 ${x('carta', 'card')} ${x('ou', 'or')} +1 ${dado}`),
+          linha(`${c('5', 'espadas')}${op('→')}${ic('dano')}`, `+1 ${atk}`),
+          linha(`${c('7', 'paus')}${op('→')}${ic('berserk')}`, 'Berserk'),
+        ])}
+        ${bloco(x('Par do mesmo naipe', 'Same-suit pair'), [
+          linha(`${c('3', 'copas')}${c('8', 'copas')}${op('→')}${ic('cemiterio')}`, x('revive', 'revive')),
+          linha(`${c('2', 'ouros')}${c('9', 'ouros')}${op('→')}${ic('parouros')}`, x('busca Ás', 'fetch Ace')),
+          linha(`${c('4', 'paus')}${c('6', 'paus')}${op('→')}${ic('parpaus')}`, `±1 ${esc(1)}`),
+          linha(`${c('5', 'espadas')}${c('10', 'espadas')}${op('→')}${ic('parespadas')}`, `±1 ${atk}`),
+        ])}
+        ${bloco(x('Pargia (números iguais)', 'Pairgic (equal numbers)'), [
+          linha(`${c('3', 'copas')}${c('3', 'paus')}${op('→')}${ic('reflexo')}`, '2–4'),
+          linha(`${c('6', 'ouros')}${c('6', 'espadas')}${op('→')}${ic('tchau')}`, '5–7'),
+          linha(`${c('9', 'copas')}${c('9', 'paus')}${op('→')}${ic('meteoro')}`, '8–10'),
+          linha(`${c('A', 'espadas')}${c('A', 'ouros')}${op('→')}${ic('raio')}`, `1 hit ${x('ou', 'or')} ${M.DANO_RAIO_PALHACO} PV`),
+        ])}
+        ${bloco(x('Dado', 'Die'), [
+          linha(`${dado}${op(M.DADO_ATAQUE_TOTAL + '–6')}`, atk + x(' cheio', ' full')),
+          linha(`${dado}${op('2–3')}`, `${atk} ½`),
+          linha(`${dado}${op('1')}`, '✗'),
+        ])}
+        ${bloco(x('Defesa', 'Defense'), [
+          linha(`<span class="cola-conta">${atk} &lt; ½</span>`, esc(2)),
+          linha(`<span class="cola-conta">${atk} ≤ ${c('6', 'paus')}</span>`, esc(2, 1)),
+          linha(`<span class="cola-conta">${atk} &gt; ${c('6', 'paus')}</span>`, esc(2, 2)),
+        ])}
       </div>`;
   }
 
@@ -4925,7 +4952,7 @@ window.SS = window.SS || {};
   const BUILD = {
     n: 111, data: '30/10/2026',
     novidades: [
-      ['Colinha: embaixo da caixa de ações, um papel de caderno rasgado com o resumo de todas as combinações', 'Crib sheet: below the actions box, a torn notebook page summing up every combo'],
+      ['Colinha: embaixo da caixa de ações, um papel de caderno rasgado com o resumo de todas as combinações, feito com as cartas do jogo', 'Crib sheet: below the actions box, a torn notebook page summing up every combo with the game cards'],
       ['Mulligan sem a mão sair e voltar: só as cartas trocadas saem e as novas entram no lugar delas', 'Mulligan without the hand leaving and coming back: only the swapped cards leave and the new ones take their place'],
       ['Janelas da partida (cemitério, magias, fim de jogo) com o mesmo visual do palco das cartas', 'In-game windows (graveyard, spells, game over) share the card stage look'],
       ['Mulligan novo: escolha quais números trocar (vão para o fundo do baralho e vêm outros do topo), até 3 vezes', 'New mulligan: pick which numbers to swap (they go to the bottom of the deck and new ones come from the top), up to 3 times'],

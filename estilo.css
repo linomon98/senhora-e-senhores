@@ -2445,3 +2445,25 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 @keyframes cola-abre { from { transform: rotate(-10deg) translateY(160px) scale(.4); opacity: 0; } }
 @keyframes cola-fundo { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .cola-wrap, #colinha-aberta { animation: none; } }
+
+/* Colinha em imagens: cartinhas, artes das ações, escudos e o dado */
+.cola-cols { columns: 2 340px; column-gap: 40px; }
+.cola-folha section { break-inside: avoid; margin-bottom: 18px; }
+.cola-folha h3 { margin: 0 0 4px; }
+.cola-linha { display: flex; align-items: center; gap: 10px; min-height: 52px; }
+.cola-fig { display: flex; align-items: center; gap: 3px; flex: none; }
+.cola-c { position: relative; display: inline-block; width: 34px; height: 48px; flex: none; filter: drop-shadow(1px 2px 0 rgba(0, 0, 0, .25)); }
+.cola-c .svg-carta { width: 100%; height: 100%; display: block; }
+.cola-c + .cola-c { margin-left: -8px; }
+.cola-c.cola-sac { opacity: .85; }
+.cola-atk { font-family: 'Segoe UI Symbol', 'Noto Sans Symbols', sans-serif; font-weight: 400; }
+.cola-c.cola-sac::after { content: '✕'; position: absolute; inset: 0; display: grid; place-items: center; font: 900 32px var(--fonte-ui); color: #c41e2a; text-shadow: 0 0 3px #fff, 0 0 3px #fff; }
+.cola-ic { width: 44px; height: 44px; object-fit: contain; flex: none; filter: drop-shadow(1px 2px 0 rgba(0, 0, 0, .25)); }
+.cola-op { font: 700 18px var(--fonte-mao); color: #b0101e; font-style: normal; padding: 0 2px; }
+.cola-rot { font: 700 15px var(--fonte-mao); color: #1f2f6e; display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.cola-esc { display: inline-flex; gap: 2px; }
+.cola-esc img { width: 20px; height: 20px; object-fit: contain; }
+.cola-esc img.apagado { filter: grayscale(1) opacity(.35); }
+.cola-dado { width: 30px; height: 30px; object-fit: contain; }
+.cola-conta { display: inline-flex; align-items: center; gap: 6px; font: 700 17px var(--fonte-mao); color: #1f2f6e; }
+.cola-linha .cola-n { width: 18px; height: 18px; }
