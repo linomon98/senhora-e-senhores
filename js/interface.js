@@ -4784,6 +4784,7 @@ window.SS = window.SS || {};
   const BUILD = {
     n: 111, data: '30/10/2026',
     novidades: [
+      ['Artes novas de todos os Valetes e Reis (com o Rei de Espadas e o Rei de Ouros), com a letra e o naipe desenhados na própria arte', 'New art for every Jack and King (including the King of Spades and King of Diamonds), with the rank and suit drawn into the art itself'],
       ['As fichas EXTRA do Ás de Ouros viram um botão só, com um selinho dizendo quantas você tem', 'The Ace of Diamonds EXTRA tokens are now a single button, with a badge showing how many you have'],
       ['Ícone novo do dado no sorteio de quem começa, na área de testes e na mesa livre', 'New die icon in the who-goes-first roll, the test area and the free table'],
       ['Comprar com a ficha do Ás de Ouros não gasta mais ação (dá para usar até sem ações sobrando)', 'Drawing with the Ace of Diamonds token no longer spends an action (it works even with no actions left)'],

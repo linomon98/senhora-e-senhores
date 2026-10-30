@@ -1,10 +1,8 @@
 /* Desenho das cartas: fundo creme liso (ou um fundo desenhado, se houver em FUNDOS), naipes desenhados (arte/naipes)
    nas posições clássicas do baralho. As figuras com arte própria (arte/cartas/senhores/<rank>-<naipe>.webp) usam o desenho
-   no lugar do placeholder; a letra e o naipe dos cantos continuam por cima.
+   no lugar do placeholder; essas já trazem a letra e o naipe desenhados, então ficam sem o índice dos cantos.
    Para usar a arte final de uma carta, registre a imagem em SS.ARTE (chave = rank-naipe), como as de baixo.
-   A arte vem do arquivo de desenho do Leonardo (1792 × 2400, com a moldura esticada até quase a tela inteira): a tela toda
-   vira a carta (600 × 830), e o desenho fica na mesma posição do mockup dele. Se algo sair da carta, a conversão o encolhe
-   só o necessário para caber inteiro (dentro da borda preta). */
+   A arte vem do arquivo de desenho do Leonardo (1169 × 1621, já na proporção da carta): a tela toda vira a carta (600 × 830). */
 window.SS = window.SS || {};
 (function (SS) {
   'use strict';
@@ -16,6 +14,8 @@ window.SS = window.SS || {};
   SS.ARTE['J-ouros'] = 'arte/cartas/senhores/J-ouros.webp';
   SS.ARTE['K-copas'] = 'arte/cartas/senhores/K-copas.webp';
   SS.ARTE['K-paus'] = 'arte/cartas/senhores/K-paus.webp';
+  SS.ARTE['K-espadas'] = 'arte/cartas/senhores/K-espadas.webp';
+  SS.ARTE['K-ouros'] = 'arte/cartas/senhores/K-ouros.webp';
 
   // Cada naipe com a sua cor: Copas vermelho, Ouros amarelo, Paus verde, Espadas azul.
   const COR = { copas: '#d0202e', ouros: '#d49a06', paus: '#1c8a3a', espadas: '#1f55c8' };
@@ -29,7 +29,7 @@ window.SS = window.SS || {};
   // Borda preta na beirada da carta: a do desenho é fina demais (cerca de 1 px numa carta da mão) e sumia.
   const BORDA = '<rect x="2.2" y="2.2" width="195.6" height="275.6" rx="15" fill="none" stroke="#141414" stroke-width="4.5"/>';
   // Versão das imagens das cartas (trocar quando um arquivo mudar com o mesmo nome, para o navegador não usar o antigo).
-  const V_ARTE = '?v=9';
+  const V_ARTE = '?v=10';
 
   // Fundo da carta: o creme liso de sempre. Com fundos desenhados (arte/cartas/fundo-<letra>.webp, feitos no gabarito
   // arte/cartas/gabarito), ponha as letras deles aqui: cada carta pega sempre a mesma variação (rank + naipe).
@@ -101,7 +101,7 @@ window.SS = window.SS || {};
     else corpo = LAYOUT[c.rank].map(([x, y]) => pip(c.naipe, x, y, 34, y > 140)).join('');
     const svg = `<svg class="svg-carta" viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg">
       ${fundo(chave)}
-      ${corpo}${arte || FUNDOS.length ? BORDA : ''}<g>${canto(c, arte)}</g><g transform="rotate(180 100 140)">${canto(c, arte)}</g></svg>`;
+      ${corpo}${arte || FUNDOS.length ? BORDA : ''}${arte ? '' : `<g>${canto(c, arte)}</g><g transform="rotate(180 100 140)">${canto(c, arte)}</g>`}</svg>`;
     if (!arte) cache[ck] = svg;
     return svg;
   }
