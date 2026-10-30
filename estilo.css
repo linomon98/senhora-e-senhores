@@ -2392,3 +2392,56 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 .sprite-meteoro .fx-meteoro::after { display: none; }
 .sprite-cratera .fx-cratera { border-radius: 0; background: url('arte/efeitos/cratera.png') center / 100% 100% no-repeat; }
 .fx-raio-sprite { width: 80px; z-index: 69; opacity: 0; transform: translateX(-50%); background: url('arte/efeitos/raio.png') center / 100% 100% no-repeat; }
+
+/* Janelas da partida (cemitério, escolhas das magias, esperas do online...): o mesmo visual do palco das cartas */
+#modal:not(.modal-papel):not(.modal-menu) { background: rgba(6, 14, 4, .72); }
+#modal:not(.modal-papel):not(.modal-menu) .caixa { background: none; border: 0; box-shadow: none; }
+#modal:not(.modal-papel):not(.modal-menu) h2 { font: 400 42px var(--fonte-titulo); color: #fff; letter-spacing: .5px; text-shadow: 0 3px 0 rgba(0, 0, 0, .5); }
+#modal:not(.modal-papel):not(.modal-menu) .caixa > p { font: 700 18px var(--fonte-ui); color: #fff; text-shadow: 0 2px 4px rgba(0, 0, 0, .6); }
+#modal:not(.modal-papel):not(.modal-menu) .btn {
+  padding: 11px 28px; border-radius: 16px; font: 900 20px var(--fonte-ui); text-transform: uppercase;
+  color: #111; background: #fff; border: 3px solid #111; box-shadow: 0 4px 0 #111; transition: transform .12s, box-shadow .12s;
+}
+#modal:not(.modal-papel):not(.modal-menu) .btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 0 #111; }
+#modal:not(.modal-papel):not(.modal-menu) .btn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 #111; }
+#modal:not(.modal-papel):not(.modal-menu) .btn.principal { background: #ffc21a; }
+
+/* Colinha: tira de papel de caderno embaixo da caixa de ações; abre a folha com o resumo das combinações */
+.colinha, #colinha-aberta { --fonte-mao: 'Segoe Print', 'Bradley Hand', 'Comic Sans MS', cursive; }
+.cola-tira, .cola-folha {
+  background-color: #fbfaf4;
+  background-image: linear-gradient(90deg, transparent var(--margem), rgba(222, 70, 90, .6) var(--margem), rgba(222, 70, 90, .6) calc(var(--margem) + 1.5px), transparent calc(var(--margem) + 1.5px)),
+    repeating-linear-gradient(transparent 0, transparent calc(var(--linha) - 1.5px), #86acd8 calc(var(--linha) - 1.5px), #86acd8 var(--linha));
+}
+#acoes .colinha {
+  position: absolute; left: 50%; top: calc(100% + 18px); padding: 0; border: 0; background: none; cursor: pointer;
+  transform: translateX(-50%) rotate(-5deg); filter: drop-shadow(2px 4px 0 rgba(0, 0, 0, .35));
+  transition: transform .18s cubic-bezier(.3, 1.4, .5, 1);
+}
+#acoes .colinha:hover { transform: translateX(-50%) rotate(-1deg) scale(1.08); }
+.cola-tira { --linha: 13px; --margem: 14px; display: block; width: 118px; padding: 13px 6px 13px 20px; font: 700 21px/1 var(--fonte-mao); color: #1f3c8e; text-align: center; }
+#colinha-aberta { position: fixed; inset: 0; z-index: 150; display: grid; place-items: center; background: rgba(6, 14, 4, .72); animation: cola-fundo .2s ease-out; }
+.cola-wrap { position: relative; width: min(920px, 94vw); transform: rotate(-1deg); filter: drop-shadow(5px 10px 0 rgba(0, 0, 0, .35)); animation: cola-abre .38s cubic-bezier(.3, 1.3, .5, 1); }
+.cola-folha {
+  --linha: 26px; --margem: 40px; max-height: 88vh; overflow: auto; padding: 34px 30px 34px 56px; background-attachment: local;
+  font: 15px/26px var(--fonte-mao); color: #1f2f6e; text-align: left;
+}
+.cola-folha h2 { margin: 0 0 4px; font: 700 30px/52px var(--fonte-mao); color: #b0101e; }
+.cola-folha h2 small { font-size: 14px; color: #6b6b6b; font-weight: 400; }
+.cola-cols { columns: 2 330px; column-gap: 36px; }
+.cola-folha section { break-inside: avoid; margin-bottom: 26px; }
+.cola-folha h3 { margin: 0; font: 700 18px/26px var(--fonte-mao); color: #b0101e; }
+.cola-folha h3 small { margin-left: 4px; font-size: 12px; font-weight: 400; color: #6b6b6b; }
+.cola-folha ul { margin: 0; padding: 0; list-style: none; }
+.cola-folha li { line-height: 26px; }
+.cola-folha li b { color: #b0101e; }
+.cola-folha i { color: #2d5a1f; }
+.cola-obs { margin: 0; font-size: 13px; line-height: 26px; color: #6b6b6b; }
+.cola-n { width: 18px; height: 18px; vertical-align: -3px; object-fit: contain; }
+.cola-fechar {
+  position: absolute; top: 18px; right: 14px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer;
+  font: 900 18px var(--fonte-ui); color: #111; background: #fff; border: 3px solid #111; box-shadow: 0 3px 0 #111;
+}
+@keyframes cola-abre { from { transform: rotate(-10deg) translateY(160px) scale(.4); opacity: 0; } }
+@keyframes cola-fundo { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .cola-wrap, #colinha-aberta { animation: none; } }

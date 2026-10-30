@@ -435,6 +435,8 @@ window.SS = window.SS || {};
     'ui.dadoExtra': ['+{n} dado no próximo ataque', '+{n} die on the next attack'],
     'ui.vezDe': ['vez de {j}', "{j}'s turn"],
     'ui.turnoN': ['Turno {n}', 'Turn {n}'],
+    'ui.colinha': ['Colinha', 'Crib sheet'],
+    'ui.colinhaDica': ['Resumo das combinações', 'Summary of the combos'],
     'chip.foraDeCampo': ['(fora de campo)', '(off the field)'],
     'chip.resultado': [' · dado {r} → {d} de dano', ' · die {r} → {d} damage'],
     'chip.ordem': ['{n}º', '#{n}'],

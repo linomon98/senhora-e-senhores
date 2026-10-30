@@ -247,9 +247,14 @@ window.SS = window.SS || {};
       if (!c || j.abertura.figuras.includes(id) || (!ehNumero(c) && !ehAs(c))) throw new Error('Carta inválida para trocar: ' + id);
       return c;
     });
+    const lugares = ids.map(id => j.mao.findIndex(c => c.id === id)).sort((a, b) => a - b);
     j.mao = j.mao.filter(c => !ids.includes(c.id));
     j.numeros.unshift(...devolver);
+    const antes = j.mao.length;
     comprar(e, p, devolver.length, 'numeros');
+    // (as que chegaram ficam no lugar das que saíram, para a mão não se embaralhar na tela)
+    const novas = j.mao.splice(antes);
+    lugares.forEach((i, k) => { if (novas[k]) j.mao.splice(i, 0, novas[k]); });
     j.abertura.trocas++;
     registrar(e, t('log.mulligan', { j: j.nome, n: devolver.length }));
   }

@@ -532,6 +532,7 @@ window.SS = window.SS || {};
     if (ds.acao === 'menu') return confirmarMenu();
     if (ds.acao === 'desistir') return confirmarDesistir();
     if (ds.acao === 'reiniciar') return confirmarReiniciar();
+    if (ds.acao === 'colinha') return abrirColinha();
     if (ds.acao === 'opcoes-mesa') return telaOpcoes(() => { fecharModal(); if (jogo) render(); });
     if (ds.acao && ds.acao.startsWith('vel:')) {
       velocidadeBots = Number(ds.acao.slice(4)) || 1;
@@ -694,6 +695,7 @@ window.SS = window.SS || {};
       ev.preventDefault();
       return ui.aoContinuar();
     }
+    if (ev.key === 'Escape' && $('#colinha-aberta')) return fecharColinha();
     if (ev.key !== 'Escape' || !jogo) return;
     if (ui.miraAs) pararMiraAs();
     ui.sel = []; ui.pend = null; ui.atacanteSel = null; ui.bloqSel = null; ui.mira = null; ui.destino = null; ui.reflexoModo = null; ui.miraRei = null; ui.miraDado = null; ui.acaoGuiada = null;
@@ -3089,8 +3091,74 @@ window.SS = window.SS || {};
     const pips = Array.from({ length: total }, (_, k) => `<i class="${k < restantes ? 'cheio' : ''}"></i>`).join('');
     caixa.className = 'cor-' + corDe(jogo.vez);
     caixa.innerHTML = `<div class="acoes-turno">${t('ui.turnoN', { n: jogo.turno })}</div><div class="acoes-rotulo">${t('ui.acoesPassivas')}</div><div class="acoes-num"><b>${restantes}</b>/${total}</div><div class="acoes-pips">${pips}</div>
-      <div class="acoes-vez">${t('ui.vezDe', { j: escapar(jogo.jogadores[jogo.vez].nome) })}</div>`;
+      <div class="acoes-vez">${t('ui.vezDe', { j: escapar(jogo.jogadores[jogo.vez].nome) })}</div>
+      <button class="colinha" data-acao="colinha" title="${t('ui.colinhaDica')}"><span class="cola-tira" style="clip-path:${rasgado(7, 9, 9)}">${t('ui.colinha')}</span></button>`;
     caixa.hidden = false;
+  }
+
+  // ---------- Colinha: o resumo das combinações num papel de caderno rasgado ----------
+  // Borda rasgada (em cima e embaixo) para o clip-path; a semente deixa o rasgo sempre igual.
+  function rasgado(semente, dentes, fundo) {
+    let s = semente;
+    const r = () => (s = (s * 9301 + 49297) % 233280) / 233280;
+    const topo = [], base = [];
+    for (let k = 0; k <= dentes; k++) {
+      const x = (k / dentes) * 100;
+      topo.push(`${x.toFixed(1)}% ${(r() * fundo).toFixed(2)}%`);
+      base.push(`${(100 - x).toFixed(1)}% ${(100 - r() * fundo).toFixed(2)}%`);
+    }
+    return `polygon(${topo.concat(base).join(', ')})`;
+  }
+
+  function colinhaHtml() {
+    const en = SS.Idioma.atual() === 'en', x = (pt, ing) => (en ? ing : pt);
+    const n = s => `<img class="cola-n" src="arte/naipes/${s}.webp" alt="" draggable="false">`;
+    const R = M.regras(), faixa = r => M.faixaFigura(r).join('–'), acao = x('1 ação', '1 action');
+    return `<h2>${x('Colinha', 'Crib sheet')} <small>${x('(não conta pro professor)', "(don't tell the teacher)")}</small></h2>
+      <div class="cola-cols">
+        <section><h3>${x('Senhor = letra + número', 'Gentleman = face + number')}</h3>
+          <p class="cola-obs">${x('o número é o ataque', 'the number is the attack')} · ${acao}</p>
+          <ul><li><b>J</b> ${faixa('J')} · ${x('entra direto', 'enters directly')} · <i>${x('Ímpeto', 'Haste')}</i>: ${x('ataca no mesmo turno', 'attacks the same turn')}</li>
+            <li><b>K</b> ${faixa('K')} · ${R.reiSacrificaValete ? x('sacrifica 1 J', 'sacrifices 1 J') : x('entra direto', 'enters directly')} · <i>${x('Ordem real', 'Royal order')}</i>: ${x('ataca um Senhor, que tem que defender', 'attacks a Gentleman, who must block')}</li>
+            <li><b>Q</b> ${faixa('Q')} · ${R.rainha === 'doisSenhores' ? x('sacrifica 2 Senhores', 'sacrifices 2 Gentlemen') : x('sacrifica 1 K ou 2 J', 'sacrifices 1 K or 2 J')} · <i>${x('Atropelar', 'Trample')}</i>: ${x('o que sobra vai no Palhaço', 'leftover hits the Jester')}</li></ul>
+          <p class="cola-obs">${x('quem é sacrificado já estava em campo antes do turno', 'the sacrificed one was on the field before this turn')}</p></section>
+        <section><h3>${x('Naipado', 'Suited')} <small>${x('letra e número do mesmo naipe', 'face and number of the same suit')}</small></h3>
+          <ul class="cola-naipes"><li>${n('paus')} ${x('aguenta 3 hits', 'takes 3 hits')}</li><li>${n('espadas')} +1 ${x('de ataque', 'attack')}</li>
+            <li>${n('copas')} ${x(`acertou o Palhaço: +${M.CURA_NAIPADO_COPAS} PV`, `hits the Jester: +${M.CURA_NAIPADO_COPAS} HP`)}</li><li>${n('ouros')} ${x('ataca 2 vezes', 'attacks twice')}</li></ul></section>
+        <section><h3>${x('Ás = totem', 'Ace = totem')} <small>${x('+ 1 número do mesmo naipe · 1 por turno', '+ 1 number of the same suit · 1 per turn')}</small></h3>
+          <ul class="cola-naipes"><li>${n('paus')} ${x('vizinhos +1 hit', 'neighbors +1 hit')}</li><li>${n('espadas')} ${x('vizinhos +1 de ataque', 'neighbors +1 attack')}</li>
+            <li>${n('copas')} ${x(`+${M.CURA_AS_COPAS} PV por turno`, `+${M.CURA_AS_COPAS} HP per turn`)}</li><li>${n('ouros')} ${x('+1 Ouros por turno', '+1 Diamond per turn')}</li></ul>
+          <p class="cola-obs">${x('não ataca, não defende, cai com 1 golpe', "doesn't attack or block, falls to 1 hit")}</p></section>
+        <section><h3>${x('1 número sozinho', 'A single number')} <small>${acao}</small></h3>
+          <ul class="cola-naipes"><li>${n('copas')} ${x('cura 3 (A–5) ou 4 (6–10)', 'heals 3 (A–5) or 4 (6–10)')}</li><li>${n('ouros')} ${x('compra 1 · ou +1 dado no ataque', 'draw 1 · or +1 die on attack')}</li>
+            <li>${n('espadas')} ${x('+1 de ataque no turno', '+1 attack this turn')}</li><li>${n('paus')} Berserk: ${x('o ferido levanta', 'the wounded one stands up')}</li></ul></section>
+        <section><h3>${x('Par do mesmo naipe', 'Pair of the same suit')} <small>${acao}</small></h3>
+          <ul class="cola-naipes"><li>${n('copas')} ${x('revive 1 Senhor', 'revives 1 Gentleman')}</li><li>${n('ouros')} ${x('busca 1 Ás do baralho', 'fetches 1 Ace from the deck')}</li>
+            <li>${n('paus')} ${x('±1 de defesa', '±1 defense')}</li><li>${n('espadas')} ${x('±1 de dano', '±1 damage')}</li></ul></section>
+        <section><h3>${x('Pargia', 'Pairgic')} <small>${x('2 números iguais, qualquer naipe', '2 equal numbers, any suit')}</small></h3>
+          <ul><li><b>2–4</b> ${x('Refletir! (na defesa, de graça)', 'Reflect! (on defense, free)')}</li><li><b>5–7</b> ${x('Sai daqui! (volta pra mão)', 'Get out! (back to hand)')}</li>
+            <li><b>8–10</b> ${x('Meteoro! (limpa a mesa)', 'Meteor! (clears the table)')}</li><li><b>A+A</b> ${x(`Trovão (1 hit ou ${M.DANO_RAIO_PALHACO} PV)`, `Thunder (1 hit or ${M.DANO_RAIO_PALHACO} HP)`)}</li></ul></section>
+        <section><h3>${x('Dado', 'Die')}</h3>
+          <ul><li><b>${M.DADO_ATAQUE_TOTAL}–6</b> ${x('dano cheio', 'full damage')}</li><li><b>2–3</b> ${x('metade', 'half')}</li><li><b>1</b> ${x('errou', 'miss')}</li></ul></section>
+        <section><h3>${x('Defesa', 'Defense')} <small>${x('dano contra o número de quem defende', 'damage against the defender\'s number')}</small></h3>
+          <ul><li>${x('menos da metade: nada', 'under half: nothing')}</li><li>${x('até o número: 1 hit', 'up to the number: 1 hit')}</li><li>${x('passou: 2 hits', 'over: 2 hits')}</li>
+            <li>${x('atacante com número menor leva 1 hit', 'an attacker with a lower number takes 1 hit')}</li></ul></section>
+      </div>`;
+  }
+
+  function fecharColinha() {
+    const el = $('#colinha-aberta');
+    if (el) el.remove();
+  }
+  function abrirColinha() {
+    fecharColinha();
+    const el = document.createElement('div');
+    el.id = 'colinha-aberta';
+    el.innerHTML = `<div class="cola-wrap"><div class="cola-folha" style="clip-path:${rasgado(3, 46, 1.2)}">${colinhaHtml()}</div>
+      <button class="cola-fechar" aria-label="${t('btn.fechar')}">✕</button></div>`;
+    el.addEventListener('click', ev => { if (!ev.target.closest('.cola-folha') || ev.target.closest('.cola-fechar')) fecharColinha(); });
+    document.body.appendChild(el);
+    Som.tocar('palco-entra');
   }
 
   // Registro da partida: fica escondido; o botão do canto superior direito abre uma caixa suspensa.
@@ -3410,7 +3478,8 @@ window.SS = window.SS || {};
   // Palco de cartas (abertura, mulligan e descarte): a mesa escurece, as cartas voam de um lugar da mesa
   // (baralho, mão) até o meio, o jogador escolhe e, no fim, elas voam para onde vão (baralho, mão, cemitério).
   // o: { titulo, sub, cartas, origem(), qtd (0 = só olhar), botao(n), botoes: [{ m, rotulo, secundario, comSel }],
-  //      destino(id, escolhida, m), livre(id) } → Promise { ids, m }
+  //      destino(id, escolhida, m), livre(id), emLugar: { m: async ids → { novas, sub, semMais } } } → Promise { ids, m }
+  // Os botões em "emLugar" não fecham o palco: só as cartas escolhidas voam para o destino e as novas voltam no lugar delas.
   // Com "livre", escolhe quantas quiser entre as cartas em que livre(id) é true; os botões com comSel(n) mudam o
   // texto conforme a escolha e ficam apagados sem nenhuma carta escolhida.
   function palcoCartas(o) {
@@ -3452,6 +3521,10 @@ window.SS = window.SS || {};
         const b = ev.target.closest('[data-m]');
         if (!b || b.disabled) return;
         saindo = true;
+        if (o.emLugar && o.emLugar[b.dataset.m]) {
+          trocarNoPalco(o, esc.slice(), b.dataset.m).then(() => { esc.length = 0; saindo = false; });
+          return;
+        }
         sairPalco(o, esc, b.dataset.m).then(() => resolver({ ids: esc.slice(), m: b.dataset.m }));
       });
       entrarPalco(o.origem);
@@ -3477,6 +3550,44 @@ window.SS = window.SS || {};
         { transform: 'none', opacity: 1 },
       ], { duration: 560, delay: k * 75, easing: 'cubic-bezier(.3, .8, .3, 1)', fill: 'backwards' });
     });
+  }
+
+  // Troca no palco: as cartas escolhidas voam até o destino (o baralho) e as que chegam voltam de lá para o mesmo lugar;
+  // o resto da mão fica parado.
+  async function trocarNoPalco(o, ids, m) {
+    Som.tocar('embaralhar');
+    const els = ids.map(id => $(`#modal [data-pc="${id}"]`)).filter(Boolean);
+    const voo = (el, alvo, ida, k) => {
+      const d = caixaDe(alvo), r = el.getBoundingClientRect();
+      if (!d || MOVIMENTO_REDUZIDO) return Promise.resolve();
+      const dx = d.left + d.width / 2 - (r.left + r.width / 2), dy = d.top + d.height / 2 - (r.top + r.height / 2);
+      const longe = { transform: `translate(${dx}px, ${dy}px) scale(${escalaVoo(d, r)}) rotate(${ida ? 8 : -10}deg)`, opacity: .3 };
+      const perto = { transform: 'none', opacity: 1 };
+      return el.animate(ida ? [perto, longe] : [longe, { transform: 'translateY(-14px) scale(1.05)', opacity: 1, offset: .75 }, perto],
+        { duration: ida ? 420 : 520, delay: k * 70, easing: 'cubic-bezier(.4, 0, .3, 1)', fill: ida ? 'forwards' : 'backwards' }).finished.catch(() => {});
+    };
+    await Promise.race([Promise.all(els.map((el, k) => voo(el, o.destino(el.dataset.pc, true, m), true, k))), esperar(1200)]);
+    const r = await o.emLugar[m](ids);
+    els.forEach((el, k) => {
+      el.getAnimations().forEach(a => a.cancel());
+      const c = r.novas[k];
+      if (!c) return el.remove();
+      el.dataset.pc = c.id;
+      el.innerHTML = C.frente(c);
+      el.classList.remove('selecionada');
+    });
+    $('#modal').querySelectorAll('.palco-carta').forEach(el => el.classList.toggle('clicavel', !!(o.livre && o.livre(el.dataset.pc))));
+    const sub = $('#modal .palco-sub');
+    if (sub && r.sub != null) sub.innerHTML = r.sub;
+    for (const b of o.botoes || []) {
+      const bt = b.comSel && $(`#modal [data-m="${b.m}"]`);
+      if (!bt) continue;
+      if (r.semMais && b.m === m) { bt.remove(); continue; }
+      bt.textContent = b.comSel(0);
+      bt.disabled = true;
+    }
+    Som.tocar('palco-entra');
+    await Promise.race([Promise.all(els.filter(el => el.isConnected).map((el, k) => voo(el, o.destino(el.dataset.pc, true, m), false, k))), esperar(1300)]);
   }
 
   // Cada carta voa para o seu destino; o resto do palco some junto.
@@ -3524,24 +3635,28 @@ window.SS = window.SS || {};
   }
 
   // Mulligan: você escolhe quais números da mão inicial trocar (vão para o fundo do baralho e vêm outros do topo),
-  // até M.TROCAS_MULLIGAN vezes. Cada troca é aplicada na hora (aqui) e a mão nova volta para o palco.
+  // até M.TROCAS_MULLIGAN vezes. A mão fica parada no palco: só as trocadas saem e as novas entram no lugar delas.
   // Devolve a lista das trocas feitas (cada uma, os ids trocados), para o online repetir na tela do amigo.
   async function decidirMulliganModal() {
     const j = jogo.jogadores[eu], trocas = [];
-    for (;;) {
-      const restam = M.TROCAS_MULLIGAN - j.abertura.trocas;
-      const trocavel = id => { const c = j.mao.find(x => x.id === id); return !!c && restam > 0 && !j.abertura.figuras.includes(id) && (M.ehNumero(c) || M.ehAs(c)); };
-      const r = await palcoCartas({
-        titulo: t('ab.suaMao'), sub: t(restam > 0 ? 'ab.mulliganNota' : 'ab.mulliganFim', { n: restam }), cartas: j.mao, qtd: 0, livre: trocavel,
-        origem: id => (trocas.length && trocas[trocas.length - 1].includes(id) ? pilhaDe(eu, 'numeros') : cartaNaMao(eu, id)),
-        botoes: [{ m: 'manter', rotulo: t('ab.manter') }].concat(restam > 0 ? [{ m: 'trocar', comSel: n => t('ab.trocar', { n }), secundario: true }] : []),
-        destino: (id, escolhida, m) => (m === 'trocar' && escolhida ? pilhaDe(eu, 'numeros') : cartaNaMao(eu, id)),
-      });
-      if (r.m !== 'trocar' || !r.ids.length) break;
-      M.mulligan(jogo, eu, r.ids);
-      trocas.push(r.ids.slice());
-      render();
-    }
+    const restam = () => M.TROCAS_MULLIGAN - j.abertura.trocas;
+    const nota = () => t(restam() > 0 ? 'ab.mulliganNota' : 'ab.mulliganFim', { n: restam() });
+    const trocavel = id => { const c = j.mao.find(x => x.id === id); return !!c && restam() > 0 && !j.abertura.figuras.includes(id) && (M.ehNumero(c) || M.ehAs(c)); };
+    await palcoCartas({
+      titulo: t('ab.suaMao'), sub: nota(), cartas: j.mao, qtd: 0, livre: trocavel,
+      origem: id => cartaNaMao(eu, id),
+      botoes: [{ m: 'manter', rotulo: t('ab.manter') }, { m: 'trocar', comSel: n => t('ab.trocar', { n }), secundario: true }],
+      destino: (id, escolhida, m) => (m === 'trocar' && escolhida ? pilhaDe(eu, 'numeros') : cartaNaMao(eu, id)),
+      emLugar: {
+        trocar: async ids => {
+          const lugares = ids.map(id => j.mao.findIndex(c => c.id === id));
+          M.mulligan(jogo, eu, ids);
+          trocas.push(ids.slice());
+          render();
+          return { novas: lugares.map(i => j.mao[i]), sub: nota(), semMais: restam() <= 0 };
+        },
+      },
+    });
     return trocas;
   }
 
@@ -4810,6 +4925,9 @@ window.SS = window.SS || {};
   const BUILD = {
     n: 111, data: '30/10/2026',
     novidades: [
+      ['Colinha: embaixo da caixa de ações, um papel de caderno rasgado com o resumo de todas as combinações', 'Crib sheet: below the actions box, a torn notebook page summing up every combo'],
+      ['Mulligan sem a mão sair e voltar: só as cartas trocadas saem e as novas entram no lugar delas', 'Mulligan without the hand leaving and coming back: only the swapped cards leave and the new ones take their place'],
+      ['Janelas da partida (cemitério, magias, fim de jogo) com o mesmo visual do palco das cartas', 'In-game windows (graveyard, spells, game over) share the card stage look'],
       ['Mulligan novo: escolha quais números trocar (vão para o fundo do baralho e vêm outros do topo), até 3 vezes', 'New mulligan: pick which numbers to swap (they go to the bottom of the deck and new ones come from the top), up to 3 times'],
       ['Valete de Ouros espelhado e Valete de Copas um pouco menor, para não cobrir o naipe do canto', 'Jack of Diamonds mirrored and Jack of Hearts a bit smaller, so they no longer cover the corner suit'],
       ['Deckbuilder: caixas mais largas (a Rainha não sai mais da borda) e a carta destacada fica destacada ao pôr ou tirar, sem o leque fechar e abrir', 'Deckbuilder: wider boxes (the Queen no longer sticks out) and the highlighted card stays highlighted when adding or removing, without the fan closing and reopening'],
