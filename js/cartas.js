@@ -34,7 +34,7 @@ window.SS = window.SS || {};
   // Borda preta na beirada da carta: a do desenho é fina demais (cerca de 1 px numa carta da mão) e sumia.
   const BORDA = '<rect x="2.2" y="2.2" width="195.6" height="275.6" rx="15" fill="none" stroke="#141414" stroke-width="4.5"/>';
   // Versão das imagens das cartas (trocar quando um arquivo mudar com o mesmo nome, para o navegador não usar o antigo).
-  const V_ARTE = '?v=11';
+  const V_ARTE = '?v=12';
 
   // Fundo da carta: o creme liso de sempre. Com fundos desenhados (arte/cartas/fundo-<letra>.webp, feitos no gabarito
   // arte/cartas/gabarito), ponha as letras deles aqui: cada carta pega sempre a mesma variação (rank + naipe).
