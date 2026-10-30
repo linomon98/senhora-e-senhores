@@ -3155,10 +3155,10 @@ window.SS = window.SS || {};
           linha(`${c('5', 'espadas')}${c('10', 'espadas')}${op('→')}${ic('parespadas')}`, `±1 ${atk}`),
         ])}
         ${bloco(x('Pargia (números iguais)', 'Pairgic (equal numbers)'), [
-          linha(`${c('3', 'copas')}${c('3', 'paus')}${op('→')}${ic('reflexo')}`, '2–4'),
-          linha(`${c('6', 'ouros')}${c('6', 'espadas')}${op('→')}${ic('tchau')}`, '5–7'),
-          linha(`${c('9', 'copas')}${c('9', 'paus')}${op('→')}${ic('meteoro')}`, '8–10'),
-          linha(`${c('A', 'espadas')}${c('A', 'ouros')}${op('→')}${ic('raio')}`, `1 hit ${x('ou', 'or')} ${M.DANO_RAIO_PALHACO} PV`),
+          linha(`${c('3', 'copas')}${c('3', 'paus')}${op('→')}${ic('reflexo')}`, `${x('Reflete o ataque', 'Reflects the attack')} <small>(${x('pares', 'pairs')} 2–4)</small>`),
+          linha(`${c('6', 'ouros')}${c('6', 'espadas')}${op('→')}${ic('tchau')}`, `${x('Devolve o Senhor', 'Sends the Gentleman back')} <small>(5–7)</small>`),
+          linha(`${c('9', 'copas')}${c('9', 'paus')}${op('→')}${ic('meteoro')}`, `${x('Limpa o tabuleiro', 'Clears the board')} <small>(8–10)</small>`),
+          linha(`${c('A', 'espadas')}${c('A', 'ouros')}${op('→')}${ic('raio')}`, `${x(`1 hit ou ${M.DANO_RAIO_PALHACO} PV`, `1 hit or ${M.DANO_RAIO_PALHACO} HP`)} <small>(${x('Ases', 'Aces')})</small>`),
         ])}
         ${bloco(x('Dado', 'Die'), [
           linha(`${dado}${op(M.DADO_ATAQUE_TOTAL + '–6')}`, atk + x(' cheio', ' full')),

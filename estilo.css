@@ -2467,3 +2467,4 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 .cola-dado { width: 30px; height: 30px; object-fit: contain; }
 .cola-conta { display: inline-flex; align-items: center; gap: 6px; font: 700 17px var(--fonte-mao); color: #1f2f6e; }
 .cola-linha .cola-n { width: 18px; height: 18px; }
+.cola-rot small { font-size: 12px; font-weight: 400; color: #6b6b6b; }
