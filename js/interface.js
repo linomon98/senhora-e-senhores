@@ -3121,51 +3121,51 @@ window.SS = window.SS || {};
     const atk = '<span class="cola-atk">⚔</span>';
     const op = t => `<i class="cola-op">${t}</i>`;
     const linha = (fig, rot) => `<div class="cola-linha"><span class="cola-fig">${fig}</span><b class="cola-rot">${rot}</b></div>`;
-    const bloco = (titulo, linhas) => `<section><h3>${titulo}</h3>${linhas.join('')}</section>`;
+    const bloco = (area, titulo, linhas) => `<section class="cola-${area}"><h3>${titulo}</h3>${linhas.join('')}</section>`;
     const R = M.regras(), faixa = r => M.faixaFigura(r).join('–');
-    return `<h2>${x('Colinha', 'Crib sheet')} <small>${x('(não conta pro professor)', "(don't tell the teacher)")}</small></h2>
+    return `<h2>${x('Colinha', 'Crib sheet')}</h2>
       <div class="cola-cols">
-        ${bloco(x('Senhores', 'Gentlemen'), [
+        ${bloco('sen', x('Senhores', 'Gentlemen'), [
           linha(`${c('J', 'espadas')}${op('+')}${c('3', 'copas')}`, `${faixa('J')} · ${x('ataca já', 'attacks now')}`),
           linha(`${c('K', 'paus')}${op('+')}${c('7', 'copas')}${R.reiSacrificaValete ? op('✕') + c('J', 'ouros', 'cola-sac') : ''}`, `${faixa('K')} · ${x('ordem real', 'royal order')}`),
           linha(`${c('Q', 'copas')}${op('+')}${c('10', 'ouros')}${op('✕')}${c('K', 'espadas', 'cola-sac')}${op(x('ou', 'or'))}${c('J', 'paus', 'cola-sac')}${c('J', 'copas', 'cola-sac')}`, `${faixa('Q')} · ${x('atropela', 'tramples')}`),
         ])}
-        ${bloco(x('Naipado', 'Suited'), [
+        ${bloco('nai', x('Naipado', 'Suited'), [
           linha(`${c('J', 'paus')}${c('4', 'paus')}`, esc(3)),
           linha(`${c('K', 'espadas')}${c('5', 'espadas')}`, `+1 ${atk}`),
           linha(`${c('K', 'copas')}${c('7', 'copas')}`, `+${M.CURA_NAIPADO_COPAS} ${np('copas')}`),
           linha(`${c('J', 'ouros')}${c('3', 'ouros')}`, `${atk} ×2`),
         ])}
-        ${bloco(x('Ás (totem)', 'Ace (totem)'), [
+        ${bloco('as', x('Ás (totem)', 'Ace (totem)'), [
           linha(`${c('A', 'paus')}${c('2', 'paus')}`, `↔ +${esc(1)}`),
           linha(`${c('A', 'espadas')}${c('2', 'espadas')}`, `↔ +1 ${atk}`),
           linha(`${c('A', 'copas')}${c('2', 'copas')}`, `+${M.CURA_AS_COPAS} ${np('copas')} / ${x('turno', 'turn')}`),
           linha(`${c('A', 'ouros')}${c('2', 'ouros')}`, `+1 ${np('ouros')} / ${x('turno', 'turn')}`),
         ])}
-        ${bloco(x('1 carta', '1 card'), [
+        ${bloco('um', x('1 carta', '1 card'), [
           linha(`${c('6', 'copas')}${op('→')}${ic('cura')}`, `+3 / +4 ${np('copas')}`),
           linha(`${c('4', 'ouros')}${op('→')}${ic('comprar')}${ic('dado')}`, `+1 ${x('carta', 'card')} ${x('ou', 'or')} +1 ${dado}`),
           linha(`${c('5', 'espadas')}${op('→')}${ic('dano')}`, `+1 ${atk}`),
           linha(`${c('7', 'paus')}${op('→')}${ic('berserk')}`, 'Berserk'),
         ])}
-        ${bloco(x('Par do mesmo naipe', 'Same-suit pair'), [
+        ${bloco('par', x('Par do mesmo naipe', 'Same-suit pair'), [
           linha(`${c('3', 'copas')}${c('8', 'copas')}${op('→')}${ic('cemiterio')}`, x('revive', 'revive')),
           linha(`${c('2', 'ouros')}${c('9', 'ouros')}${op('→')}${ic('parouros')}`, x('busca Ás', 'fetch Ace')),
           linha(`${c('4', 'paus')}${c('6', 'paus')}${op('→')}${ic('parpaus')}`, `±1 ${esc(1)}`),
           linha(`${c('5', 'espadas')}${c('10', 'espadas')}${op('→')}${ic('parespadas')}`, `±1 ${atk}`),
         ])}
-        ${bloco(x('Pargia (números iguais)', 'Pairgic (equal numbers)'), [
+        ${bloco('pgi', x('Pargia (números iguais)', 'Pairgic (equal numbers)'), [
           linha(`${c('3', 'copas')}${c('3', 'paus')}${op('→')}${ic('reflexo')}`, `${x('Reflete o ataque', 'Reflects the attack')} <small>(${x('pares', 'pairs')} 2–4)</small>`),
           linha(`${c('6', 'ouros')}${c('6', 'espadas')}${op('→')}${ic('tchau')}`, `${x('Devolve o Senhor', 'Sends the Gentleman back')} <small>(5–7)</small>`),
           linha(`${c('9', 'copas')}${c('9', 'paus')}${op('→')}${ic('meteoro')}`, `${x('Limpa o tabuleiro', 'Clears the board')} <small>(8–10)</small>`),
           linha(`${c('A', 'espadas')}${c('A', 'ouros')}${op('→')}${ic('raio')}`, `${x(`1 hit ou ${M.DANO_RAIO_PALHACO} PV`, `1 hit or ${M.DANO_RAIO_PALHACO} HP`)} <small>(${x('Ases', 'Aces')})</small>`),
         ])}
-        ${bloco(x('Dado', 'Die'), [
+        ${bloco('dad', x('Dado', 'Die'), [
           linha(`${dado}${op(M.DADO_ATAQUE_TOTAL + '–6')}`, atk + x(' cheio', ' full')),
           linha(`${dado}${op('2–3')}`, `${atk} ½`),
           linha(`${dado}${op('1')}`, '✗'),
         ])}
-        ${bloco(x('Defesa', 'Defense'), [
+        ${bloco('def', x('Defesa', 'Defense'), [
           linha(`<span class="cola-conta">${atk} &lt; ½</span>`, esc(2)),
           linha(`<span class="cola-conta">${atk} ≤ ${c('6', 'paus')}</span>`, esc(2, 1)),
           linha(`<span class="cola-conta">${atk} &gt; ${c('6', 'paus')}</span>`, esc(2, 2)),

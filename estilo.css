@@ -2468,3 +2468,13 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 .cola-conta { display: inline-flex; align-items: center; gap: 6px; font: 700 17px var(--fonte-mao); color: #1f2f6e; }
 .cola-linha .cola-n { width: 18px; height: 18px; }
 .cola-rot small { font-size: 12px; font-weight: 400; color: #6b6b6b; }
+/* Colinha: a distribuição do rascunho do Leonardo (Senhores e Pares em cima; Naipado, Pargia e Ás no meio; 1 carta, Dado e Defesa embaixo) */
+.cola-wrap { width: min(1120px, 96vw); }
+.cola-folha .cola-cols { columns: auto; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-areas: 'sen sen sen sen sen sen par par par par par par' 'nai nai nai pgi pgi pgi pgi pgi as as as as' 'um um um um dad dad dad dad def def def def'; column-gap: 28px; row-gap: 10px; align-items: start; }
+.cola-folha .cola-cols section { margin: 0; min-width: 0; }
+.cola-sen { grid-area: sen; } .cola-par { grid-area: par; } .cola-nai { grid-area: nai; } .cola-pgi { grid-area: pgi; } .cola-as { grid-area: as; }
+.cola-um { grid-area: um; } .cola-dad { grid-area: dad; } .cola-def { grid-area: def; }
+@media (max-width: 820px) { .cola-folha .cola-cols { grid-template-columns: 1fr; grid-template-areas: 'sen' 'par' 'nai' 'pgi' 'as' 'um' 'dad' 'def'; } }
+.cola-folha .cola-linha { min-height: 46px; }
+.cola-folha .cola-rot { flex-wrap: nowrap; white-space: nowrap; }
+.cola-folha h2 { line-height: 40px; }
