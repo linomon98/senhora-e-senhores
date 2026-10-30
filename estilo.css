@@ -2095,6 +2095,14 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 .db-colecao-carta.cheia:not(.tem) { filter: grayscale(.8) brightness(.8); opacity: .6; cursor: not-allowed; }
 .db-colecao.leitura .db-colecao-carta { cursor: default; }
 .db-colecao.leitura .db-colecao-carta:hover { transform: none; }
+/* Carta com o mouse em cima: as do lado se afastam um pouco para ela aparecer inteira (e elas também) */
+.db-colecao-carta, .db-carta, .db-mini { transition: transform .14s, translate .2s cubic-bezier(.3, 1.3, .5, 1); }
+.db-colecao:not(.leitura) .db-colecao-carta:hover ~ .db-colecao-carta { translate: 44px 0; }
+.db-colecao:not(.leitura) .db-colecao-carta:has(~ .db-colecao-carta:hover) { translate: -26px 0; }
+.db-carta:hover ~ .db-carta { translate: calc(var(--w) * .38) 0; }
+.db-carta:has(~ .db-carta:hover) { translate: calc(var(--w) * -.2) 0; }
+.db-mini.tem:hover ~ .db-mini { translate: 14px 0; }
+.db-mini:has(~ .db-mini.tem:hover) { translate: -8px 0; }
 .db-qtd { position: absolute; left: 8px; top: -27px; padding: 3px 9px 2px; border-radius: 9px 9px 0 0; background: #1b2a44; color: #fff; font: 800 15px var(--fonte-ui); opacity: 0; transition: opacity .12s; }
 .db-colecao-carta.tem .db-qtd, .db-colecao-carta:hover .db-qtd { opacity: 1; }
 .db-colecao-carta.max .db-qtd { background: #b0101e; }

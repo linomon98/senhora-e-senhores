@@ -12,8 +12,9 @@ window.SS = window.SS || {};
   const tr = (k, p) => SS.Idioma.t(k, p);
   const FIGURAS = ['J', 'Q', 'K'];
   const NUMEROS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
-  // Coleção embaixo: do Ás ao 10 e depois as Letras pela ordem de força (Valete, Rei, Rainha).
-  const ORDEM_COLECAO = NUMEROS.concat(['J', 'K', 'Q']);
+  // Letras pela ordem de força (Valete, Rei, Rainha). Coleção embaixo e baralho corrido: do Ás ao 10 e depois elas.
+  const LETRAS_FORCA = ['J', 'K', 'Q'];
+  const ORDEM_COLECAO = NUMEROS.concat(LETRAS_FORCA);
 
   // ---------- Caixinhas: cores e ícones ----------
 
@@ -229,7 +230,7 @@ window.SS = window.SS || {};
     };
     return `<div class="db-naipes">${NAIPES.map(naipe => `<div class="db-fileira">
       <img class="db-fileira-naipe" src="arte/naipes/${naipe}.webp" alt="" draggable="false">
-      <span class="db-leque letras">${FIGURAS.map(r => pilha(r, naipe)).join('')}</span>
+      <span class="db-leque letras">${LETRAS_FORCA.map(r => pilha(r, naipe)).join('')}</span>
       <span class="db-leque numeros">${NUMEROS.map(r => pilha(r, naipe)).join('')}</span></div>`).join('')}</div>`;
   }
 
@@ -238,7 +239,7 @@ window.SS = window.SS || {};
   const AREA_CORRIDA = { w: 500, h: 236 }, PASSO = 0.62, PROPORCAO = 1.4;
   function vistaCorrida(d) {
     const cartas = [];
-    for (const naipe of NAIPES) for (const rank of FIGURAS.concat(NUMEROS)) {
+    for (const naipe of NAIPES) for (const rank of ORDEM_COLECAO) {
       const n = d.cont[chaveDe(rank, naipe)] || 0;
       if (n) cartas.push({ rank, naipe, n });
     }
