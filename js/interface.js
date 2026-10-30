@@ -4943,9 +4943,9 @@ window.SS = window.SS || {};
       } else if (m === 'testes') telaTestes();
       else if (m === 'opcoes') telaOpcoes(telaInicio);
     });
-    // Número da build e as últimas novidades, bem pequenos no canto de baixo.
-    $('#modal').insertAdjacentHTML('beforeend', `<div class="build-info"><b>${t('build.titulo', { n: BUILD.n, d: BUILD.data })}</b>
-      <ul>${BUILD.novidades.map(x => `<li>${x[idioma === 'en' ? 1 : 0]}</li>`).join('')}</ul></div>`);
+    // Número e data da build num botãozinho no canto de baixo; clicando, abre a lista das novidades.
+    $('#modal').insertAdjacentHTML('beforeend', `<details class="build-info"><summary>${t('build.titulo', { n: BUILD.n, d: BUILD.data })}</summary>
+      <ul>${BUILD.novidades.map(x => `<li>${x[idioma === 'en' ? 1 : 0]}</li>`).join('')}</ul></details>`);
   }
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
