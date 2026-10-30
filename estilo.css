@@ -187,6 +187,16 @@ html, body {
 .token.token-extra.chegando { opacity: 0; pointer-events: none; }
 .zona-op .token.token-extra { font-size: 16px; padding: 3px 10px 3px 7px; }
 .zona-op .token.token-extra img { width: 16px; height: 16px; }
+/* Selinho redondo com quantas fichas EXTRA você tem (2 ou mais) */
+.token.token-extra { position: relative; }
+.token-qtd {
+  position: absolute; top: -12px; left: -12px; min-width: 26px; height: 26px; padding: 0 4px; border-radius: 999px;
+  display: grid; place-items: center; font: 400 17px/1 var(--fonte-titulo); color: #fff;
+  background: #d4242f; border: 3px solid var(--tinta); box-shadow: 2px 2px 0 var(--tinta);
+}
+.zona-op .token-qtd { top: -9px; left: -9px; min-width: 20px; height: 20px; font-size: 13px; border-width: 2px; }
+/* Ícone do dado no lugar do emoji (sorteio, área de testes, mesa livre) */
+.dado-inicio .dado-img, .gravidade-dado label .dado-img, .ed-dados .dado-img { width: 1.15em; height: auto; vertical-align: -0.2em; display: inline-block; }
 
 .mao { display: flex; justify-content: center; align-items: flex-end; height: 100%; }
 .zona-eu .mao .carta { width: 86px; height: 120px; margin: 0; transition: transform .15s, box-shadow .15s, filter .15s; }

@@ -1447,22 +1447,30 @@ window.SS = window.SS || {};
   // Ficha "♦ EXTRA" do Ás de Ouros: o naipezinho voa do totem até o botão, que só aparece quando ele chega.
   // reservarToken esconde já o último botão ainda visível (ele reaparece quando o naipe pousa, ou em 3 s
   // se a animação não acontecer); voarToken faz o naipe voar até ele.
+  const seloToken = n => (n > 1 ? `<span class="token-qtd">${n}</span>` : '');
+  // Acerta o botão já desenhado (some enquanto nenhuma ficha pousou; o selinho conta só as que pousaram).
+  function acertarBotaoToken(p) {
+    const b = $(`#info-${p} .token-extra`);
+    if (!b || !jogo) return;
+    const vis = jogo.jogadores[p].tokens - ui.tokensChegando[p];
+    b.classList.toggle('chegando', vis <= 0);
+    const selo = b.querySelector('.token-qtd');
+    if (selo) selo.remove();
+    if (vis > 1) b.insertAdjacentHTML('beforeend', seloToken(vis));
+  }
   function reservarToken(p) {
-    const botoes = [...document.querySelectorAll(`#info-${p} .token-extra`)];
     ui.tokensChegando[p]++;
-    const alvo = botoes[botoes.length - ui.tokensChegando[p]];
-    if (alvo) alvo.classList.add('chegando');
-    const k = alvo ? alvo.dataset.token : null;
+    const k = $(`#info-${p} .token-extra`) ? '0' : null;
+    acertarBotaoToken(p);
     let feito = false;
     const soltar = () => {
       if (feito) return;
       feito = true;
       ui.tokensChegando[p] = Math.max(0, ui.tokensChegando[p] - 1);
-      const b = botao();
-      if (b) b.classList.remove('chegando'); // a classe foi posta direto no botão (o HTML guardado não muda)
+      acertarBotaoToken(p); // (as classes foram postas direto no botão: o HTML guardado não muda)
       if (jogo) render();
     };
-    const botao = () => (k == null ? null : $(`#info-${p} .token-extra[data-token="${k}"]`));
+    const botao = () => (k == null ? null : $(`#info-${p} .token-extra`));
     setTimeout(soltar, 3000);
     return { k, soltar, botao };
   }
@@ -2534,12 +2542,13 @@ window.SS = window.SS || {};
     const j = jogo.jogadores[p], cor = corDe(p), teto = M.tetoCura(j), pal = palhacoDe(p);
     const quem = controle(p) === 'humano' ? t('ui.voce') : controle(p) === 'remoto' ? t('ui.amigo') : `bot · ${NOME_NIVEL[nivelDe(p)]}`;
     const podeJogar = controle(p) === 'humano' && jogo.vez === p && (jogo.fase === 'principal' || jogo.fase === 'ataque') && !ui.ocupado;
-    // Fichas do Ás de Ouros: botões amarelos "♦ EXTRA" do lado esquerdo do Palhaço (os que ainda estão
-    // chegando voando do totem ficam invisíveis até o naipe pousar).
+    // Fichas do Ás de Ouros: um botão amarelo "♦ EXTRA" do lado esquerdo do Palhaço, com um selinho redondo
+    // contando quantas tem quando são 2 ou mais (as que ainda estão chegando voando do totem só contam
+    // quando o naipe pousa).
     let tokens = '';
-    for (let k = 0; k < j.tokens; k++) {
-      const chegando = k >= j.tokens - ui.tokensChegando[p];
-      tokens += `<button class="token token-extra${ui.sel.includes('TOKEN#' + k) ? ' selecionada' : ''}${chegando ? ' chegando' : ''}" data-token="${k}"${podeJogar ? '' : ' disabled'}><img src="arte/naipes/ouros.webp" alt="">${t('ui.extra')}</button>`;
+    if (j.tokens > 0) {
+      const vis = j.tokens - ui.tokensChegando[p];
+      tokens = `<button class="token token-extra${ui.sel.includes('TOKEN#0') ? ' selecionada' : ''}${vis <= 0 ? ' chegando' : ''}" data-token="0"${podeJogar ? '' : ' disabled'}><img src="arte/naipes/ouros.webp" alt="">${t('ui.extra')}${seloToken(vis)}</button>`;
     }
     // Botão do poder: o próprio símbolo do naipe do Palhaço (pulsa enquanto dá para usar).
     let poder;
@@ -3350,7 +3359,7 @@ window.SS = window.SS || {};
       return `<div class="inicio-lado lado-${p === 0 ? 'esq' : 'dir'}${p === primeiro ? ' comeca' : ''}">
         <div class="heroi mini cor-${pal.cor}${pal.retrato ? ' com-retrato' : ''}">${arteHeroi(pal)}<div class="heroi-nome">${pal.nome}</div></div>
         <span>${t(controle(p) === 'humano' ? 'ui.voce' : 'ui.oponente')}</span>
-        ${dados ? `<b class="dado-inicio">🎲 ${dados[p]}</b>` : ''}
+        ${dados ? `<b class="dado-inicio">${DADO_IMG} ${dados[p]}</b>` : ''}
         ${p === primeiro ? `<em>${t('inicio.comeca')}</em>` : ''}</div>`;
     };
     const motivo = t('inicio.dado');
@@ -4775,6 +4784,8 @@ window.SS = window.SS || {};
   const BUILD = {
     n: 111, data: '30/10/2026',
     novidades: [
+      ['As fichas EXTRA do Ás de Ouros viram um botão só, com um selinho dizendo quantas você tem', 'The Ace of Diamonds EXTRA tokens are now a single button, with a badge showing how many you have'],
+      ['Ícone novo do dado no sorteio de quem começa, na área de testes e na mesa livre', 'New die icon in the who-goes-first roll, the test area and the free table'],
       ['Comprar com a ficha do Ás de Ouros não gasta mais ação (dá para usar até sem ações sobrando)', 'Drawing with the Ace of Diamonds token no longer spends an action (it works even with no actions left)'],
       ['O número do turno aparece em cima da caixa de ações', 'The turn number shows above the actions box'],
       ['Uma carta Invocar só para Valete, Rei, Rainha e Ás; ao usar a carta, uma setinha deixa você escolher o lugar no campo', 'A single Summon card for Jack, King, Queen and Ace; when you use it, a little arrow lets you pick the spot on the field'],
@@ -4805,7 +4816,7 @@ window.SS = window.SS || {};
         ${item('comportamento', '🤖', t('cb.titulo'), P.LISTA.some(x => compModificado(x.id)) ? t('cb.ativos', { l: P.LISTA.filter(x => compModificado(x.id)).map(x => x.nome).join(', ') }) : t('cb.notaMenu'))}
         ${item('regras', '⚖', t('rg.titulo'), regrasModificadas(cfg.regras).length ? t('rg.ativas', { n: regrasModificadas(cfg.regras).length }) : t('rg.notaMenu'))}
       </div>
-      <div class="opcao gravidade-dado"><label>🎲 ${t('teste.gravidade')} <b class="grav-v">${textoGravidade()}</b></label>
+      <div class="opcao gravidade-dado"><label>${DADO_IMG} ${t('teste.gravidade')} <b class="grav-v">${textoGravidade()}</b></label>
         <input type="range" class="grav-dado" min="20" max="250" step="5" value="${gravidadeDado}">
         <p class="nota">${t('teste.gravidadeNota')}</p></div>
       <div class="acoes-menu"><button class="btn" data-m="voltar">${t('btn.voltar')}</button></div></div>`,
@@ -5166,7 +5177,7 @@ window.SS = window.SS || {};
       <div class="ed-titulo">${t('livre.turno')}</div>
       <div class="ed-linha"><button data-ed="acoes">${t('livre.acoes3')}</button><button data-ed="vez">${t('livre.darVez')}</button></div>
       <div class="ed-titulo">${t('livre.dado')}</div>
-      <div class="ed-linha ed-dados">${[0, 1, 2, 3, 4, 5, 6].map(v => `<button data-ed="dado:${v}" class="${(cfg.livre.dado || 0) === v ? 'ativo' : ''}" title="${v ? t('livre.dadoFixo', { n: v }) : t('livre.dadoSorte')}">${v || '🎲'}</button>`).join('')}</div>
+      <div class="ed-linha ed-dados">${[0, 1, 2, 3, 4, 5, 6].map(v => `<button data-ed="dado:${v}" class="${(cfg.livre.dado || 0) === v ? 'ativo' : ''}" title="${v ? t('livre.dadoFixo', { n: v }) : t('livre.dadoSorte')}">${v || DADO_IMG}</button>`).join('')}</div>
       <div class="ed-linha"><button data-ed="desfazer"${historicoLivre.length < 2 ? ' disabled' : ''}>↶ ${t('livre.desfazer')} (${Math.max(0, historicoLivre.length - 1)})</button></div>
       </div>`;
     // mantém a escolha dos selects entre um redesenho e outro
