@@ -4791,7 +4791,7 @@ window.SS = window.SS || {};
       ['As fichas EXTRA do Ás de Ouros viram um botão só, com um selinho dizendo quantas você tem', 'The Ace of Diamonds EXTRA tokens are now a single button, with a badge showing how many you have'],
       ['Ícone novo do dado no sorteio de quem começa, na área de testes e na mesa livre', 'New die icon in the who-goes-first roll, the test area and the free table'],
       ['Comprar com a ficha do Ás de Ouros não gasta mais ação (dá para usar até sem ações sobrando)', 'Drawing with the Ace of Diamonds token no longer spends an action (it works even with no actions left)'],
-      ['O número do turno aparece em cima da caixa de ações', 'The turn number shows above the actions box'],
+      ['O número do turno aparece no topo da caixa de ações', 'The turn number shows at the top of the actions box'],
       ['Uma carta Invocar só para Valete, Rei, Rainha e Ás; ao usar a carta, uma setinha deixa você escolher o lugar no campo', 'A single Summon card for Jack, King, Queen and Ace; when you use it, a little arrow lets you pick the spot on the field'],
       ['Arraste o Rei ou a Rainha (com o número já selecionado) para cima do Senhor(a) a sacrificar: o sacrifício acontece sozinho', 'Drag the King or Queen (with the number already selected) onto the Gentleman to sacrifice: the sacrifice happens on its own'],
       ['Tutorial novo, com as regras oficiais: começa no sorteio do dado e na escolha das figuras, e ensina o Ímpeto, o Rei sacrificando o Valete e a Ordem real', 'New tutorial with the official rules: it starts with the dice roll-off and the face card pick, and teaches Haste, the King sacrificing a Jack and the Royal order'],
