@@ -4784,12 +4784,11 @@ window.SS = window.SS || {};
   const BUILD = {
     n: 111, data: '30/10/2026',
     novidades: [
-      ['Artes novas das 4 Rainhas: agora todas as figuras têm arte própria', 'New art for all 4 Queens: every face card now has its own art'],
       ['Deckbuilder: caixas mais largas (a Rainha não sai mais da borda) e a carta destacada fica destacada ao pôr ou tirar, sem o leque fechar e abrir', 'Deckbuilder: wider boxes (the Queen no longer sticks out) and the highlighted card stays highlighted when adding or removing, without the fan closing and reopening'],
       ['Deckbuilder: a carta com o mouse em cima afasta as vizinhas para aparecer inteira, e as Letras ficam na ordem Valete, Rei, Rainha também em cima', 'Deckbuilder: the hovered card pushes its neighbors aside so it shows in full, and the Letters go Jack, King, Queen up top too'],
       ['Meteoro: agora derruba também os Ases da mesa, e quem está em Berserk aguenta', 'Meteor: now also knocks down the Aces on the table, and Berserk Gentlemen hold on'],
       ['Deckbuilder: a coleção vai do Ás ao 10 e depois Valete, Rei e Rainha; pôr mais uma cópia não some mais com a carta lá em cima', 'Deckbuilder: the collection goes Ace to 10, then Jack, King and Queen; adding another copy no longer hides the card above'],
-      ['Artes novas de todos os Valetes e Reis (com o Rei de Espadas e o Rei de Ouros), com a letra e o naipe desenhados na própria arte', 'New art for every Jack and King (including the King of Spades and King of Diamonds), with the rank and suit drawn into the art itself'],
+      ['Todas as 12 figuras com arte própria (Valetes, Reis e Rainhas), com a letra e o naipe nos cantos; o de cima, à esquerda, um pouco maior', 'All 12 face cards have their own art (Jacks, Kings and Queens), with rank and suit in the corners; the top-left one a bit bigger'],
       ['As fichas EXTRA do Ás de Ouros viram um botão só, com um selinho dizendo quantas você tem', 'The Ace of Diamonds EXTRA tokens are now a single button, with a badge showing how many you have'],
       ['Ícone novo do dado no sorteio de quem começa, na área de testes e na mesa livre', 'New die icon in the who-goes-first roll, the test area and the free table'],
       ['Comprar com a ficha do Ás de Ouros não gasta mais ação (dá para usar até sem ações sobrando)', 'Drawing with the Ace of Diamonds token no longer spends an action (it works even with no actions left)'],

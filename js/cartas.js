@@ -1,8 +1,9 @@
 /* Desenho das cartas: fundo creme liso (ou um fundo desenhado, se houver em FUNDOS), naipes desenhados (arte/naipes)
    nas posições clássicas do baralho. As figuras com arte própria (arte/cartas/senhores/<rank>-<naipe>.webp) usam o desenho
-   no lugar do placeholder; essas já trazem a letra e o naipe desenhados, então ficam sem o índice dos cantos.
+   no lugar do placeholder, com a letra e o naipe nos cantos como as outras cartas (o de cima, à esquerda, um pouco maior).
    Para usar a arte final de uma carta, registre a imagem em SS.ARTE (chave = rank-naipe), como as de baixo.
-   A arte vem do arquivo de desenho do Leonardo (1169 × 1621, já na proporção da carta): a tela toda vira a carta (600 × 830). */
+   A arte vem do arquivo de desenho do Leonardo (1792 × 2400): a tela toda vira a carta (600 × 830). Os desenhos mais estreitos
+   que isso entram pela altura, sem esticar. */
 window.SS = window.SS || {};
 (function (SS) {
   'use strict';
@@ -33,7 +34,7 @@ window.SS = window.SS || {};
   // Borda preta na beirada da carta: a do desenho é fina demais (cerca de 1 px numa carta da mão) e sumia.
   const BORDA = '<rect x="2.2" y="2.2" width="195.6" height="275.6" rx="15" fill="none" stroke="#141414" stroke-width="4.5"/>';
   // Versão das imagens das cartas (trocar quando um arquivo mudar com o mesmo nome, para o navegador não usar o antigo).
-  const V_ARTE = '?v=10';
+  const V_ARTE = '?v=11';
 
   // Fundo da carta: o creme liso de sempre. Com fundos desenhados (arte/cartas/fundo-<letra>.webp, feitos no gabarito
   // arte/cartas/gabarito), ponha as letras deles aqui: cada carta pega sempre a mesma variação (rank + naipe).
@@ -74,6 +75,13 @@ window.SS = window.SS || {};
     return `<text x="15" y="41" font-size="${dez ? 19 : 24}"${dez ? ' letter-spacing="-3"' : ''} text-anchor="middle" fill="${COR[c.naipe]}" font-family="${FONTE}" font-weight="700">${c.rank}</text>${pip(c.naipe, 15, 56, 17, false)}`;
   }
 
+  // Índice das figuras com arte: o de cima, à esquerda, maior que o das outras cartas; o de baixo, do tamanho de sempre.
+  // Um contorno creme na letra a separa do desenho que passa por baixo.
+  function cantoArte(c, grande) {
+    const [x, y, fs, py, pt] = grande ? [27, 50, 44, 78, 34] : [22, 42, 34, 64, 26];
+    return `<text x="${x}" y="${y}" font-size="${fs}" text-anchor="middle" fill="${COR[c.naipe]}" font-family="${FONTE}" font-weight="700" stroke="#fdfbf3" stroke-width="5" stroke-linejoin="round" paint-order="stroke">${c.rank}</text>${pip(c.naipe, x, py, pt, false)}`;
+  }
+
   const GLIFO = { J: '♞', Q: '♛', K: '♚' };
   const nomeFace = rank => (SS.Idioma ? SS.Idioma.t('carta.face.' + rank) : rank);
 
@@ -105,7 +113,7 @@ window.SS = window.SS || {};
     else corpo = LAYOUT[c.rank].map(([x, y]) => pip(c.naipe, x, y, 34, y > 140)).join('');
     const svg = `<svg class="svg-carta" viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg">
       ${fundo(chave)}
-      ${corpo}${arte || FUNDOS.length ? BORDA : ''}${arte ? '' : `<g>${canto(c, arte)}</g><g transform="rotate(180 100 140)">${canto(c, arte)}</g>`}</svg>`;
+      ${corpo}${arte || FUNDOS.length ? BORDA : ''}${arte ? `<g>${cantoArte(c, true)}</g><g transform="rotate(180 100 140)">${cantoArte(c, false)}</g>` : `<g>${canto(c, arte)}</g><g transform="rotate(180 100 140)">${canto(c, arte)}</g>`}</svg>`;
     if (!arte) cache[ck] = svg;
     return svg;
   }
