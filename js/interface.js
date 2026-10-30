@@ -2955,7 +2955,7 @@ window.SS = window.SS || {};
           }
         } else {
           texto = t(jogo.acoes > 0 ? 'faixa.comoJogar' : 'faixa.semAcoes');
-          if (opcoes.todasAcoes && jogo.acoes > 0) {
+          if (opcoes.todasAcoes && (jogo.acoes > 0 || jogo.jogadores[p].tokens > 0)) {
             botoes = gruposDisponiveis().map(g => btnGuiada(g, '')).join('');
             if (botoes) texto = t('faixa.cliqueDuplo') + ' ' + texto;
           }
@@ -3079,7 +3079,7 @@ window.SS = window.SS || {};
     const restantes = jogo.acoes;
     const pips = Array.from({ length: total }, (_, k) => `<i class="${k < restantes ? 'cheio' : ''}"></i>`).join('');
     caixa.className = 'cor-' + corDe(jogo.vez);
-    caixa.innerHTML = `<div class="acoes-rotulo">${t('ui.acoesPassivas')}</div><div class="acoes-num"><b>${restantes}</b>/${total}</div><div class="acoes-pips">${pips}</div>
+    caixa.innerHTML = `<div class="acoes-turno">${t('ui.turnoN', { n: jogo.turno })}</div><div class="acoes-rotulo">${t('ui.acoesPassivas')}</div><div class="acoes-num"><b>${restantes}</b>/${total}</div><div class="acoes-pips">${pips}</div>
       <div class="acoes-vez">${t('ui.vezDe', { j: escapar(jogo.jogadores[jogo.vez].nome) })}</div>`;
     caixa.hidden = false;
   }
@@ -4775,6 +4775,8 @@ window.SS = window.SS || {};
   const BUILD = {
     n: 111, data: '30/10/2026',
     novidades: [
+      ['Comprar com a ficha do Ás de Ouros não gasta mais ação (dá para usar até sem ações sobrando)', 'Drawing with the Ace of Diamonds token no longer spends an action (it works even with no actions left)'],
+      ['O número do turno aparece em cima da caixa de ações', 'The turn number shows above the actions box'],
       ['Uma carta Invocar só para Valete, Rei, Rainha e Ás; ao usar a carta, uma setinha deixa você escolher o lugar no campo', 'A single Summon card for Jack, King, Queen and Ace; when you use it, a little arrow lets you pick the spot on the field'],
       ['Arraste o Rei ou a Rainha (com o número já selecionado) para cima do Senhor(a) a sacrificar: o sacrifício acontece sozinho', 'Drag the King or Queen (with the number already selected) onto the Gentleman to sacrifice: the sacrifice happens on its own'],
       ['Tutorial novo, com as regras oficiais: começa no sorteio do dado e na escolha das figuras, e ensina o Ímpeto, o Rei sacrificando o Valete e a Ordem real', 'New tutorial with the official rules: it starts with the dice roll-off and the face card pick, and teaches Haste, the King sacrificing a Jack and the Royal order'],

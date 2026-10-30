@@ -434,6 +434,7 @@ window.SS = window.SS || {};
     'golpe.reguaNota': ['ataque de quem defende: {a}', 'defender\'s attack: {a}'],
     'ui.dadoExtra': ['+{n} dado no próximo ataque', '+{n} die on the next attack'],
     'ui.vezDe': ['vez de {j}', "{j}'s turn"],
+    'ui.turnoN': ['Turno {n}', 'Turn {n}'],
     'chip.foraDeCampo': ['(fora de campo)', '(off the field)'],
     'chip.resultado': [' · dado {r} → {d} de dano', ' · die {r} → {d} damage'],
     'chip.ordem': ['{n}º', '#{n}'],

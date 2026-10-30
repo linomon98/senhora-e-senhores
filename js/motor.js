@@ -526,8 +526,10 @@ window.SS = window.SS || {};
     const r = [];
     if (e.fase !== 'principal' || e.vencedor != null) return r;
     r.push({ tipo: 'atacar' }); // encerra as ações passivas e vai para o ataque
-    if (e.acoes <= 0) return r;
     const p = e.vez, j = e.jogadores[p];
+    // A ficha do Ás de Ouros compra de graça: não gasta ação, então vale até sem ações sobrando.
+    if (j.tokens > 0) for (const b of baralhosDisponiveis(e, p)) r.push({ tipo: 'comprar', carta: 'TOKEN', baralho: b });
+    if (e.acoes <= 0) return r;
     const figuras = j.mao.filter(ehFigura), numeros = j.mao.filter(ehNumero), ases = j.mao.filter(ehAs);
     const sacrificaveis = j.mao.filter(ehSacrificavel); // números e Ases (para efeitos de naipe e magias)
     const vazios = [], senhores = [];
@@ -601,7 +603,7 @@ window.SS = window.SS || {};
     }
     const ouros = ourosDisponiveis(e, p);
     const fontes = baralhosDisponiveis(e, p);
-    for (const o of new Set(ouros)) for (const b of fontes) r.push({ tipo: 'comprar', carta: o, baralho: b });
+    for (const o of new Set(ouros)) if (o !== 'TOKEN') for (const b of fontes) r.push({ tipo: 'comprar', carta: o, baralho: b });
     // Pargias do seu turno: par de números iguais (5 a 7, 8 a 10 ou Ases). 1 ação.
     const op = e.jogadores[1 - p], inimigos = op.campo.filter(u => u && u.tipo === 'senhor').map(u => u.uid);
     const algumSenhor = j.campo.concat(op.campo).some(u => u && u.tipo === 'senhor');
@@ -751,9 +753,10 @@ window.SS = window.SS || {};
       evento(e, { tipo: 'fx', fx: 'dado', p, alvo: { p, i: l.i, uid: l.u.uid } });
       return;
     }
-    if (e.acoes <= 0) throw new Error('Sem ações neste turno');
+    const fichaOuros = a.tipo === 'comprar' && a.carta === 'TOKEN'; // ficha do Ás de Ouros: não gasta ação
+    if (e.acoes <= 0 && !fichaOuros) throw new Error('Sem ações neste turno');
     const p = e.vez, j = e.jogadores[p];
-    let custo = 1;
+    let custo = fichaOuros ? 0 : 1;
     switch (a.tipo) {
       case 'sumonar': {
         const f0 = j.mao.find(c => c.id === a.figura), n0 = j.mao.find(c => c.id === a.numero);

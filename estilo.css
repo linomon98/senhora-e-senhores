@@ -1155,6 +1155,12 @@ html.em-menu #mesa { background: none; }
 #acoes { border: 3px solid var(--tinta); border-radius: 18px; box-shadow: 0 4px 0 var(--tinta), 0 10px 20px rgba(20, 50, 5, .3); }
 .acoes-rotulo { font: 400 14px var(--fonte-titulo); letter-spacing: 1px; text-transform: none; opacity: 1; }
 .acoes-num b { font: 400 46px var(--fonte-titulo); }
+/* Etiqueta do turno, presa em cima da caixa de ações */
+.acoes-turno {
+  position: absolute; left: 50%; bottom: 100%; transform: translate(-50%, -6px); white-space: nowrap;
+  padding: 3px 14px 4px; border-radius: 12px; background: #fdfbf3; color: var(--tinta);
+  border: 3px solid var(--tinta); box-shadow: 0 3px 0 var(--tinta); font: 400 16px var(--fonte-titulo); letter-spacing: .5px;
+}
 #combate { background: rgba(16, 30, 10, .95); border: 3px solid var(--tinta); box-shadow: 0 4px 0 var(--tinta), 0 16px 34px rgba(20, 50, 5, .4); }
 .cb-topo { font: 400 16px var(--fonte-titulo); letter-spacing: 1px; text-transform: none; }
 .caixa-faixa { border: 3px solid var(--tinta); box-shadow: 0 4px 0 var(--tinta), 0 10px 22px rgba(20, 50, 5, .3); }
