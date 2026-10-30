@@ -4784,6 +4784,7 @@ window.SS = window.SS || {};
   const BUILD = {
     n: 111, data: '30/10/2026',
     novidades: [
+      ['Artes novas das 4 Rainhas: agora todas as figuras têm arte própria', 'New art for all 4 Queens: every face card now has its own art'],
       ['Deckbuilder: caixas mais largas (a Rainha não sai mais da borda) e a carta destacada fica destacada ao pôr ou tirar, sem o leque fechar e abrir', 'Deckbuilder: wider boxes (the Queen no longer sticks out) and the highlighted card stays highlighted when adding or removing, without the fan closing and reopening'],
       ['Deckbuilder: a carta com o mouse em cima afasta as vizinhas para aparecer inteira, e as Letras ficam na ordem Valete, Rei, Rainha também em cima', 'Deckbuilder: the hovered card pushes its neighbors aside so it shows in full, and the Letters go Jack, King, Queen up top too'],
       ['Meteoro: agora derruba também os Ases da mesa, e quem está em Berserk aguenta', 'Meteor: now also knocks down the Aces on the table, and Berserk Gentlemen hold on'],

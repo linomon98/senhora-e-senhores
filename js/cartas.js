@@ -16,6 +16,10 @@ window.SS = window.SS || {};
   SS.ARTE['K-paus'] = 'arte/cartas/senhores/K-paus.webp';
   SS.ARTE['K-espadas'] = 'arte/cartas/senhores/K-espadas.webp';
   SS.ARTE['K-ouros'] = 'arte/cartas/senhores/K-ouros.webp';
+  SS.ARTE['Q-espadas'] = 'arte/cartas/senhores/Q-espadas.webp';
+  SS.ARTE['Q-copas'] = 'arte/cartas/senhores/Q-copas.webp';
+  SS.ARTE['Q-paus'] = 'arte/cartas/senhores/Q-paus.webp';
+  SS.ARTE['Q-ouros'] = 'arte/cartas/senhores/Q-ouros.webp';
 
   // Cada naipe com a sua cor: Copas vermelho, Ouros amarelo, Paus verde, Espadas azul.
   const COR = { copas: '#d0202e', ouros: '#d49a06', paus: '#1c8a3a', espadas: '#1f55c8' };
