@@ -236,7 +236,7 @@ window.SS = window.SS || {};
 
   // Vista 2: as cartas corridas. Com pouca variedade é uma linha só de cartas grandes; quanto mais cartas
   // diferentes, mais linhas e cartas menores. As cópias aparecem num número em cima da carta.
-  const AREA_CORRIDA = { w: 500, h: 236 }, PASSO = 0.62, PROPORCAO = 1.4;
+  const AREA_CORRIDA = { w: 520, h: 236 }, PASSO = 0.62, PROPORCAO = 1.4;
   function vistaCorrida(d) {
     const cartas = [];
     for (const naipe of NAIPES) for (const rank of ORDEM_COLECAO) {
@@ -347,8 +347,16 @@ window.SS = window.SS || {};
       </div>`;
   }
 
+  // Carta com o mouse em cima antes de redesenhar: a nova cópia dela já nasce destacada (classe "foco", sem transição),
+  // senão o leque fechava e abria de novo a cada clique. O foco sai no próximo movimento do mouse (aí vale o :hover).
+  const CARTAS_FOCO = '.db-colecao-carta, .db-carta, .db-mini';
+  const chaveFoco = c => (c.dataset.por ? 'por:' + c.dataset.por : c.dataset.tirar ? 'tirar:' + c.dataset.tirar : null);
+  function soltarFoco() {
+    tela().querySelectorAll('.foco').forEach(c => c.classList.remove('foco'));
+  }
   function desenhar() {
     const el = tela(), d = aberto();
+    const focos = [...el.querySelectorAll(CARTAS_FOCO)].filter(c => c.matches(':hover') || c.classList.contains('foco')).map(chaveFoco).filter(Boolean);
     el.innerHTML = `<div class="deck-palco">
       <button class="db-btn voltar" data-cmd="voltar">← ${tr('btn.voltarMenu')}</button>
       ${extras.opcoes ? `<button class="db-engrenagem" data-cmd="opcoes" title="${tr('menu.opcoes')}" aria-label="${tr('menu.opcoes')}">⚙&#xFE0E;</button>` : ''}
@@ -361,6 +369,16 @@ window.SS = window.SS || {};
     </div>`;
     animar = null;
     encaixar();
+    if (focos.length) {
+      el.classList.add('sem-transicao');
+      for (const k of focos) {
+        const [tipo, chave] = k.split(/:(.*)/);
+        const c = el.querySelector(`[data-${tipo}="${chave}"]`);
+        if (c) c.classList.add('foco');
+      }
+      requestAnimationFrame(() => requestAnimationFrame(() => el.classList.remove('sem-transicao')));
+      el.addEventListener('mousemove', soltarFoco, { once: true });
+    }
   }
 
   // ---------- Cartas voando entre a coleção (embaixo) e o baralho (em cima) ----------

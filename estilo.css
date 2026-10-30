@@ -1752,7 +1752,7 @@ body.tut-pulsa-seta #setas .seta .linha { animation: tut-pulsa-linha .6s ease-in
 .btn-engrenagem:hover { transform: rotate(60deg); }
 .palco-menu .leque-inicio { left: calc(425 * var(--u)); top: calc(0 * var(--u)); width: calc(350 * var(--u)); height: calc(240 * var(--u)); z-index: 0; }
 .palco-menu .leque-inicio img { width: calc(122 * var(--u)); border-radius: calc(10 * var(--u)); filter: drop-shadow(calc(4 * var(--u)) calc(6 * var(--u)) 0 rgba(20, 20, 20, .55)); }
-.logo-menu { left: calc(300 * var(--u)); top: calc(195 * var(--u)); width: calc(600 * var(--u)); z-index: 1; pointer-events: none; }
+.logo-menu { left: calc(318 * var(--u)); top: calc(195 * var(--u)); width: calc(600 * var(--u)); z-index: 1; pointer-events: none; }
 .palco-menu .convite { left: calc(240 * var(--u)); right: calc(240 * var(--u)); top: calc(845 * var(--u)); text-align: center; }
 
 /* Caixinha de cigarro (os baralhos): a tampa abre e as cartas aparecem quando o mouse passa em cima */
@@ -2024,12 +2024,12 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 .db-btn.mini { min-width: 38px; padding: 4px 6px; font-size: 18px; white-space: nowrap; }
 
 /* O baralho sendo montado */
-.db-deck { left: 393px; top: 129px; width: 815px; height: 350px; z-index: 2; }
+.db-deck { left: 383px; top: 129px; width: 836px; height: 350px; z-index: 2; }
 .db-deck-caixa { position: absolute; left: 62px; top: 36px; width: 170px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .db-deck-caixa .maco.cx { --u: 1.2px; }
 .db-deck-caixa .db-btn.editar { margin-top: -6px; width: 170px; font-size: 40px; padding: 2px 0 4px; border-width: 4px; border-radius: 18px; box-shadow: 0 6px 0 #141414; position: relative; z-index: 5; }
 .db-deck-nome { margin: -4px 0 0; font-size: 26px; text-align: center; line-height: 1; }
-.db-deck-cartas { position: absolute; left: 262px; top: 40px; width: 530px; height: 284px; }
+.db-deck-cartas { position: absolute; left: 262px; top: 40px; width: 552px; height: 284px; }
 .db-vazio-espaco { position: absolute; inset: 40px 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 8px; }
 .db-vazio-espaco h3 { margin: 0; font-size: 40px; }
 .db-vazio-espaco p { margin: 0 0 8px; font-size: 16px; max-width: 460px; }
@@ -2087,8 +2087,8 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 .db-aba.copas, .db-colecao.copas { background: #e64545; }
 .db-aba.espadas, .db-colecao.espadas { background: #1f56d8; }
 .db-aba.ouros, .db-colecao.ouros { background: #f5b528; }
-.db-colecao { left: 393px; top: 582px; width: 817px; height: 251px; border: 4px solid #141414; border-radius: 22px; box-shadow: 0 8px 0 #141414; }
-.db-colecao-cartas { position: absolute; left: 42px; right: 42px; top: 42px; display: flex; }
+.db-colecao { left: 383px; top: 582px; width: 836px; height: 251px; border: 4px solid #141414; border-radius: 22px; box-shadow: 0 8px 0 #141414; }
+.db-colecao-cartas { position: absolute; left: 30px; right: 30px; top: 42px; display: flex; }
 .db-colecao-carta { position: relative; width: 118px; height: 165px; flex: none; cursor: pointer; transition: transform .14s; filter: drop-shadow(2px 3px 0 rgba(0, 0, 0, .35)); }
 .db-colecao-carta + .db-colecao-carta { margin-left: -67px; }
 .db-colecao-carta:hover { transform: translateY(-14px); z-index: 5; }
@@ -2097,12 +2097,16 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 .db-colecao.leitura .db-colecao-carta:hover { transform: none; }
 /* Carta com o mouse em cima: as do lado se afastam um pouco para ela aparecer inteira (e elas também) */
 .db-colecao-carta, .db-carta, .db-mini { transition: transform .14s, translate .2s cubic-bezier(.3, 1.3, .5, 1); }
-.db-colecao:not(.leitura) .db-colecao-carta:hover ~ .db-colecao-carta { translate: 44px 0; }
-.db-colecao:not(.leitura) .db-colecao-carta:has(~ .db-colecao-carta:hover) { translate: -26px 0; }
-.db-carta:hover ~ .db-carta { translate: calc(var(--w) * .38) 0; }
-.db-carta:has(~ .db-carta:hover) { translate: calc(var(--w) * -.2) 0; }
-.db-mini.tem:hover ~ .db-mini { translate: 14px 0; }
-.db-mini:has(~ .db-mini.tem:hover) { translate: -8px 0; }
+.db-colecao:not(.leitura) .db-colecao-carta:is(:hover, .foco) ~ .db-colecao-carta { translate: 44px 0; }
+.db-colecao:not(.leitura) .db-colecao-carta:has(~ .db-colecao-carta:is(:hover, .foco)) { translate: -26px 0; }
+.db-carta:is(:hover, .foco) ~ .db-carta { translate: calc(var(--w) * .38) 0; }
+.db-carta:has(~ .db-carta:is(:hover, .foco)) { translate: calc(var(--w) * -.2) 0; }
+.db-mini.tem:is(:hover, .foco) ~ .db-mini { translate: 14px 0; }
+.db-mini:has(~ .db-mini.tem:is(:hover, .foco)) { translate: -8px 0; }
+/* (a cópia nova da carta destacada, logo depois de redesenhar) */
+.db-colecao:not(.leitura) .db-colecao-carta.foco { transform: translateY(-14px); z-index: 5; }
+.db-mini.tem.foco, .db-carta.foco { transform: translateY(-6px); z-index: 3; }
+#tela-decks.sem-transicao .db-colecao-carta, #tela-decks.sem-transicao .db-carta, #tela-decks.sem-transicao .db-mini { transition: none; }
 .db-qtd { position: absolute; left: 8px; top: -27px; padding: 3px 9px 2px; border-radius: 9px 9px 0 0; background: #1b2a44; color: #fff; font: 800 15px var(--fonte-ui); opacity: 0; transition: opacity .12s; }
 .db-colecao-carta.tem .db-qtd, .db-colecao-carta:hover .db-qtd { opacity: 1; }
 .db-colecao-carta.max .db-qtd { background: #b0101e; }

@@ -4784,6 +4784,7 @@ window.SS = window.SS || {};
   const BUILD = {
     n: 111, data: '30/10/2026',
     novidades: [
+      ['Deckbuilder: caixas mais largas (a Rainha não sai mais da borda) e a carta destacada fica destacada ao pôr ou tirar, sem o leque fechar e abrir', 'Deckbuilder: wider boxes (the Queen no longer sticks out) and the highlighted card stays highlighted when adding or removing, without the fan closing and reopening'],
       ['Deckbuilder: a carta com o mouse em cima afasta as vizinhas para aparecer inteira, e as Letras ficam na ordem Valete, Rei, Rainha também em cima', 'Deckbuilder: the hovered card pushes its neighbors aside so it shows in full, and the Letters go Jack, King, Queen up top too'],
       ['Meteoro: agora derruba também os Ases da mesa, e quem está em Berserk aguenta', 'Meteor: now also knocks down the Aces on the table, and Berserk Gentlemen hold on'],
       ['Deckbuilder: a coleção vai do Ás ao 10 e depois Valete, Rei e Rainha; pôr mais uma cópia não some mais com a carta lá em cima', 'Deckbuilder: the collection goes Ace to 10, then Jack, King and Queen; adding another copy no longer hides the card above'],
