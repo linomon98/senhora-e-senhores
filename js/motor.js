@@ -606,14 +606,14 @@ window.SS = window.SS || {};
     for (const o of new Set(ouros)) if (o !== 'TOKEN') for (const b of fontes) r.push({ tipo: 'comprar', carta: o, baralho: b });
     // Pargias do seu turno: par de números iguais (5 a 7, 8 a 10 ou Ases). 1 ação.
     const op = e.jogadores[1 - p], inimigos = op.campo.filter(u => u && u.tipo === 'senhor').map(u => u.uid);
-    const algumSenhor = j.campo.concat(op.campo).some(u => u && u.tipo === 'senhor');
+    const algumAlvoMeteoro = j.campo.concat(op.campo).some(atingeMeteoro);
     const cartasPar = j.mao.filter(c => ehNumero(c) || ehAs(c));
     for (let x = 0; x < cartasPar.length; x++) for (let y = x + 1; y < cartasPar.length; y++) {
       const a = cartasPar[x], b = cartasPar[y];
       if (a.rank !== b.rank) continue;
       const efeito = EFEITO_PARGIA(valor(a)), base = { tipo: 'pargia', efeito, cartas: [a.id, b.id].sort() };
       if (efeito === 'saiDaqui') for (const uid of inimigos) r.push(Object.assign({ alvo: uid }, base));
-      else if (efeito === 'meteoro' && algumSenhor) r.push(base);
+      else if (efeito === 'meteoro' && algumAlvoMeteoro) r.push(base);
       else if (efeito === 'raio') {
         for (const uid of inimigos) r.push(Object.assign({ alvo: uid }, base));
         r.push(Object.assign({ alvo: 'jogador' }, base));
@@ -680,6 +680,8 @@ window.SS = window.SS || {};
   // Pargias (pares de números iguais): 2 a 4 = Refletir (na defesa), 5 a 7 = Sai daqui!, 8 a 10 = Meteoro!,
   // Ases = Trovão. As três últimas são ações do seu turno (1 ação cada).
   const VALOR_MIN_REFLEXO = 2, VALOR_MAX_REFLEXO = 4;
+  // O Meteoro derruba os Senhores(as) e os Ases da mesa; quem está em Berserk aguenta.
+  const atingeMeteoro = u => !!u && (u.tipo === 'as' || (u.tipo === 'senhor' && !u.berserk));
   const EFEITO_PARGIA = v => (v === 1 ? 'raio' : v >= 5 && v <= 7 ? 'saiDaqui' : v >= 8 ? 'meteoro' : null);
   const DANO_RAIO_PALHACO = 2;
   function paresIguais(e, p) {
@@ -976,11 +978,12 @@ window.SS = window.SS || {};
         } else if (efeito === 'meteoro') {
           registrar(e, t('log.meteoro', { j: j.nome }));
           const alvos = [];
-          for (const q of [p, d]) e.jogadores[q].campo.forEach((u, i) => { if (u && u.tipo === 'senhor') alvos.push({ p: q, i, uid: u.uid }); });
+          for (const q of [p, d]) e.jogadores[q].campo.forEach((u, i) => { if (atingeMeteoro(u)) alvos.push({ p: q, i, uid: u.uid }); });
           evento(e, { tipo: 'fx', fx: 'meteoro', p, alvos });
-          for (const q of [p, d]) for (let i = 0; i < ESPACOS; i++) {
-            const u = e.jogadores[q].campo[i];
-            if (u && u.tipo === 'senhor') morrer(e, q, i, 'meteoro');
+          // (pelo uid: um Ás de Paus caindo pode levar junto o vizinho, e os lugares mudam no meio)
+          for (const a of alvos) {
+            const l = localizar(e, a.uid);
+            if (l) morrer(e, l.p, l.i, 'meteoro');
           }
         } else {
           if (a.alvo === 'jogador') {
