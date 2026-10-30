@@ -2411,7 +2411,7 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 .cola-tira, .cola-folha {
   background-color: #fbfaf4;
   background-image: linear-gradient(90deg, transparent var(--margem), rgba(222, 70, 90, .6) var(--margem), rgba(222, 70, 90, .6) calc(var(--margem) + 1.5px), transparent calc(var(--margem) + 1.5px)),
-    repeating-linear-gradient(transparent 0, transparent calc(var(--linha) - 1.5px), #86acd8 calc(var(--linha) - 1.5px), #86acd8 var(--linha));
+    repeating-linear-gradient(transparent 0, transparent calc(var(--linha) - 1.5px), rgba(134, 172, 216, .5) calc(var(--linha) - 1.5px), rgba(134, 172, 216, .5) var(--linha));
 }
 #acoes .colinha {
   position: absolute; left: 50%; top: calc(100% + 18px); padding: 0; border: 0; background: none; cursor: pointer;
@@ -2424,7 +2424,7 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 .cola-wrap { position: relative; width: min(920px, 94vw); transform: rotate(-1deg); filter: drop-shadow(5px 10px 0 rgba(0, 0, 0, .35)); animation: cola-abre .38s cubic-bezier(.3, 1.3, .5, 1); }
 .cola-folha {
   --linha: 26px; --margem: 40px; max-height: 88vh; overflow: auto; padding: 34px 30px 34px 56px; background-attachment: local;
-  font: 15px/26px var(--fonte-mao); color: #1f2f6e; text-align: left;
+  font: 15px/26px var(--fonte-mao); color: #141414; text-align: left;
 }
 .cola-folha h2 { margin: 0 0 4px; font: 700 30px/52px var(--fonte-mao); color: #b0101e; }
 .cola-folha h2 small { font-size: 14px; color: #6b6b6b; font-weight: 400; }
@@ -2460,12 +2460,12 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 .cola-c.cola-sac::after { content: '✕'; position: absolute; inset: 0; display: grid; place-items: center; font: 900 32px var(--fonte-ui); color: #c41e2a; text-shadow: 0 0 3px #fff, 0 0 3px #fff; }
 .cola-ic { width: 44px; height: 44px; object-fit: contain; flex: none; filter: drop-shadow(1px 2px 0 rgba(0, 0, 0, .25)); }
 .cola-op { font: 700 18px var(--fonte-mao); color: #b0101e; font-style: normal; padding: 0 2px; }
-.cola-rot { font: 700 15px var(--fonte-mao); color: #1f2f6e; display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.cola-rot { font: 700 15px var(--fonte-mao); color: #141414; display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .cola-esc { display: inline-flex; gap: 2px; }
 .cola-esc img { width: 20px; height: 20px; object-fit: contain; }
 .cola-esc img.apagado { filter: grayscale(1) opacity(.35); }
 .cola-dado { width: 30px; height: 30px; object-fit: contain; }
-.cola-conta { display: inline-flex; align-items: center; gap: 6px; font: 700 17px var(--fonte-mao); color: #1f2f6e; }
+.cola-conta { display: inline-flex; align-items: center; gap: 6px; font: 700 17px var(--fonte-mao); color: #141414; }
 .cola-linha .cola-n { width: 18px; height: 18px; }
 .cola-rot small { font-size: 12px; font-weight: 400; color: #6b6b6b; }
 /* Colinha: a distribuição do rascunho do Leonardo (Senhores e Pares em cima; Naipado, Pargia e Ás no meio; 1 carta, Dado e Defesa embaixo) */
