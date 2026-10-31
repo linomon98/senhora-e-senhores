@@ -2601,3 +2601,6 @@ html.celular .db-vista { transform: scale(1.15); }
 html.celular .lista-testes { grid-template-columns: repeat(2, 400px); justify-content: center; }
 /* No toque o :hover fica "grudado" depois de tocar: a carta da mão não fica levantada só por isso. */
 html.toque .zona-eu .mao .carta.jogavel:hover:not(.selecionada):not(.combina):not(.par-escolhido):not(.arrastando) { transform: translateY(var(--desce, 0px)) rotate(var(--giro, 0deg)); }
+
+/* Poeira do pouso das cartas no campo */
+.fx-poeira { border-radius: 50%; z-index: 53; filter: blur(1.5px); background: radial-gradient(circle, rgba(232, 220, 188, .9) 0, rgba(205, 188, 150, .6) 45%, rgba(190, 172, 132, 0) 70%); }

@@ -2073,7 +2073,7 @@ window.SS = window.SS || {};
         voarParaCampo(p, u.uid);
         // Ás de Ouros: o botão da ficha nova fica escondido até o naipe voar do totem até ele.
         const reserva = u.tipo === 'as' && u.naipe === 'ouros' && !MOVIMENTO_REDUZIDO ? reservarToken(p) : null;
-        setTimeout(() => { Som.tocar('soltar-carta'); efeitoEntrada(p, u.uid, reserva); }, 660); // depois que ela pousa
+        setTimeout(() => { Som.tocar('soltar-carta'); efeitoEntrada(p, u.uid, reserva); }, Math.round(VOO_CAMPO_MS * POUSO_CAMPO)); // na batida
       });
       campoVisto[p] = new Set(noCampo.map(u => u.uid));
       const atual = j.mao.map(c => c.id);
@@ -2125,7 +2125,9 @@ window.SS = window.SS || {};
     }, atraso + dur + 30);
   }
 
-  // A carta sai de onde o jogador soltou (ou da mão de quem jogou), sobe um pouco e "pousa" no lugar.
+  // A carta sai de onde o jogador soltou (ou da mão de quem jogou), sobe um pouco e "pousa" no lugar: começa devagar e
+  // acelera até bater na mesa (em POUSO_CAMPO do voo), onde amassa de leve e solta a poeira.
+  const VOO_CAMPO_MS = 440, POUSO_CAMPO = 0.8;
   function voarParaCampo(p, uid) {
     const loc = M.localizar(jogo, uid);
     const espaco = loc && document.querySelector(`[data-slot="${p}:${loc.i}"]`);
@@ -2151,13 +2153,14 @@ window.SS = window.SS || {};
     Object.assign(voo.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
     app.appendChild(voo);
     const dx = de.x - (x + w / 2), dy = de.y - (y + h / 2);
-    const dur = 620;
+    const dur = VOO_CAMPO_MS;
     voo.animate([
-      { transform: `translate(${dx}px, ${dy}px) scale(${de.s}) rotate(-8deg)`, filter: 'drop-shadow(0 10px 10px rgba(0,0,0,.5))' },
-      { transform: `translate(${dx * 0.35}px, ${dy * 0.35 - 46}px) scale(1.2) rotate(4deg)`, filter: 'drop-shadow(0 26px 18px rgba(0,0,0,.45))', offset: 0.6 },
-      { transform: 'translate(0, 0) scale(1.1) rotate(0deg)', filter: 'drop-shadow(0 4px 4px rgba(0,0,0,.5))', offset: 0.86 },
+      { transform: `translate(${dx}px, ${dy}px) scale(${de.s}) rotate(-8deg)`, filter: 'drop-shadow(0 10px 10px rgba(0,0,0,.5))', easing: 'cubic-bezier(.45, 0, .8, .5)' },
+      { transform: `translate(${dx * 0.4}px, ${dy * 0.4 - 40}px) scale(1.18) rotate(4deg)`, filter: 'drop-shadow(0 26px 18px rgba(0,0,0,.45))', offset: 0.5, easing: 'cubic-bezier(.6, 0, 1, .55)' },
+      // batida: amassa um pouquinho no chão e volta
+      { transform: 'translate(0, 0) scale(1.04, .95) rotate(0deg)', filter: 'drop-shadow(0 2px 2px rgba(0,0,0,.55))', offset: POUSO_CAMPO, easing: 'cubic-bezier(.2, .8, .4, 1)' },
       { transform: 'translate(0, 0) scale(1)', filter: 'drop-shadow(0 2px 3px rgba(0,0,0,.4))' },
-    ], { duration: dur, easing: 'cubic-bezier(.3, .7, .4, 1)', fill: 'both' });
+    ], { duration: dur, easing: 'linear', fill: 'both' });
     setTimeout(() => {
       voo.remove();
       voandoCampo.delete(uid);
@@ -2300,7 +2303,9 @@ window.SS = window.SS || {};
   // dão um pulinho, em onda a partir de onde ele caiu (quem está mais longe pula depois e um pouco menos).
   // nivel 1 (Valete, Ás), 2 (Rei), 3 (Rainha, que ainda treme a tela).
   function impactoMesa(nivel, origem) {
+    Som.tocar('impacto-fraco', { vol: [0, 0.18, 0.26, 0.36][nivel] }); // baque bem baixinho
     if (MOVIMENTO_REDUZIDO || !origem) return;
+    poeiraPouso(origem, nivel);
     const c = origem.getBoundingClientRect(), cx = c.left + c.width / 2, cy = c.top + c.height / 2;
     const altura = [0, 5, 11, 19][nivel], giro = [0, 1.5, 3, 5][nivel];
     const alvos = [...document.querySelectorAll('.decoracoes .deco, .fileira .espaco > .unidade, .mao > .carta, .pilhas .pilha > .carta')]
@@ -2319,6 +2324,25 @@ window.SS = window.SS || {};
     }
     if (nivel >= 3) tremor(9);
     else if (nivel === 2) tremor(6);
+  }
+
+  // Poeira que levanta dos dois lados da carta quando ela bate na mesa (mais nuvens e mais alto a cada nível).
+  function poeiraPouso(origem, nivel) {
+    const r = origem.getBoundingClientRect();
+    if (!r.width) return;
+    const base = pontoNoApp(r.left + r.width / 2, r.bottom - r.height * 0.06), larg = r.width / escala;
+    const n = 6 + nivel * 4, forca = 0.8 + nivel * 0.3;
+    for (let k = 0; k < n; k++) {
+      const lado = k % 2 ? 1 : -1, x = base.x + lado * (larg * 0.12 + Math.random() * larg * 0.38);
+      const el = peca('fx-poeira', x, base.y - Math.random() * 6), tam = (14 + Math.random() * 18) * forca;
+      Object.assign(el.style, { width: tam.toFixed(0) + 'px', height: tam.toFixed(0) + 'px' });
+      const dx = lado * (18 + Math.random() * 38) * forca, sobe = (14 + Math.random() * 26) * forca;
+      animarPeca(el, [
+        { transform: 'translate(-50%, -50%) scale(.3)', opacity: 0 },
+        { transform: `translate(calc(-50% + ${(dx * 0.4).toFixed(0)}px), calc(-50% - ${(sobe * 0.3).toFixed(0)}px)) scale(1)`, opacity: 0.85, offset: 0.25 },
+        { transform: `translate(calc(-50% + ${dx.toFixed(0)}px), calc(-50% - ${sobe.toFixed(0)}px)) scale(1.7)`, opacity: 0 },
+      ], { duration: 560 + Math.random() * 420, delay: Math.random() * 70, easing: 'cubic-bezier(.2, .7, .4, 1)' });
+    }
   }
 
   // Tremor da tela: levinho (ataque 1–5), médio (6–8) e forte (9 ou mais).
@@ -5004,6 +5028,7 @@ window.SS = window.SS || {};
   const BUILD = {
     n: 112, data: '30/10/2026',
     novidades: [
+      ['A carta voa mais rápido da mão para a mesa, acelerando até bater, com poeira subindo e um baque baixinho', 'Cards fly faster from hand to table, speeding up until they land, with a puff of dust and a soft thud'],
       ['Invocar sacode a mesa: decorações e cartas dão um pulinho (Valete e Ás de leve, Rei mais forte, Rainha com tremor)', 'Summoning shakes the table: decorations and cards hop (Jack and Ace lightly, King harder, Queen with a screen shake)'],
       ['Versão para celular deitado: a mesa ocupa a tela toda com cartas e botões maiores, tudo funciona com o dedo (arrastar cartas e setas, jogar o dado), segurar uma carta mostra a dica, as janelas encolhem para caber e, em pé, aparece o aviso para girar o celular. No menu, botão de tela cheia', 'Landscape phone version: the table fills the screen with bigger cards and buttons, everything works by touch (dragging cards and arrows, throwing the die), holding a card shows its tip, windows shrink to fit and, upright, a notice asks you to turn the phone. Full-screen button in the menu'],
       ['Colinha: embaixo da caixa de ações, um papel de caderno rasgado com o resumo de todas as combinações, feito com as cartas do jogo', 'Crib sheet: below the actions box, a torn notebook page summing up every combo with the game cards'],
