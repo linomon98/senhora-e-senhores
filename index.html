@@ -2,7 +2,10 @@
 <html lang="en" class="em-menu">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#141414">
   <!-- Política de segurança: só roda script deste site e das bibliotecas (cdnjs/jsdelivr); a rede só fala
        com o servidor do PeerJS (que apresenta os dois navegadores no online). -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://0.peerjs.com wss://0.peerjs.com; object-src 'none'; base-uri 'self'; form-action 'none'; frame-src 'none'">
@@ -14,7 +17,7 @@
   <link rel="preload" href="arte/menu/papelao.webp" as="image">
   <link rel="preload" href="arte/menu/naipes.webp" as="image">
   <link rel="preload" href="arte/menu/logo.webp" as="image">
-  <link rel="stylesheet" href="estilo.css?v=202610302152">
+  <link rel="stylesheet" href="estilo.css?v=202610302237">
 </head>
 <body>
   <div id="palco">
@@ -66,21 +69,27 @@
   </div>
   <div id="modal" hidden></div>
   <div id="dica" hidden></div>
+  <!-- Celular em pé: pede para deitar (o jogo é feito para a tela na horizontal). -->
+  <div id="girar" aria-live="polite">
+    <div class="girar-celular" aria-hidden="true"><span class="girar-tela"></span></div>
+    <p data-i18n="girar.titulo">Turn your phone sideways</p>
+    <small data-i18n="girar.sub">The table is made for a landscape screen.</small>
+  </div>
 
-  <script defer src="js/idioma.js?v=202610302152"></script>
-  <script defer src="js/libs.js?v=202610302152"></script>
-  <script defer src="js/motor.js?v=202610302152"></script>
-  <script defer src="js/palhacos.js?v=202610302152"></script>
-  <script defer src="js/pesos.js?v=202610302152"></script>
-  <script defer src="js/bot.js?v=202610302152"></script>
-  <script defer src="js/cartas.js?v=202610302152"></script>
-  <script defer src="js/som.js?v=202610302152"></script>
-  <script defer src="js/dados3d.js?v=202610302152"></script>
-  <script defer src="js/decks.js?v=202610302152"></script>
-  <script defer src="js/regras.js?v=202610302152"></script>
-  <script defer src="js/rede.js?v=202610302152"></script>
-  <script defer src="js/decoracao.js?v=202610302152"></script>
-  <script defer src="js/tutorial.js?v=202610302152"></script>
-  <script defer src="js/interface.js?v=202610302152"></script>
+  <script defer src="js/idioma.js?v=202610302237"></script>
+  <script defer src="js/libs.js?v=202610302237"></script>
+  <script defer src="js/motor.js?v=202610302237"></script>
+  <script defer src="js/palhacos.js?v=202610302237"></script>
+  <script defer src="js/pesos.js?v=202610302237"></script>
+  <script defer src="js/bot.js?v=202610302237"></script>
+  <script defer src="js/cartas.js?v=202610302237"></script>
+  <script defer src="js/som.js?v=202610302237"></script>
+  <script defer src="js/dados3d.js?v=202610302237"></script>
+  <script defer src="js/decks.js?v=202610302237"></script>
+  <script defer src="js/regras.js?v=202610302237"></script>
+  <script defer src="js/rede.js?v=202610302237"></script>
+  <script defer src="js/decoracao.js?v=202610302237"></script>
+  <script defer src="js/tutorial.js?v=202610302237"></script>
+  <script defer src="js/interface.js?v=202610302237"></script>
 </body>
 </html>

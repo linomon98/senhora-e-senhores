@@ -571,7 +571,7 @@ window.SS = window.SS || {};
   }
 
   function aoPressionar(ev) {
-    if (ev.button !== 0 || !jogo || ev.target.closest('#modal')) return;
+    if (ev.button !== 0 || !ev.isPrimary || !jogo || ev.target.closest('#modal')) return;
     if (ui) ui.ignorarProximoClique = false; // (o clique depois de fechar uma mira pode nem chegar a acontecer)
     const naMao = ev.target.closest('[data-mao]');
     // Mirando o lugar do Ás (par de Ouros): o clique num espaço do seu campo põe o Ás ali; a carta Cancelar desiste.
@@ -634,7 +634,7 @@ window.SS = window.SS || {};
   }
 
   function aoSoltar(ev) {
-    if (!jogo || ev.button !== 0) return;
+    if (!jogo || ev.button !== 0 || !ev.isPrimary || dedoSegurou) return;
     if (ui.arrasto) return soltarArrasto(ev);
     const mira = ui.mira;
     ui.mira = null;
@@ -674,6 +674,7 @@ window.SS = window.SS || {};
   }
 
   function aoMover(ev) {
+    if (!ev.isPrimary || (segurar && segurar.mostrou)) return;
     if (ui && ui.arrasto && jogo) return moverArrasto(ev);
     if (ui && ui.mira && !ui.mira.moveu && Math.hypot(ev.clientX - ui.mira.x, ev.clientY - ui.mira.y) > 8) ui.mira.moveu = true;
     if (jogo && ((ui.atacanteSel != null && ui.mira && ui.mira.moveu) || ui.bloqSel != null || mirandoSeta())) {
@@ -1323,9 +1324,9 @@ window.SS = window.SS || {};
 
   function dicaPara(el) {
     if (!el || !el.closest || el.closest('#modal .acoes-menu')) return null;
-    const mCarta = el.closest('[data-m-carta],[data-carta]');
+    const mCarta = el.closest('[data-m-carta],[data-carta],[data-pc]');
     if (mCarta) {
-      const c = acharCarta(mCarta.dataset.mCarta || mCarta.dataset.carta);
+      const c = acharCarta(mCarta.dataset.mCarta || mCarta.dataset.carta || mCarta.dataset.pc);
       return c ? dicaCarta(c) : null;
     }
     if (!jogo || el.closest('#modal')) return null;
@@ -1371,6 +1372,8 @@ window.SS = window.SS || {};
 
   function atualizarDica(ev) {
     if (ui && ui.dicaFixa) return; // o tutorial deixou uma dica aberta de propósito
+    const dedo = ev.pointerType && ev.pointerType !== 'mouse';
+    if (dedo && !(segurar && segurar.mostrou)) return; // no toque, a dica é de segurar (não de passar o dedo)
     const caixa = $('#dica');
     const d = dicaPara(ev.target);
     if (!d) {
@@ -1388,6 +1391,12 @@ window.SS = window.SS || {};
     let x = ev.clientX + 18, y = ev.clientY + 18;
     if (x + w > innerWidth - 8) x = ev.clientX - w - 18;
     if (y + h > innerHeight - 8) y = Math.max(8, innerHeight - h - 8);
+    if (dedo) {
+      // O dedo cobre o que está embaixo dele: a caixa vai para o lado (o que tiver mais espaço), longe do dedo.
+      x = ev.clientX > innerWidth / 2 ? ev.clientX - w - 44 : ev.clientX + 44;
+      x = Math.min(x, innerWidth - w - 8);
+      y = Math.min(Math.max(8, ev.clientY - h / 2), innerHeight - h - 8);
+    }
     caixa.style.left = Math.max(8, x) + 'px';
     caixa.style.top = y + 'px';
   }
@@ -3477,7 +3486,9 @@ window.SS = window.SS || {};
     m.classList.toggle('modal-menu', !jogo);
     m.classList.toggle('modal-papel', !jogo || /class="(menu-tema|confirmacao)/.test(html));
     m.hidden = false;
-    m.onclick = aoClicarModal || null;
+    // (no celular, depois de cada clique a janela pode ter crescido ou mudado: encaixa de novo)
+    m.onclick = aoClicarModal ? ev => { aoClicarModal(ev); if (document.documentElement.classList.contains('celular')) requestAnimationFrame(encaixarModal); } : null;
+    encaixarModal();
   }
 
   function fecharModal() {
@@ -3569,8 +3580,8 @@ window.SS = window.SS || {};
     $('#modal').querySelectorAll('.palco-carta').forEach((el, k) => {
       const s = caixaDe(origem(el.dataset.pc));
       if (!s || MOVIMENTO_REDUZIDO) return;
-      const r = el.getBoundingClientRect();
-      const dx = s.left + s.width / 2 - (r.left + r.width / 2), dy = s.top + s.height / 2 - (r.top + r.height / 2);
+      const r = el.getBoundingClientRect(), z = zoomModal();
+      const dx = (s.left + s.width / 2 - (r.left + r.width / 2)) / z, dy = (s.top + s.height / 2 - (r.top + r.height / 2)) / z;
       el.animate([
         { transform: `translate(${dx}px, ${dy}px) scale(${escalaVoo(s, r)}) rotate(-10deg)`, opacity: .4 },
         { transform: 'translate(0, -18px) scale(1.06) rotate(2deg)', opacity: 1, offset: .75 },
@@ -3585,9 +3596,9 @@ window.SS = window.SS || {};
     Som.tocar('embaralhar');
     const els = ids.map(id => $(`#modal [data-pc="${id}"]`)).filter(Boolean);
     const voo = (el, alvo, ida, k) => {
-      const d = caixaDe(alvo), r = el.getBoundingClientRect();
+      const d = caixaDe(alvo), r = el.getBoundingClientRect(), z = zoomModal();
       if (!d || MOVIMENTO_REDUZIDO) return Promise.resolve();
-      const dx = d.left + d.width / 2 - (r.left + r.width / 2), dy = d.top + d.height / 2 - (r.top + r.height / 2);
+      const dx = (d.left + d.width / 2 - (r.left + r.width / 2)) / z, dy = (d.top + d.height / 2 - (r.top + r.height / 2)) / z;
       const longe = { transform: `translate(${dx}px, ${dy}px) scale(${escalaVoo(d, r)}) rotate(${ida ? 8 : -10}deg)`, opacity: .3 };
       const perto = { transform: 'none', opacity: 1 };
       return el.animate(ida ? [perto, longe] : [longe, { transform: 'translateY(-14px) scale(1.05)', opacity: 1, offset: .75 }, perto],
@@ -3632,7 +3643,7 @@ window.SS = window.SS || {};
     const fim = els.map((el, k) => {
       const id = el.dataset.pc, d = caixaDe(o.destino(id, esc.includes(id), m)), r = el.getBoundingClientRect();
       if (!d) return el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' }).finished;
-      const dx = d.left + d.width / 2 - (r.left + r.width / 2), dy = d.top + d.height / 2 - (r.top + r.height / 2);
+      const z = zoomModal(), dx = (d.left + d.width / 2 - (r.left + r.width / 2)) / z, dy = (d.top + d.height / 2 - (r.top + r.height / 2)) / z;
       return el.animate([
         { transform: 'none', opacity: 1 },
         { transform: 'translateY(-16px) scale(1.05)', opacity: 1, offset: .2 },
@@ -4887,6 +4898,18 @@ window.SS = window.SS || {};
       <p class="plano">${t('menu.estilo')} ${pal.plano}</p></div>`;
   }
 
+  // No celular: tela cheia (some a barra do navegador) e, onde o aparelho deixa, trava deitado.
+  const telaCheiaPossivel = () => document.documentElement.classList.contains('toque') && !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+  function alternarTelaCheia() {
+    const d = document, el = d.documentElement;
+    if (d.fullscreenElement || d.webkitFullscreenElement) return (d.exitFullscreen || d.webkitExitFullscreen).call(d);
+    const pedir = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (!pedir) return;
+    Promise.resolve(pedir.call(el)).then(() => {
+      if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {});
+    }).catch(() => {});
+  }
+
   function telaInicio() {
     const convite = SS.Rede.codigoDoLink();
     Som.musica('menu');
@@ -4903,6 +4926,7 @@ window.SS = window.SS || {};
     modal(`<div class="menu-tema inicio-novo"><div class="palco-menu">
       <button class="btn-tutorial" data-m="tutorial">${t('menu.tutorialBotao')}${feito ? ' ✓' : ''}</button>
       <div class="idiomas">${bandeira('pt', 'bandeira-br.svg', 'Português')}${bandeira('en', 'bandeira-us.svg', 'English')}</div>
+      ${telaCheiaPossivel() ? `<button class="btn-tela-cheia" data-m="tela-cheia" title="${t('menu.telaCheia')}" aria-label="${t('menu.telaCheia')}">⛶&#xFE0E;</button>` : ''}
       <button class="btn-engrenagem" data-m="opcoes" title="${t('menu.opcoes')}" aria-label="${t('menu.opcoes')}">⚙&#xFE0E;</button>
       <div class="leque-inicio">${P.LISTA.map((pal, k) => `<img src="${pal.carta}" alt="" style="--i:${k}" draggable="false">`).join('')}</div>
       ${logo}
@@ -4942,6 +4966,7 @@ window.SS = window.SS || {};
         SS.Regras.abrir(telaInicio);
       } else if (m === 'testes') telaTestes();
       else if (m === 'opcoes') telaOpcoes(telaInicio);
+      else if (m === 'tela-cheia') alternarTelaCheia();
     });
     // Número e data da build num botãozinho no canto de baixo; clicando, abre a lista das novidades.
     $('#modal').insertAdjacentHTML('beforeend', `<details class="build-info"><summary>${t('build.titulo', { n: BUILD.n, d: BUILD.data })}</summary>
@@ -4950,8 +4975,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 111, data: '30/10/2026',
+    n: 112, data: '30/10/2026',
     novidades: [
+      ['Versão para celular deitado: a mesa ocupa a tela toda com cartas e botões maiores, tudo funciona com o dedo (arrastar cartas e setas, jogar o dado), segurar uma carta mostra a dica, as janelas encolhem para caber e, em pé, aparece o aviso para girar o celular. No menu, botão de tela cheia', 'Landscape phone version: the table fills the screen with bigger cards and buttons, everything works by touch (dragging cards and arrows, throwing the die), holding a card shows its tip, windows shrink to fit and, upright, a notice asks you to turn the phone. Full-screen button in the menu'],
       ['Colinha: embaixo da caixa de ações, um papel de caderno rasgado com o resumo de todas as combinações, feito com as cartas do jogo', 'Crib sheet: below the actions box, a torn notebook page summing up every combo with the game cards'],
       ['Mulligan sem a mão sair e voltar: só as cartas trocadas saem e as novas entram no lugar delas', 'Mulligan without the hand leaving and coming back: only the swapped cards leave and the new ones take their place'],
       ['Janelas da partida (cemitério, magias, fim de jogo) com o mesmo visual do palco das cartas', 'In-game windows (graveyard, spells, game over) share the card stage look'],
@@ -5808,30 +5834,125 @@ window.SS = window.SS || {};
   };
   const esconderCusto = () => { clearTimeout(custoTimer); custoTimer = null; custoCarta = null; caixaCusto().hidden = true; };
   document.addEventListener('mouseover', ev => {
+    if (ultimoPonteiro !== 'mouse') return; // (o toque também solta um "mouseover": no dedo, o custo é de segurar)
     const carta = ev.target.closest && ev.target.closest('.carta-acao[data-custo]');
     if (carta === custoCarta) return;
     esconderCusto();
     if (!carta) return;
     custoCarta = carta;
-    custoTimer = setTimeout(() => {
-      if (!carta.isConnected) return;
-      const caixa = caixaCusto(), r = carta.getBoundingClientRect();
-      caixa.innerHTML = `<b>${t('custo.titulo')}</b> ${escapar(carta.dataset.custo)}`;
-      caixa.hidden = false;
-      const cw = caixa.offsetWidth, ch = caixa.offsetHeight;
-      caixa.style.left = Math.max(8, Math.min(innerWidth - cw - 8, r.left + r.width / 2 - cw / 2)) + 'px';
-      caixa.style.top = Math.max(8, r.top - ch - 10) + 'px';
-    }, 500);
+    custoTimer = setTimeout(() => mostrarCusto(carta), 500);
   });
-  document.addEventListener('mousedown', esconderCusto, true);
+  function mostrarCusto(carta) {
+    if (!carta.isConnected) return;
+    const caixa = caixaCusto(), r = carta.getBoundingClientRect();
+    caixa.innerHTML = `<b>${t('custo.titulo')}</b> ${escapar(carta.dataset.custo)}`;
+    caixa.hidden = false;
+    const cw = caixa.offsetWidth, ch = caixa.offsetHeight;
+    caixa.style.left = Math.max(8, Math.min(innerWidth - cw - 8, r.left + r.width / 2 - cw / 2)) + 'px';
+    caixa.style.top = Math.max(8, r.top - ch - 10) + 'px';
+  }
+  document.addEventListener('pointerdown', esconderCusto, true);
 
   // Passar o mouse numa carta de ação ou da sua mão: um "fff" baixinho (uma vez por carta).
   let hoverAntes = null;
   document.addEventListener('mouseover', ev => {
+    if (ultimoPonteiro !== 'mouse') return;
     const el = ev.target.closest && ev.target.closest('.carta-acao, .zona-eu .mao .carta.jogavel');
     if (el && el !== hoverAntes) Som.tocar('hover-carta');
     hoverAntes = el;
   });
+
+  // ---------- Toque (celular) ----------
+  // O dedo usa os mesmos eventos de ponteiro do mouse: tocar = clicar, arrastar = arrastar. O que no computador
+  // aparece passando o mouse (a dica das cartas, o custo das cartas de ação) aparece segurando o dedo parado;
+  // segurar não vira clique, nem arrasto, nem seta. Arrastando o dedo com a dica aberta, ela segue o que está embaixo.
+  let ultimoPonteiro = 'mouse', segurar = null, dedoSegurou = false;
+  const SEGURAR_MS = 430;
+  function aoTocar(ev) {
+    ultimoPonteiro = ev.pointerType || 'mouse';
+    if (ev.pointerType === 'mouse' || !ev.isPrimary) return;
+    // (o dedo "prende" o ponteiro no elemento tocado; solto, os eventos seguem o que está embaixo do dedo)
+    if (ev.target.hasPointerCapture && ev.target.hasPointerCapture(ev.pointerId)) ev.target.releasePointerCapture(ev.pointerId);
+    pararSegurar();
+    dedoSegurou = false;
+    segurar = { x: ev.clientX, y: ev.clientY, antes: ui ? { atacanteSel: ui.atacanteSel, bloqSel: ui.bloqSel } : null };
+    segurar.timer = setTimeout(segurou, SEGURAR_MS);
+  }
+  function pararSegurar() {
+    if (segurar) clearTimeout(segurar.timer);
+    segurar = null;
+  }
+  function segurou() {
+    const s = segurar;
+    if (!s) return;
+    const el = document.elementFromPoint(s.x, s.y);
+    if (!el || el.closest('#tela-decks')) return; // (no deckbuilder, segurar é o "botão direito": tira a carta)
+    const custo = el.closest('.carta-acao[data-custo]');
+    if (!custo && !dicaPara(el)) return;
+    s.mostrou = true;
+    dedoSegurou = true;
+    if (navigator.vibrate) try { navigator.vibrate(12); } catch (err) { /* sem vibração */ }
+    // Desfaz o que o toque já tinha começado (arrasto da mão, seta de ataque ou de bloqueio).
+    if (ui && jogo) {
+      if (ui.arrasto) {
+        if (ui.arrasto.el) ui.arrasto.el.remove();
+        marcarDestino(null);
+        $('#campo-' + jogo.vez).classList.remove('soltando');
+        document.querySelectorAll('.arrastando').forEach(e => e.classList.remove('arrastando'));
+      }
+      ui.arrasto = null;
+      ui.mira = null;
+      if (s.antes) { ui.atacanteSel = s.antes.atacanteSel; ui.bloqSel = s.antes.bloqSel; }
+      render();
+    }
+    if (custo) return mostrarCusto(custo);
+    atualizarDica({ target: el, clientX: s.x, clientY: s.y, pointerType: 'touch' });
+  }
+  function aoArrastarDedo(ev) {
+    const s = segurar;
+    if (!s || ev.pointerType === 'mouse' || !ev.isPrimary) return;
+    if (!s.mostrou) {
+      if (Math.hypot(ev.clientX - s.x, ev.clientY - s.y) > 10) pararSegurar();
+      return;
+    }
+    // Com a dica aberta, deslizar o dedo mostra a dica do que estiver embaixo.
+    const el = document.elementFromPoint(ev.clientX, ev.clientY);
+    if (!el) return;
+    const custo = el.closest('.carta-acao[data-custo]');
+    if (custo) { $('#dica').hidden = true; if (custo !== custoCarta) { esconderCusto(); custoCarta = custo; mostrarCusto(custo); } return; }
+    esconderCusto();
+    atualizarDica({ target: el, clientX: ev.clientX, clientY: ev.clientY, pointerType: 'touch' });
+  }
+  function aoSoltarDedo(ev) {
+    if (ev.pointerType === 'mouse' || !ev.isPrimary) return;
+    const mostrou = segurar && segurar.mostrou;
+    pararSegurar();
+    if (!mostrou) return;
+    $('#dica').hidden = true;
+    esconderCusto();
+    // O clique que vem depois de soltar o dedo é engolido; se ele não vier, a trava sai sozinha.
+    setTimeout(() => { dedoSegurou = false; }, 450);
+  }
+  function aoCancelarDedo(ev) {
+    if (ev.pointerType === 'mouse') return;
+    pararSegurar();
+    $('#dica').hidden = true;
+    if (!ui || !jogo || !ev.isPrimary) return;
+    if (ui.arrasto) {
+      if (ui.arrasto.el) ui.arrasto.el.remove();
+      ui.arrasto = null;
+      marcarDestino(null);
+      $('#campo-' + jogo.vez).classList.remove('soltando');
+      render();
+    }
+    ui.mira = null;
+  }
+  function engolirCliqueDoSegurar(ev) {
+    if (!dedoSegurou) return;
+    dedoSegurou = false;
+    ev.stopPropagation();
+    ev.preventDefault();
+  }
 
   function plantarGraminhas() {
     const campo = $('#graminhas');
@@ -5848,7 +5969,45 @@ window.SS = window.SS || {};
     campo.innerHTML = h;
   }
 
+  // html.toque: aparelho sem mouse (os textos falam em tocar e segurar). html.celular: tela baixa e deitada
+  // (celular na horizontal): a mesa fica mais baixa, as cartas e os botões crescem e as janelas se encolhem para caber.
+  const SO_TOQUE = matchMedia('(hover: none) and (pointer: coarse)');
+  function ajustarAparelho() {
+    const h = document.documentElement;
+    h.classList.toggle('toque', SO_TOQUE.matches);
+    h.classList.toggle('celular', innerHeight <= 540 && innerWidth > innerHeight);
+  }
+
+  // Celular: a janela aberta encolhe (zoom) até caber na tela, sem passar de um mínimo legível (aí ela rola).
+  const ZOOMS_MODAL = [1, .9, .82, .75, .68, .62, .56];
+  function encaixarModal() {
+    const c = $('#modal > .caixa');
+    if (!c) return;
+    c.style.zoom = '';
+    c.style.removeProperty('--zm');
+    if (!document.documentElement.classList.contains('celular') || $('#modal').hidden || c.querySelector('.inicio-novo')) return;
+    // (a altura do conteúdo vem do layout, não do scroll: as cartas entrando com translate não contam)
+    const alturaConteudo = () => {
+      const filhos = [...c.children], est = getComputedStyle(c);
+      if (!filhos.length) return 0;
+      return Math.max(...filhos.map(k => k.offsetTop + k.offsetHeight)) - Math.min(...filhos.map(k => k.offsetTop))
+        + parseFloat(est.paddingTop) + parseFloat(est.paddingBottom);
+    };
+    for (const z of ZOOMS_MODAL) {
+      c.style.zoom = z;
+      c.style.setProperty('--zm', z);
+      const r = c.getBoundingClientRect();
+      if (alturaConteudo() <= c.clientHeight + 2 && c.scrollWidth <= c.clientWidth + 2 && r.height <= innerHeight - 6 && r.width <= innerWidth - 6) break;
+    }
+  }
+  // (as cartas do palco voam com translate dentro da caixa encolhida: a distância da tela é dividida pelo zoom)
+  let refazerModal = null;
+  $('#modal').addEventListener('load', () => { clearTimeout(refazerModal); refazerModal = setTimeout(encaixarModal, 40); }, true);
+  const zoomModal = () => parseFloat(($('#modal > .caixa') || { style: {} }).style.zoom) || 1;
+
   function ajustarEscala() {
+    ajustarAparelho();
+    encaixarModal();
     const app = $('#app');
     escala = Math.min(innerWidth / app.offsetWidth, innerHeight / app.offsetHeight);
     app.style.transform = `translate(-50%, -50%) scale(${escala})`;
@@ -5857,6 +6016,7 @@ window.SS = window.SS || {};
     if (jogo) desenharSetas();
   }
 
+  ajustarAparelho();
   SS.Idioma.aplicarEstaticos();
   C.aplicarTexturas();
   sonsDasJogadas();
@@ -5864,9 +6024,16 @@ window.SS = window.SS || {};
   ajustarEscala();
   addEventListener('resize', ajustarEscala);
   document.addEventListener('click', aoClicar);
-  document.addEventListener('mousedown', aoPressionar);
-  document.addEventListener('mouseup', aoSoltar);
-  document.addEventListener('mousemove', aoMover);
+  // Eventos de ponteiro: o mesmo caminho para o mouse e para o dedo (no toque, segurar mostra a dica).
+  document.addEventListener('pointerdown', aoTocar, true);
+  document.addEventListener('pointermove', aoArrastarDedo, true);
+  document.addEventListener('pointerup', aoSoltarDedo, true);
+  document.addEventListener('pointercancel', aoCancelarDedo, true);
+  document.addEventListener('click', engolirCliqueDoSegurar, true);
+  document.addEventListener('contextmenu', ev => { if (ev.pointerType !== 'mouse' && document.documentElement.classList.contains('toque') && !ev.target.closest('#tela-decks')) ev.preventDefault(); });
+  document.addEventListener('pointerdown', aoPressionar);
+  document.addEventListener('pointerup', aoSoltar);
+  document.addEventListener('pointermove', aoMover);
   document.addEventListener('keydown', aoTeclar);
   menu();
   // Com o menu na tela, baixa por trás o que a partida vai usar (dado 3D) e, se veio de um convite, o online.

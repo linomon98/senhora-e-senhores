@@ -2488,3 +2488,116 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 .cola-folha .cola-linha { min-height: 46px; }
 .cola-folha .cola-rot { flex-wrap: nowrap; white-space: nowrap; }
 .cola-folha h2 { line-height: 40px; }
+
+/* =====================================================================================
+   Celular e toque. html.toque: aparelho sem mouse. html.celular: tela baixa e deitada (celular na horizontal).
+   No computador nada daqui vale (as duas classes só entram em tela de toque ou janela muito baixa).
+   ===================================================================================== */
+html { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; touch-action: manipulation; }
+html.toque, html.toque * { -webkit-touch-callout: none; }
+/* Na mesa o dedo arrasta cartas e setas: a página não rola nem dá zoom. Listas que rolam continuam rolando. */
+#palco, #setas, #dados3d, .carta-arrastada { touch-action: none; }
+#log, #painel { touch-action: pan-y; }
+
+/* Celular em pé: aviso para deitar */
+#girar { display: none; }
+@media (orientation: portrait) and (max-width: 820px) and (pointer: coarse), (orientation: portrait) and (max-width: 560px) {
+  #girar {
+    position: fixed; inset: 0; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+    padding: 24px; text-align: center; color: #141414; background: #d8d1c5 url('arte/menu/papelao.webp') center / cover;
+  }
+  #girar p { margin: 18px 0 0; font: 400 40px/1.05 var(--fonte-titulo); }
+  #girar small { font: 600 15px/1.35 var(--fonte-ui); opacity: .75; max-width: 260px; }
+  .girar-celular {
+    position: relative; width: 74px; height: 128px; border: 6px solid #141414; border-radius: 16px; background: #fff;
+    box-shadow: 0 8px 0 #141414; animation: girar-celular 2.4s cubic-bezier(.6, 0, .3, 1) infinite;
+  }
+  .girar-tela { position: absolute; inset: 9px 6px 15px; border-radius: 4px; background: radial-gradient(ellipse at 50% 45%, #1d9450, #0c5d2e); }
+  .girar-tela::after { content: '♠ ♥ ♣ ♦'; position: absolute; inset: 0; display: grid; place-items: center; font: 700 12px/1 serif; color: #fff; writing-mode: vertical-rl; }
+  .girar-celular::after { content: ''; position: absolute; left: 50%; bottom: 4px; width: 14px; height: 4px; margin-left: -7px; border-radius: 2px; background: #141414; }
+}
+@keyframes girar-celular { 0%, 20% { transform: rotate(0); } 55%, 85% { transform: rotate(-90deg); } 100% { transform: rotate(0); } }
+@media (prefers-reduced-motion: reduce) { .girar-celular { animation: none; transform: rotate(-90deg); } }
+
+/* Botão de tela cheia no menu (só em aparelho de toque) */
+.btn-tela-cheia {
+  left: calc(850 * var(--u)); top: calc(33 * var(--u)); width: calc(80 * var(--u)); height: calc(80 * var(--u)); border-radius: 50%;
+  color: #141414; background: #fff; border: calc(6 * var(--u)) solid #141414; box-shadow: 0 calc(7 * var(--u)) 0 #141414;
+  font: 400 calc(46 * var(--u)) / 1 'Segoe UI Symbol', 'Segoe UI', sans-serif; display: grid; place-items: center; padding: 0;
+}
+
+/* Janelas no celular: encolhem com zoom (o JS escolhe o zoom); os limites de tamanho valem para a tela, não para o zoom. */
+html.celular #modal { overflow: auto; }
+html.celular #modal .caixa { max-height: calc(96vh / var(--zm, 1)); max-width: calc(98vw / var(--zm, 1)); }
+/* Telas de escolha (Palhaço, oponente): no celular as cartas ficam à esquerda e o resto à direita, para caber na altura. */
+html.celular .menu-tema:has(> .versus, > .mesa-cartas) { display: grid; grid-template-columns: auto 480px; column-gap: 30px; align-items: center; align-content: center; }
+html.celular .menu-tema:has(> .versus, > .mesa-cartas) > * { grid-column: 2; margin-left: 0; margin-right: 0; }
+html.celular .menu-tema:has(> .versus, > .mesa-cartas) > .titulo-etapa { grid-column: 1 / -1; }
+html.celular .menu-tema > .versus, html.celular .menu-tema > .mesa-cartas { grid-column: 1; grid-row: 2 / span 6; align-self: center; }
+html.celular .menu-tema > .mesa-cartas { flex-wrap: nowrap; gap: 12px; padding-top: 24px; }
+html.celular .menu-tema > .mesa-cartas .carta-joker { width: 112px; }
+html.celular .menu-tema > .versus { gap: 18px; grid-template-columns: auto auto auto; }
+html.celular .menu-tema .vs { font-size: 60px; }
+html.celular .menu-tema .lado-rivais { grid-template-columns: repeat(2, 96px); }
+html.celular .menu-tema .lado-rivais .carta-joker { width: 96px; }
+html.celular .menu-tema > .versus .lado-eu .carta-joker.grande { width: 150px; }
+html.celular #modal .caixa { padding: 16px 22px; }
+html.celular .menu-tema:has(> .versus, > .mesa-cartas) .titulo-etapa { margin-bottom: 0; }
+html.celular .menu-tema:has(> .versus, > .mesa-cartas) .acoes-menu { margin-top: 10px; }
+
+/* Mesa no celular: o palco fica mais baixo (1600×780, a faixa do meio quase some), então a escala cresce e a
+   mesa ocupa a largura do celular deitado. Cartas da mão e do campo maiores; botões do topo do tamanho do dedo. */
+html.celular #app, html.celular #mesa { height: 780px; }
+html.celular #faixa { height: 20px; }
+html.celular .zona-op { height: 176px; grid-template-rows: 124px 52px; }
+html.celular .zona-eu { height: 250px; grid-template-rows: 150px 100px; }
+html.celular .zona-eu .mao { width: 600px; z-index: 5; }
+html.celular .zona-eu .mao .carta { width: 112px; height: 157px; }
+html.celular .fileira, html.celular .unidade-voando { --cw: 88px; --ch: 123px; }
+html.celular .btn.btn-topo, html.celular .barra-partida .btn.btn-topo { font-size: 23px; padding: 13px 24px; border-radius: 18px; }
+html.celular #mesa .barra-partida { gap: 12px; }
+html.celular .btn-log { right: 96px; }
+html.celular .btn.btn-opcoes-mesa { width: 64px; height: 64px; padding: 0; font-size: 32px; }
+html.celular #acoes { top: 44%; transform: translateY(-50%) scale(1.2); transform-origin: 0 50%; }
+html.celular .carta-acao { width: 140px; }
+/* (a mão maior cobriria o naipe do poder: ele vai um pouco mais para a direita, fora do leque) */
+html.celular .zona-eu .info .lado-heroi { left: calc(100% + 150px); top: 36%; }
+html.celular .zona-eu .mao { margin-bottom: 18px; }
+html.celular #combate { transform: translateY(-50%) scale(1.35); transform-origin: 100% 50%; max-height: 500px; }
+html.celular #cartas-acao .btn:not(.carta-acao) { font-size: 22px; padding: 12px 20px; min-height: 56px; border-radius: 16px; }
+/* Dica (segurando o dedo) no celular: arte e texto menores, para caber do lado do dedo */
+html.celular #dica { font-size: 12px; line-height: 1.38; max-width: 280px; max-height: calc(100vh - 16px); overflow: hidden; padding: 9px 11px; }
+html.celular #dica.com-arte { max-width: calc(100vw - 16px); gap: 10px; }
+html.celular #dica .dica-texto { width: 250px; }
+html.celular .dica-arte { width: 150px; height: 210px; }
+html.celular .dica-arte.senhor { width: 172px; height: 224px; }
+html.celular .dica-arte .carta { width: 150px; height: 210px; border-radius: 11px; }
+html.celular .dica-arte .carta.numero { width: 80px; height: 112px; border-radius: 7px; }
+html.celular #dica .dica-titulo { font-size: 14px; }
+html.celular #caixa-custo { font-size: 14px; }
+html.celular #combate .cb-ctrl { gap: 8px; margin-top: 6px; }
+html.celular #combate .cb-ctrl .mini { font-size: 15px; padding: 7px 12px; min-width: 40px; border-radius: 10px; }
+
+/* Regras e telas com rolagem no celular: o dedo rola a página; tudo um pouco menor para caber mais texto. */
+.tela, #modal { -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y; }
+html.celular .tela { padding: 10px 14px; }
+html.celular #tela-regras.tela-regras-nova { padding: 10px 14px 30px; }
+html.celular .rg-tela { zoom: .68; }
+html.celular .rg-topo h1 { font-size: 44px; }
+/* Colinha no celular: as três faixas de colunas do computador (e não uma coluna comprida), encolhida para caber. */
+html.celular .cola-wrap { width: 1500px; zoom: .47; }
+html.celular .cola-folha { max-height: calc(96vh / .47); padding: 18px 26px 18px 56px; }
+html.celular .cola-folha .cola-cols { grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-areas: 'sen sen sen sen sen sen par par par par par par' 'nai nai nai pgi pgi pgi pgi pgi as as as as' 'um um um um dad dad dad dad def def def def'; }
+/* Registro no celular: painel maior, letra maior e X do tamanho do dedo */
+html.celular #painel { top: 86px; width: 600px; height: 670px; }
+html.celular #painel h2 { font-size: 34px; }
+html.celular #painel #log { font-size: 22px; line-height: 1.4; }
+html.celular .fechar-log { width: 56px; height: 56px; font-size: 32px; }
+/* Deckbuilder no celular: botões do palco mais altos e com letra maior (alvos para o dedo) */
+html.celular .db-btn.voltar { font-size: 30px; padding: 10px 22px; }
+html.celular .db-acoes { width: 236px; gap: 8px; }
+html.celular .db-acoes .db-btn { font-size: 27px; padding: 8px 10px; }
+html.celular .db-vista { transform: scale(1.15); }
+html.celular .lista-testes { grid-template-columns: repeat(2, 400px); justify-content: center; }
+/* No toque o :hover fica "grudado" depois de tocar: a carta da mão não fica levantada só por isso. */
+html.toque .zona-eu .mao .carta.jogavel:hover:not(.selecionada):not(.combina):not(.par-escolhido):not(.arrastando) { transform: translateY(var(--desce, 0px)) rotate(var(--giro, 0deg)); }

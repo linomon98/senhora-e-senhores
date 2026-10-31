@@ -680,7 +680,7 @@
     // (as janelas ficam livres, a não ser que o passo trave: ex. na abertura, só o botão Manter)
     if (ev.target.closest && (ev.target.closest('.tut-balao') || (ev.target.closest('#modal') && !(p && p.travarModal)))) return;
     // Cliques que a aula quer perceber (mesmo os que não fazem nada no jogo, como atacar com o Rei recém-invocado).
-    if (p && p.clique && (ev.type === 'mousedown' || ev.type === 'touchstart')) {
+    if (p && p.clique && ev.type === 'pointerdown') {
       for (const c of p.clique) if (elementos(c.em).some(el => el.contains(ev.target))) c.faz(T.api);
     }
     if (p && p.permitir === '*') return;
