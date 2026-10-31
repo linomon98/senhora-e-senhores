@@ -1667,6 +1667,8 @@ window.SS = window.SS || {};
     // Entrada: cada figura tem o seu som (Valete, Rainha, Rei); se ainda não foi gravado, toca o "sumonar" geral.
     const somFigura = l.u.tipo === 'as' ? 'as-' + l.u.naipe : { J: 'sumonar-valete', Q: 'sumonar-rainha', K: 'sumonar-rei' }[l.u.figura.rank];
     Som.tocar(somFigura && Som.tem(somFigura) ? somFigura : 'sumonar', { atraso: 90 });
+    // A mesa sente o peso de quem chegou: Valete e Ás 1, Rei 2, Rainha 3.
+    impactoMesa(l.u.tipo === 'as' ? 1 : { J: 1, K: 2, Q: 3 }[l.u.figura.rank] || 1, esp);
     if (l.u.tipo === 'as') {
       const naipe = l.u.naipe, cor = COR_NAIPE[naipe], un = esp.querySelector('.unidade');
       if (un) {
@@ -2292,6 +2294,31 @@ window.SS = window.SS || {};
         { transform: `translate(calc(-50% + ${(Math.cos(ang) * dist).toFixed(1)}px), calc(-50% + ${(Math.sin(ang) * dist + 16).toFixed(1)}px)) scale(.2)`, opacity: 0 },
       ], { duration: 520 + Math.random() * 420, easing: 'cubic-bezier(.15, .8, .3, 1)' }).onfinish = () => p.remove();
     }
+  }
+
+  // Impacto na mesa quando um Senhor(a) ou Ás pousa: as decorações, as outras cartas do campo, as mãos e as pilhas
+  // dão um pulinho, em onda a partir de onde ele caiu (quem está mais longe pula depois e um pouco menos).
+  // nivel 1 (Valete, Ás), 2 (Rei), 3 (Rainha, que ainda treme a tela).
+  function impactoMesa(nivel, origem) {
+    if (MOVIMENTO_REDUZIDO || !origem) return;
+    const c = origem.getBoundingClientRect(), cx = c.left + c.width / 2, cy = c.top + c.height / 2;
+    const altura = [0, 5, 11, 19][nivel], giro = [0, 1.5, 3, 5][nivel];
+    const alvos = [...document.querySelectorAll('.decoracoes .deco, .fileira .espaco > .unidade, .mao > .carta, .pilhas .pilha > .carta')]
+      .filter(el => !origem.contains(el));
+    for (const el of alvos) {
+      const r = el.getBoundingClientRect();
+      if (!r.width) continue;
+      const d = Math.hypot(r.left + r.width / 2 - cx, r.top + r.height / 2 - cy);
+      const perto = Math.max(0.35, 1 - d / 1400), h = altura * perto, g = (Math.random() * 2 - 1) * giro * perto;
+      el.animate([
+        { translate: '0 0', rotate: '0deg' },
+        { translate: `0 ${(-h).toFixed(1)}px`, rotate: `${g.toFixed(1)}deg`, offset: 0.35 },
+        { translate: `0 ${(h * 0.18).toFixed(1)}px`, rotate: `${(-g * 0.4).toFixed(1)}deg`, offset: 0.7 },
+        { translate: '0 0', rotate: '0deg' },
+      ], { duration: 260 + nivel * 70, delay: Math.min(260, d * 0.22), easing: 'ease-out', composite: 'add' });
+    }
+    if (nivel >= 3) tremor(9);
+    else if (nivel === 2) tremor(6);
   }
 
   // Tremor da tela: levinho (ataque 1–5), médio (6–8) e forte (9 ou mais).
@@ -4977,6 +5004,7 @@ window.SS = window.SS || {};
   const BUILD = {
     n: 112, data: '30/10/2026',
     novidades: [
+      ['Invocar sacode a mesa: decorações e cartas dão um pulinho (Valete e Ás de leve, Rei mais forte, Rainha com tremor)', 'Summoning shakes the table: decorations and cards hop (Jack and Ace lightly, King harder, Queen with a screen shake)'],
       ['Versão para celular deitado: a mesa ocupa a tela toda com cartas e botões maiores, tudo funciona com o dedo (arrastar cartas e setas, jogar o dado), segurar uma carta mostra a dica, as janelas encolhem para caber e, em pé, aparece o aviso para girar o celular. No menu, botão de tela cheia', 'Landscape phone version: the table fills the screen with bigger cards and buttons, everything works by touch (dragging cards and arrows, throwing the die), holding a card shows its tip, windows shrink to fit and, upright, a notice asks you to turn the phone. Full-screen button in the menu'],
       ['Colinha: embaixo da caixa de ações, um papel de caderno rasgado com o resumo de todas as combinações, feito com as cartas do jogo', 'Crib sheet: below the actions box, a torn notebook page summing up every combo with the game cards'],
       ['Mulligan sem a mão sair e voltar: só as cartas trocadas saem e as novas entram no lugar delas', 'Mulligan without the hand leaving and coming back: only the swapped cards leave and the new ones take their place'],
