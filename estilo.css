@@ -1850,12 +1850,12 @@ body.tut-pulsa-seta #setas .seta .linha { animation: tut-pulsa-linha .6s ease-in
 /* ---------- Vitória e derrota: fundo escuro, título enorme, festa ou tomates ---------- */
 #modal:has(.tela-fim) { background: rgba(4, 8, 3, .8); }
 #modal .caixa:has(.tela-fim) { background: none; border: 0; box-shadow: none; max-width: none; text-align: center; }
-.tela-fim .titulo-fim-grande {
+#modal .caixa .tela-fim h2.titulo-fim-grande {
   margin: 0; font: 400 clamp(90px, 15vw, 210px) / .9 var(--fonte-titulo); letter-spacing: 2px; color: #ffd84d;
   -webkit-text-stroke: 10px #141414; paint-order: stroke fill; text-shadow: 0 12px 0 #141414;
   animation: fim-entra .7s cubic-bezier(.3, 1.5, .5, 1) both;
 }
-.tela-fim.derrota .titulo-fim-grande { color: #ff4b4b; animation-name: fim-cai; }
+#modal .caixa .tela-fim.derrota h2.titulo-fim-grande { color: #ff4b4b; animation-name: fim-cai; }
 .tela-fim .fim-turno { margin: 14px 0 6px; font-size: 18px; color: #fff; opacity: .85; }
 @keyframes fim-entra { from { transform: scale(.2) rotate(-8deg); opacity: 0; } }
 @keyframes fim-cai { from { transform: translateY(-120px) rotate(6deg); opacity: 0; } 60% { transform: translateY(12px) rotate(-2deg); opacity: 1; } }
