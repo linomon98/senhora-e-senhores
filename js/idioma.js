@@ -603,6 +603,8 @@ window.SS = window.SS || {};
     'menu.deckPalhaco': ['Baralho do Palhaço', "Jester's deck"],
     'menu.palhacoCurto': ['Palhaço', 'Jester'],
     'intro.apresenta': ['Linomon apresenta', 'Linomon presents'],
+    'intro.clique': ['Clique para começar', 'Click to start'],
+    'intro.toque': ['Toque para começar', 'Tap to start'],
     'menu.deckTradicional': ['Tradicional', 'Classic'],
     'menu.passiva': ['Passiva:', 'Passive:'],
     'menu.poder': ['Poder:', 'Power:'],

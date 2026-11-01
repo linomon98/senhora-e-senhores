@@ -5653,9 +5653,9 @@ window.SS = window.SS || {};
     }).catch(() => {});
   }
 
-  // Introdução ao abrir o jogo: tela preta, "Linomon apresenta", o logo salta embaixo do texto, o texto some, o logo vai
-  // para o lugar dele no menu e a música começa junto com os botões subindo. Clicar ou apertar uma tecla pula.
-  // (Sem nenhum clique antes, o navegador não deixa tocar som: nesse caso a música só começa no primeiro clique.)
+  // Introdução ao abrir o jogo: "Clique para começar" (sem um clique o navegador não deixa tocar som, e a música tem de
+  // entrar junto com os botões), depois "Linomon apresenta", o logo salta embaixo do texto, o texto some, o logo vai para
+  // o lugar dele no menu e a música começa junto com os botões subindo. Durante a abertura, clicar ou apertar uma tecla pula.
   async function introducao() {
     const intro = $('#intro');
     if (!intro) return;
@@ -5665,6 +5665,21 @@ window.SS = window.SS || {};
       return Som.musica('menu');
     }
     real.style.visibility = 'hidden';
+    const convite = document.createElement('div');
+    convite.className = 'intro-comecar';
+    convite.textContent = t(document.documentElement.classList.contains('toque') ? 'intro.toque' : 'intro.clique');
+    intro.appendChild(convite);
+    await new Promise(pronto => {
+      const comecar = ev => {
+        if (ev.type === 'keydown' && ev.repeat) return;
+        intro.removeEventListener('pointerdown', comecar);
+        removeEventListener('keydown', comecar, true);
+        pronto();
+      };
+      intro.addEventListener('pointerdown', comecar);
+      addEventListener('keydown', comecar, true);
+    });
+    convite.remove();
     let acabou = false, entrou = false;
     const entrar = () => {
       if (entrou) return;
@@ -5672,8 +5687,8 @@ window.SS = window.SS || {};
       Som.musica('menu');
       entrarBotoesInicio(raiz);
     };
-    const fim = () => {
-      if (acabou) return;
+    const fim = ev => {
+      if (acabou || (ev && ev.repeat)) return;
       acabou = true;
       entrar();
       real.style.visibility = '';
@@ -5786,8 +5801,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 145, data: '02/11/2026',
+    n: 146, data: '02/11/2026',
     novidades: [
+      ['Tela Clique para começar antes da introdução: agora a música entra junto com os botões', 'Click to start screen before the intro: the music now comes in with the buttons'],
       ['Introdução ao abrir o jogo: Linomon apresenta, o logo salta e vai para o menu com a música e os botões (clique para pular)', 'Intro when opening the game: Linomon presents, the logo bounces and moves to the menu with the music and buttons (click to skip)'],
       ['Valete de Copas espelhado', 'Jack of Hearts mirrored'],
       ['Todas as cartas, de número e de costas, com o mesmo contorno preto das cartas de letra', 'All cards, numbers and backs, with the same black outline as the letter cards'],
