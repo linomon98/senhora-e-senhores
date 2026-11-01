@@ -2697,3 +2697,10 @@ html.em-menu::before { display: none; }
   filter: drop-shadow(.4px 0 0 var(--tinta-arte)) drop-shadow(-.4px 0 0 var(--tinta-arte)) drop-shadow(0 .4px 0 var(--tinta-arte)) drop-shadow(0 -.4px 0 var(--tinta-arte))
     drop-shadow(0 7px 5px rgba(5, 18, 2, .4));
 }
+
+/* Bloqueando quem ataca 2 vezes: as etiquetas "1º/2º ataque" são onde a seta azul é solta */
+.tag-escolha { cursor: pointer; transform-origin: 100% 50%; transition: transform .15s ease, box-shadow .15s ease; }
+#mesa.mirando-bloq .tag-escolha { transform: scale(1.35); box-shadow: 0 0 0 2px #fff, 0 0 10px 2px rgba(120, 170, 255, .9); animation: tag-escolha 1s ease-in-out infinite; }
+#mesa.mirando-bloq .tags:has(.tag-escolha) { gap: 9px; }
+#mesa.mirando-bloq .tag-escolha:hover { transform: scale(1.6); background: #2459c4; animation: none; }
+@keyframes tag-escolha { 50% { box-shadow: 0 0 0 2px #fff, 0 0 16px 5px rgba(120, 170, 255, 1); } }

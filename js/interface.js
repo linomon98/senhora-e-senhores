@@ -1311,9 +1311,10 @@ window.SS = window.SS || {};
       const bl = jogo.fase === 'bloqueio' ? ui.bloqueios[at.n] || [] : at.bloqueadores;
       const resolvido = !!at.resultado;
       if (de && para) setas.push({ de, para, cor: 'ataque', rotulo: at.n, tenue: bl.length > 0 || resolvido, foco: ui.foco === at.n });
+      const etiqueta = jogo.fase === 'bloqueio' ? centroDe(document.querySelector(`.tag-escolha[data-ataque="${at.n}"]`)) : null;
       for (const b of bl) {
         const db = centroDe(elUnidade(b));
-        if (db && de) setas.push({ de: db, para: de, cor: 'bloqueio', tenue: resolvido, foco: ui.foco === at.n });
+        if (db && de) setas.push({ de: db, para: etiqueta || de, cor: 'bloqueio', tenue: resolvido, foco: ui.foco === at.n });
       }
     }
     if (ui.mouse && ((ui.atacanteSel != null && ((ui.mira && ui.mira.moveu) || ui.miraRei === ui.atacanteSel)) || ui.bloqSel != null)) {
@@ -1506,6 +1507,7 @@ window.SS = window.SS || {};
       renderCampo(p, alvos);
     }
     renderFaixa();
+    $('#mesa').classList.toggle('mirando-bloq', humanoBloqueia() && ui.bloqSel != null);
     renderLog();
     desenharSetas();
     animarEntradas();
@@ -2421,7 +2423,9 @@ window.SS = window.SS || {};
     Object.assign(el.style, { left: (c.left - ra.left) / escala + 'px', top: (c.top - ra.top) / escala + 'px', width: c.width / escala + 'px', height: c.height / escala + 'px' });
     app.appendChild(el);
     voandoCampo.add(f.uid);
-    if (f.el && f.el.isConnected) f.el.classList.add('voo-oculto');
+    // esconde a carta que está na mesa agora (a mesa pode ter sido redesenhada depois da foto da cena)
+    const naMesa = elUnidade(f.uid) || (f.el && f.el.isConnected ? f.el : null);
+    if (naMesa) naMesa.classList.add('voo-oculto');
     return el;
   }
 
@@ -3115,10 +3119,14 @@ window.SS = window.SS || {};
     return !!at && (at.atacante === u.uid || at.alvo === u.uid || at.bloqueadores.includes(u.uid));
   }
 
+  // Senhor(a) que ataca mais de uma vez (Naipado de Ouros): no bloqueio, cada etiqueta "1º/2º ataque" é um alvo
+  // da seta azul, para escolher qual dos ataques defender (soltando a seta em cima da etiqueta).
   function tagsUnidade(u) {
     let h = '';
-    for (const at of ataquesVisiveis()) {
-      if (at.atacante === u.uid) h += `<span class="tag tag-ataque">${t('tag.ataque', { n: at.n })}</span>`;
+    const visiveis = ataquesVisiveis(), varios = visiveis.filter(at => at.atacante === u.uid).length > 1;
+    const escolhe = varios && jogo.fase === 'bloqueio';
+    for (const at of visiveis) {
+      if (at.atacante === u.uid) h += `<span class="tag tag-ataque${escolhe ? ' tag-escolha' : ''}"${escolhe ? ` data-ataque="${at.n}"` : ''}>${t('tag.ataque', { n: at.n })}</span>`;
       const bl = jogo.fase === 'bloqueio' ? ui.bloqueios[at.n] || [] : at.bloqueadores;
       if (bl.includes(u.uid)) h += `<span class="tag tag-bloq">${t(alvoDoRei(at, at.alvo) && at.alvo !== u.uid ? 'tag.ajuda' : 'tag.bloqueia', { n: at.n })}</span>`;
       if (at.alvo === u.uid && M.ataqueDirecionado(jogo, at)) h += `<span class="tag tag-alvo">${t('tag.defende', { n: at.n })}</span>`;
@@ -5408,8 +5416,10 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 131, data: '01/11/2026',
+    n: 132, data: '01/11/2026',
     novidades: [
+      ['Bloqueando quem ataca 2 vezes: solte a seta azul na etiqueta "1º ataque" ou "2º ataque" para escolher qual defender', 'Blocking a double attacker: drop the blue arrow on the "1st attack" or "2nd attack" tag to pick which one to block'],
+      ['Corrigido: no ataque que erra (dado 1), a carta ficava parada no lugar enquanto a cópia fazia a animação', 'Fixed: on a missed attack (die 1), the card stayed in place while its copy animated'],
       ['Contorno das artes da mesa padronizado (palcos, enfeites e cobra com a mesma espessura de traço)', 'Table art outlines standardized (stages, decorations and snake with the same line weight)'],
       ['Corrigido: trocar cartas no Mulligan deixava a janela minúscula', 'Fixed: swapping cards in the Mulligan made the window tiny'],
       ['Escolha do baralho: o nome vai escrito na caixa (o do Palhaço leva o nome dele) e o Tradicional fica sempre na ponta', 'Deck choice: the name is written on the box (the Jester one shows their name) and the Classic one is always last'],
