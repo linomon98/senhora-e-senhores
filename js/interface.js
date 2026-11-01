@@ -2733,7 +2733,7 @@ window.SS = window.SS || {};
     const cem = dono != null ? cemiterioDe(dono) : null, rc = cem && cem.getBoundingClientRect();
     const gx = rc ? (rc.left + rc.width / 2 - (r.left + r.width / 2)) / escala : null;
     const gy = rc ? (rc.top + rc.height / 2 - (r.top + r.height / 2)) / escala : null;
-    if (rc) setTimeout(() => { const c2 = centroDe(cem); if (c2) particulas(c2, 6, false, '250, 244, 226'); }, 1050);
+    if (rc) setTimeout(() => { const c2 = centroDe(cem); if (c2) particulas(c2, 6, false, '250, 244, 226'); }, 940);
     for (const [clip, lado] of cortes) {
       const p = el.cloneNode(true);
       p.removeAttribute('id');
@@ -2747,12 +2747,17 @@ window.SS = window.SS || {};
       ];
       // depois de separadas, os restos vão (girando) para o cemitério; sem cemitério na tela, só caem e somem
       const fim = rc
-        ? [{ translate: `${(gx + lado * 4).toFixed(1)}px ${(gy + lado * 6).toFixed(1)}px`, rotate: `${(gira * 2.2).toFixed(1)}deg`, opacity: 1, filter: 'grayscale(.7) brightness(.75)', offset: 0.92 },
-          { translate: `${gx.toFixed(1)}px ${gy.toFixed(1)}px`, rotate: `${(gira * 2.4).toFixed(1)}deg`, opacity: 0, filter: 'grayscale(.7) brightness(.75)', offset: 1 }]
+        ? [{ translate: `${gx.toFixed(1)}px ${gy.toFixed(1)}px`, rotate: `${(gira * 2.4).toFixed(1)}deg`, opacity: 0, filter: 'grayscale(.7) brightness(.75)', offset: 1 }]
         : [{ translate: `${sx.toFixed(1)}px ${(lado < 0 ? 30 : 70) + vy}px`, rotate: `${gira.toFixed(1)}deg`, opacity: 0, filter: 'grayscale(1) brightness(.6)', offset: 1 }];
-      const dur = rc ? 1100 : 820;
-      p.animate(separa.concat(fim), { duration: dur, easing: 'cubic-bezier(.25, .7, .4, 1)', composite: 'add' }).onfinish = () => p.remove();
-      if (rc) p.animate([{ scale: '1' }, { scale: '1', offset: 0.32 }, { scale: '.5' }], { duration: dur, easing: 'ease-in', fill: 'forwards' });
+      const dur = rc ? 1000 : 820;
+      // indo para o cemitério: o voo acelera até ele (sem desacelerar e parar na chegada)
+      if (rc) { separa[0].easing = separa[1].easing = 'ease-out'; separa[2].easing = 'cubic-bezier(.45, 0, .85, .55)'; }
+      p.animate(separa.concat(fim), { duration: dur, easing: rc ? 'linear' : 'cubic-bezier(.25, .7, .4, 1)', composite: 'add' }).onfinish = () => p.remove();
+      if (rc) {
+        p.animate([{ scale: '1' }, { scale: '1', offset: 0.32 }, { scale: '.5' }], { duration: dur, easing: 'ease-in', fill: 'forwards' });
+        // some aos poucos já perto do cemitério (no último quarto do caminho)
+        p.animate([{ opacity: 1 }, { opacity: 1, offset: 0.72 }, { opacity: 0 }], { duration: dur, fill: 'forwards' });
+      }
     }
     const c = pontoNoApp(r.left + r.width / 2, r.top + r.height / 2);
     particulas(c, 10, false, '250, 244, 226'); // fiapos de papel
@@ -5345,8 +5350,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 118, data: '01/11/2026',
+    n: 119, data: '01/11/2026',
     novidades: [
+      ['Os pedaços rasgados voam direto para o cemitério, sem parar no caminho, e somem já chegando nele', 'Torn pieces fly straight into the graveyard without stalling, fading out as they arrive'],
       ['Colinha reorganizada: Senhores, Naipado e Ás em cima; Pargias e Recursos no meio; Dado de dano e Defesa embaixo', 'Crib sheet rearranged: Gentlemen, Suited and Ace on top; Pairgics and Resources in the middle; Damage die and Defense below'],
       ['Os pedaços da carta rasgada voam para o cemitério', 'Torn card pieces fly into the graveyard'],
       ['A carta gira (diagonal/horizontal) e perde o escudo no mesmo instante do golpe', 'Cards turn (diagonal/sideways) and lose the shield right as the hit lands'],
