@@ -2634,3 +2634,27 @@ html.toque .zona-eu .mao .carta.jogavel:hover:not(.selecionada):not(.combina):no
 /* Rótulo em duas linhas na colinha (Recursos: "+1 carta / ou +1 dado") */
 .cola-duas { display: inline-flex; flex-direction: column; align-items: flex-start; line-height: 1.15; }
 .cola-duas > span { display: inline-flex; align-items: center; gap: 4px; }
+
+/* Botão de tela cheia no canto superior direito (o ⚙ e o Registro chegam para a esquerda) */
+.btn.btn-topo.btn-tela-cheia { position: absolute; top: 14px; right: 18px; z-index: 30; width: 42px; height: 42px; padding: 0; border-radius: 50%; display: grid; place-items: center; }
+.btn-tela-cheia svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.btn-tela-cheia .fechar, .btn-tela-cheia.ativo .abrir { display: none; }
+.btn-tela-cheia.ativo .fechar { display: inline; }
+.btn.btn-topo.btn-opcoes-mesa { right: 70px; }
+.btn-log { right: 122px; }
+html.celular .btn.btn-tela-cheia { width: 64px; height: 64px; }
+html.celular .btn-tela-cheia svg { width: 32px; height: 32px; }
+html.celular .btn.btn-opcoes-mesa { right: 96px; }
+html.celular .btn-log { right: 174px; }
+
+/* Turno: dentro da própria caixa de ações (sem a faixa clara), maior que o "Ações" para mandar na leitura */
+.acoes-turno { margin: -2px 0 2px; padding: 0; border: 0; border-radius: 0; background: none; color: inherit; font: 400 27px/1.05 var(--fonte-titulo); letter-spacing: .5px; }
+
+/* Colunas coloridas dos lados da mesa: o mesmo padrão de naipes do menu, andando na diagonal */
+html::before {
+  content: ''; position: fixed; left: 0; top: 0; z-index: 0; width: calc(100vw + 32.16vh); height: 136vh; pointer-events: none;
+  background: url('arte/menu/naipes.webp') 0 0 / 32.16vh 36vh repeat; mix-blend-mode: multiply; opacity: .45;
+  animation: naipes-andam 26s linear infinite; will-change: transform;
+}
+html.em-menu::before { display: none; }
+@media (prefers-reduced-motion: reduce) { html::before { animation: none; } }

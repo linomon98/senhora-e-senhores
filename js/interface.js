@@ -538,6 +538,7 @@ window.SS = window.SS || {};
     if (ds.acao === 'reiniciar') return confirmarReiniciar();
     if (ds.acao === 'colinha') return abrirColinha();
     if (ds.acao === 'opcoes-mesa') return telaOpcoes(() => { fecharModal(); if (jogo) render(); });
+    if (ds.acao === 'tela-cheia') return alternarTelaCheia();
     if (ds.acao && ds.acao.startsWith('vel:')) {
       velocidadeBots = Number(ds.acao.slice(4)) || 1;
       return renderVelocidade();
@@ -3607,6 +3608,27 @@ window.SS = window.SS || {};
   }
   window.addEventListener('resize', () => { if ($('#colinha-aberta')) encaixarColinha(); });
 
+  // Tela cheia (botão do canto superior direito). Onde o navegador não deixa (iPhone), o botão nem aparece.
+  function alternarTelaCheia() {
+    try {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
+    } catch (e) { /* sem tela cheia */ }
+  }
+  {
+    const atualizar = () => {
+      const b = $('.btn-tela-cheia');
+      if (!b) return;
+      b.hidden = !document.fullscreenEnabled;
+      b.classList.toggle('ativo', !!document.fullscreenElement);
+      const tit = t(document.fullscreenElement ? 'barra.sairTelaCheia' : 'barra.telaCheia');
+      b.title = tit;
+      b.setAttribute('aria-label', tit);
+    };
+    document.addEventListener('fullscreenchange', atualizar);
+    setTimeout(atualizar, 0);
+  }
+
   // Registro da partida: fica escondido; o botão do canto superior direito abre uma caixa suspensa.
   function alternarLog(abrir) {
     const painel = $('#painel');
@@ -5398,8 +5420,11 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 123, data: '01/11/2026',
+    n: 124, data: '01/11/2026',
     novidades: [
+      ['Botão de tela cheia no canto superior direito', 'Full screen button in the top right corner'],
+      ['O turno fica dentro da caixa de ações, em letra maior', 'The turn number sits inside the actions box, in a bigger font'],
+      ['Naipes andando na diagonal nas faixas coloridas dos lados da mesa', 'Suits drifting diagonally on the colored bands beside the table'],
       ['As cartas da mão deslizam para abrir espaço quando chegam cartas novas (inclusive as do Sai daqui!)', 'Hand cards slide aside to make room for incoming cards (including Get out!)'],
       ['Toda carta de ação que mira com seta (Invocar, Pargias, magias, Dado adicional) voa para o meio da mesa e a seta sai dela, como no Refletir', 'Every action card that aims with an arrow (Summon, Pairgics, magic, Extra die) flies to the middle of the table and the arrow comes from it, like Reflect'],
       ['Mesa livre: botão Trocar de lado (você joga os dois lados: ataca com um e defende com o outro)', 'Free table: Switch sides button (you play both sides: attack with one, defend with the other)'],
