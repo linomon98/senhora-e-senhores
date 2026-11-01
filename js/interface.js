@@ -2674,7 +2674,7 @@ window.SS = window.SS || {};
     pilha.classList.add('girando');
   }
 
-  // Golpe final (o que zera o Palhaço): a mesa escurece com faixas de cinema, o atacante toma
+  // Golpe final (o que zera o Palhaço): a mesa escurece e a câmera chega perto da carta e do alvo, o atacante toma
   // impulso em câmera lenta, dispara e o impacto para o tempo: clarão, ondas, rachadura, faíscas, a mesa inteira
   // pula, a tela treme forte e aparece o NOCAUTE. Logo depois entra a tela de vitória/derrota.
   async function golpeFinal(cena, danos, fa) {
@@ -2686,15 +2686,18 @@ window.SS = window.SS || {};
     copia.style.zIndex = 61;
     const giro = (n.x >= 0 ? -1 : 1) * 7;
     const P = a => `translate(${(n.x * a).toFixed(1)}px, ${(n.y * a).toFixed(1)}px)`;
-    // véu escuro com o foco no alvo + faixas de cinema
+    // véu escuro com o foco no alvo
     const veu = document.createElement('div');
     veu.className = 'fx-final-veu';
     veu.style.setProperty('--fx', cena.alvo.x + 'px');
     veu.style.setProperty('--fy', cena.alvo.y + 'px');
-    const barras = ['cima', 'baixo'].map(lado => { const b = document.createElement('div'); b.className = 'fx-final-barra ' + lado; return b; });
-    app.append(veu, ...barras);
+    app.appendChild(veu);
     veu.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 500, fill: 'forwards' });
-    barras.forEach(b => b.animate([{ scale: '1 0' }, { scale: '1 1' }], { duration: 500, easing: 'cubic-bezier(.3, .8, .3, 1)', fill: 'forwards' }));
+    // Quem apanha e não é o Palhaço: as cópias nascem antes do zoom (as caixas guardadas são da tela sem zoom).
+    const copiasDano = danos.filter(d => d.f && d.f.uid !== cena.atacante && d.f.caixa && d.f.html).map(d => ({ d, el: copiaFlutuante(d.f) }));
+    const vitima = danos.find(d => d.heroi != null);
+    // Zoom: enquadra a carta que vai finalizar (com o recuo do impulso) e o alvo, sem cortar nenhum dos dois.
+    const fim = zoomFinal(fa, vitima ? elRetrato(vitima.heroi) : null, n);
     Som.tocar('pv-baixo');
     // 1) câmera lenta: sobe, recua tomando impulso e treme de força
     const LENTO = 1500, DISPARO = 170;
@@ -2718,10 +2721,11 @@ window.SS = window.SS || {};
     Som.tocar('impacto-forte', { atraso: 70 });
     Som.tocar('palhaco-dano-forte', { atraso: 120 });
     if (danos.some(d => d.f && d.morreu)) Som.tocar('senhor-morre', { atraso: 200 });
+    // clarão branco na tela inteira (fica fora da mesa para cobrir também as faixas dos lados)
     const clarao = document.createElement('div');
     clarao.className = 'fx-final-clarao';
-    app.appendChild(clarao);
-    clarao.animate([{ opacity: 1 }, { opacity: .85, offset: .15 }, { opacity: 0 }], { duration: 650, easing: 'ease-out' }).onfinish = () => clarao.remove();
+    document.body.appendChild(clarao);
+    clarao.animate([{ opacity: 1 }, { opacity: 1, offset: .16 }, { opacity: 0 }], { duration: 850, easing: 'ease-out' }).onfinish = () => clarao.remove();
     particulas(contato, 40, true);
     particulas(contato, 26, true, '255, 210, 80');
     particulas(contato, 18, true, '255, 70, 50');
@@ -2738,6 +2742,10 @@ window.SS = window.SS || {};
     setTimeout(() => pulinhoMesa(2, ra.left + contato.x * escala, ra.top + contato.y * escala), 260);
     tremorFinal();
     // quem apanha voa longe (o Palhaço) ou é rasgado (Senhores mortos)
+    for (const { d, el } of copiasDano) {
+      if (d.morreu) setTimeout(() => rasgarCarta(el, n, d.f.p), 60);
+      setTimeout(() => soltarCopia(d.f, el), 1300);
+    }
     for (const d of danos) {
       if (d.heroi != null) {
         const el = elRetrato(d.heroi);
@@ -2747,10 +2755,6 @@ window.SS = window.SS || {};
           { transform: `translate(${(n.x * 22).toFixed(1)}px, ${(n.y * 22).toFixed(1)}px) rotate(${(n.x * 9).toFixed(1)}deg)`, filter: 'grayscale(.6) brightness(.8)', offset: .6 },
           { transform: `translate(${(n.x * 26).toFixed(1)}px, ${(n.y * 26).toFixed(1)}px) rotate(${(n.x * 11).toFixed(1)}deg)`, filter: 'grayscale(.8) brightness(.7)' },
         ], { duration: 1100, easing: 'ease-out', fill: 'forwards' });
-      } else if (d.f && d.f.uid !== cena.atacante && d.f.caixa && d.f.html) {
-        const el = copiaFlutuante(d.f);
-        if (d.morreu) setTimeout(() => rasgarCarta(el, n, d.f.p), 60);
-        setTimeout(() => soltarCopia(d.f, el), 1300);
       }
     }
     // o tempo para um instante no golpe (a carta fica cravada) e aparece o NOCAUTE
@@ -2765,14 +2769,42 @@ window.SS = window.SS || {};
       { opacity: 1, transform: 'translate(-50%, -50%) scale(1) rotate(-6deg)', offset: .8 },
       { opacity: 0, transform: 'translate(-50%, -50%) scale(1.08) rotate(-6deg)' },
     ], { duration: 1500, delay: 120, fill: 'both' }).onfinish = () => txt.remove();
-    await esperar(1150);
-    // 4) a carta volta e a cena clareia enquanto a tela do fim entra
+    await esperar(900);
+    // 4) a carta volta, a câmera se afasta e a cena clareia; a tela do fim entra em seguida
     copia.animate([{ transform: `${P(k)} scale(1.14) rotate(${-giro}deg)` }, { transform: 'translate(0, 0) scale(1) rotate(0deg)' }],
       { duration: 380, easing: 'cubic-bezier(.3, .8, .3, 1)', fill: 'forwards' });
 
-    for (const el of [veu, ...barras]) el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 700, delay: 250, fill: 'forwards' }).onfinish = () => el.remove();
+    veu.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 420, fill: 'forwards' }).onfinish = () => veu.remove();
     setTimeout(() => { soltarCopia(fa, copia); setas.style.opacity = ''; }, 1000);
-    await esperar(260);
+    await fim();
+  }
+  // Chega a câmera (a #palco, que leva a mesa e tudo que voa por cima) até caberem a carta e o alvo. Enquanto dura,
+  // a escala guardada acompanha o zoom, para as contas de tela continuarem certas. Devolve a função que afasta de volta.
+  function zoomFinal(fa, alvoEl, n) {
+    const palco = $('#palco'), ap = $('#app').getBoundingClientRect(), pr = palco.getBoundingClientRect();
+    const c = fa.caixa, folga = 24 * escala, recuoX = -n.x * 66 * escala, recuoY = -n.y * 66 * escala;
+    const caixas = [{ l: c.left + recuoX, t: c.top + recuoY, r: c.right + recuoX, b: c.bottom + recuoY }, { l: c.left, t: c.top, r: c.right, b: c.bottom }];
+    if (alvoEl) { const a = alvoEl.getBoundingClientRect(); caixas.push({ l: a.left, t: a.top, r: a.right, b: a.bottom }); }
+    const l = Math.max(ap.left, Math.min(...caixas.map(q => q.l)) - folga), r = Math.min(ap.right, Math.max(...caixas.map(q => q.r)) + folga);
+    const t = Math.max(ap.top, Math.min(...caixas.map(q => q.t)) - folga), b = Math.min(ap.bottom, Math.max(...caixas.map(q => q.b)) + folga);
+    const z = Math.max(1, Math.min(1.75, ap.width / (r - l), ap.height / (b - t)));
+    // leva o centro do quadro ao centro da mesa, sem deixar aparecer nada além da borda dela
+    const entre = (v, a, d) => Math.max(a, Math.min(d, v));
+    const tx = entre(ap.left + ap.width / 2 - pr.left - z * ((l + r) / 2 - pr.left), ap.right - pr.left - z * (ap.right - pr.left), ap.left - pr.left - z * (ap.left - pr.left));
+    const ty = entre(ap.top + ap.height / 2 - pr.top - z * ((t + b) / 2 - pr.top), ap.bottom - pr.top - z * (ap.bottom - pr.top), ap.top - pr.top - z * (ap.top - pr.top));
+    const origemAntes = palco.style.transformOrigin, escalaAntes = escala;
+    palco.style.transformOrigin = '0 0';
+    const perto = { translate: `${tx.toFixed(1)}px ${ty.toFixed(1)}px`, scale: z.toFixed(3) }, longe = { translate: '0px 0px', scale: '1' };
+    const camera = palco.animate([longe, perto], { duration: 1000, easing: 'cubic-bezier(.3, .1, .2, 1)', fill: 'forwards' });
+    escala = escalaAntes * z;
+    return async () => {
+      const volta = palco.animate([perto, longe], { duration: 420, easing: 'cubic-bezier(.4, 0, .3, 1)', fill: 'forwards' });
+      await esperar(420); // (pelo relógio: com a aba em segundo plano a animação não termina e o jogo não pode travar)
+      camera.cancel();
+      volta.cancel();
+      palco.style.transformOrigin = origemAntes;
+      escala = escalaAntes;
+    };
   }
   // Tremor bem mais forte e mais longo que o do golpe comum.
   function tremorFinal() {
@@ -5538,8 +5570,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 133, data: '01/11/2026',
+    n: 134, data: '02/11/2026',
     novidades: [
+      ['Golpe final: sem tarjas pretas; a câmera dá zoom na carta e no oponente, com clarão branco no impacto', 'Final blow: no black bars; the camera zooms on the card and the opponent, with a white flash on impact'],
       ['Golpe final: o ataque que zera o Palhaço vem em câmera lenta, com faixas de cinema, mega impacto, NOCAUTE e a tela de vitória emendando', 'Final blow: the attack that knocks out the Jester comes in slow motion, with cinema bars, a mega impact, K.O. and the victory screen right after'],
       ['Bloqueando quem ataca 2 vezes: solte a seta azul na etiqueta "1º ataque" ou "2º ataque" para escolher qual defender', 'Blocking a double attacker: drop the blue arrow on the "1st attack" or "2nd attack" tag to pick which one to block'],
       ['Corrigido: no ataque que erra (dado 1), a carta ficava parada no lugar enquanto a cópia fazia a animação', 'Fixed: on a missed attack (die 1), the card stayed in place while its copy animated'],
