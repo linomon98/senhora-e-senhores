@@ -2667,3 +2667,6 @@ html.em-menu::before { display: none; }
 .grupo-decks button:hover .maco-tampa { transform: translateY(-48%) rotate(-5deg); }
 .grupo-decks button:hover .maco-cartas { transform: translateY(-22%); }
 .deck-legenda { display: block; max-width: 140px; font: 700 14px/1.2 var(--fonte-ui); text-align: center; white-space: normal; }
+
+/* Pop-ups: a caixa encolhe (zoom) para caber inteira na tela; a altura máxima acompanha o zoom */
+#modal .caixa { max-height: calc(92vh / var(--zm, 1)); }

@@ -3919,7 +3919,7 @@ window.SS = window.SS || {};
     m.classList.toggle('modal-papel', !jogo || /class="(menu-tema|confirmacao)/.test(html));
     m.hidden = false;
     // (no celular, depois de cada clique a janela pode ter crescido ou mudado: encaixa de novo)
-    m.onclick = aoClicarModal ? ev => { aoClicarModal(ev); if (document.documentElement.classList.contains('celular')) requestAnimationFrame(encaixarModal); } : null;
+    m.onclick = aoClicarModal ? ev => { aoClicarModal(ev); requestAnimationFrame(encaixarModal); } : null;
     encaixarModal();
   }
 
@@ -5420,8 +5420,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 125, data: '01/11/2026',
+    n: 126, data: '01/11/2026',
     novidades: [
+      ['As janelas do menu encolhem um pouco para caber na tela, sem precisar rolar', 'Menu windows shrink a little to fit the screen, no scrolling'],
       ['Testes: slider de altura do dado, embaixo do de gravidade', 'Tests: dice height slider, below the gravity one'],
       ['Escolha do baralho com caixas grandes e o nome embaixo; deck virou baralho em português', 'Deck choice with big boxes and the name below'],
       ['Botão de tela cheia no canto superior direito', 'Full screen button in the top right corner'],
@@ -6481,13 +6482,14 @@ window.SS = window.SS || {};
   }
 
   // Celular: a janela aberta encolhe (zoom) até caber na tela, sem passar de um mínimo legível (aí ela rola).
-  const ZOOMS_MODAL = [1, .9, .82, .75, .68, .62, .56];
+  const ZOOMS_MODAL = [1, .95, .9, .85, .8, .75, .7, .65, .6, .56];
   function encaixarModal() {
     const c = $('#modal > .caixa');
     if (!c) return;
     c.style.zoom = '';
     c.style.removeProperty('--zm');
-    if (!document.documentElement.classList.contains('celular') || $('#modal').hidden || c.querySelector('.inicio-novo')) return;
+    // (no computador também: a janela inteira cabe na tela sem rolar, encolhendo um pouco se precisar)
+    if ($('#modal').hidden || c.querySelector('.inicio-novo')) return;
     // (a altura do conteúdo vem do layout, não do scroll: as cartas entrando com translate não contam)
     const alturaConteudo = () => {
       const filhos = [...c.children], est = getComputedStyle(c);
