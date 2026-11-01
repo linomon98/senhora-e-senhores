@@ -211,9 +211,11 @@ window.SS = window.SS || {};
 
   function aoClicar(ev) {
     if (ev.target.closest('[data-regra-cmd="voltar"]')) {
-      tela().hidden = true;
-      tela().innerHTML = '';
-      if (aoVoltar) aoVoltar();
+      SS.transicao(() => {
+        tela().hidden = true;
+        tela().innerHTML = '';
+        if (aoVoltar) aoVoltar();
+      });
       return;
     }
     const b = ev.target.closest('[data-tema]');

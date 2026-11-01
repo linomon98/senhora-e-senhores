@@ -1552,9 +1552,6 @@ html.sem-caixa-meio #faixa .caixa-faixa { display: none; }
 .btn.principal:hover:not(:disabled), .btn-menu.principal:hover { background: #fff; transform: translateY(-2px); box-shadow: 0 5px 0 var(--tinta), 0 10px 18px rgba(20, 50, 5, .3); }
 .btn.principal:active, .btn-menu.principal:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--tinta); }
 
-/* Botão redondo de opções (engrenagem) ao lado do Registro */
-.btn.btn-topo.btn-opcoes-mesa { position: absolute; top: 14px; right: 18px; z-index: 30; width: 42px; height: 42px; padding: 0; border-radius: 50%; font-size: 22px; line-height: 1; display: grid; place-items: center; }
-.btn-log { right: 70px; }
 
 
 /* Leque com 7 ou mais cartas de ação: ainda mais espremido, e todas inclinadas (até a 10ª) */
@@ -1743,13 +1740,6 @@ body.tut-pulsa-seta #setas .seta .linha { animation: tut-pulsa-linha .6s ease-in
 .idiomas button:hover { transform: scale(1.1); filter: none; }
 .idiomas button.ativo img { box-shadow: 0 calc(6 * var(--u)) 0 #141414; }
 .idiomas button:not(.ativo) img { opacity: .75; }
-.btn-engrenagem {
-  left: calc(1092 * var(--u)); top: calc(27 * var(--u)); width: calc(92 * var(--u)); height: calc(92 * var(--u)); border-radius: 50%;
-  color: #141414; background: #fff; border: calc(6 * var(--u)) solid #141414; box-shadow: 0 calc(8 * var(--u)) 0 #141414;
-  font: 400 calc(58 * var(--u)) / 1 'Segoe UI Symbol', 'Segoe UI', sans-serif; display: grid; place-items: center; padding: 0;
-  transition: transform .3s cubic-bezier(.3, 1.4, .5, 1);
-}
-.btn-engrenagem:hover { transform: rotate(60deg); }
 .palco-menu .leque-inicio { left: calc(425 * var(--u)); top: calc(0 * var(--u)); width: calc(350 * var(--u)); height: calc(240 * var(--u)); z-index: 0; }
 .palco-menu .leque-inicio img { width: calc(122 * var(--u)); border-radius: calc(10 * var(--u)); filter: drop-shadow(calc(4 * var(--u)) calc(6 * var(--u)) 0 rgba(20, 20, 20, .55)); }
 .logo-menu { left: calc(318 * var(--u)); top: calc(195 * var(--u)); width: calc(600 * var(--u)); z-index: 1; pointer-events: none; }
@@ -2157,12 +2147,6 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 @media (prefers-reduced-motion: reduce) { .db-colecao.entra, .db-colecao.entra .db-colecao-carta, .db-aba.ativa.pula, .db-deck-cartas.entra > * > * { animation: none; } }
 
 /* Engrenagem das opções no deckbuilder */
-.db-engrenagem {
-  left: 1500px; top: 20px; width: 76px; height: 76px; padding: 0; border-radius: 50%; display: grid; place-items: center; cursor: pointer;
-  color: #141414; background: #fff; border: 5px solid #141414; box-shadow: 0 7px 0 #141414;
-  font: 400 48px / 1 'Segoe UI Symbol', 'Segoe UI', sans-serif; transition: transform .3s cubic-bezier(.3, 1.4, .5, 1);
-}
-.db-engrenagem:hover { transform: rotate(60deg); }
 
 /* Caixinha pequena do deck nos botões da escolha antes da partida */
 .deck-mini { --u: .26px; display: inline-block; vertical-align: middle; margin: -6px 7px -6px -2px; }
@@ -2519,12 +2503,6 @@ html.toque, html.toque * { -webkit-touch-callout: none; }
 @keyframes girar-celular { 0%, 20% { transform: rotate(0); } 55%, 85% { transform: rotate(-90deg); } 100% { transform: rotate(0); } }
 @media (prefers-reduced-motion: reduce) { .girar-celular { animation: none; transform: rotate(-90deg); } }
 
-/* Botão de tela cheia no menu (só em aparelho de toque) */
-.btn-tela-cheia {
-  left: calc(850 * var(--u)); top: calc(33 * var(--u)); width: calc(80 * var(--u)); height: calc(80 * var(--u)); border-radius: 50%;
-  color: #141414; background: #fff; border: calc(6 * var(--u)) solid #141414; box-shadow: 0 calc(7 * var(--u)) 0 #141414;
-  font: 400 calc(46 * var(--u)) / 1 'Segoe UI Symbol', 'Segoe UI', sans-serif; display: grid; place-items: center; padding: 0;
-}
 
 /* Janelas no celular: encolhem com zoom (o JS escolhe o zoom); os limites de tamanho valem para a tela, não para o zoom. */
 html.celular #modal { overflow: auto; }
@@ -2557,7 +2535,6 @@ html.celular .fileira, html.celular .unidade-voando { --cw: 88px; --ch: 123px; }
 html.celular .btn.btn-topo, html.celular .barra-partida .btn.btn-topo { font-size: 23px; padding: 13px 24px; border-radius: 18px; }
 html.celular #mesa .barra-partida { gap: 12px; }
 html.celular .btn-log { right: 96px; }
-html.celular .btn.btn-opcoes-mesa { width: 64px; height: 64px; padding: 0; font-size: 32px; }
 html.celular #acoes { top: 44%; transform: translateY(-50%) scale(1.2); transform-origin: 0 50%; }
 html.celular .carta-acao { width: 140px; }
 /* (a mão maior cobriria o naipe do poder: ele vai um pouco mais para a direita, fora do leque) */
@@ -2635,16 +2612,7 @@ html.toque .zona-eu .mao .carta.jogavel:hover:not(.selecionada):not(.combina):no
 .cola-duas { display: inline-flex; flex-direction: column; align-items: flex-start; line-height: 1.15; }
 .cola-duas > span { display: inline-flex; align-items: center; gap: 4px; }
 
-/* Botão de tela cheia no canto superior direito (o ⚙ e o Registro chegam para a esquerda) */
-.btn.btn-topo.btn-tela-cheia { position: absolute; top: 14px; right: 18px; z-index: 30; width: 42px; height: 42px; padding: 0; border-radius: 50%; display: grid; place-items: center; }
-.btn-tela-cheia svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
-.btn-tela-cheia .fechar, .btn-tela-cheia.ativo .abrir { display: none; }
-.btn-tela-cheia.ativo .fechar { display: inline; }
-.btn.btn-topo.btn-opcoes-mesa { right: 70px; }
 .btn-log { right: 122px; }
-html.celular .btn.btn-tela-cheia { width: 64px; height: 64px; }
-html.celular .btn-tela-cheia svg { width: 32px; height: 32px; }
-html.celular .btn.btn-opcoes-mesa { right: 96px; }
 html.celular .btn-log { right: 174px; }
 
 /* Turno: dentro da própria caixa de ações (sem a faixa clara), maior que o "Ações" para mandar na leitura */
@@ -2710,3 +2678,29 @@ html.em-menu::before { display: none; }
   background: radial-gradient(circle at var(--fx) var(--fy), rgba(0, 0, 0, 0) 0, rgba(0, 0, 0, 0) 150px, rgba(0, 0, 0, .7) 520px); }
 .fx-final-clarao { position: fixed; inset: 0; z-index: 9999; pointer-events: none; background: #fff; }
 .que-vergonha.fx-nocaute { z-index: 97; color: #ff3b2f; -webkit-text-stroke: 6px #2b0603; text-shadow: 0 9px 0 #2b0603, 0 0 40px rgba(255, 80, 40, .8); font-size: 170px; }
+
+/* Configurações e tela cheia: no canto superior direito da mesa, em todas as telas (na mesma escala da mesa) */
+#botoes-canto {
+  --e: min(calc(100vw / 1600), calc(100vh / 900)); --t: 42; --ic: 22;
+  position: fixed; z-index: 140; top: calc(14 * var(--e)); right: calc(var(--faixa-lateral, 0px) + 18 * var(--e));
+  display: flex; gap: calc(10 * var(--e)); touch-action: manipulation;
+}
+html.celular #botoes-canto { --t: 64; --ic: 32; gap: calc(14 * var(--e)); }
+#botoes-canto button {
+  width: calc(var(--t) * var(--e)); height: calc(var(--t) * var(--e)); padding: 0; display: grid; place-items: center; border-radius: 50%; cursor: pointer;
+  color: #141414; background: #fff; border: calc(3 * var(--e)) solid #141414; box-shadow: 0 calc(3 * var(--e)) 0 #141414;
+  font: 400 calc(var(--ic) * var(--e)) / 1 'Segoe UI Symbol', 'Segoe UI', sans-serif; transition: transform .2s cubic-bezier(.3, 1.4, .5, 1);
+}
+#botoes-canto button[hidden] { display: none; }
+#botoes-canto .canto-opcoes:hover { transform: rotate(60deg); }
+#botoes-canto .canto-tela-cheia:hover { transform: scale(1.1); }
+#botoes-canto svg { width: calc(var(--ic) * var(--e)); height: calc(var(--ic) * var(--e)); fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+#botoes-canto .fechar, #botoes-canto .ativo .abrir { display: none; }
+#botoes-canto .ativo .fechar { display: inline; }
+
+/* Transição de tela: o bando de cartas por cima de tudo (menos dos botões, que ficam escondidos atrás dele) e a foto da tela antiga */
+#transicao { position: fixed; inset: 0; z-index: 2000; overflow: hidden; }
+#transicao .carta { position: absolute; margin: 0; border-radius: 3.5vh; box-shadow: 0 1vh 2.4vh rgba(0, 0, 0, .45); will-change: transform; background-color: #fdfbf3; }
+#transicao .carta .svg-carta { width: 100%; height: 100%; display: block; }
+#modal.foto-tela { z-index: 130; pointer-events: none; } /* (acima da tela nova, abaixo dos botões do canto) */
+#modal.foto-tela, #modal.foto-tela * { animation: none !important; transition: none !important; }

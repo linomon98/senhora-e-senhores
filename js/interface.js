@@ -536,8 +536,6 @@ window.SS = window.SS || {};
     if (ds.acao === 'desistir') return confirmarDesistir();
     if (ds.acao === 'reiniciar') return confirmarReiniciar();
     if (ds.acao === 'colinha') return abrirColinha();
-    if (ds.acao === 'opcoes-mesa') return telaOpcoes(() => { fecharModal(); if (jogo) render(); });
-    if (ds.acao === 'tela-cheia') return alternarTelaCheia();
     if (ds.acao && ds.acao.startsWith('vel:')) {
       velocidadeBots = Number(ds.acao.slice(4)) || 1;
       return renderVelocidade();
@@ -3755,20 +3753,47 @@ window.SS = window.SS || {};
   }
   window.addEventListener('resize', () => { if ($('#colinha-aberta')) encaixarColinha(); });
 
-  // Tela cheia (botão do canto superior direito, usa o alternarTelaCheia do celular). Onde o navegador não deixa
-  // (iPhone), o botão nem aparece.
+  SS.transicao = transicao; // (as telas de baralhos e de regras também usam)
+
+  // Botões do canto, em todas as telas: configurações e tela cheia. Onde o navegador não deixa tela cheia (iPhone),
+  // esse botão nem aparece.
+  function atualizarCanto() {
+    const cheia = $('.canto-tela-cheia'), op = $('.canto-opcoes');
+    const ativa = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    cheia.hidden = !(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+    cheia.classList.toggle('ativo', ativa);
+    cheia.title = t(ativa ? 'barra.sairTelaCheia' : 'barra.telaCheia');
+    cheia.setAttribute('aria-label', cheia.title);
+    op.title = t('menu.opcoes');
+    op.setAttribute('aria-label', op.title);
+  }
+  // As configurações abrem por cima de qualquer tela e, ao voltar, ela reaparece exatamente como estava.
+  function abrirOpcoesDoCanto() {
+    if ($('#modal .opcoes-jogo')) return;
+    const m = $('#modal'), aberto = m.hidden ? null : m.firstElementChild, classes = m.className, clique = m.onclick;
+    const telas = [...document.querySelectorAll('.tela')].filter(el => !el.hidden);
+    if (aberto) aberto.remove();
+    telas.forEach(el => { el.hidden = true; });
+    telaOpcoes(() => {
+      if (aberto) {
+        m.replaceChildren(aberto);
+        m.className = classes;
+        m.onclick = clique;
+        encaixarModal();
+      } else fecharModal();
+      telas.forEach(el => { el.hidden = false; });
+      if (jogo) render();
+    });
+  }
   {
-    const atualizar = () => {
-      const b = $('.btn-tela-cheia');
-      if (!b) return;
-      b.hidden = !document.fullscreenEnabled;
-      b.classList.toggle('ativo', !!document.fullscreenElement);
-      const tit = t(document.fullscreenElement ? 'barra.sairTelaCheia' : 'barra.telaCheia');
-      b.title = tit;
-      b.setAttribute('aria-label', tit);
-    };
-    document.addEventListener('fullscreenchange', atualizar);
-    setTimeout(atualizar, 0);
+    const canto = $('#botoes-canto');
+    // (os cliques aqui não contam para a mesa: não desfazem seleção nem mira)
+    for (const tipo of ['pointerdown', 'pointerup', 'click']) canto.addEventListener(tipo, ev => ev.stopPropagation());
+    $('.canto-opcoes').addEventListener('click', abrirOpcoesDoCanto);
+    $('.canto-tela-cheia').addEventListener('click', () => alternarTelaCheia());
+    document.addEventListener('fullscreenchange', atualizarCanto);
+    document.addEventListener('webkitfullscreenchange', atualizarCanto);
+    setTimeout(atualizarCanto, 0);
   }
 
   // Registro da partida: fica escondido; o botão do canto superior direito abre uma caixa suspensa.
@@ -4054,8 +4079,62 @@ window.SS = window.SS || {};
 
   // ---------- Janelas ----------
 
+  // ---------- Transição entre telas ----------
+  // Um bando de cartas sobe da parte de baixo da tela, na diagonal, com o "fuish" do vento: quando elas cobrem tudo,
+  // a tela troca por trás (trocar()), e elas seguem até sair por cima.
+  let emTransicao = false;
+  const TRANSICAO_MS = 950, TROCA_EM = 0.34;
+  const CARTAS_TRANSICAO = [['K', 'paus'], ['Q', 'copas'], ['J', 'espadas'], ['K', 'ouros'], ['Q', 'espadas'], ['J', 'copas']];
+  function transicao(trocar) {
+    if (emTransicao || MOVIMENTO_REDUZIDO) return trocar();
+    emTransicao = true;
+    Som.tocar('golpe-no-vento');
+    const L = innerWidth, A = innerHeight, altC = A * 0.62, largC = altC * 0.71, passoX = largC * 0.72, passoY = altC * 0.62;
+    const INCLINA = 0.28, FILAS = 7, inicio = A * 1.1, curso = inicio + FILAS * passoY + altC;
+    const camada = document.createElement('div');
+    camada.id = 'transicao';
+    const colIni = Math.floor(-(inicio * INCLINA + largC) / passoX) - 1, colFim = Math.ceil(L / passoX) + 1;
+    const cores = ['vermelho', 'azul', 'verde', 'dourado'];
+    for (let fila = 0; fila < FILAS; fila++) {
+      for (let col = colIni; col <= colFim; col++) {
+        const el = document.createElement('div');
+        const face = Math.random() < 0.08 ? CARTAS_TRANSICAO[Math.floor(Math.random() * CARTAS_TRANSICAO.length)] : null;
+        el.className = 'carta' + (face ? '' : ' dorso ' + cores[Math.floor(Math.random() * cores.length)]);
+        if (face) el.innerHTML = C.frente({ rank: face[0], naipe: face[1] });
+        const x = col * passoX + (fila % 2 ? passoX / 2 : 0) - fila * passoY * INCLINA, y = inicio + fila * passoY;
+        const giro = 10 + (Math.random() * 2 - 1) * 9;
+        Object.assign(el.style, { left: x.toFixed(0) + 'px', top: y.toFixed(0) + 'px', width: largC.toFixed(0) + 'px', height: altC.toFixed(0) + 'px', rotate: giro.toFixed(1) + 'deg' });
+        el.animate([{ transform: 'translate(0, 0)' }, { transform: `translate(${(curso * INCLINA).toFixed(0)}px, ${(-curso).toFixed(0)}px)` }], { duration: TRANSICAO_MS, easing: 'linear', fill: 'both' });
+        camada.appendChild(el);
+      }
+    }
+    document.body.appendChild(camada);
+    // (pelo relógio: a troca e a limpeza acontecem mesmo com a aba em segundo plano)
+    setTimeout(() => {
+      try { trocar(); } finally { emTransicao = false; }
+    }, TRANSICAO_MS * TROCA_EM);
+    setTimeout(() => camada.remove(), TRANSICAO_MS + 40);
+  }
+  // Para as trocas que têm de acontecer na hora (o código seguinte já conta com a tela nova): uma foto da tela
+  // antiga fica por cima até as cartas cobrirem tudo e a nova já está pronta por baixo.
+  function transicaoComFoto() {
+    const m = $('#modal');
+    if (emTransicao || MOVIMENTO_REDUZIDO || m.hidden || !m.firstElementChild) return;
+    const foto = m.cloneNode(true);
+    foto.classList.add('foto-tela');
+    foto.onclick = null;
+    document.body.appendChild(foto); // (depois do original: quem procura #modal continua achando o de verdade)
+    transicao(() => foto.remove());
+  }
+  // Nome da tela de menu que um HTML desenha: o mesmo nome é a mesma tela sendo redesenhada, sem transição.
+  const chaveDaTela = html => (html.match(/<h2[^>]*>(.*?)<\/h2>/) || html.match(/class="([^"]+)"/) || [0, ''])[1];
+
   function modal(html, aoClicarModal) {
     const m = $('#modal');
+    const chave = chaveDaTela(html);
+    // (o VS tem a própria animação de entrada; configurações e confirmações abrem por cima da tela, sem trocar de tela)
+    if (!jogo && m.dataset.tela !== chave && !/lado-rivais|opcoes-jogo|class="confirmacao/.test(html)) transicaoComFoto();
+    m.dataset.tela = jogo ? '' : chave;
     m.innerHTML = `<div class="caixa">${html}</div>`;
     m.classList.toggle('modal-menu', !jogo);
     m.classList.toggle('modal-papel', !jogo || /class="(menu-tema|confirmacao)/.test(html));
@@ -4073,6 +4152,7 @@ window.SS = window.SS || {};
     m.innerHTML = '';
     m.classList.remove('modal-menu', 'modal-papel');
     m.onclick = null;
+    m.dataset.tela = '';
     $('#dica').hidden = true;
   }
 
@@ -4484,6 +4564,7 @@ window.SS = window.SS || {};
 
   // online: { eu, semente, palhacos, decks } (partida com um amigo; ver rede.js).
   async function iniciarPartida(modo, online) {
+    if (document.documentElement.classList.contains('em-menu')) transicaoComFoto();
     cfg.modo = modo;
     partida++;
     const id = partida;
@@ -5027,6 +5108,7 @@ window.SS = window.SS || {};
   async function iniciarTutorial(n) {
     const aula = SS.Tutorial && SS.Tutorial.aula(n);
     if (!aula) return;
+    if (document.documentElement.classList.contains('em-menu')) transicaoComFoto();
     cfg.modo = 'tutorial';
     cfg.aula = n;
     M.definirRegras(null); // regras oficiais
@@ -5444,7 +5526,12 @@ window.SS = window.SS || {};
     if (SS.Decoracao) SS.Decoracao.montar($('#mesa'));
   }
 
+  let menuJaAberto = false;
   function menu() {
+    if (!menuJaAberto) { menuJaAberto = true; return menuAgora(); } // (ao abrir o jogo não há o que esconder)
+    transicao(menuAgora);
+  }
+  function menuAgora() {
     document.documentElement.classList.add('em-menu');
     if (SS.Tutorial) SS.Tutorial.parar();
     fecharEditorLivre();
@@ -5494,7 +5581,6 @@ window.SS = window.SS || {};
   }
 
   // No celular: tela cheia (some a barra do navegador) e, onde o aparelho deixa, trava deitado.
-  const telaCheiaPossivel = () => document.documentElement.classList.contains('toque') && !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
   function alternarTelaCheia() {
     const d = document, el = d.documentElement;
     if (d.fullscreenElement || d.webkitFullscreenElement) return (d.exitFullscreen || d.webkitExitFullscreen).call(d);
@@ -5506,6 +5592,7 @@ window.SS = window.SS || {};
   }
 
   function telaInicio() {
+    atualizarCanto(); // (o idioma pode ter mudado)
     const convite = SS.Rede.codigoDoLink();
     Som.musica('menu');
     // Fora da partida, as laterais da tela voltam ao verde.
@@ -5521,8 +5608,6 @@ window.SS = window.SS || {};
     modal(`<div class="menu-tema inicio-novo"><div class="palco-menu">
       <button class="btn-tutorial" data-m="tutorial">${t('menu.tutorialBotao')}${feito ? ' ✓' : ''}</button>
       <div class="idiomas">${bandeira('pt', 'bandeira-br.svg', 'Português')}${bandeira('en', 'bandeira-us.svg', 'English')}</div>
-      ${telaCheiaPossivel() ? `<button class="btn-tela-cheia" data-m="tela-cheia" title="${t('menu.telaCheia')}" aria-label="${t('menu.telaCheia')}">⛶&#xFE0E;</button>` : ''}
-      <button class="btn-engrenagem" data-m="opcoes" title="${t('menu.opcoes')}" aria-label="${t('menu.opcoes')}">⚙&#xFE0E;</button>
       <div class="leque-inicio">${P.LISTA.map((pal, k) => `<img src="${pal.carta}" alt="" style="--i:${k}" draggable="false">`).join('')}</div>
       ${logo}
       <button class="btn-grande-menu jogar" data-m="jogar">${t('menu.jogarCurto')}</button>
@@ -5553,15 +5638,15 @@ window.SS = window.SS || {};
       else if (m === 'jogar') telaPalhacos('bot');
       else if (m === 'online') telaPalhacos('online');
       else if (m === 'entrar-convite') telaPalhacos('convite');
-      else if (m === 'decks') {
+      else if (m === 'decks') transicao(() => {
         fecharModal();
-        SS.Decks.abrir(telaInicio, { opcoes: volta => telaOpcoes(() => { fecharModal(); volta(); }) });
-      } else if (m === 'regras') {
+        SS.Decks.abrir(telaInicio);
+      });
+      else if (m === 'regras') transicao(() => {
         fecharModal();
         SS.Regras.abrir(telaInicio);
-      } else if (m === 'testes') telaTestes();
-      else if (m === 'opcoes') telaOpcoes(telaInicio);
-      else if (m === 'tela-cheia') alternarTelaCheia();
+      });
+      else if (m === 'testes') telaTestes();
     });
     // Número e data da build num botãozinho no canto de baixo; clicando, abre a lista das novidades.
     $('#modal').insertAdjacentHTML('beforeend', `<details class="build-info"><summary>${t('build.titulo', { n: BUILD.n, d: BUILD.data })}</summary>
@@ -5570,8 +5655,10 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 134, data: '02/11/2026',
+    n: 135, data: '02/11/2026',
     novidades: [
+      ['Transição entre telas: um bando de cartas sobe na diagonal com o som de vento e esconde a troca', 'Screen transitions: a flock of cards sweeps up diagonally with a wind sound and hides the change'],
+      ['Configurações e tela cheia agora ficam no canto em todas as telas', 'Settings and full screen are now in the corner of every screen'],
       ['Golpe final: sem tarjas pretas; a câmera dá zoom na carta e no oponente, com clarão branco no impacto', 'Final blow: no black bars; the camera zooms on the card and the opponent, with a white flash on impact'],
       ['Golpe final: o ataque que zera o Palhaço vem em câmera lenta, com faixas de cinema, mega impacto, NOCAUTE e a tela de vitória emendando', 'Final blow: the attack that knocks out the Jester comes in slow motion, with cinema bars, a mega impact, K.O. and the victory screen right after'],
       ['Bloqueando quem ataca 2 vezes: solte a seta azul na etiqueta "1º ataque" ou "2º ataque" para escolher qual defender', 'Blocking a double attacker: drop the blue arrow on the "1st attack" or "2nd attack" tag to pick which one to block'],
@@ -5673,8 +5760,10 @@ window.SS = window.SS || {};
       else if (b.dataset.m === 'regras') telaRegras();
       else if (b.dataset.m === 'comportamento') telaComportamento();
       else if (b.dataset.m === 'deckbot') {
-        fecharModal();
-        SS.Decks.abrir(telaTestes, { bot: true, opcoes: volta => telaOpcoes(() => { fecharModal(); volta(); }) });
+        transicao(() => {
+          fecharModal();
+          SS.Decks.abrir(telaTestes, { bot: true });
+        });
       }
     });
     $('#modal .grav-dado').addEventListener('input', ev => {
@@ -5906,6 +5995,7 @@ window.SS = window.SS || {};
 
   // estado (opcional): uma situação colada do log, que entra no lugar da mesa montada do zero.
   function iniciarMesaLivre(estado) {
+    if (document.documentElement.classList.contains('em-menu')) transicaoComFoto();
     const lv = cfg.livre;
     historicoLivre = [];
     cfg.modo = 'livre';

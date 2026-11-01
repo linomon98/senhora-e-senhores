@@ -463,7 +463,7 @@
         { foco: '#acoes', permitir: '*', fala: ['Você tem mais uma <b>ação</b> para fazer nesse turno: escolhe aí o que você quer fazer...', 'You have one more <b>action</b> this turn: pick whatever you want to do...'] },
         { fala: ['TEM MUITA COISA PRA EXPLICAR AINDA (as <b>Pargias</b>, os pares do mesmo naipe, os outros Palhaços...), MAS POR ENQUANTO É ISSO: VOCÊ VAI ENTENDER AS COISAS JOGANDO O JOGO! E se bater dúvida, tá tudo na tela de <b>Regras</b>, no menu.',
           'THERE IS A LOT MORE TO EXPLAIN (the <b>Pairgics</b>, the same-suit pairs, the other Jesters...), BUT THAT IS IT FOR NOW: YOU WILL GET THE HANG OF IT BY PLAYING! And if you get stuck, it is all in the <b>Rules</b> screen, in the menu.'] },
-        { foco: '[data-acao="opcoes-mesa"]', alvo: '[data-acao="opcoes-mesa"]', permitir: ['[data-acao="opcoes-mesa"]'],
+        { foco: '.canto-opcoes', alvo: '.canto-opcoes', permitir: ['.canto-opcoes'],
           fala: ['Clique em <b>Opções</b>.', 'Click <b>Options</b>.'], esperar: () => !!document.querySelector('#modal [data-grupo="todasAcoes"]') },
         { foco: '#modal [data-grupo="todasAcoes"]', fala: ['Aqui você pode ativar este botão, e deixar <b>todas as cartas de ação</b> aparecendo direto.', 'Here you can turn on this button and keep <b>all the action cards</b> showing all the time.'] },
         { foco: '#modal [data-grupo="todasAcoes"]', fala: ['Pra quem tá começando, é uma mão na roda: em vez de lembrar qual combinação de cartas faz o quê, o jogo já mostra <b>todas as jogadas que a sua mão permite</b>. Você clica na ação que quer, as cartas certas brilham na mão, e clicando <b>2 vezes</b> ele joga sozinho. Assim você aprende as combinações vendo elas na tela!',
@@ -684,6 +684,7 @@
       for (const c of p.clique) if (elementos(c.em).some(el => el.contains(ev.target))) c.faz(T.api);
     }
     if (p && p.permitir === '*') return;
+    if (ev.target.closest && ev.target.closest('.canto-tela-cheia')) return; // (a tela cheia vale em qualquer passo)
     const ok = p && p.permitir && elementos(p.permitir).some(el => el.contains(ev.target));
     if (ok) return;
     ev.stopImmediatePropagation();

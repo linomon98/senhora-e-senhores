@@ -159,7 +159,6 @@ window.SS = window.SS || {};
     p.style.transform = `translate(${(innerWidth - 1600 * s) / 2}px, ${(innerHeight - 900 * s) / 2}px) scale(${s})`;
   }
 
-  // extras.opcoes(volta): abre as opções do jogo e chama volta() ao fechar.
   // extras.bot: abre o deckbuilder dos decks de bot (escolhendo o Palhaço em cima).
   function abrir(voltar, mais) {
     aoVoltar = voltar;
@@ -173,9 +172,11 @@ window.SS = window.SS || {};
   }
 
   function fechar() {
-    tela().hidden = true;
-    tela().innerHTML = '';
-    if (aoVoltar) aoVoltar();
+    SS.transicao(() => {
+      tela().hidden = true;
+      tela().innerHTML = '';
+      if (aoVoltar) aoVoltar();
+    });
   }
 
   const slotAtual = () => (typeof atual === 'number' ? slots[atual] : null);
@@ -361,7 +362,6 @@ window.SS = window.SS || {};
     const focos = [...el.querySelectorAll(CARTAS_FOCO)].filter(c => c.matches(':hover') || c.classList.contains('foco')).map(chaveFoco).filter(Boolean);
     el.innerHTML = `<div class="deck-palco">
       <button class="db-btn voltar" data-cmd="voltar">← ${tr('btn.voltarMenu')}</button>
-      ${extras.opcoes ? `<button class="db-engrenagem" data-cmd="opcoes" title="${tr('menu.opcoes')}" aria-label="${tr('menu.opcoes')}">⚙&#xFE0E;</button>` : ''}
       <h1 class="db-titulo">${tr(palBot ? 'db.tituloBot' : 'db.titulo')}</h1>
       ${palBot ? `<div class="db-palhacos">${SS.Palhacos.LISTA.map(p => `<button class="db-palhaco cor-${p.cor}${p.id === palBot ? ' ativo' : ''}" data-palbot="${p.id}">
         <img src="arte/naipes/${p.naipe}.webp" alt="" draggable="false">${p.nome}${doBot(p.id).padrao != null ? ' ★' : ''}</button>`).join('')}</div>` : ''}
@@ -484,10 +484,6 @@ window.SS = window.SS || {};
         padraoBot = padraoBot === atual ? null : atual;
         guardar();
         return desenhar();
-      }
-      if (cmd === 'opcoes' && extras.opcoes) {
-        tela().hidden = true;
-        return extras.opcoes(() => { tela().hidden = false; desenhar(); });
       }
       if (cmd === 'editar') { editando = true; return desenhar(); }
       if (cmd === 'fecharEditar') { editando = false; return desenhar(); }
