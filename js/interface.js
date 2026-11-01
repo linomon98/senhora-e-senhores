@@ -2266,6 +2266,8 @@ window.SS = window.SS || {};
   // ---------- Ataque animado: a carta levanta, pega impulso para trás e bate no alvo ----------
   const MOVIMENTO_REDUZIDO = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const IMPACTO_MS = 560, INVESTIDA_MS = 1000;
+  // Com contra-ataque: o troco acerta o atacante em CONTRA_BATE_MS e ele volta voando para o lugar.
+  const INVESTIDA_CONTRA_MS = 1500, CONTRA_BATE_MS = 960;
 
   // Foto da mesa ANTES de resolver: onde está cada carta (e o seu desenho) e quanto dano já tinha.
   function prepararInvestida(at) {
@@ -2466,6 +2468,9 @@ window.SS = window.SS || {};
     return el.animate(quadros, { duration: morreu ? 760 : 520, delay: atraso, easing: 'ease-out', fill: morreu ? 'forwards' : 'none' });
   }
 
+  // Investida do atacante. Com contra-ataque a cena é mais longa: o atacante acerta e fica na pose do golpe,
+  // o defensor pega impulso para trás (ou desvia, se o golpe não fez dano) e dá o troco, mandando o atacante
+  // de volta para o lugar dele; se o troco mata, o atacante é rasgado ali mesmo.
   async function investida(cena, danos) {
     const fa = cena.unidades.find(f => f.uid === cena.atacante);
     if (!fa || !fa.caixa || !fa.html || !cena.alvo || !cena.de) return;
@@ -2483,41 +2488,67 @@ window.SS = window.SS || {};
       setas.style.opacity = '';
       return;
     }
-    copia.animate([
-      { transform: 'translate(0, 0) scale(1) rotate(0deg)', filter: 'drop-shadow(0 2px 3px rgba(0,0,0,.4))', easing: 'cubic-bezier(.3, .7, .4, 1)' },
-      { transform: 'translate(0, -18px) scale(1.15) rotate(0deg)', filter: 'drop-shadow(0 18px 14px rgba(0,0,0,.45))', offset: 0.2, easing: 'ease-in-out' },
-      { transform: `translate(${(-n.x * 38).toFixed(1)}px, ${(-n.y * 38 - 18).toFixed(1)}px) scale(1.18) rotate(${giro}deg)`, filter: 'drop-shadow(0 22px 16px rgba(0,0,0,.45))', offset: 0.42, easing: 'cubic-bezier(.6, 0, .9, .5)' },
-      { transform: `translate(${(n.x * k).toFixed(1)}px, ${(n.y * k).toFixed(1)}px) scale(1.08) rotate(${-giro / 2}deg)`, filter: 'drop-shadow(0 4px 4px rgba(0,0,0,.5))', offset: IMPACTO_MS / INVESTIDA_MS, easing: 'ease-out' },
-      { transform: `translate(${(n.x * (k - 18)).toFixed(1)}px, ${(n.y * (k - 18)).toFixed(1)}px) scale(1.06) rotate(0deg)`, filter: 'drop-shadow(0 8px 8px rgba(0,0,0,.45))', offset: 0.66, easing: 'cubic-bezier(.4, 0, .3, 1)' },
-      { transform: 'translate(0, 0) scale(1) rotate(0deg)', filter: 'drop-shadow(0 2px 3px rgba(0,0,0,.4))' },
-    ], { duration: INVESTIDA_MS, fill: 'both' });
-    // Quem vai apanhar: cópias prontas desde já (uma carta que morre continua visível até o fim do recuo).
+    const contra = danos.some(d => d.f && d.f.uid === cena.atacante);
+    const atacanteMorreu = danos.some(d => d.f && d.f.uid === cena.atacante && d.morreu);
+    const total = contra ? INVESTIDA_CONTRA_MS : INVESTIDA_MS, o = ms => ms / total;
+    const P = a => `translate(${(n.x * a).toFixed(1)}px, ${(n.y * a).toFixed(1)}px)`;
+    const SOMBRA = 'drop-shadow(0 2px 3px rgba(0,0,0,.4))';
+    const ida = [
+      { transform: 'translate(0, 0) scale(1) rotate(0deg)', filter: SOMBRA, easing: 'cubic-bezier(.3, .7, .4, 1)' },
+      { transform: 'translate(0, -18px) scale(1.15) rotate(0deg)', filter: 'drop-shadow(0 18px 14px rgba(0,0,0,.45))', offset: o(IMPACTO_MS * 0.2), easing: 'ease-in-out' },
+      { transform: `translate(${(-n.x * 38).toFixed(1)}px, ${(-n.y * 38 - 18).toFixed(1)}px) scale(1.18) rotate(${giro}deg)`, filter: 'drop-shadow(0 22px 16px rgba(0,0,0,.45))', offset: o(IMPACTO_MS * 0.42), easing: 'cubic-bezier(.6, 0, .9, .5)' },
+      { transform: `${P(k)} scale(1.08) rotate(${-giro / 2}deg)`, filter: 'drop-shadow(0 4px 4px rgba(0,0,0,.5))', offset: o(IMPACTO_MS), easing: 'ease-out' },
+    ];
+    const volta = contra ? [
+      // fica na pose do golpe até o troco chegar
+      { transform: `${P(k - 6)} scale(1.07) rotate(${-giro / 3}deg)`, filter: 'drop-shadow(0 5px 5px rgba(0,0,0,.5))', offset: o(CONTRA_BATE_MS), easing: 'cubic-bezier(.15, .8, .3, 1)' },
+      // arremessado de volta: passa um pouquinho do lugar e assenta
+      { transform: `${P(-14)} scale(1.03) rotate(${giro * 2.4}deg)`, filter: 'drop-shadow(0 10px 8px rgba(0,0,0,.45))', offset: o(CONTRA_BATE_MS + 360), easing: 'ease-in-out' },
+      { transform: 'translate(0, 0) scale(1) rotate(0deg)', filter: SOMBRA },
+    ] : [
+      { transform: `${P(k - 18)} scale(1.06) rotate(0deg)`, filter: 'drop-shadow(0 8px 8px rgba(0,0,0,.45))', offset: 0.66, easing: 'cubic-bezier(.4, 0, .3, 1)' },
+      { transform: 'translate(0, 0) scale(1) rotate(0deg)', filter: SOMBRA },
+    ];
+    copia.animate(ida.concat(volta), { duration: total, fill: 'both' });
+    // Quem vai apanhar: cópias prontas desde já (uma carta que morre continua visível até ser rasgada).
     const alvos = [];
-    let atacanteMorreu = false;
     for (const d of danos) {
       if (d.heroi != null) {
         const el = elRetrato(d.heroi);
         if (el) recuo(el, n, IMPACTO_MS, false);
         continue;
       }
-      if (d.f.uid === cena.atacante) {
-        atacanteMorreu = d.morreu;
-        continue;
-      }
-      if (!d.f.caixa || !d.f.html) continue;
-      const el = copiaFlutuante(d.f);
-      recuo(el, n, IMPACTO_MS, d.morreu);
-      alvos.push({ f: d.f, el, morreu: d.morreu });
+      if (d.f.uid === cena.atacante || !d.f.caixa || !d.f.html) continue;
+      const el = copiaFlutuante(d.f), revida = contra && !d.morreu && (cena.defensores || []).includes(d.f.uid);
+      if (!revida) recuo(el, n, IMPACTO_MS, false);
+      if (d.morreu) setTimeout(() => rasgarCarta(el, n), IMPACTO_MS + 110);
+      alvos.push({ f: d.f, el, morreu: d.morreu, levou: true });
     }
+    // Quem dá o troco: os defensores vivos (os que não levaram dano desviam do golpe).
+    const revidam = [];
+    if (contra) {
+      for (const uid of cena.defensores || []) {
+        const ja = alvos.find(a => a.f.uid === uid);
+        if (ja) { if (!ja.morreu) revidam.push(ja); continue; }
+        const f = cena.unidades.find(x => x.uid === uid);
+        if (!f || !f.caixa || !f.html) continue;
+        const a = { f, el: copiaFlutuante(f), morreu: false, levou: false };
+        alvos.push(a);
+        revidam.push(a);
+      }
+      revidam.forEach(a => impulsoContra(a.el, n, a.levou, total));
+    }
+    const esquivou = contra && revidam.length && !revidam.some(a => a.levou) && !alvos.some(a => a.morreu);
     await esperar(IMPACTO_MS);
     const contato = { x: cena.de.x + n.x * (k + 34), y: cena.de.y + n.y * (k + 34) };
     const forte = cena.forca >= 9;
-    Som.tocar(forte ? 'impacto-forte' : cena.forca >= 6 ? 'impacto-medio' : 'impacto-fraco');
+    if (esquivou) Som.tocar('golpe-no-vento'); // acertou o vento: o defensor já tinha saído dali
+    else Som.tocar(forte ? 'impacto-forte' : cena.forca >= 6 ? 'impacto-medio' : 'impacto-fraco');
     if (!danos.length) Som.tocar('golpe-ignorado', { atraso: 120 }); // ninguém se machucou
     const perdas = [0, 1].map(p => cena.pv[p] - jogo.jogadores[p].pv).filter(x => x > 0);
     if (perdas.length) Som.tocar(Math.max(...perdas) >= 5 ? 'palhaco-dano-forte' : 'palhaco-dano', { atraso: 140 });
-    if (atacanteMorreu || alvos.some(a => a.morreu)) Som.tocar('senhor-morre', { atraso: 250 });
-    particulas(contato, forte ? 26 : cena.forca >= 6 ? 18 : 12, forte);
+    if (alvos.some(a => a.morreu)) Som.tocar('senhor-morre', { atraso: 120 });
+    if (!esquivou) particulas(contato, forte ? 26 : cena.forca >= 6 ? 18 : 12, forte);
     for (const d of danos) {
       if (d.heroi != null) {
         const c = centroDe(elRetrato(d.heroi));
@@ -2529,51 +2560,61 @@ window.SS = window.SS || {};
     }
     // A mesa sente o golpe: pulinho em onda a partir do ponto de contato (mais alto nos golpes fortes).
     const ra = $('#app').getBoundingClientRect();
-    pulinhoMesa(forte ? 3 : cena.forca >= 6 ? 2 : 1, ra.left + contato.x * escala, ra.top + contato.y * escala);
-    // Contra-ataque: o atacante também apanha; quem defendeu dá o troco.
-    if (danos.some(d => d.f && d.f.uid === cena.atacante)) contraAtaque(cena, copia, n, alvos);
-    tremor(cena.forca);
-    await esperar(INVESTIDA_MS - IMPACTO_MS);
-    if (atacanteMorreu) await copia.animate([{ opacity: 1 }, { opacity: 0, transform: 'translate(0, 8px) scale(.82)', filter: 'grayscale(1)' }], { duration: 320, fill: 'forwards' }).finished.catch(() => {});
-    else await esperar(80);
-    if (alvos.some(a => a.morreu)) await esperar(280);
+    if (!esquivou) {
+      pulinhoMesa(forte ? 3 : cena.forca >= 6 ? 2 : 1, ra.left + contato.x * escala, ra.top + contato.y * escala);
+      tremor(cena.forca);
+    }
+    if (contra) {
+      await esperar(CONTRA_BATE_MS - IMPACTO_MS);
+      trocoNoAtacante(copia, atacanteMorreu, n);
+      await esperar(total - CONTRA_BATE_MS + (atacanteMorreu ? 260 : 0));
+    } else {
+      await esperar(total - IMPACTO_MS);
+      await esperar(alvos.some(a => a.morreu) ? 300 : 80);
+    }
     soltarCopia(fa, copia);
     for (const a of alvos) soltarCopia(a.f, a.el);
     setas.style.opacity = '';
   }
 
-  // Contra-ataque: logo depois do impacto, quem defendeu se recompõe e dá um tranco de volta no atacante, que é
-  // jogado para trás piscando vermelho, com faíscas e um "Contra-ataque!" em cima dele.
-  function contraAtaque(cena, copia, n, alvos) {
-    const ATRASO = 190;
-    const defs = (cena.defensores || []).map(uid => {
-      const ja = alvos.find(a => a.f.uid === uid);
-      if (ja) return ja.morreu ? null : ja.el;
-      const f = cena.unidades.find(x => x.uid === uid);
-      if (!f || !f.caixa || !f.html) return null;
-      const el = copiaFlutuante(f);
-      alvos.push({ f, el, morreu: false }); // solta junto com as outras no fim da investida
-      return el;
-    }).filter(Boolean);
-    Som.tocar('impacto-fraco', { atraso: ATRASO + 90, vol: 0.7 });
+  // Defensor no contra-ataque: pega impulso para trás (empurrado pelo golpe, piscando vermelho) ou, se o golpe
+  // não fez dano, desvia para o lado antes dele chegar; depois avança e acerta o atacante e volta para o lugar.
+  function impulsoContra(el, n, levou, total) {
+    const o = ms => ms / total, lado = { x: -n.y, y: n.x }, sinal = n.x >= 0 ? 1 : -1;
+    const tr = (a, b) => `${(n.x * a + lado.x * b).toFixed(1)}px ${(n.y * a + lado.y * b).toFixed(1)}px`;
+    const q = levou ? [
+      { translate: '0px 0px', rotate: '0deg', offset: 0 },
+      { translate: '0px 0px', rotate: '0deg', offset: o(IMPACTO_MS) },
+      { translate: tr(30, 0), rotate: `${6 * sinal}deg`, offset: o(IMPACTO_MS + 90), easing: 'ease-out' },
+      { translate: tr(44, 0), rotate: `${9 * sinal}deg`, offset: o(CONTRA_BATE_MS - 110), easing: 'cubic-bezier(.7, 0, 1, .6)' },
+    ] : [
+      { translate: '0px 0px', rotate: '0deg', offset: 0 },
+      { translate: '0px 0px', rotate: '0deg', offset: o(IMPACTO_MS - 150), easing: 'cubic-bezier(.2, .8, .3, 1)' },
+      { translate: tr(34, 52), rotate: `${14 * sinal}deg`, offset: o(IMPACTO_MS + 30) },
+      { translate: tr(46, 40), rotate: `${10 * sinal}deg`, offset: o(CONTRA_BATE_MS - 110), easing: 'cubic-bezier(.7, 0, 1, .6)' },
+    ];
+    q.push(
+      { translate: tr(-38, 0), rotate: `${-6 * sinal}deg`, offset: o(CONTRA_BATE_MS), easing: 'ease-out' },
+      { translate: tr(-24, 0), rotate: `${-3 * sinal}deg`, offset: o(CONTRA_BATE_MS + 120), easing: 'ease-in-out' },
+      { translate: '0px 0px', rotate: '0deg', offset: o(CONTRA_BATE_MS + 420) },
+      { translate: '0px 0px', rotate: '0deg', offset: 1 },
+    );
     if (MOVIMENTO_REDUZIDO) return;
-    defs.forEach(el => el.animate([
-      { translate: '0 0', scale: '1' },
-      { translate: `${(n.x * 10).toFixed(1)}px ${(n.y * 10).toFixed(1)}px`, scale: '1.02', offset: 0.3 },
-      { translate: `${(-n.x * 46).toFixed(1)}px ${(-n.y * 46).toFixed(1)}px`, scale: '1.12', offset: 0.55 },
-      { translate: '0 0', scale: '1' },
-    ], { duration: 420, delay: ATRASO, easing: 'cubic-bezier(.3, .7, .4, 1)', composite: 'add' }));
-    const bate = ATRASO + 420 * 0.55;
-    copia.animate([
-      { translate: '0 0', rotate: '0deg' },
-      { translate: `${(-n.x * 34).toFixed(1)}px ${(-n.y * 34).toFixed(1)}px`, rotate: `${(n.x >= 0 ? 9 : -9)}deg`, offset: 0.3 },
-      { translate: '0 0', rotate: '0deg' },
-    ], { duration: 420, delay: bate, easing: 'ease-out', composite: 'add' });
-    if (copia.firstElementChild) copia.firstElementChild.animate([{ filter: 'none' }, { filter: 'brightness(1.9) sepia(1) saturate(6) hue-rotate(-30deg)' }, { filter: 'none' }], { duration: 420, delay: bate });
-    setTimeout(() => {
-      const c = centroDe(copia);
-      if (!c) return;
-      particulas(c, 10, false);
+    el.animate(q, { duration: total, composite: 'add' });
+    if (levou && el.firstElementChild) {
+      el.firstElementChild.animate([{ filter: 'none' }, { filter: 'brightness(1.9) sepia(1) saturate(6) hue-rotate(-30deg)', offset: 0.25 }, { filter: 'none' }], { duration: 480, delay: IMPACTO_MS });
+    }
+  }
+
+  // O troco acerta o atacante: pisca vermelho, faíscas, "Contra-ataque!" e é mandado de volta (ou rasgado).
+  function trocoNoAtacante(copia, morreu, n) {
+    const c = centroDe(copia);
+    Som.tocar('impacto-medio');
+    if (morreu) Som.tocar('senhor-morre', { atraso: 90 });
+    if (c) {
+      particulas(c, 12, false);
+      const ra = $('#app').getBoundingClientRect();
+      pulinhoMesa(1, ra.left + c.x * escala, ra.top + c.y * escala);
       const txt = peca('fx-contra', c.x, c.y - 70, t('fx.contra'));
       animarPeca(txt, [
         { transform: 'translate(-50%, -50%) scale(.4) rotate(-8deg)', opacity: 0 },
@@ -2581,7 +2622,43 @@ window.SS = window.SS || {};
         { transform: 'translate(-50%, -50%) scale(1) rotate(-5deg)', opacity: 1, offset: 0.7 },
         { transform: 'translate(-50%, -90%) scale(1) rotate(-5deg)', opacity: 0 },
       ], { duration: 900, easing: 'ease-out' });
-    }, bate);
+    }
+    tremor(5);
+    if (morreu) return rasgarCarta(copia, { x: -n.x, y: -n.y });
+    if (copia.firstElementChild) copia.firstElementChild.animate([{ filter: 'none' }, { filter: 'brightness(1.9) sepia(1) saturate(6) hue-rotate(-30deg)', offset: 0.25 }, { filter: 'none' }], { duration: 460 });
+  }
+
+  // Morte: a carta é rasgada ao meio, com um rasgo torto na horizontal. As duas metades se separam (a de cima
+  // sobe e gira para um lado, a de baixo cai para o outro), soltam fiapos de papel e somem.
+  // n (opcional): direção do golpe, para as metades voarem um pouco para esse lado.
+  function rasgarCarta(el, n) {
+    if (!el || !el.isConnected) return;
+    const cs = getComputedStyle(el), r = el.getBoundingClientRect();
+    el.style.visibility = 'hidden';
+    if (MOVIMENTO_REDUZIDO || !r.width) return;
+    Som.tocar('descartar', { vol: 0.9 });
+    const pts = [];
+    for (let k = 0; k <= 12; k++) pts.push(`${(k * 100 / 12).toFixed(1)}% ${(50 + (k % 2 ? 1 : -1) * (2 + Math.random() * 4)).toFixed(1)}%`);
+    const cortes = [
+      [`polygon(0% 0%, 100% 0%, ${pts.slice().reverse().join(', ')})`, -1],
+      [`polygon(${pts.join(', ')}, 100% 100%, 0% 100%)`, 1],
+    ];
+    const vx = n ? n.x * 26 : 0, vy = n ? n.y * 26 : 0;
+    for (const [clip, lado] of cortes) {
+      const p = el.cloneNode(true);
+      p.removeAttribute('id');
+      Object.assign(p.style, { visibility: 'visible', transform: cs.transform === 'none' ? '' : cs.transform, translate: cs.translate, rotate: cs.rotate, clipPath: clip, pointerEvents: 'none' });
+      el.parentNode.appendChild(p);
+      const sx = lado * (10 + Math.random() * 8) + vx, gira = lado * (12 + Math.random() * 10);
+      p.animate([
+        { translate: '0px 0px', rotate: '0deg', opacity: 1, filter: 'none' },
+        { translate: `${(lado * 3).toFixed(1)}px ${lado * 4}px`, rotate: `${(gira * 0.15).toFixed(1)}deg`, opacity: 1, offset: 0.14 },
+        { translate: `${(sx * 0.7).toFixed(1)}px ${(lado * 22 + vy * 0.6).toFixed(1)}px`, rotate: `${(gira * 0.6).toFixed(1)}deg`, opacity: 1, filter: 'grayscale(.4) brightness(.85)', offset: 0.45 },
+        { translate: `${sx.toFixed(1)}px ${(lado < 0 ? 30 : 70) + vy}px`, rotate: `${gira.toFixed(1)}deg`, opacity: 0, filter: 'grayscale(1) brightness(.6)' },
+      ], { duration: 820, easing: 'cubic-bezier(.25, .7, .4, 1)', composite: 'add' }).onfinish = () => p.remove();
+    }
+    const c = pontoNoApp(r.left + r.width / 2, r.top + r.height / 2);
+    particulas(c, 10, false, '250, 244, 226'); // fiapos de papel
   }
 
   // Errou (dado 1 no ataque direto): a carta toma impulso, passa raspando ao lado do Palhaço, rodopia
@@ -5166,8 +5243,10 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 115, data: '01/11/2026',
+    n: 116, data: '01/11/2026',
     novidades: [
+      ['Contra-ataque novo: o atacante fica na pose do golpe, o defensor pega impulso (ou desvia, se não levou dano) e o manda de volta para o lugar', 'New counterattack: the attacker holds its strike pose, the defender winds up (or dodges if unhurt) and sends it flying back'],
+      ['Senhores mortos em combate são rasgados ao meio', 'Gentlemen killed in combat are torn in half'],
       ['Invocando com a seta, o lugar não fica mais tremendo: o meio de duas cartas vale como um lugar só, o vão abre mais e a carta da direita também inclina', 'Summoning with the arrow no longer flickers: the middle of two cards counts as one spot, the gap opens wider and the right card tilts too'],
       ['Quem começa? mais rápido e animado: título grande batendo na tela, Palhaços entrando dos lados e o Começa carimbado', 'Who goes first? is faster and livelier: big title slamming in, Jesters sliding in and a stamped Goes first'],
       ['Colinha: as duas Pargias (mesmo naipe e números iguais) ficam lado a lado', 'Crib sheet: both Pairgics (same suit and equal numbers) sit side by side'],
