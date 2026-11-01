@@ -3300,7 +3300,7 @@ window.SS = window.SS || {};
           linha(`${c('5', 'espadas')}${op('→')}${ic('dano')}`, `+1 ${atk}`),
           linha(`${c('7', 'paus')}${op('→')}${ic('berserk')}`, 'Berserk'),
         ])}
-        ${bloco('par', x('Par do mesmo naipe', 'Same-suit pair'), [
+        ${bloco('par', x('Pargia (mesmo naipe)', 'Pairgic (same suit)'), [
           linha(`${c('3', 'copas')}${c('8', 'copas')}${op('→')}${ic('cemiterio')}`, x('revive', 'revive')),
           linha(`${c('2', 'ouros')}${c('9', 'ouros')}${op('→')}${ic('parouros')}`, x('busca Ás', 'fetch Ace')),
           linha(`${c('4', 'paus')}${c('6', 'paus')}${op('→')}${ic('parpaus')}`, `±1 ${esc(1)}`),
@@ -4108,8 +4108,8 @@ window.SS = window.SS || {};
     render();
     mostrarAnuncio(anuncioInicio(primeiro, dadosInicio) + botaoContinuar(), 'inicio');
     // O Palhaço que tirou mais dá uma porradinha no outro (o impacto acontece no meio da animação).
-    setTimeout(() => { if (id === partida) Som.tocar('impacto-medio'); }, 980);
-    await esperarContinuar(2600);
+    setTimeout(() => { if (id === partida) Som.tocar('impacto-medio'); }, 820);
+    await esperarContinuar(2100);
     if (id !== partida) return;
     esconderAnuncio();
     if (modo === 'online') {
@@ -4186,7 +4186,7 @@ window.SS = window.SS || {};
   async function sorteioNoDado(id, nomes) {
     ui.sorteio = t('sorteio.aviso');
     render();
-    await esperar(1400);
+    await esperar(800);
     for (;;) {
       const r = [];
       for (const p of [0, 1]) {
@@ -4198,20 +4198,20 @@ window.SS = window.SS || {};
         const rol = await dadoDe(p, 1, id);
         if (id !== partida) return null;
         r[p] = rol[0];
-        await esperar(900);
+        await esperar(550);
         SS.Dados.sumir();
       }
       SS.Dados.definirArena(null);
       ui.sorteio = t('sorteio.tirou', { j: escapar(nomes[0]), n: r[0] }) + ' ' + t('sorteio.tirou', { j: escapar(nomes[1]), n: r[1] });
       if (r[0] !== r[1]) {
         render();
-        await esperar(700);
+        await esperar(400);
         ui.sorteio = null;
         return r;
       }
       ui.sorteio += ' ' + t('sorteio.empate', { n: r[0] });
       render();
-      await esperar(1500);
+      await esperar(1000);
     }
   }
 
@@ -4635,8 +4635,8 @@ window.SS = window.SS || {};
     M.registrar(jogo, t('log.inicioDados', { a: nomes[0], da: dadosInicio[0], b: nomes[1], db: dadosInicio[1], j: nomes[primeiro] }));
     render();
     mostrarAnuncio(anuncioInicio(primeiro, dadosInicio) + botaoContinuar(), 'inicio');
-    setTimeout(() => { if (id === partida) Som.tocar('impacto-medio'); }, 980);
-    await esperarContinuar(2600);
+    setTimeout(() => { if (id === partida) Som.tocar('impacto-medio'); }, 820);
+    await esperarContinuar(2100);
     if (id !== partida) return;
     esconderAnuncio();
     aula.preparar(jogo); // (os baralhos da aula e a abertura do oponente)
@@ -5118,8 +5118,10 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 113, data: '31/10/2026',
+    n: 114, data: '01/11/2026',
     novidades: [
+      ['Quem começa? mais rápido e animado: título grande batendo na tela, Palhaços entrando dos lados e o Começa carimbado', 'Who goes first? is faster and livelier: big title slamming in, Jesters sliding in and a stamped Goes first'],
+      ['Colinha: as duas Pargias (mesmo naipe e números iguais) ficam lado a lado', 'Crib sheet: both Pairgics (same suit and equal numbers) sit side by side'],
       ['Golpes sacodem a mesa e o contra-ataque ganhou animação: quem defende dá um tranco de volta no atacante', 'Attacks shake the table and counterattacks are animated: the defender shoves the attacker back'],
       ['Arrastar uma carta para entre duas no campo ficou firme: a da esquerda se inclina e a da direita abre espaço', 'Dragging a card between two on the field is steady now: the left one leans and the right one makes room'],
       ['Escolhendo as cartas depois da carta de ação, a seta do alvo agora segue o mouse', 'After picking the cards for an action card, the target arrow now follows the mouse'],
