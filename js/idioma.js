@@ -237,7 +237,7 @@ window.SS = window.SS || {};
     'carta.naoDefender': ['Não defender', 'No block'],
     'btn.naoDefender': ['Seguir sem bloquear', 'Take the hits'],
     'faixa.reflexoPar@toque': ['Toque no par que subiu para sacrificá-lo (outra carta roxa troca o par).', 'Tap the raised pair to sacrifice it (another purple card switches the pair).'],
-    'faixa.reflexoPar': ['Clique no par que subiu para sacrificá-lo (outra carta roxa troca o par).', 'Click the raised pair to sacrifice it (another purple card switches the pair).'],
+    'faixa.reflexoPar': ['Clique no par que subiu (ou de novo em Refletir!) para sacrificá-lo; outra carta roxa troca o par.', 'Click the raised pair (or Reflect! again) to sacrifice it; another purple card switches the pair.'],
     'faixa.reflexoAlvo@toque': ['Arraste a seta roxa até o Senhor(a) atacante que vai bater no próprio dono, ou toque nele.', 'Drag the purple arrow onto the attacking Gentleman that will hit its own owner, or tap it.'],
     'faixa.reflexoAlvo': ['Leve a seta roxa até o Senhor(a) atacante que vai bater no próprio dono e clique. Esc cancela.', 'Bring the purple arrow to the attacking Gentleman that will hit its own owner and click. Esc cancels.'],
     'carta.reflexo': ['Refletir!', 'Reflect!'],

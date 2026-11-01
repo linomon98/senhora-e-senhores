@@ -1317,7 +1317,7 @@ window.SS = window.SS || {};
       if (de) setas.push({ de, para: ui.mouse, cor: ui.atacanteSel != null ? 'mira-ataque' : 'mira-bloqueio', viva: true });
     }
     // Seta presa no mouse: roxa ao escolher o ataque a refletir; na cor do poder ao escolher o alvo do Palhaço.
-    if (ui.mouse && ui.reflexoModo && ui.reflexoModo.etapa === 'alvo') setas.push({ de: ORIGEM_REFLEXO, para: ui.mouse, cor: 'mira-reflexo', viva: true });
+    if (ui.mouse && ui.reflexoModo && ui.reflexoModo.etapa === 'alvo') setas.push({ de: centroDe($('#app .refletir-flutuante')) || ORIGEM_REFLEXO, para: ui.mouse, cor: 'mira-reflexo', viva: true }); // (sai da carta Refletir, onde ela estiver)
     // A seta sai de onde a carta de ação está agora (a faixa se rearruma depois do clique e a carta muda de lugar).
     const origemCarta = (sel, mira, sobe) => {
       const c = centroDe($(sel));
@@ -2081,15 +2081,16 @@ window.SS = window.SS || {};
         ], { duration: 800, delay: k * 35, easing: 'ease-in' });
       }
       if (f) {
-        const mao = centroDe($('#mao-' + ev.alvo.p)) || { x: c.x, y: ev.alvo.p === eu ? 860 : -60 };
-        const dx = mao.x - c.x, dy = mao.y - c.y;
+        // o redemoinho gira o Senhor(a) no lugar; no auge ele se desfaz nas duas cartas, que voam para a mão
+        const caixa = f.getBoundingClientRect();
         f.animate([
           { transform: 'none', opacity: 1 },
-          { transform: 'rotate(-14deg) scale(1.06)', opacity: 1, offset: .2 },
-          { transform: 'rotate(200deg) scale(.85)', opacity: 1, offset: .55 },
-          { transform: `translate(${dx}px, ${dy}px) rotate(560deg) scale(.3)`, opacity: 0 },
-        ], { duration: 1100, delay: 150, easing: 'cubic-bezier(.5, 0, .7, 1)', fill: 'forwards' });
-      }
+          { transform: 'rotate(-14deg) scale(1.06)', opacity: 1, offset: .25 },
+          { transform: 'rotate(260deg) scale(.9)', opacity: 1, offset: .85 },
+          { transform: 'rotate(330deg) scale(.6)', opacity: 0 },
+        ], { duration: 760, delay: 150, easing: 'cubic-bezier(.5, 0, .7, 1)', fill: 'forwards' });
+        setTimeout(() => soltarVoltas(ev.alvo.uid, caixa), 150 + 680);
+      } else setTimeout(() => soltarVoltas(ev.alvo.uid, slotDe(ev.alvo) && slotDe(ev.alvo).getBoundingClientRect()), 500);
       ondaEm(c, '230, 240, 255', 2.4, 120);
       return 1350;
     },
@@ -2107,6 +2108,7 @@ window.SS = window.SS || {};
         setTimeout(() => {
           if (k === 0 || k === alvos.length - 1) Som.tocar('impacto-forte');
           tremor(k === alvos.length - 1 ? 9 : 6);
+          pulinhoNoApp(k === alvos.length - 1 ? 3 : 2, c);
           particulas(c, 20, true, '255, 120, 30');
           ondaEm(c, '255, 110, 30', 3);
           brasas(c, 12, ['255, 80, 20', '255, 170, 40', '90, 70, 60'], 50);
@@ -2115,7 +2117,7 @@ window.SS = window.SS || {};
           queimar(f, 0);
         }, atraso + cai);
       });
-      if (!alvos.length) tremor(6);
+      if (!alvos.length) { tremor(6); pulinhoNoApp(2, { x: 800, y: 450 }); }
       return alvos.length ? (alvos.length - 1) * 170 + 560 + 950 : 0;
     },
     // Trovão: o céu clareia e um raio cai no Senhor(a) (1 hit) ou no Palhaço (2 PV).
@@ -2136,7 +2138,8 @@ window.SS = window.SS || {};
       animarPeca(svg, [{ opacity: 0 }, { opacity: 1, offset: .05 }, { opacity: .2, offset: .2 }, { opacity: 1, offset: .3 }, { opacity: 1, offset: .55 }, { opacity: 0 }], { duration: 700 });
       setTimeout(() => {
         Som.tocar('impacto-forte');
-        tremor(7);
+        tremor(8);
+        pulinhoNoApp(2, c);
         particulas(c, 18, true, '255, 240, 120');
         ondaEm(c, '255, 245, 150', 2.6);
         ondaEm(c, '140, 200, 255', 1.8, 120);
@@ -2150,6 +2153,10 @@ window.SS = window.SS || {};
   // ---------- Cartas voando do baralho (ou do cemitério) para a mão ----------
 
   let maoVista = [null, null], cemVisto = [new Set(), new Set()], campoVisto = [null, null];
+  // Cartas (figura e número) de cada Senhor(a) no último desenho, e as que voltaram do campo para a mão
+  // (Sai daqui!) esperando o efeito soltá-las de onde ele estava: uid → [{ p, c }].
+  let cartasCampoVistas = [new Map(), new Map()];
+  const voltasDoCampo = new Map();
   let posCampo = [{}, {}]; // em que espaço estava cada Senhor(a) no último desenho (para animar quem foi empurrado)
   const voando = new Set(), voandoCampo = new Set();
 
@@ -2168,14 +2175,64 @@ window.SS = window.SS || {};
       campoVisto[p] = new Set(noCampo.map(u => u.uid));
       const atual = j.mao.map(c => c.id);
       if (maoVista[p]) {
-        const novas = j.mao.filter(c => !maoVista[p].has(c.id));
+        let novas = j.mao.filter(c => !maoVista[p].has(c.id));
+        // Voltou do campo: fica escondida até o efeito do Sai daqui! soltar a carta do lugar dela.
+        novas = novas.filter(c => {
+          const uid = cartasCampoVistas[p].get(c.id);
+          if (uid == null || MOVIMENTO_REDUZIDO) return uid == null;
+          voando.add(c.id);
+          const lista = voltasDoCampo.get(uid) || [];
+          lista.push({ p, c });
+          voltasDoCampo.set(uid, lista);
+          const el = document.querySelector(`#mao-${p} [data-voo="${c.id}"]`);
+          if (el) el.style.visibility = 'hidden';
+          setTimeout(() => soltarVoltas(uid), 4000); // (se o efeito não rodar, a carta aparece mesmo assim)
+          return false;
+        });
         // De onde a carta veio: do cemitério, da mão do oponente (roubo do Ourinhos) ou do baralho.
         const deOnde = c => (cemVisto[p].has(c.id) ? 'cemiterio' : maosAntes[1 - p] && maosAntes[1 - p].has(c.id) ? 'roubo' : M.ehFigura(c) ? 'letras' : 'numeros');
         novas.forEach((c, k) => voarParaMao(p, c, deOnde(c), k));
       }
       maoVista[p] = new Set(atual);
       cemVisto[p] = new Set(j.cemiterio.map(c => c.id));
+      cartasCampoVistas[p] = new Map();
+      for (const u of noCampo) if (u.tipo === 'senhor') { cartasCampoVistas[p].set(u.figura.id, u.uid); cartasCampoVistas[p].set(u.numero.id, u.uid); }
     }
+  }
+
+  // As cartas do Senhor(a) mandado embora saem de onde ele estava (de) e voam para a mão do dono.
+  function soltarVoltas(uid, de) {
+    const lista = voltasDoCampo.get(uid);
+    if (!lista) return;
+    voltasDoCampo.delete(uid);
+    lista.forEach(({ p, c }, k) => voarDoCampo(p, c, de, k));
+  }
+  function voarDoCampo(p, c, de, ordem) {
+    const fim = () => {
+      voando.delete(c.id);
+      const a = document.querySelector(`#mao-${p} [data-voo="${c.id}"]`);
+      if (a) a.style.visibility = '';
+    };
+    const alvo0 = document.querySelector(`#mao-${p} [data-voo="${c.id}"]`);
+    if (!alvo0 || !de) return fim();
+    const visivel = p === eu || cfg.modo === 'bots' || cfg.modo === 'livre';
+    const para = alvo0.getBoundingClientRect(), w = para.width, h = para.height;
+    const x0 = de.left + de.width / 2 - w / 2 + (ordem ? 14 : -14), y0 = de.top + de.height / 2 - h / 2;
+    const voo = document.createElement('div');
+    voo.className = 'carta-voando';
+    voo.innerHTML = C.frente(c);
+    Object.assign(voo.style, { left: x0 + 'px', top: y0 + 'px', width: w + 'px', height: h + 'px', background: '#fdfbf3' });
+    document.body.appendChild(voo);
+    const dx = para.left - x0, dy = para.top - y0, giro = ordem ? 16 : -16, atraso = ordem * 110, dur = 640;
+    setTimeout(() => Som.tocar('comprar-carta'), atraso);
+    voo.animate([
+      { transform: `translate(0, 0) rotate(${giro}deg) scale(.9)`, opacity: 1 },
+      { transform: `translate(${dx * 0.45}px, ${dy * 0.45 - 70}px) rotate(${giro * 3}deg) scale(1.08)`, opacity: 1, offset: 0.45 },
+      { transform: `translate(${dx}px, ${dy}px) rotate(0deg) scale(1)`, opacity: 1 },
+    ], { duration: dur, delay: atraso, easing: 'cubic-bezier(.4, 0, .3, 1)', fill: 'both' });
+    // na mão escondida (oponente), a carta vira de costas no meio do caminho
+    if (!visivel) setTimeout(() => { voo.innerHTML = ''; voo.style.background = ''; voo.classList.add('dorso', corDe(p)); }, atraso + dur * 0.45);
+    setTimeout(() => { voo.remove(); fim(); }, atraso + dur + 30);
   }
 
   function voarParaMao(p, c, origem, ordem) {
@@ -2273,11 +2330,11 @@ window.SS = window.SS || {};
   function prepararInvestida(at) {
     const loc = M.localizar(jogo, at.atacante);
     const unidades = [];
-    for (const j of jogo.jogadores) for (const u of j.campo) {
-      if (!u) continue;
+    jogo.jogadores.forEach((j, p) => j.campo.forEach(u => {
+      if (!u) return;
       const el = elUnidade(u.uid), dentro = el && el.querySelector('.unidade');
-      unidades.push({ uid: u.uid, hits: u.hits, bhits: u.berserk ? u.berserk.hits : 0, el, caixa: el && el.getBoundingClientRect(), html: dentro ? dentro.outerHTML : '' });
-    }
+      unidades.push({ uid: u.uid, p, hits: u.hits, bhits: u.berserk ? u.berserk.hits : 0, el, caixa: el && el.getBoundingClientRect(), html: dentro ? dentro.outerHTML : '' });
+    }));
     let alvos;
     if (at.refletido) alvos = [elRetrato(at.contra ? 1 - jogo.vez : jogo.vez)]; // refletido: vai no próprio dono (de volta: no defensor)
     else if (at.alvo !== 'jogador' && (M.ataqueDirecionado(jogo, at) || !at.bloqueadores.length)) alvos = [elUnidade(at.alvo)];
@@ -2444,6 +2501,12 @@ window.SS = window.SS || {};
     }
   }
 
+  // Pulinho da mesa a partir de um ponto do #app.
+  function pulinhoNoApp(nivel, c) {
+    const ra = $('#app').getBoundingClientRect();
+    pulinhoMesa(nivel, ra.left + c.x * escala, ra.top + c.y * escala);
+  }
+
   // Tremor da tela: levinho (ataque 1–5), médio (6–8) e forte (9 ou mais).
   function tremor(forca) {
     if (MOVIMENTO_REDUZIDO) return;
@@ -2521,7 +2584,7 @@ window.SS = window.SS || {};
       if (d.f.uid === cena.atacante || !d.f.caixa || !d.f.html) continue;
       const el = copiaFlutuante(d.f), revida = contra && !d.morreu && (cena.defensores || []).includes(d.f.uid);
       if (!revida) recuo(el, n, IMPACTO_MS, false);
-      if (d.morreu) setTimeout(() => rasgarCarta(el, n), IMPACTO_MS + 110);
+      if (d.morreu) setTimeout(() => rasgarCarta(el, n, d.f.p), IMPACTO_MS + 110);
       alvos.push({ f: d.f, el, morreu: d.morreu, levou: true });
     }
     // Quem dá o troco: os defensores vivos (os que não levaram dano desviam do golpe).
@@ -2540,6 +2603,8 @@ window.SS = window.SS || {};
     }
     const esquivou = contra && revidam.length && !revidam.some(a => a.levou) && !alvos.some(a => a.morreu);
     await esperar(IMPACTO_MS);
+    // quem apanhou e ficou vivo já gira (diagonal/horizontal) no mesmo instante do golpe
+    for (const a of alvos) if (a.levou && !a.morreu) girarNaHora(a.el, a.f.uid);
     const contato = { x: cena.de.x + n.x * (k + 34), y: cena.de.y + n.y * (k + 34) };
     const forte = cena.forca >= 9;
     if (esquivou) Som.tocar('golpe-no-vento'); // acertou o vento: o defensor já tinha saído dali
@@ -2566,7 +2631,7 @@ window.SS = window.SS || {};
     }
     if (contra) {
       await esperar(CONTRA_BATE_MS - IMPACTO_MS);
-      trocoNoAtacante(copia, atacanteMorreu, n);
+      trocoNoAtacante(copia, atacanteMorreu, n, fa);
       await esperar(total - CONTRA_BATE_MS + (atacanteMorreu ? 260 : 0));
     } else {
       await esperar(total - IMPACTO_MS);
@@ -2575,6 +2640,25 @@ window.SS = window.SS || {};
     soltarCopia(fa, copia);
     for (const a of alvos) soltarCopia(a.f, a.el);
     setas.style.opacity = '';
+  }
+
+  // A carta que apanhou já gira para a postura nova (diagonal/horizontal) e perde o escudo junto com o golpe,
+  // em vez de esperar a mesa ser redesenhada depois da animação.
+  function girarNaHora(el, uid) {
+    const l = M.localizar(jogo, uid), un = el && el.querySelector('.unidade'), pilha = el && el.querySelector('.pilha-senhor');
+    if (!l || !un || !pilha || l.u.tipo !== 'senhor') return;
+    const nova = M.postura(jogo, l.p, l.i), velha = (un.className.match(/postura-(\w+)/) || [])[1] || 'vertical';
+    posturaAnterior[uid] = { post: nova, de: nova, desde: -Infinity }; // (o próximo desenho não gira de novo)
+    const selo = un.querySelector('.selo-vida'), res = M.resistencia(jogo, l.p, l.i);
+    if (selo && !l.u.berserk) selo.innerHTML = ESCUDO.repeat(Math.max(0, res - l.u.hits)) + ESCUDO_APAGADO.repeat(Math.min(l.u.hits, res));
+    if (nova === velha) return;
+    un.classList.remove('postura-' + velha);
+    un.classList.add('postura-' + nova);
+    pilha.style.setProperty('--de', ANGULO[velha] + 'deg');
+    pilha.style.setProperty('--de-escala', `var(--esc-${velha}, 1)`);
+    pilha.classList.remove('girando');
+    void pilha.offsetWidth;
+    pilha.classList.add('girando');
   }
 
   // Defensor no contra-ataque: pega impulso para trás (empurrado pelo golpe, piscando vermelho) ou, se o golpe
@@ -2607,7 +2691,7 @@ window.SS = window.SS || {};
   }
 
   // O troco acerta o atacante: pisca vermelho, faíscas, "Contra-ataque!" e é mandado de volta (ou rasgado).
-  function trocoNoAtacante(copia, morreu, n) {
+  function trocoNoAtacante(copia, morreu, n, fa) {
     const c = centroDe(copia);
     Som.tocar('impacto-medio');
     if (morreu) Som.tocar('senhor-morre', { atraso: 90 });
@@ -2624,14 +2708,15 @@ window.SS = window.SS || {};
       ], { duration: 900, easing: 'ease-out' });
     }
     tremor(5);
-    if (morreu) return rasgarCarta(copia, { x: -n.x, y: -n.y });
+    if (morreu) return rasgarCarta(copia, { x: -n.x, y: -n.y }, fa.p);
+    girarNaHora(copia, fa.uid);
     if (copia.firstElementChild) copia.firstElementChild.animate([{ filter: 'none' }, { filter: 'brightness(1.9) sepia(1) saturate(6) hue-rotate(-30deg)', offset: 0.25 }, { filter: 'none' }], { duration: 460 });
   }
 
   // Morte: a carta é rasgada ao meio, com um rasgo torto na horizontal. As duas metades se separam (a de cima
   // sobe e gira para um lado, a de baixo cai para o outro), soltam fiapos de papel e somem.
   // n (opcional): direção do golpe, para as metades voarem um pouco para esse lado.
-  function rasgarCarta(el, n) {
+  function rasgarCarta(el, n, dono) {
     if (!el || !el.isConnected) return;
     const cs = getComputedStyle(el), r = el.getBoundingClientRect();
     el.style.visibility = 'hidden';
@@ -2644,18 +2729,30 @@ window.SS = window.SS || {};
       [`polygon(${pts.join(', ')}, 100% 100%, 0% 100%)`, 1],
     ];
     const vx = n ? n.x * 26 : 0, vy = n ? n.y * 26 : 0;
+    // Destino: o cemitério do dono (em pixels do #app, a partir do centro da carta).
+    const cem = dono != null ? cemiterioDe(dono) : null, rc = cem && cem.getBoundingClientRect();
+    const gx = rc ? (rc.left + rc.width / 2 - (r.left + r.width / 2)) / escala : null;
+    const gy = rc ? (rc.top + rc.height / 2 - (r.top + r.height / 2)) / escala : null;
+    if (rc) setTimeout(() => { const c2 = centroDe(cem); if (c2) particulas(c2, 6, false, '250, 244, 226'); }, 1050);
     for (const [clip, lado] of cortes) {
       const p = el.cloneNode(true);
       p.removeAttribute('id');
       Object.assign(p.style, { visibility: 'visible', transform: cs.transform === 'none' ? '' : cs.transform, translate: cs.translate, rotate: cs.rotate, clipPath: clip, pointerEvents: 'none' });
       el.parentNode.appendChild(p);
       const sx = lado * (10 + Math.random() * 8) + vx, gira = lado * (12 + Math.random() * 10);
-      p.animate([
-        { translate: '0px 0px', rotate: '0deg', opacity: 1, filter: 'none' },
-        { translate: `${(lado * 3).toFixed(1)}px ${lado * 4}px`, rotate: `${(gira * 0.15).toFixed(1)}deg`, opacity: 1, offset: 0.14 },
-        { translate: `${(sx * 0.7).toFixed(1)}px ${(lado * 22 + vy * 0.6).toFixed(1)}px`, rotate: `${(gira * 0.6).toFixed(1)}deg`, opacity: 1, filter: 'grayscale(.4) brightness(.85)', offset: 0.45 },
-        { translate: `${sx.toFixed(1)}px ${(lado < 0 ? 30 : 70) + vy}px`, rotate: `${gira.toFixed(1)}deg`, opacity: 0, filter: 'grayscale(1) brightness(.6)' },
-      ], { duration: 820, easing: 'cubic-bezier(.25, .7, .4, 1)', composite: 'add' }).onfinish = () => p.remove();
+      const separa = [
+        { translate: '0px 0px', rotate: '0deg', opacity: 1, filter: 'none', offset: 0 },
+        { translate: `${(lado * 3).toFixed(1)}px ${lado * 4}px`, rotate: `${(gira * 0.15).toFixed(1)}deg`, opacity: 1, filter: 'none', offset: 0.1 },
+        { translate: `${(sx * 0.7).toFixed(1)}px ${(lado * 22 + vy * 0.6).toFixed(1)}px`, rotate: `${(gira * 0.6).toFixed(1)}deg`, opacity: 1, filter: 'grayscale(.4) brightness(.85)', offset: 0.32, easing: 'cubic-bezier(.5, 0, .5, 1)' },
+      ];
+      // depois de separadas, os restos vão (girando) para o cemitério; sem cemitério na tela, só caem e somem
+      const fim = rc
+        ? [{ translate: `${(gx + lado * 4).toFixed(1)}px ${(gy + lado * 6).toFixed(1)}px`, rotate: `${(gira * 2.2).toFixed(1)}deg`, opacity: 1, filter: 'grayscale(.7) brightness(.75)', offset: 0.92 },
+          { translate: `${gx.toFixed(1)}px ${gy.toFixed(1)}px`, rotate: `${(gira * 2.4).toFixed(1)}deg`, opacity: 0, filter: 'grayscale(.7) brightness(.75)', offset: 1 }]
+        : [{ translate: `${sx.toFixed(1)}px ${(lado < 0 ? 30 : 70) + vy}px`, rotate: `${gira.toFixed(1)}deg`, opacity: 0, filter: 'grayscale(1) brightness(.6)', offset: 1 }];
+      const dur = rc ? 1100 : 820;
+      p.animate(separa.concat(fim), { duration: dur, easing: 'cubic-bezier(.25, .7, .4, 1)', composite: 'add' }).onfinish = () => p.remove();
+      if (rc) p.animate([{ scale: '1' }, { scale: '1', offset: 0.32 }, { scale: '.5' }], { duration: dur, easing: 'ease-in', fill: 'forwards' });
     }
     const c = pontoNoApp(r.left + r.width / 2, r.top + r.height / 2);
     particulas(c, 10, false, '250, 244, 226'); // fiapos de papel
@@ -4079,14 +4176,14 @@ window.SS = window.SS || {};
   // Refletir em passos, sem pop-up: (1) a carta Refletir pulsa roxo; (2) ao clicar nela, o par de números
   // sobe já escolhido e o resto da mão escurece (as outras cartas que formam par brilham, para trocar);
   // (3) clicando numa carta do par que subiu, ele é sacrificado e uma seta roxa segue o mouse até o atacante
-  // que vai bater no próprio dono. Clicar de novo em Refletir desiste. (O motor só aplica no Defender.)
+  // que vai bater no próprio dono. Clicar de novo em Refletir também usa o par que subiu. (O motor só aplica no Defender.)
   // No contra-reflexo (ui.contra) é igual, sem a seta: o golpe já tem destino.
   const ORIGEM_REFLEXO = { x: 800, y: 600 }; // logo abaixo da faixa do meio (não tapa o texto)
   function iniciarReflexo() {
     if (!humanoBloqueia() && !ui.contra) return;
     const livres = paresLivres();
     if (!livres.length) return;
-    if (ui.reflexoModo && ui.reflexoModo.etapa === 'par') { ui.reflexoModo = null; return render(); } // 2º clique: desiste
+    if (ui.reflexoModo && ui.reflexoModo.etapa === 'par') return descartarParReflexo(true); // 2º clique: usa o par que subiu
     if (ui.reflexoModo) return; // já mirando
     ui.reflexoModo = { etapa: 'par', par: livres[0] };
     render();
@@ -4099,7 +4196,8 @@ window.SS = window.SS || {};
     render();
   }
 
-  function descartarParReflexo() {
+  // daCarta: confirmado clicando de novo na carta Refletir (a carta já sai voando, sem esperar o par sumir).
+  function descartarParReflexo(daCarta) {
     const par = ui.reflexoModo.par, dono = ui.contra ? jogo.vez : 1 - jogo.vez, j = jogo.jogadores[dono];
     if (ui.contra) {
       ui.reflexoModo = null;
@@ -4109,7 +4207,7 @@ window.SS = window.SS || {};
     }
     const cartaRefletir = $('.carta-acao[data-acao="refletir"]');
     ui.reflexoModo = { etapa: 'alvo', par };
-    mostrarRefletirFlutuante(cartaRefletir);
+    mostrarRefletirFlutuante(cartaRefletir, daCarta ? 150 : 900);
     animarParDestruido(dono, par.map(id => j.mao.find(c => c.id === id)).filter(Boolean));
     ui.magiaFeita = new Set([...(ui.magiaFeita || []), ...par]); // o evento do motor não anima de novo
     ui.mouse = ui.mouse || Object.assign({}, ORIGEM_REFLEXO);
@@ -4117,7 +4215,7 @@ window.SS = window.SS || {};
   }
 
   // A carta Refletir sai do canto, sobe até o meio da mesa e fica flutuando: é dela que a seta roxa sai.
-  function mostrarRefletirFlutuante(deEl) {
+  function mostrarRefletirFlutuante(deEl, atraso) {
     let el = $('#app .refletir-flutuante');
     if (el) return;
     el = document.createElement('div');
@@ -4131,7 +4229,11 @@ window.SS = window.SS || {};
         { transform: `translate(calc(-50% + ${(de.x - ORIGEM_REFLEXO.x).toFixed(1)}px), calc(-50% + ${(de.y - ORIGEM_REFLEXO.y).toFixed(1)}px)) scale(.9) rotate(-8deg)`, opacity: 1 },
         { transform: 'translate(-50%, -50%) scale(1.08) rotate(3deg)', opacity: 1, offset: .8 },
         { transform: 'translate(-50%, -50%) scale(1) rotate(0deg)', opacity: 1 },
-      ], { duration: 700, delay: 900, easing: 'cubic-bezier(.3, .8, .3, 1)', fill: 'backwards' });
+      ], { duration: 700, delay: atraso == null ? 900 : atraso, easing: 'cubic-bezier(.3, .8, .3, 1)', fill: 'backwards' });
+      // a seta acompanha a carta enquanto ela voa para o meio da mesa
+      const ate = performance.now() + (atraso == null ? 900 : atraso) + 760;
+      const seguir = () => { if (!el.isConnected || !ui.reflexoModo) return; desenharSetas(); if (performance.now() < ate) requestAnimationFrame(seguir); };
+      requestAnimationFrame(seguir);
     }
   }
 
@@ -5243,8 +5345,13 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 116, data: '01/11/2026',
+    n: 117, data: '01/11/2026',
     novidades: [
+      ['Os pedaços da carta rasgada voam para o cemitério', 'Torn card pieces fly into the graveyard'],
+      ['A carta gira (diagonal/horizontal) e perde o escudo no mesmo instante do golpe', 'Cards turn (diagonal/sideways) and lose the shield right as the hit lands'],
+      ['Sai daqui!: as cartas saem voando do campo para a mão, em vez de aparecer na mão antes', 'Get out!: the cards fly from the field to the hand instead of popping into the hand early'],
+      ['Trovão e Meteoro fazem a mesa pular', 'Thunder and Meteor make the table hop'],
+      ['Refletir: clicar de novo na carta usa o par que subiu, e a seta sai da carta', 'Reflect: clicking the card again uses the raised pair, and the arrow comes from the card'],
       ['Contra-ataque novo: o atacante fica na pose do golpe, o defensor pega impulso (ou desvia, se não levou dano) e o manda de volta para o lugar', 'New counterattack: the attacker holds its strike pose, the defender winds up (or dodges if unhurt) and sends it flying back'],
       ['Senhores mortos em combate são rasgados ao meio', 'Gentlemen killed in combat are torn in half'],
       ['Invocando com a seta, o lugar não fica mais tremendo: o meio de duas cartas vale como um lugar só, o vão abre mais e a carta da direita também inclina', 'Summoning with the arrow no longer flickers: the middle of two cards counts as one spot, the gap opens wider and the right card tilts too'],
