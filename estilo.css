@@ -2604,3 +2604,12 @@ html.toque .zona-eu .mao .carta.jogavel:hover:not(.selecionada):not(.combina):no
 
 /* Poeira do pouso das cartas no campo */
 .fx-poeira { border-radius: 50%; z-index: 53; filter: blur(1.5px); background: radial-gradient(circle, rgba(232, 220, 188, .9) 0, rgba(205, 188, 150, .6) 45%, rgba(190, 172, 132, 0) 70%); }
+
+/* Arrastando uma carta para entre duas no campo: a da esquerda se inclina e as da direita abrem espaço */
+.fileira .espaco { transform-origin: 50% 100%; }
+.fileira .espaco.vao-esq { translate: -10px 0; rotate: -9deg; }
+.fileira .espaco.vao-dir { translate: 26px 0; }
+
+/* "Contra-ataque!" que salta em cima do atacante que apanhou de volta */
+.fx-contra { z-index: 60; white-space: nowrap; font: 900 26px var(--fonte-ui); color: #ffe7a0; letter-spacing: .5px;
+  text-shadow: 0 2px 0 #7a1010, 0 0 2px #7a1010, 2px 0 0 #7a1010, -2px 0 0 #7a1010, 0 -2px 0 #7a1010, 0 6px 10px rgba(0, 0, 0, .45); pointer-events: none; }

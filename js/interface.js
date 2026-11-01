@@ -246,7 +246,7 @@ window.SS = window.SS || {};
     // Par de Ouros: o Ás escolhido aparece na mesa e você leva a seta até o lugar dele.
     if (acao.tipo === 'magia' && acao.naipe === 'ouros' && controle(jogo.vez) === 'humano') return mirarLugarDoAs(acao);
     // Senhor(a) solto em cima de alguém: entra ali mesmo, empurrando as cartas para o lado (a Rainha tem lugar certo).
-    if (acao.tipo === 'sumonar' && acao.sacrificio == null && pd.destino != null && acao.slot !== pd.destino && jogo.jogadores[jogo.vez].campo[pd.destino]) {
+    if (((acao.tipo === 'sumonar' && acao.sacrificio == null) || acao.tipo === 'invocarAs') && pd.destino != null && acao.slot !== pd.destino && jogo.jogadores[jogo.vez].campo[pd.destino]) {
       acao = Object.assign({}, acao, { slot: pd.destino });
     }
     aplicarDoJogador(acao);
@@ -856,7 +856,8 @@ window.SS = window.SS || {};
     const cands = candidatosSelecao().filter(a => grupoDaAcao(a) === grupo);
     if (cands.length) {
       ui.acaoGuiada = null;
-      ui.ultimoBotao = null;
+      // a seta do alvo sai da carta de ação que você escolheu antes das cartas da mão
+      ui.ultimoBotao = [...document.querySelectorAll('.carta-acao[data-acao]')].find(b => b.dataset.acao === 'guiada:' + grupo) || null;
       return iniciarPendente(chaveAcao(cands[0]));
     }
     render();
@@ -867,23 +868,48 @@ window.SS = window.SS || {};
   const cartaDaMao = id => jogo.jogadores[jogo.vez].mao.find(c => c.id === id);
   const ehColocacao = a => a.tipo === 'sumonar' || a.tipo === 'invocarAs';
 
+  // Centro (x) de cada espaço da fileira, sem os deslocamentos do vão: guardado no começo do arrasto para que as
+  // cartas que se afastam não mudem a conta (antes elas fugiam do mouse e o destino ficava trocando de lado).
+  function centrosFileira(p) {
+    return [...$('#campo-' + p).querySelectorAll('.espaco')].map(e => {
+      const q = e.getBoundingClientRect();
+      return q.left + q.width / 2 - (e.classList.contains('vao-dir') ? 26 : e.classList.contains('vao-esq') ? -10 : 0) * escala;
+    });
+  }
+
   // Onde a carta arrastada está em cima: um Senhor(a)/Ás seu, o seu Palhaço ou um lugar na fileira.
-  function destinoEm(x, y) {
+  // Na fileira: num espaço vazio ela vai ali; em cima de uma carta, vale o vão do lado em que o mouse está
+  // (entre duas cartas, a da esquerda se inclina e a da direita se afasta). sobre = a carta bem embaixo do mouse
+  // (para o Rei/Rainha sacrificar); lugar = onde a carta entra; vao = { esq, dir } quando entra entre duas.
+  function destinoEm(x, y, centros, vaoAntes) {
     const p = jogo.vez, el = document.elementFromPoint(x, y);
     if (!el) return null;
-    const loc = unidadeEm(el);
-    if (loc && loc.p === p) return { tipo: 'unidade', uid: loc.u.uid, i: loc.i };
     const ret = el.closest('[data-alvo]');
     if (ret && ret.dataset.alvo === 'jogador:' + p) return { tipo: 'heroi' };
-    const fileira = $('#campo-' + p), r = fileira.getBoundingClientRect();
+    const loc = unidadeEm(el), fileira = $('#campo-' + p), r = fileira.getBoundingClientRect();
     const folga = 40 * escala;
-    if (x < r.left - folga || x > r.right + folga || y < r.top - folga || y > r.bottom + folga) return null;
-    let melhor = 0, dm = Infinity;
-    fileira.querySelectorAll('.espaco').forEach((e, i) => {
-      const q = e.getBoundingClientRect(), d = Math.abs(q.left + q.width / 2 - x);
-      if (d < dm) { dm = d; melhor = i; }
-    });
-    return { tipo: 'campo', i: melhor };
+    const naFileira = !(x < r.left - folga || x > r.right + folga || y < r.top - folga || y > r.bottom + folga);
+    if (!naFileira) return loc && loc.p === p ? { tipo: 'unidade', uid: loc.u.uid, i: loc.i } : null;
+    const cs = centros || centrosFileira(p), n = cs.length, campo = jogo.jogadores[p].campo;
+    const u = (x - cs[0]) / ((cs[n - 1] - cs[0]) / (n - 1)); // posição em "espaços" (0 = centro do primeiro)
+    const k = Math.max(0, Math.min(n - 1, Math.round(u)));
+    const d = loc && loc.p === p ? { tipo: 'unidade', uid: loc.u.uid, i: loc.i } : { tipo: 'campo', i: k };
+    if (!campo[k]) return Object.assign(d, { lugar: k });
+    if (Math.abs(u - k) < 0.3) d.sobre = k;
+    // vão entre a e a+1, do lado do mouse; perto do meio da carta mantém o vão que já estava aberto
+    let a = u < k ? k - 1 : k;
+    if (vaoAntes != null && (vaoAntes === k - 1 || vaoAntes === k) && Math.abs(u - k) < 0.2) a = vaoAntes;
+    d.vaoA = a;
+    if (a >= 0 && !campo[a]) return Object.assign(d, { lugar: a });
+    if (a + 1 < n && !campo[a + 1]) return Object.assign(d, { lugar: a + 1 });
+    // Entre duas cartas (ou na ponta): o motor empurra para o lado vazio mais perto; escolhe o lugar que deixa
+    // a carta nova bem no meio das duas.
+    let dir = -1, esq = -1;
+    for (let q = a + 2; q < n; q++) if (!campo[q]) { dir = q; break; }
+    for (let q = a - 1; q >= 0; q--) if (!campo[q]) { esq = q; break; }
+    const R = a + 1, praDireita = dir >= 0 && (esq < 0 || dir - R <= R - esq);
+    const lugar = a < 0 ? 0 : a + 1 >= n ? n - 1 : praDireita ? R : a;
+    return Object.assign(d, { lugar, vao: { esq: a, dir: a + 1 } });
   }
 
   // O que acontece se a carta for solta ali: a ação direta (Espadas, Paus, Copas) ou a colocação no campo.
@@ -898,11 +924,12 @@ window.SS = window.SS || {};
       const a = legais.find(x => x.tipo === 'curar' && x.carta === id);
       return a ? { acao: a } : null;
     }
-    const i = dest.i;
+    const i = dest.lugar;
     if (i == null || !legais.some(a => ehColocacao(a) && chaveCartas(a).includes(id))) return null;
-    // Rei/Rainha em cima de um Senhor(a) que pode ser sacrificado por ele(a): o Senhor(a) brilha como alvo.
-    if (dest.tipo === 'unidade' && legais.some(a => a.tipo === 'sumonar' && a.sacrificio != null && a.figura === id && a.slot === i)) return { campo: i, sacrificio: true };
-    return { campo: i };
+    // Rei/Rainha bem em cima de um Senhor(a) que pode ser sacrificado por ele(a): o Senhor(a) brilha como alvo.
+    const s = dest.sobre;
+    if (s != null && legais.some(a => a.tipo === 'sumonar' && a.sacrificio != null && a.figura === id && a.slot === s)) return { campo: s, sacrificio: true };
+    return { campo: i, vao: dest.vao };
   }
 
   function iniciarArrasto(ev, id) {
@@ -923,27 +950,42 @@ window.SS = window.SS || {};
       document.body.appendChild(a.el);
       if (origem) origem.classList.add('arrastando');
       $('#dica').hidden = true;
+      a.centros = centrosFileira(jogo.vez);
     }
     const dx = ev.clientX - (a.ux != null ? a.ux : ev.clientX);
     a.ux = ev.clientX;
     a.giro = Math.max(-14, Math.min(14, (a.giro || 0) * 0.7 + dx * 0.9));
     a.el.style.transform = `translate(${ev.clientX}px, ${ev.clientY}px) translate(-50%, -50%) rotate(${a.giro.toFixed(1)}deg) scale(1.08)`;
-    const dest = destinoEm(ev.clientX, ev.clientY);
+    const dest = destinoEm(ev.clientX, ev.clientY, a.centros, a.vaoA);
     const ef = efeitoDoDestino(a.id, dest);
     a.dest = ef ? dest : null;
-    marcarDestino(ef ? dest : null, !!ef && (!!ef.acao || !!ef.sacrificio));
+    a.vaoA = dest ? dest.vaoA : null;
+    marcarDestino(ef ? dest : null, ef);
   }
 
-  // Mostra onde a carta vai cair: um brilho no lugar da fileira (os espaços não aparecem) ou no alvo.
-  function marcarDestino(dest, ehAlvo) {
+  // Mostra onde a carta vai cair: um brilho no lugar da fileira (os espaços não aparecem) ou no alvo; entrando
+  // entre duas cartas, a da esquerda se inclina para a esquerda e as da direita se afastam.
+  function marcarDestino(dest, ef) {
     document.querySelectorAll('.destino, .destino-alvo').forEach(e => e.classList.remove('destino', 'destino-alvo'));
-    abrirEspaco(jogo.vez, dest && !ehAlvo && dest.tipo !== 'heroi' ? dest.i : null);
+    const ehAlvo = !!ef && (!!ef.acao || !!ef.sacrificio);
+    abrirVao(jogo.vez, dest && ef && !ehAlvo ? ef.vao : null);
     const fileira = $('#campo-' + jogo.vez);
     fileira.classList.toggle('soltando', !!ui.arrasto && ui.arrasto.moveu);
     if (!dest) return;
     if (dest.tipo === 'heroi') return elRetrato(jogo.vez).classList.add('destino-alvo');
-    const e = fileira.querySelector(`[data-slot="${jogo.vez}:${dest.i}"]`);
+    if (ef.vao) return;
+    const e = fileira.querySelector(`[data-slot="${jogo.vez}:${ef.acao ? dest.i : ef.campo}"]`);
     if (e) e.classList.add(ehAlvo ? 'destino-alvo' : 'destino');
+  }
+
+  function abrirVao(p, vao) {
+    const fileira = $('#campo-' + p);
+    if (!fileira || !jogo) return;
+    const slots = [...fileira.querySelectorAll('.espaco')], campo = jogo.jogadores[p].campo;
+    slots.forEach(s => s.classList.remove('vao-esq', 'vao-dir'));
+    if (!vao) return;
+    if (slots[vao.esq]) slots[vao.esq].classList.add('vao-esq');
+    for (let k = vao.dir; k < slots.length && campo[k]; k++) slots[k].classList.add('vao-dir');
   }
 
   function soltarArrasto(ev) {
@@ -956,7 +998,7 @@ window.SS = window.SS || {};
     a.el.remove();
     marcarDestino(null);
     $('#campo-' + jogo.vez).classList.remove('soltando');
-    const destSolto = destinoEm(ev.clientX, ev.clientY), ef = efeitoDoDestino(a.id, destSolto);
+    const destSolto = destinoEm(ev.clientX, ev.clientY, a.centros, a.vaoA), ef = efeitoDoDestino(a.id, destSolto);
     ui.vooDe = { x: voo.left + voo.width / 2, y: voo.top + voo.height / 2, w: voo.width };
     if (!ef) {
       ui.vooDe = null;
@@ -1298,11 +1340,11 @@ window.SS = window.SS || {};
     const vizinhos = [i - 1, i + 1].map(k => jogo.jogadores[p].campo[k]).filter(w => w && w.tipo === 'as').map(w => w.naipe);
     const partes = [t('du.numero', { v: M.valor(u.numero) })];
     if (nai === 'espadas') partes.push(t('du.naipadoEspadas'));
-    if (vizinhos.includes('espadas')) partes.push(t('du.asEspadas'));
+    vizinhos.filter(n => n === 'espadas').forEach(() => partes.push(t('du.asEspadas')));
     if (u.bonus.length) partes.push(t('du.bonusEspadas', { n: u.bonus.length, crit: u.bonus.reduce((s, v) => s + Math.floor(v / 2), 0) }));
     const fontesRes = [];
     if (nai === 'paus') fontesRes.push(t('du.naipadoPaus'));
-    if (vizinhos.includes('paus')) fontesRes.push(t('du.asPaus'));
+    vizinhos.filter(n => n === 'paus').forEach(() => fontesRes.push(t('du.asPaus')));
     const linhas = [
       t('du.ataque', { a: atk, partes: partes.join(' · ') }),
       u.berserk
@@ -2193,7 +2235,8 @@ window.SS = window.SS || {};
     else alvos = [elRetrato(1 - jogo.vez)];
     const pontos = alvos.map(centroDe).filter(Boolean);
     const alvo = pontos.length ? { x: pontos.reduce((s, q) => s + q.x, 0) / pontos.length, y: pontos.reduce((s, q) => s + q.y, 0) / pontos.length } : null;
-    return { atacante: at.atacante, forca: loc ? M.ataque(jogo, loc.p, loc.i) : 0, unidades, pv: jogo.jogadores.map(j => j.pv), alvo, de: centroDe(elUnidade(at.atacante)) };
+    const defensores = at.refletido ? [] : at.alvo !== 'jogador' && M.ataqueDirecionado(jogo, at) ? [at.alvo].concat(at.bloqueadores) : at.bloqueadores.slice();
+    return { atacante: at.atacante, forca: loc ? M.ataque(jogo, loc.p, loc.i) : 0, unidades, pv: jogo.jogadores.map(j => j.pv), alvo, de: centroDe(elUnidade(at.atacante)), defensores };
   }
 
   // ---------- Explicando o golpe: o selo do dado e a régua de defesa ----------
@@ -2306,10 +2349,18 @@ window.SS = window.SS || {};
     Som.tocar('impacto-fraco', { vol: [0, 0.18, 0.26, 0.36][nivel] }); // baque bem baixinho
     if (MOVIMENTO_REDUZIDO || !origem) return;
     poeiraPouso(origem, nivel);
-    const c = origem.getBoundingClientRect(), cx = c.left + c.width / 2, cy = c.top + c.height / 2;
+    const c = origem.getBoundingClientRect();
+    pulinhoMesa(nivel, c.left + c.width / 2, c.top + c.height / 2, origem);
+    if (nivel >= 3) tremor(9);
+    else if (nivel === 2) tremor(6);
+  }
+
+  // As coisas da mesa dão um pulinho em onda a partir de (cx, cy) (pixels da tela). excluir: quem não pula.
+  function pulinhoMesa(nivel, cx, cy, excluir) {
+    if (MOVIMENTO_REDUZIDO) return;
     const altura = [0, 5, 11, 19][nivel], giro = [0, 1.5, 3, 5][nivel];
     const alvos = [...document.querySelectorAll('.decoracoes .deco, .fileira .espaco > .unidade, .mao > .carta, .pilhas .pilha > .carta')]
-      .filter(el => !origem.contains(el));
+      .filter(el => !(excluir && excluir.contains(el)));
     for (const el of alvos) {
       const r = el.getBoundingClientRect();
       if (!r.width) continue;
@@ -2322,8 +2373,6 @@ window.SS = window.SS || {};
         { translate: '0 0', rotate: '0deg' },
       ], { duration: 260 + nivel * 70, delay: Math.min(260, d * 0.22), easing: 'ease-out', composite: 'add' });
     }
-    if (nivel >= 3) tremor(9);
-    else if (nivel === 2) tremor(6);
   }
 
   // Poeira que levanta dos dois lados da carta quando ela bate na mesa (mais nuvens e mais alto a cada nível).
@@ -2430,10 +2479,11 @@ window.SS = window.SS || {};
         if (Math.hypot(c.x - contato.x, c.y - contato.y) > 40) particulas(c, 8, false);
       }
     }
-    // Contra-ataque: o atacante também apanha (pisca vermelho no impacto).
-    if (danos.some(d => d.f && d.f.uid === cena.atacante)) {
-      copia.firstElementChild && copia.firstElementChild.animate([{ filter: 'none' }, { filter: 'brightness(1.9) sepia(1) saturate(6) hue-rotate(-30deg)' }, { filter: 'none' }], { duration: 380 });
-    }
+    // A mesa sente o golpe: pulinho em onda a partir do ponto de contato (mais alto nos golpes fortes).
+    const ra = $('#app').getBoundingClientRect();
+    pulinhoMesa(forte ? 3 : cena.forca >= 6 ? 2 : 1, ra.left + contato.x * escala, ra.top + contato.y * escala);
+    // Contra-ataque: o atacante também apanha; quem defendeu dá o troco.
+    if (danos.some(d => d.f && d.f.uid === cena.atacante)) contraAtaque(cena, copia, n, alvos);
     tremor(cena.forca);
     await esperar(INVESTIDA_MS - IMPACTO_MS);
     if (atacanteMorreu) await copia.animate([{ opacity: 1 }, { opacity: 0, transform: 'translate(0, 8px) scale(.82)', filter: 'grayscale(1)' }], { duration: 320, fill: 'forwards' }).finished.catch(() => {});
@@ -2442,6 +2492,48 @@ window.SS = window.SS || {};
     soltarCopia(fa, copia);
     for (const a of alvos) soltarCopia(a.f, a.el);
     setas.style.opacity = '';
+  }
+
+  // Contra-ataque: logo depois do impacto, quem defendeu se recompõe e dá um tranco de volta no atacante, que é
+  // jogado para trás piscando vermelho, com faíscas e um "Contra-ataque!" em cima dele.
+  function contraAtaque(cena, copia, n, alvos) {
+    const ATRASO = 190;
+    const defs = (cena.defensores || []).map(uid => {
+      const ja = alvos.find(a => a.f.uid === uid);
+      if (ja) return ja.morreu ? null : ja.el;
+      const f = cena.unidades.find(x => x.uid === uid);
+      if (!f || !f.caixa || !f.html) return null;
+      const el = copiaFlutuante(f);
+      alvos.push({ f, el, morreu: false }); // solta junto com as outras no fim da investida
+      return el;
+    }).filter(Boolean);
+    Som.tocar('impacto-fraco', { atraso: ATRASO + 90, vol: 0.7 });
+    if (MOVIMENTO_REDUZIDO) return;
+    defs.forEach(el => el.animate([
+      { translate: '0 0', scale: '1' },
+      { translate: `${(n.x * 10).toFixed(1)}px ${(n.y * 10).toFixed(1)}px`, scale: '1.02', offset: 0.3 },
+      { translate: `${(-n.x * 46).toFixed(1)}px ${(-n.y * 46).toFixed(1)}px`, scale: '1.12', offset: 0.55 },
+      { translate: '0 0', scale: '1' },
+    ], { duration: 420, delay: ATRASO, easing: 'cubic-bezier(.3, .7, .4, 1)', composite: 'add' }));
+    const bate = ATRASO + 420 * 0.55;
+    copia.animate([
+      { translate: '0 0', rotate: '0deg' },
+      { translate: `${(-n.x * 34).toFixed(1)}px ${(-n.y * 34).toFixed(1)}px`, rotate: `${(n.x >= 0 ? 9 : -9)}deg`, offset: 0.3 },
+      { translate: '0 0', rotate: '0deg' },
+    ], { duration: 420, delay: bate, easing: 'ease-out', composite: 'add' });
+    if (copia.firstElementChild) copia.firstElementChild.animate([{ filter: 'none' }, { filter: 'brightness(1.9) sepia(1) saturate(6) hue-rotate(-30deg)' }, { filter: 'none' }], { duration: 420, delay: bate });
+    setTimeout(() => {
+      const c = centroDe(copia);
+      if (!c) return;
+      particulas(c, 10, false);
+      const txt = peca('fx-contra', c.x, c.y - 70, t('fx.contra'));
+      animarPeca(txt, [
+        { transform: 'translate(-50%, -50%) scale(.4) rotate(-8deg)', opacity: 0 },
+        { transform: 'translate(-50%, -50%) scale(1.15) rotate(-5deg)', opacity: 1, offset: 0.18 },
+        { transform: 'translate(-50%, -50%) scale(1) rotate(-5deg)', opacity: 1, offset: 0.7 },
+        { transform: 'translate(-50%, -90%) scale(1) rotate(-5deg)', opacity: 0 },
+      ], { duration: 900, easing: 'ease-out' });
+    }, bate);
   }
 
   // Errou (dado 1 no ataque direto): a carta toma impulso, passa raspando ao lado do Palhaço, rodopia
@@ -3005,7 +3097,7 @@ window.SS = window.SS || {};
         // Figura ou Ás esperando no campo: falta o número.
         texto = t('faixa.preparo');
       } else {
-        if (ui.sel.length) {
+        if (ui.sel.length && !ui.acaoGuiada) { // (escolhendo para uma carta de ação, ela continua na faixa)
           const cands = candidatosSelecao();
           const chaves = [...new Set(cands.map(chaveAcao))];
           // Ordem: sumonar (Senhor, Rainha, Ás) primeiro; efeitos de naipe e magias à direita.
@@ -5026,8 +5118,12 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 112, data: '30/10/2026',
+    n: 113, data: '31/10/2026',
     novidades: [
+      ['Golpes sacodem a mesa e o contra-ataque ganhou animação: quem defende dá um tranco de volta no atacante', 'Attacks shake the table and counterattacks are animated: the defender shoves the attacker back'],
+      ['Arrastar uma carta para entre duas no campo ficou firme: a da esquerda se inclina e a da direita abre espaço', 'Dragging a card between two on the field is steady now: the left one leans and the right one makes room'],
+      ['Escolhendo as cartas depois da carta de ação, a seta do alvo agora segue o mouse', 'After picking the cards for an action card, the target arrow now follows the mouse'],
+      ['Dois Ases vizinhos do mesmo naipe acumulam (ex.: Ás de Espadas dos dois lados = +2 de ataque)', 'Two neighboring Aces of the same suit stack (e.g. Ace of Spades on both sides = +2 attack)'],
       ['A carta voa mais rápido da mão para a mesa, acelerando até bater, com poeira subindo e um baque baixinho', 'Cards fly faster from hand to table, speeding up until they land, with a puff of dust and a soft thud'],
       ['Invocar sacode a mesa: decorações e cartas dão um pulinho (Valete e Ás de leve, Rei mais forte, Rainha com tremor)', 'Summoning shakes the table: decorations and cards hop (Jack and Ace lightly, King harder, Queen with a screen shake)'],
       ['Versão para celular deitado: a mesa ocupa a tela toda com cartas e botões maiores, tudo funciona com o dedo (arrastar cartas e setas, jogar o dado), segurar uma carta mostra a dica, as janelas encolhem para caber e, em pé, aparece o aviso para girar o celular. No menu, botão de tela cheia', 'Landscape phone version: the table fills the screen with bigger cards and buttons, everything works by touch (dragging cards and arrows, throwing the die), holding a card shows its tip, windows shrink to fit and, upright, a notice asks you to turn the phone. Full-screen button in the menu'],

@@ -510,6 +510,7 @@ window.SS = window.SS || {};
     'selo.hit': ['+1 hit', '+1 hit'],
     'selo.ileso': ['sem dano', 'no damage'],
     'selo.contra': ['(contra-ataque)', '(counterattack)'],
+    'fx.contra': ['Contra-ataque!', 'Counter!'],
     'duelo.bloqueadoPor': ['bloqueado por', 'blocked by'],
     'duelo.defende': ['o alvo defende', 'the target defends'],
     'duelo.defendem': ['alvo + ajuda', 'target + help'],

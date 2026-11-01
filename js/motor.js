@@ -344,7 +344,7 @@ window.SS = window.SS || {};
     a += u.atkExtra || 0; // Par de Espadas: +1 de dano permanente
     if (naipado(u) === 'espadas') a++;
     if (bonusDoNaipe(u, 'espadas')) a++;
-    if (asesVizinhos(e, p, i).includes('espadas')) a++;
+    a += asesVizinhos(e, p, i).filter(n => n === 'espadas').length; // cada Ás de Espadas vizinho soma (os dois lados acumulam)
     return a;
   }
 
@@ -359,7 +359,7 @@ window.SS = window.SS || {};
     r += u.resExtra || 0; // Par de Paus: +1 de defesa permanente
     if (naipado(u) === 'paus') r++;
     if (bonusDoNaipe(u, 'paus')) r++;
-    if (asesVizinhos(e, p, i).includes('paus')) r++;
+    r += asesVizinhos(e, p, i).filter(n => n === 'paus').length;
     return Math.min(r, limiteDefesa());
   }
 
