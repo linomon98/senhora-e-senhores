@@ -2704,3 +2704,7 @@ html.celular #botoes-canto { --t: 64; --ic: 32; gap: calc(14 * var(--e)); }
 #transicao .carta .svg-carta { width: 100%; height: 100%; display: block; }
 #modal.foto-tela { z-index: 130; pointer-events: none; } /* (acima da tela nova, abaixo dos botões do canto) */
 #modal.foto-tela, #modal.foto-tela * { animation: none !important; transition: none !important; }
+
+/* Foto do início caindo por cima da tela nova: sem o fundo de papelão, para a caixa nova aparecer por baixo */
+#modal.foto-saida { background: none; overflow: hidden; }
+#modal.foto-saida::before { display: none; }

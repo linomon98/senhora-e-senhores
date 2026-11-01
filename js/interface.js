@@ -4089,7 +4089,7 @@ window.SS = window.SS || {};
   function transicao(trocar) {
     if (emTransicao || MOVIMENTO_REDUZIDO) return trocar();
     emTransicao = true;
-    Som.tocar('embaralhar', { vol: 0.22 }); // (bem baixinho)
+    Som.tocar('embaralhar', { vol: 0.22, someEm: TRANSICAO_MS / 1000 }); // (bem baixinho, e acaba junto com as cartas)
     const L = innerWidth, A = innerHeight, altC = A * 0.46, largC = altC * 0.71, passoX = largC * 0.72, passoY = altC * 0.62;
     const INCLINA = 0.28, FILAS = 10, inicio = A * 1.1, curso = inicio + FILAS * passoY + altC;
     const camada = document.createElement('div');
@@ -4127,6 +4127,26 @@ window.SS = window.SS || {};
     document.body.appendChild(foto); // (depois do original: quem procura #modal continua achando o de verdade)
     transicao(() => foto.remove());
   }
+  // Saindo do início (Jogar, Multiplayer, Testes): os botões caem até sair da tela, um logo depois do outro, o resto
+  // some aos poucos e a caixa da próxima tela surge por baixo deles.
+  function saidaDoInicio(ir) {
+    const m = $('#modal');
+    if (MOVIMENTO_REDUZIDO || m.hidden) return ir();
+    const foto = m.cloneNode(true);
+    foto.classList.add('foto-tela', 'foto-saida');
+    foto.onclick = null;
+    document.body.appendChild(foto); // (depois do original: quem procura #modal continua achando o de verdade)
+    const botoes = [...foto.querySelectorAll('.btn-grande-menu, .btn-medio-menu, .caixa-baralho, .btn-tutorial')];
+    botoes.forEach((el, k) => el.animate([{ translate: '0 0' }, { translate: `0 ${Math.round(innerHeight * 1.2)}px` }],
+      { duration: 440, delay: k * 40, easing: 'cubic-bezier(.5, 0, .85, .45)', fill: 'forwards' }));
+    foto.querySelectorAll('.logo-menu, .leque-inicio, .idiomas, .build-info').forEach(el => el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 260, fill: 'forwards' }));
+    ir();
+    const caixa = $('#modal > .caixa');
+    if (caixa) caixa.animate([{ opacity: 0, scale: '.86', translate: '0 -34px' }, { opacity: 1, scale: '1.02', translate: '0 0', offset: .75 }, { opacity: 1, scale: '1', translate: '0 0' }],
+      { duration: 420, delay: 110, easing: 'cubic-bezier(.25, .8, .35, 1)', fill: 'backwards' });
+    setTimeout(() => foto.remove(), 440 + botoes.length * 40 + 40);
+  }
+
   function modal(html, aoClicarModal) {
     const m = $('#modal');
     m.innerHTML = `<div class="caixa">${html}</div>`;
@@ -5628,8 +5648,8 @@ window.SS = window.SS || {};
       if (!b) return;
       const m = b.dataset.m;
       if (m === 'tutorial') iniciarTutorial(1);
-      else if (m === 'jogar') telaPalhacos('bot');
-      else if (m === 'online') telaPalhacos('online');
+      else if (m === 'jogar') saidaDoInicio(() => telaPalhacos('bot'));
+      else if (m === 'online') saidaDoInicio(() => telaPalhacos('online'));
       else if (m === 'entrar-convite') telaPalhacos('convite');
       else if (m === 'decks') transicao(() => {
         fecharModal();
@@ -5639,7 +5659,7 @@ window.SS = window.SS || {};
         fecharModal();
         SS.Regras.abrir(telaInicio);
       });
-      else if (m === 'testes') telaTestes();
+      else if (m === 'testes') saidaDoInicio(telaTestes);
     });
     // Número e data da build num botãozinho no canto de baixo; clicando, abre a lista das novidades.
     $('#modal').insertAdjacentHTML('beforeend', `<details class="build-info"><summary>${t('build.titulo', { n: BUILD.n, d: BUILD.data })}</summary>
@@ -5648,8 +5668,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 136, data: '02/11/2026',
+    n: 137, data: '02/11/2026',
     novidades: [
+      ['Jogar, Multiplayer e Testes: os botões do menu caem da tela enquanto a caixa surge; o som da transição some junto com as cartas', 'Play, Multiplayer and Tests: the menu buttons drop off the screen as the box appears; the transition sound fades with the cards'],
       ['Transição só quando o fundo muda (baralhos, regras, batalha), com mais cartas, mais rápida e o som de dar cartas baixinho', 'Transition only when the background changes (decks, rules, battle), with more cards, faster, and a soft card-dealing sound'],
       ['Transição entre telas: um bando de cartas sobe na diagonal com o som de vento e esconde a troca', 'Screen transitions: a flock of cards sweeps up diagonally with a wind sound and hides the change'],
       ['Configurações e tela cheia agora ficam no canto em todas as telas', 'Settings and full screen are now in the corner of every screen'],

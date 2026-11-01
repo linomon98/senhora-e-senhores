@@ -148,7 +148,8 @@ window.SS = window.SS || {};
   // As variações de um som no pacote escolhido (do Llorenç, se ele fez esse; senão, do Lino).
   const variacoes = nome => (pacote === 'llorenc' && buffersLlorenc[nome] && buffersLlorenc[nome].length ? buffersLlorenc[nome] : buffers[nome]);
 
-  // o: { vol (0–1, multiplica o volume do som), canal (um som por canal: o novo corta o anterior), atraso (ms) }
+  // o: { vol (0–1, multiplica o volume do som), canal (um som por canal: o novo corta o anterior), atraso (ms),
+  //      someEm (s: o som some aos poucos e acaba nesse tempo, mesmo que o arquivo seja mais longo) }
   function tocar(nome, o) {
     o = o || {};
     const lista = variacoes(nome);
@@ -161,7 +162,13 @@ window.SS = window.SS || {};
     const fonte = ctx.createBufferSource(), ganho = ctx.createGain();
     fonte.buffer = lista[k];
     fonte.playbackRate.value = 0.96 + Math.random() * 0.08; // leve variação de tom: soa menos repetido
-    ganho.gain.value = (VOLUME[nome] == null ? 1 : VOLUME[nome]) * (o.vol == null ? 1 : o.vol);
+    const nivel = (VOLUME[nome] == null ? 1 : VOLUME[nome]) * (o.vol == null ? 1 : o.vol);
+    ganho.gain.value = nivel;
+    if (o.someEm) {
+      const agora = ctx.currentTime;
+      ganho.gain.setValueAtTime(nivel, agora + o.someEm * 0.45);
+      ganho.gain.linearRampToValueAtTime(0, agora + o.someEm);
+    }
     fonte.connect(ganho);
     ganho.connect(mestre);
     if (o.canal) {
@@ -170,6 +177,7 @@ window.SS = window.SS || {};
       fonte.onended = () => { if (canais[o.canal] && canais[o.canal].fonte === fonte) delete canais[o.canal]; };
     }
     fonte.start();
+    if (o.someEm) fonte.stop(ctx.currentTime + o.someEm + 0.02);
   }
 
   // Para o som de um canal com um fade curtinho.
