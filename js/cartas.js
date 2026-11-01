@@ -31,7 +31,8 @@ window.SS = window.SS || {};
     return `<image href="arte/naipes/${naipe}.webp${V_ARTE}" x="${(cx - t / 2).toFixed(1)}" y="${(cy - t / 2).toFixed(1)}" width="${t.toFixed(1)}" height="${t.toFixed(1)}"${rot}/>`;
   }
 
-  // Borda preta na beirada da carta: a do desenho é fina demais (cerca de 1 px numa carta da mão) e sumia.
+  // Borda preta na beirada de todas as cartas, de número, de letra e de costas: a do desenho é fina demais (cerca de
+  // 1 px numa carta da mão) e sumia.
   const BORDA = '<rect x="2.2" y="2.2" width="195.6" height="275.6" rx="15" fill="none" stroke="#141414" stroke-width="4.5"/>';
   // Versão das imagens das cartas (trocar quando um arquivo mudar com o mesmo nome, para o navegador não usar o antigo).
   const V_ARTE = '?v=16';
@@ -113,7 +114,7 @@ window.SS = window.SS || {};
     else corpo = LAYOUT[c.rank].map(([x, y]) => pip(c.naipe, x, y, 34, y > 140)).join('');
     const svg = `<svg class="svg-carta" viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg">
       ${fundo(chave)}
-      ${corpo}${arte || FUNDOS.length ? BORDA : ''}${arte ? `<g>${cantoArte(c, true)}</g>` : `<g>${canto(c, arte)}</g><g transform="rotate(180 100 140)">${canto(c, arte)}</g>`}</svg>`;
+      ${corpo}${BORDA}${arte ? `<g>${cantoArte(c, true)}</g>` : `<g>${canto(c, arte)}</g><g transform="rotate(180 100 140)">${canto(c, arte)}</g>`}</svg>`;
     if (!arte) cache[ck] = svg;
     return svg;
   }
@@ -136,7 +137,7 @@ window.SS = window.SS || {};
 <circle cx="0" cy="0" r="1.5" fill="#fff" fill-opacity=".65"/><circle cx="16" cy="0" r="1.5" fill="#fff" fill-opacity=".65"/>
 <circle cx="0" cy="16" r="1.5" fill="#fff" fill-opacity=".65"/><circle cx="16" cy="16" r="1.5" fill="#fff" fill-opacity=".65"/>
 </pattern></defs>
-<rect x="1.5" y="1.5" width="197" height="277" rx="14" fill="#fdfbf3" stroke="#bdb59f" stroke-width="2"/>
+<rect x="2.2" y="2.2" width="195.6" height="275.6" rx="15" fill="#fdfbf3" stroke="#141414" stroke-width="4.5"/>
 <rect x="11" y="11" width="178" height="258" rx="7" fill="${escuro}"/>
 <rect x="15" y="15" width="170" height="250" rx="5" fill="url(#g)"/>
 <rect x="15" y="15" width="170" height="250" rx="5" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="2"/>
