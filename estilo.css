@@ -2670,3 +2670,7 @@ html.em-menu::before { display: none; }
 
 /* Pop-ups: a caixa encolhe (zoom) para caber inteira na tela; a altura máxima acompanha o zoom */
 #modal .caixa { max-height: calc(92vh / var(--zm, 1)); }
+
+/* Caixa do Palhaço na escolha: só passiva e poder, sempre do mesmo tamanho (a tela não pula ao trocar de Palhaço) */
+.info-carta { min-height: 164px; }
+.info-carta .caixa-info { min-height: 164px; box-sizing: border-box; }

@@ -3603,13 +3603,8 @@ window.SS = window.SS || {};
   }
   window.addEventListener('resize', () => { if ($('#colinha-aberta')) encaixarColinha(); });
 
-  // Tela cheia (botão do canto superior direito). Onde o navegador não deixa (iPhone), o botão nem aparece.
-  function alternarTelaCheia() {
-    try {
-      if (document.fullscreenElement) document.exitFullscreen();
-      else document.documentElement.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
-    } catch (e) { /* sem tela cheia */ }
-  }
+  // Tela cheia (botão do canto superior direito, usa o alternarTelaCheia do celular). Onde o navegador não deixa
+  // (iPhone), o botão nem aparece.
   {
     const atualizar = () => {
       const b = $('.btn-tela-cheia');
@@ -5333,8 +5328,7 @@ window.SS = window.SS || {};
     return `<div class="caixa-info cor-${pal.cor}">
       <h3><span class="naipe-info">${SIMB[pal.naipe]}</span> ${pal.nome} <small>${pal.titulo} · ${NOME_NAIPE[pal.naipe]}</small></h3>
       <p><b>${t('menu.passiva')} ${pontuar(pal.passiva.nome)}</b> ${pal.passiva.texto}</p>
-      ${pal.poder ? `<p><b>${t('menu.poder')} ${pontuar(pal.poder.nome)}</b> ${pal.poder.texto}</p>` : ''}
-      <p class="plano">${t('menu.estilo')} ${pal.plano}</p></div>`;
+      ${pal.poder ? `<p><b>${t('menu.poder')} ${pontuar(pal.poder.nome)}</b> ${pal.poder.texto}</p>` : ''}</div>`;
   }
 
   // No celular: tela cheia (some a barra do navegador) e, onde o aparelho deixa, trava deitado.
@@ -5414,8 +5408,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 127, data: '01/11/2026',
+    n: 128, data: '01/11/2026',
     novidades: [
+      ['Escolha do Palhaço: a caixa mostra só passiva e poder, sempre do mesmo tamanho', 'Jester choice: the box shows only passive and power, always the same size'],
       ['A seta de mira volta a sair da carta de ação na faixa (só o Refletir flutua no meio da mesa)', 'The aiming arrow comes from the action card in the strip again (only Reflect floats in the middle)'],
       ['As janelas do menu encolhem um pouco para caber na tela, sem precisar rolar', 'Menu windows shrink a little to fit the screen, no scrolling'],
       ['Testes: slider de altura do dado, embaixo do de gravidade', 'Tests: dice height slider, below the gravity one'],
