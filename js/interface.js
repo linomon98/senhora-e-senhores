@@ -273,9 +273,10 @@ window.SS = window.SS || {};
   }
   function pararMiraAs() {
     ui.miraAs = null;
+    ui.miraLugar = null;
     const el = $('#as-mirando');
     if (el) el.remove();
-    abrirEspaco(jogo.vez, null);
+    marcarLugar(null);
   }
   // Qual espaço do seu campo está debaixo do mouse (para o Ás).
   function espacoDoAs(alvo) {
@@ -579,11 +580,21 @@ window.SS = window.SS || {};
       if (ev.target.closest('[data-acao]')) return;
       ev.preventDefault();
       ui.ignorarProximoClique = true;
-      const i = espacoDoAs(ev.target);
-      if (i == null) return;
-      const acao = Object.assign({}, ui.miraAs.acao, { slot: i });
+      const d = lugarMirado(ev.clientX, ev.clientY);
+      if (!d) return;
+      const acao = Object.assign({}, ui.miraAs.acao, { slot: d.lugar });
       pararMiraAs();
       return aplicarDoJogador(acao);
+    }
+    // Escolhendo o lugar com a seta (Invocar pela carta de ação): vale o mesmo vão do arrasto, inclusive o
+    // meio de duas cartas (a carta nova entra entre elas).
+    if (ui.pend && passoAtual() === 'slot' && jogo.fase === 'principal' && !ev.target.closest('[data-acao]')) {
+      const d = lugarMirado(ev.clientX, ev.clientY);
+      if (d && lugarValido(d.lugar)) {
+        ev.preventDefault();
+        ui.ignorarProximoClique = true;
+        return escolherLugar(d.lugar);
+      }
     }
     // Mirando o Dado adicional: o clique escolhe o Senhor(a); fora dele, desiste.
     if (ui.miraDado) {
@@ -681,13 +692,13 @@ window.SS = window.SS || {};
       ui.mouse = pontoNoApp(ev.clientX, ev.clientY);
       desenharSetas();
     }
-    // Mirando o Ás: o espaço ocupado debaixo do mouse já abre caminho, mostrando para onde as cartas vão.
-    if (jogo && ui.miraAs) abrirEspaco(jogo.vez, espacoDoAs(ev.target));
-    // Escolhendo o lugar do Ás: a mesma prévia, só nos lugares que valem.
+    // Mirando o lugar (Ás do Par de Ouros ou Invocar pela seta): o espaço vazio brilha; entre duas cartas, elas
+    // abrem o vão (a da esquerda inclina para a esquerda, a da direita para a direita).
+    if (jogo && ui.miraAs) marcarLugar(lugarMirado(ev.clientX, ev.clientY));
     else if (jogo && ui.pend && passoAtual() === 'slot') {
-      const i = espacoDoAs(ev.target);
-      abrirEspaco(jogo.vez, i != null && alvosClicaveis().has(`slot:${jogo.vez}:${i}`) ? i : null);
-    }
+      const d = lugarMirado(ev.clientX, ev.clientY);
+      marcarLugar(d && lugarValido(d.lugar) ? d : null);
+    } else if (ui && ui.miraLugar) { ui.miraLugar = null; if (jogo) marcarLugar(null); }
     atualizarDica(ev);
   }
 
@@ -873,7 +884,7 @@ window.SS = window.SS || {};
   function centrosFileira(p) {
     return [...$('#campo-' + p).querySelectorAll('.espaco')].map(e => {
       const q = e.getBoundingClientRect();
-      return q.left + q.width / 2 - (e.classList.contains('vao-dir') ? 26 : e.classList.contains('vao-esq') ? -10 : 0) * escala;
+      return q.left + q.width / 2 - (e.classList.contains('vao-dir') ? 40 : e.classList.contains('vao-esq') ? -24 : 0) * escala;
     });
   }
 
@@ -910,6 +921,42 @@ window.SS = window.SS || {};
     const R = a + 1, praDireita = dir >= 0 && (esq < 0 || dir - R <= R - esq);
     const lugar = a < 0 ? 0 : a + 1 >= n ? n - 1 : praDireita ? R : a;
     return Object.assign(d, { lugar, vao: { esq: a, dir: a + 1 } });
+  }
+
+  // Lugar na fileira debaixo do mouse para as miras com seta (a geometria é guardada no começo da mira).
+  function lugarMirado(x, y) {
+    const lm = ui.miraLugar || (ui.miraLugar = { centros: centrosFileira(jogo.vez), vaoA: null });
+    const d = destinoEm(x, y, lm.centros, lm.vaoA);
+    lm.vaoA = d ? d.vaoA : null;
+    return d && d.tipo !== 'heroi' && d.lugar != null ? d : null;
+  }
+  // No passo "lugar": um espaço vazio que a jogada aceita, ou o meio de duas cartas (quando a fileira tem espaço
+  // e não é a Rainha, que entra no lugar de quem ela sacrifica).
+  function lugarValido(i) {
+    const p = jogo.vez;
+    if (alvosClicaveis().has(`slot:${p}:${i}`)) return true;
+    const campo = jogo.jogadores[p].campo;
+    return !!campo[i] && campo.includes(null) && candidatosPendentes().every(a => a.sacrificio == null);
+  }
+  function escolherLugar(i) {
+    ui.miraLugar = null;
+    marcarLugar(null);
+    if (alvosClicaveis().has(`slot:${jogo.vez}:${i}`)) return escolherParametro(i);
+    // entre duas cartas: segue com esse destino (a jogada empurra as cartas para abrir o lugar)
+    ui.pend.destino = i;
+    ui.pend.k++;
+    avancarPendente();
+  }
+  function marcarLugar(d) {
+    const fileira = $('#campo-' + jogo.vez);
+    if (!fileira) return;
+    fileira.querySelectorAll('.destino').forEach(e => e.classList.remove('destino'));
+    abrirEspaco(jogo.vez, null);
+    abrirVao(jogo.vez, d ? d.vao : null);
+    if (d && !d.vao) {
+      const e = fileira.querySelector(`[data-slot="${jogo.vez}:${d.lugar}"]`);
+      if (e) e.classList.add('destino');
+    }
   }
 
   // O que acontece se a carta for solta ali: a ação direta (Espadas, Paus, Copas) ou a colocação no campo.
@@ -982,10 +1029,11 @@ window.SS = window.SS || {};
     const fileira = $('#campo-' + p);
     if (!fileira || !jogo) return;
     const slots = [...fileira.querySelectorAll('.espaco')], campo = jogo.jogadores[p].campo;
-    slots.forEach(s => s.classList.remove('vao-esq', 'vao-dir'));
+    slots.forEach(s => s.classList.remove('vao-esq', 'vao-dir', 'vao-dir1'));
     if (!vao) return;
     if (slots[vao.esq]) slots[vao.esq].classList.add('vao-esq');
     for (let k = vao.dir; k < slots.length && campo[k]; k++) slots[k].classList.add('vao-dir');
+    if (slots[vao.dir] && campo[vao.dir]) slots[vao.dir].classList.add('vao-dir1');
   }
 
   function soltarArrasto(ev) {
@@ -5118,8 +5166,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 114, data: '01/11/2026',
+    n: 115, data: '01/11/2026',
     novidades: [
+      ['Invocando com a seta, o lugar não fica mais tremendo: o meio de duas cartas vale como um lugar só, o vão abre mais e a carta da direita também inclina', 'Summoning with the arrow no longer flickers: the middle of two cards counts as one spot, the gap opens wider and the right card tilts too'],
       ['Quem começa? mais rápido e animado: título grande batendo na tela, Palhaços entrando dos lados e o Começa carimbado', 'Who goes first? is faster and livelier: big title slamming in, Jesters sliding in and a stamped Goes first'],
       ['Colinha: as duas Pargias (mesmo naipe e números iguais) ficam lado a lado', 'Crib sheet: both Pairgics (same suit and equal numbers) sit side by side'],
       ['Golpes sacodem a mesa e o contra-ataque ganhou animação: quem defende dá um tranco de volta no atacante', 'Attacks shake the table and counterattacks are animated: the defender shoves the attacker back'],

@@ -2607,8 +2607,9 @@ html.toque .zona-eu .mao .carta.jogavel:hover:not(.selecionada):not(.combina):no
 
 /* Arrastando uma carta para entre duas no campo: a da esquerda se inclina e as da direita abrem espaço */
 .fileira .espaco { transform-origin: 50% 100%; }
-.fileira .espaco.vao-esq { translate: -10px 0; rotate: -9deg; }
-.fileira .espaco.vao-dir { translate: 26px 0; }
+.fileira .espaco.vao-esq { translate: -24px 0; rotate: -9deg; }
+.fileira .espaco.vao-dir { translate: 40px 0; }
+.fileira .espaco.vao-dir1 { rotate: 9deg; }
 
 /* "Contra-ataque!" que salta em cima do atacante que apanhou de volta */
 .fx-contra { z-index: 60; white-space: nowrap; font: 900 26px var(--fonte-ui); color: #ffe7a0; letter-spacing: .5px;
