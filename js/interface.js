@@ -5713,8 +5713,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 139, data: '02/11/2026',
+    n: 140, data: '02/11/2026',
     novidades: [
+      ['Palcos dos Palhaços com contorno de 2 px; a ilustração das formigas perdeu o contorno extra', 'Jester stages now have a 2 px outline; the ant illustration lost its extra outline'],
       ['Corrigido: a barra de rolagem aparecia e tudo pulava no meio da animação de voltar; as janelas não mostram mais barra de rolagem', 'Fixed: the scrollbar appeared and everything jumped during the back animation; windows no longer show a scrollbar'],
       ['Toda troca de tela do menu anima, indo e voltando: a tela antiga sai, a nova entra, e os botões do início voltam de baixo', 'Every menu screen change animates both ways: the old screen leaves, the new one enters, and the home buttons rise back from below'],
       ['Jogar, Multiplayer e Testes: os botões do menu caem da tela enquanto a caixa surge; o som da transição some junto com as cartas', 'Play, Multiplayer and Tests: the menu buttons drop off the screen as the box appears; the transition sound fades with the cards'],
