@@ -3516,7 +3516,7 @@ window.SS = window.SS || {};
           linha(`${c('A', 'copas')}${c('2', 'copas')}`, `+${M.CURA_AS_COPAS} ${np('copas')} / ${x('turno', 'turn')}`),
           linha(`${c('A', 'ouros')}${c('2', 'ouros')}`, `+1 ${np('ouros')} / ${x('turno', 'turn')}`),
         ])}
-        ${bloco('um', x('1 carta', '1 card'), [
+        ${bloco('um', x('Recursos', 'Resources'), [
           linha(`${c('6', 'copas')}${op('→')}${ic('cura')}`, `+3 / +4 ${np('copas')}`),
           linha(`${c('4', 'ouros')}${op('→')}${ic('comprar')}${ic('dado')}`, `+1 ${x('carta', 'card')} ${x('ou', 'or')} +1 ${dado}`),
           linha(`${c('5', 'espadas')}${op('→')}${ic('dano')}`, `+1 ${atk}`),
@@ -3534,7 +3534,7 @@ window.SS = window.SS || {};
           linha(`${c('9', 'copas')}${c('9', 'paus')}${op('→')}${ic('meteoro')}`, `${x('Limpa o tabuleiro', 'Clears the board')} <small>(8–10)</small>`),
           linha(`${c('A', 'espadas')}${c('A', 'ouros')}${op('→')}${ic('raio')}`, `${x(`1 hit ou ${M.DANO_RAIO_PALHACO} PV`, `1 hit or ${M.DANO_RAIO_PALHACO} HP`)} <small>(${x('Ases', 'Aces')})</small>`),
         ])}
-        ${bloco('dad', x('Dado', 'Die'), [
+        ${bloco('dad', x('Dado de dano', 'Damage die'), [
           linha(`${dado}${op(M.DADO_ATAQUE_TOTAL + '–6')}`, atk + x(' cheio', ' full')),
           linha(`${dado}${op('2–3')}`, `${atk} ½`),
           linha(`${dado}${op('1')}`, '✗'),
@@ -5345,8 +5345,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 117, data: '01/11/2026',
+    n: 118, data: '01/11/2026',
     novidades: [
+      ['Colinha reorganizada: Senhores, Naipado e Ás em cima; Pargias e Recursos no meio; Dado de dano e Defesa embaixo', 'Crib sheet rearranged: Gentlemen, Suited and Ace on top; Pairgics and Resources in the middle; Damage die and Defense below'],
       ['Os pedaços da carta rasgada voam para o cemitério', 'Torn card pieces fly into the graveyard'],
       ['A carta gira (diagonal/horizontal) e perde o escudo no mesmo instante do golpe', 'Cards turn (diagonal/sideways) and lose the shield right as the hit lands'],
       ['Sai daqui!: as cartas saem voando do campo para a mão, em vez de aparecer na mão antes', 'Get out!: the cards fly from the field to the hand instead of popping into the hand early'],
