@@ -203,7 +203,8 @@ window.SS = window.SS || {};
       const origem = botao || document.querySelector(`#mao-${jogo.vez} [data-mao="${cands[0].figura || cands[0].as}"]`);
       const c = centroDe(origem) || { x: 800, y: 700 };
       ui.pend.seta = { de: { x: c.x, y: c.y - 46 }, chave, rotulo: rotuloTipo(cands[0].tipo, cands[0]), icone: iconeDaAcao(cands[0]) };
-      ui.mouse = Object.assign({}, ui.pend.seta.de);
+      ui.mouse = Object.assign({}, ORIGEM_REFLEXO);
+      mostrarAcaoFlutuante(origem, 0, ARTE_ACAO[ui.pend.seta.icone] || 'sumonar', t('carta.' + ui.pend.seta.icone));
       Som.tocar('mira-seta');
     }
     avancarPendente();
@@ -765,10 +766,12 @@ window.SS = window.SS || {};
     const id = ui.sel[0];
     if (!id) return;
     // A seta sai da própria carta Dado adicional (que sobe e brilha enquanto você mira).
-    const c = centroDe($('.carta-acao[data-acao="dado-adicional"]') || (ui.ultimoBotao && ui.ultimoBotao.isConnected && ui.ultimoBotao.matches('.carta-acao') ? ui.ultimoBotao : null));
+    const carta = $('.carta-acao[data-acao="dado-adicional"]') || (ui.ultimoBotao && ui.ultimoBotao.isConnected && ui.ultimoBotao.matches('.carta-acao') ? ui.ultimoBotao : null);
+    const c = centroDe(carta);
     Som.tocar('mira-seta');
     ui.miraDado = { ouro: id.startsWith('TOKEN') ? 'TOKEN' : id, de: c ? { x: c.x, y: c.y - 40 } : { x: 300, y: 760 } };
-    ui.mouse = Object.assign({}, ui.miraDado.de);
+    ui.mouse = Object.assign({}, ORIGEM_REFLEXO);
+    mostrarAcaoFlutuante(carta, 0, ARTE_ACAO.dado || 'dado', t('carta.dado'));
     render();
   }
 
@@ -1329,12 +1332,15 @@ window.SS = window.SS || {};
       mira.de = de;
     };
     if (ui.mouse && ui.miraAs) setas.push({ de: { x: ui.miraAs.de.x, y: ui.miraAs.de.y - 50 }, para: ui.mouse, cor: 'mira-bloqueio', viva: true });
+    const flutuante = centroDe($('#app .refletir-flutuante'));
     if (ui.mouse && ui.miraDado) {
-      origemCarta('.carta-acao[data-acao="dado-adicional"]', ui.miraDado, 40);
+      if (flutuante) ui.miraDado.de = flutuante;
+      else origemCarta('.carta-acao[data-acao="dado-adicional"]', ui.miraDado, 40);
       setas.push({ de: ui.miraDado.de, para: ui.mouse, cor: 'mira-ataque', viva: true });
     }
     if (ui.mouse && mirandoCarta()) {
-      origemCarta('.carta-acao.mirando-roxo', ui.pend.seta, 46);
+      if (flutuante) ui.pend.seta.de = flutuante;
+      else origemCarta('.carta-acao.mirando-roxo', ui.pend.seta, 46);
       setas.push({ de: ui.pend.seta.de, para: ui.mouse, cor: 'mira-reflexo', viva: true });
     }
     if (ui.mouse && mirandoPoder()) {
@@ -2158,7 +2164,7 @@ window.SS = window.SS || {};
   // Cartas (figura e número) de cada Senhor(a) no último desenho, e as que voltaram do campo para a mão
   // (Sai daqui!) esperando o efeito soltá-las de onde ele estava: uid → [{ p, c }].
   let cartasCampoVistas = [new Map(), new Map()];
-  const voltasDoCampo = new Map();
+  const voltasDoCampo = new Map(), voltasEsperando = new Set();
   let posCampo = [{}, {}]; // em que espaço estava cada Senhor(a) no último desenho (para animar quem foi empurrado)
   const voando = new Set(), voandoCampo = new Set();
 
@@ -2183,6 +2189,7 @@ window.SS = window.SS || {};
           const uid = cartasCampoVistas[p].get(c.id);
           if (uid == null || MOVIMENTO_REDUZIDO) return uid == null;
           voando.add(c.id);
+          voltasEsperando.add(c.id);
           const lista = voltasDoCampo.get(uid) || [];
           lista.push({ p, c });
           voltasDoCampo.set(uid, lista);
@@ -2207,6 +2214,9 @@ window.SS = window.SS || {};
     const lista = voltasDoCampo.get(uid);
     if (!lista) return;
     voltasDoCampo.delete(uid);
+    // abre o lugar na mão (as outras cartas deslizam para o lado) e as cartas voam para ele
+    lista.forEach(({ c }) => voltasEsperando.delete(c.id));
+    if (jogo) render();
     lista.forEach(({ p, c }, k) => voarDoCampo(p, c, de, k));
   }
   function voarDoCampo(p, c, de, ordem) {
@@ -3012,10 +3022,24 @@ window.SS = window.SS || {};
     const classePar = c => (usadas.has(c.id) ? ' par-usado' : candidatas.has(c.id) ? (rm.par.includes(c.id) ? ' par-escolhido' : ' par-candidato') : escolhendo ? ' par-apagada' : '');
     // Figura (ou Ás) solta no campo esperando o número: sai da mão e fica só flutuando no lugar escolhido.
     const noCampo = ui.destino != null && jogo.vez === p && ui.sel.length === 1 ? ui.sel[0] : null;
-    $('#mao-' + p).innerHTML = j.mao.filter(c => c.id !== noCampo).map(c => (visivel
+    // Cartas voltando do campo (Sai daqui!) só ganham lugar na mão quando começam a voar.
+    const reservada = c => voltasEsperando.has(c.id)
+      || (!MOVIMENTO_REDUZIDO && maoVista[p] && !maoVista[p].has(c.id) && cartasCampoVistas[p].has(c.id));
+    // Onde cada carta estava antes deste desenho: as que ficaram deslizam até o lugar novo.
+    const maoEl = $('#mao-' + p);
+    const antes = new Map([...maoEl.querySelectorAll('[data-voo]')].map(e => [e.dataset.voo, e.getBoundingClientRect().left]));
+    maoEl.innerHTML = j.mao.filter(c => c.id !== noCampo && !reservada(c)).map(c => (visivel
       ? `<div class="carta${ui.sel.includes(c.id) ? ' selecionada' : ''}${podeJogar ? ' jogavel' : ''}${estilo(c)}${classePar(c)}"${podeJogar ? ` data-mao="${c.id}"` : ` data-carta="${c.id}"`}${candidatas.has(c.id) ? ` data-par="${c.id}"` : ''} data-voo="${c.id}"${oculta(c.id)}>${C.frente(c)}</div>`
       : `<div class="carta dorso ${cor}" data-voo="${c.id}"${oculta(c.id)}></div>`)).join('');
-    ajustarSobreposicao($('#mao-' + p));
+    ajustarSobreposicao(maoEl);
+    if (!MOVIMENTO_REDUZIDO && antes.size) {
+      for (const e of maoEl.querySelectorAll('[data-voo]')) {
+        const x0 = antes.get(e.dataset.voo);
+        if (x0 == null) continue;
+        const dx = (x0 - e.getBoundingClientRect().left) / escala;
+        if (Math.abs(dx) > 1) e.animate([{ translate: `${dx.toFixed(1)}px 0px` }, { translate: '0px 0px' }], { duration: 340, easing: 'cubic-bezier(.3, .8, .3, 1)', composite: 'add' });
+      }
+    }
     const topo = j.cemiterio[j.cemiterio.length - 1];
     $('#pilhas-' + p).innerHTML = `
       ${M.BARALHOS.map(b => {
@@ -3321,7 +3345,7 @@ window.SS = window.SS || {};
       } else if (ui.pend) {
         texto = textoPasso();
         extras = btn('cancelar', t('btn.cancelar'));
-        if (ui.pend.seta) botoes = btnGrande('cancelar', ui.pend.seta.rotulo, ui.pend.seta.icone, 'mirando mirando-roxo');
+        // (a carta que mira está flutuando no meio da mesa; aqui fica só o Cancelar)
       } else if (ui.destino != null && ui.sel.length === 1) {
         // Figura ou Ás esperando no campo: falta o número.
         texto = t('faixa.preparo');
@@ -3357,7 +3381,7 @@ window.SS = window.SS || {};
         // Um Ouros sozinho selecionado (carta ou ficha do Ás): também pode virar 1 dado a mais num ataque.
         const ouroSel = ui.sel.length === 1 && M.ourosDisponiveis(jogo, p).includes(ui.sel[0].startsWith('TOKEN') ? 'TOKEN' : ui.sel[0]);
         if (ouroSel && alguemAtaca) {
-          botoes += btnGrande('dado-adicional', t('acao.dadoAdicional'), 'dado', ui.miraDado ? 'mirando' : '');
+          if (!ui.miraDado) botoes += btnGrande('dado-adicional', t('acao.dadoAdicional'), 'dado', ''); // (mirando: ela flutua no meio da mesa)
           if (!botoes.includes('data-acao="tipo:')) texto = t('faixa.escolhaAcao');
         }
         // Par de Paus selecionado e todos os seus Senhores já no limite de defesa (sem inimigo para enfraquecer):
@@ -4235,13 +4259,21 @@ window.SS = window.SS || {};
     render();
   }
 
-  // A carta Refletir sai do canto, sobe até o meio da mesa e fica flutuando: é dela que a seta roxa sai.
+  // A carta de ação que mira (Refletir, Invocar, Pargias, magias, Dado adicional…) sai de onde estava, sobe até
+  // o meio da mesa e fica flutuando: é dela que a seta sai.
   function mostrarRefletirFlutuante(deEl, atraso) {
+    mostrarAcaoFlutuante(deEl, atraso, 'reflexo', t('refl.titulo'));
+  }
+  function mostrarAcaoFlutuante(deEl, atraso, arte, titulo) {
     let el = $('#app .refletir-flutuante');
-    if (el) return;
+    if (el) {
+      if (el.dataset.arte === arte) return;
+      el.remove();
+    }
     el = document.createElement('div');
-    el.className = 'carta-acao arte-reflexo refletir-flutuante';
-    el.innerHTML = `<img src="arte/acoes/reflexo.webp" alt="" draggable="false"><b class="ca-titulo">${t('refl.titulo')}</b>`;
+    el.className = `carta-acao arte-${arte} refletir-flutuante`;
+    el.dataset.arte = arte;
+    el.innerHTML = `<img src="arte/acoes/${arte}.webp" alt="" draggable="false"><b class="ca-titulo">${titulo}</b>`;
     Object.assign(el.style, { left: ORIGEM_REFLEXO.x + 'px', top: ORIGEM_REFLEXO.y + 'px' });
     $('#app').appendChild(el);
     const de = centroDe(deEl);
@@ -4253,7 +4285,7 @@ window.SS = window.SS || {};
       ], { duration: 700, delay: atraso == null ? 900 : atraso, easing: 'cubic-bezier(.3, .8, .3, 1)', fill: 'backwards' });
       // a seta acompanha a carta enquanto ela voa para o meio da mesa
       const ate = performance.now() + (atraso == null ? 900 : atraso) + 760;
-      const seguir = () => { if (!el.isConnected || !ui.reflexoModo) return; desenharSetas(); if (performance.now() < ate) requestAnimationFrame(seguir); };
+      const seguir = () => { if (!el.isConnected || !mirandoSeta()) return; desenharSetas(); if (performance.now() < ate) requestAnimationFrame(seguir); };
       requestAnimationFrame(seguir);
     }
   }
@@ -4261,7 +4293,7 @@ window.SS = window.SS || {};
   // Some quando a mira acaba (escolheu o ataque, cancelou ou confirmou a defesa).
   function sincronizarRefletirFlutuante() {
     const el = $('#app .refletir-flutuante');
-    if (!el || (ui.reflexoModo && ui.reflexoModo.etapa === 'alvo')) return;
+    if (!el || (ui.reflexoModo && ui.reflexoModo.etapa === 'alvo') || mirandoCarta() || ui.miraDado) return;
     el.classList.remove('refletir-flutuante');
     el.classList.add('refletir-saindo');
     el.animate([{ opacity: 1, transform: 'translate(-50%, -50%) scale(1)' }, { opacity: 0, transform: 'translate(-50%, -50%) scale(1.3)' }], { duration: 380, fill: 'forwards' }).onfinish = () => el.remove();
@@ -5366,8 +5398,10 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 122, data: '01/11/2026',
+    n: 123, data: '01/11/2026',
     novidades: [
+      ['As cartas da mão deslizam para abrir espaço quando chegam cartas novas (inclusive as do Sai daqui!)', 'Hand cards slide aside to make room for incoming cards (including Get out!)'],
+      ['Toda carta de ação que mira com seta (Invocar, Pargias, magias, Dado adicional) voa para o meio da mesa e a seta sai dela, como no Refletir', 'Every action card that aims with an arrow (Summon, Pairgics, magic, Extra die) flies to the middle of the table and the arrow comes from it, like Reflect'],
       ['Mesa livre: botão Trocar de lado (você joga os dois lados: ataca com um e defende com o outro)', 'Free table: Switch sides button (you play both sides: attack with one, defend with the other)'],
       ['A colinha diminui sozinha para caber na tela, sem precisar rolar', 'The crib sheet shrinks to fit the screen, no scrolling'],
       ['Colinha: Dado de dano e Defesa no topo, Senhores, Naipado e Ás no meio, Recursos e Pargias embaixo', 'Crib sheet: Damage die and Defense on top, Gentlemen, Suited and Ace in the middle, Resources and Pairgics below'],
