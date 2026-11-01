@@ -2674,3 +2674,6 @@ html.em-menu::before { display: none; }
 /* Caixa do Palhaço na escolha: só passiva e poder, sempre do mesmo tamanho (a tela não pula ao trocar de Palhaço) */
 .info-carta { min-height: 164px; }
 .info-carta .caixa-info { min-height: 164px; box-sizing: border-box; }
+
+/* O nome do baralho vai escrito na frente da caixa (sem legenda embaixo) */
+#modal .grupo-decks button { padding: 12px 14px; }

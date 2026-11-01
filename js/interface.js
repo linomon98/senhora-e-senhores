@@ -5408,8 +5408,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 128, data: '01/11/2026',
+    n: 129, data: '01/11/2026',
     novidades: [
+      ['Escolha do baralho: o nome vai escrito na caixa (o do Palhaço leva o nome dele) e o Tradicional fica sempre na ponta', 'Deck choice: the name is written on the box (the Jester one shows their name) and the Classic one is always last'],
       ['Escolha do Palhaço: a caixa mostra só passiva e poder, sempre do mesmo tamanho', 'Jester choice: the box shows only passive and power, always the same size'],
       ['A seta de mira volta a sair da carta de ação na faixa (só o Refletir flutua no meio da mesa)', 'The aiming arrow comes from the action card in the strip again (only Reflect floats in the middle)'],
       ['As janelas do menu encolhem um pouco para caber na tela, sem precisar rolar', 'Menu windows shrink a little to fit the screen, no scrolling'],
@@ -5603,7 +5604,14 @@ window.SS = window.SS || {};
   }
 
   // Opções de deck para um Palhaço: o temático dele, o padrão ou um dos decks montados.
-  const decksParaEscolha = () => [{ id: 'palhaco', nome: t('menu.deckPalhaco') }].concat(SS.Decks.opcoes());
+  // Baralhos na escolha antes da partida: o do Palhaço primeiro, os montados no meio e o Tradicional sempre na ponta.
+  const decksParaEscolha = () => {
+    const ops = SS.Decks.opcoes();
+    return [{ id: 'palhaco', nome: t('menu.deckPalhaco') }].concat(ops.filter(d => d.id !== 'padrao'), ops.filter(d => d.id === 'padrao'));
+  };
+  // Nome escrito na caixinha: o do Palhaço escolhido (ou "Palhaço"), "Tradicional" ou o nome do baralho montado.
+  const nomeNaCaixa = (d, palhaco) => (d.id === 'palhaco' ? (palhaco && P.get(palhaco) ? P.get(palhaco).nome : t('menu.palhacoCurto'))
+    : d.id === 'padrao' ? t('menu.deckTradicional') : d.nome);
   const contagemDe = (deck, pal) => (deck === 'palhaco' ? SS.Decks.deckDoBot(pal) : deck === 'padrao' ? M.contagemPadrao() : SS.Decks.contagemPara(deck));
   // Nível de cada bot (no bot × bot da área de testes, cada lado tem o seu).
   const nivelBase = p => (cfg.modo === 'bots' && cfg.botsCfg ? cfg.botsCfg.nivel[p] : cfg.modo === 'livre' && cfg.livre ? cfg.livre.nivel : cfg.nivel);
@@ -5990,14 +5998,14 @@ window.SS = window.SS || {};
   // modo: 'bot' (segue para o VS), 'online' (criar/entrar numa sala) ou 'convite' (entrar pelo link recebido).
   function telaPalhacos(modo, selInicial) {
     let sel = selInicial || null;
-    const decks = [{ id: 'palhaco', nome: t('menu.deckPalhaco') }].concat(SS.Decks.opcoes());
+    const decks = decksParaEscolha();
     if (!decks.some(d => d.id === cfg.deck)) cfg.deck = 'palhaco';
     const notaDeck = () => (cfg.deck === 'palhaco' ? t('menu.deckTematico2') : t('menu.monteDecks'));
     modal(`<div class="menu-tema">
       <h2 class="titulo-etapa">${t('menu.escolhaPalhaco')}</h2>
       <div class="mesa-cartas${sel ? ' com-escolha' : ''}">${P.LISTA.map((pal, k) => cartaJoker(pal, sel, k)).join('')}</div>
       <div class="info-carta">${sel ? caixaInfo(sel) : `<p class="dica-carta">${t('menu.cliqueCarta')}</p>`}</div>
-      <div class="opcao"><label>${t('menu.seuDeck')}</label>${grupoMenu('deck', decks.map(d => [d.id, `<span class="deck-caixa">${SS.Decks.caixaDe(d.id, sel)}</span><span class="deck-legenda">${escapar(d.nome)}</span>`])).replace('class="grupo"', 'class="grupo grupo-decks"')}
+      <div class="opcao"><label>${t('menu.seuDeck')}</label>${grupoMenu('deck', decks.map(d => [d.id, `<span class="deck-caixa" title="${escapar(nomeNaCaixa(d, sel))}">${SS.Decks.caixaDe(d.id, sel, nomeNaCaixa(d, sel))}</span>`])).replace('class="grupo"', 'class="grupo grupo-decks"')}
         <p class="nota nota-deck">${notaDeck()}</p></div>
       ${regrasModificadas(cfg.regras).length && modo !== 'convite' ? `<p class="nota aviso-regras">⚖ ${t('rg.aviso', { n: regrasModificadas(cfg.regras).length })}</p>` : ''}
       <div class="acoes-menu">
@@ -6015,7 +6023,7 @@ window.SS = window.SS || {};
         $('#modal [data-m="confirmar"]').disabled = false;
         // A caixinha do "Deck do Palhaço" vira a do naipe do Palhaço escolhido.
         const mini = $('#modal [data-grupo="deck"] [data-v="palhaco"] .deck-caixa');
-        if (mini) mini.innerHTML = SS.Decks.caixaDe('palhaco', sel);
+        if (mini) mini.innerHTML = SS.Decks.caixaDe('palhaco', sel, nomeNaCaixa({ id: 'palhaco' }, sel));
         return;
       }
       const g = ev.target.closest('[data-grupo="deck"] [data-v]');

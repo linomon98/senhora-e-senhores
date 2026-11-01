@@ -52,14 +52,16 @@ window.SS = window.SS || {};
   const visualTematico = p => (p.caixa && p.caixa.visual) || { tampa: COR_NAIPE[p.naipe], icone: 'naipe-' + p.naipe, corIcone: 'original' };
 
   // Caixinha de um deck pelo id usado na escolha antes da partida ('palhaco', 'padrao' ou o número do espaço).
-  function caixaDe(id, palhaco) {
+  // nome (opcional): escrito na frente da caixa.
+  function caixaDe(id, palhaco, nome) {
+    const n = nome == null ? null : nome;
     if (id === 'palhaco') {
       const p = palhaco && SS.Palhacos.get(palhaco);
-      return caixa(p ? visualTematico(p) : { tampa: 'roxo', icone: 'joker', corIcone: 'original' }, null);
+      return caixa(p ? visualTematico(p) : { tampa: 'roxo', icone: 'joker', corIcone: 'original' }, n);
     }
-    if (id === 'padrao') return caixa({ tampa: 'marrom', icone: 'ases', corIcone: 'original' }, null);
+    if (id === 'padrao') return caixa({ tampa: 'marrom', icone: 'ases', corIcone: 'original' }, n);
     const k = Number(id), s = carregar()[k];
-    return caixa(visualDe(s, k), null);
+    return caixa(visualDe(s, k), n);
   }
 
   // ---------- Armazenamento ----------

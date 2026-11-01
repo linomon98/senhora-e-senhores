@@ -600,6 +600,8 @@ window.SS = window.SS || {};
     'conf.menuTitulo': ['Abandonar a partida?', 'Leave the match?'],
     'conf.menuBtn': ['Ir para o menu', 'Go to menu'],
     'menu.deckPalhaco': ['Baralho do Palhaço', "Jester's deck"],
+    'menu.palhacoCurto': ['Palhaço', 'Jester'],
+    'menu.deckTradicional': ['Tradicional', 'Classic'],
     'menu.passiva': ['Passiva:', 'Passive:'],
     'menu.poder': ['Poder:', 'Power:'],
     'menu.aleatorio': ['Aleatório', 'Random'],
