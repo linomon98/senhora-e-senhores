@@ -5654,8 +5654,8 @@ window.SS = window.SS || {};
   }
 
   // Introdução ao abrir o jogo: "Clique para começar" (sem um clique o navegador não deixa tocar som, e a música tem de
-  // entrar junto com os botões), depois "Linomon apresenta" no meio da tela, o logo sobe com um salto, toma o meio e empurra o texto para cima, o texto some, o logo vai para
-  // o lugar dele no menu e a música começa junto com os botões subindo. Durante a abertura, clicar ou apertar uma tecla pula.
+  // entrar junto com o logo), depois "Linomon apresenta" no meio da tela, o logo sobe com um salto, toma o meio e empurra o texto para cima, o texto some, o logo vai para
+  // o lugar dele no menu com os botões subindo. A música começa com o logo, com a primeira batida no instante em que ele encosta no texto. Durante a abertura, clicar ou apertar uma tecla pula.
   async function introducao() {
     const intro = $('#intro');
     if (!intro) return;
@@ -5718,6 +5718,8 @@ window.SS = window.SS || {};
     intro.append(texto, logo);
     texto.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 600, fill: 'both' });
     await espera(1500);
+    // (o logo espera a música carregar, por até 2,5 s, para a batida poder cair junto com ele)
+    for (const limite = performance.now() + 2500; !acabou && !Som.musicaCarregada() && performance.now() < limite;) await espera(50);
     if (acabou) return;
     // o logo sobe de baixo com um salto elástico, toma o meio da tela e empurra o texto para cima
     const altura = r.height * s, baixo = (innerHeight / 2 + altura / 2 + 20) / s;
@@ -5725,17 +5727,18 @@ window.SS = window.SS || {};
     const px = v => `0px ${v.toFixed(1)}px`;
     const SALTO = [[.5, -34], [.72, 14], [.88, -5], [1, 0]];
     // (até encostar no texto o logo sobe sozinho; dali em diante os dois andam colados, com a mesma curva)
-    const ENCOSTA = .16, EMPURRAO = 'cubic-bezier(.2, .7, .3, 1)';
+    const SUBIDA_MS = 950, ENCOSTA = .16, EMPURRAO = 'cubic-bezier(.2, .7, .3, 1)';
+    Som.musicaNaBatida('menu', SUBIDA_MS * ENCOSTA / 1000); // a batida cai quando o logo encosta no texto
     img.animate([{ opacity: 1, translate: px(baixo), offset: 0 }, { opacity: 1, translate: px(empurra / s), offset: ENCOSTA, easing: EMPURRAO }].concat(SALTO.map(([o, v]) => ({ opacity: 1, translate: px(v / s), offset: o, easing: 'ease-in-out' }))),
-      { duration: 950, fill: 'forwards' });
+      { duration: SUBIDA_MS, fill: 'forwards' });
     texto.animate([{ translate: px(0), offset: 0 }, { translate: px(0), offset: ENCOSTA, easing: EMPURRAO }].concat(SALTO.map(([o, v]) => ({ translate: px(v - empurra), offset: o, easing: 'ease-in-out' }))),
-      { duration: 950, fill: 'forwards' });
+      { duration: SUBIDA_MS, fill: 'forwards' });
     await espera(1950);
     if (acabou) return;
     texto.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 350, fill: 'forwards' });
     await espera(320);
     if (acabou) return;
-    // o preto some, o logo vai para o menu; a música e os botões entram juntos
+    // o preto some, o logo vai para o menu e os botões entram
     intro.animate([{ backgroundColor: '#000' }, { backgroundColor: 'rgba(0, 0, 0, 0)' }], { duration: 650, fill: 'forwards' });
     logo.animate([{ transform: de }, { transform: 'none' }], { duration: 800, easing: 'cubic-bezier(.5, 0, .2, 1)', fill: 'forwards' });
     entrar();
@@ -5807,14 +5810,15 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 147, data: '02/11/2026',
+    n: 148, data: '02/11/2026',
     novidades: [
+      ['Introdução: a música começa com o logo, com a batida da bateria no instante em que ele chega', 'Intro: the music starts with the logo, with the drum hit landing as it arrives'],
       ['Introdução: o texto começa no meio da tela e o logo sobe empurrando ele para cima', 'Intro: the text starts in the middle and the logo rises, pushing it up'],
       ['Tela Clique para começar antes da introdução: agora a música entra junto com os botões', 'Click to start screen before the intro: the music now comes in with the buttons'],
       ['Introdução ao abrir o jogo: Linomon apresenta, o logo salta e vai para o menu com a música e os botões (clique para pular)', 'Intro when opening the game: Linomon presents, the logo bounces and moves to the menu with the music and buttons (click to skip)'],
       ['Valete de Copas espelhado', 'Jack of Hearts mirrored'],
       ['Todas as cartas, de número e de costas, com o mesmo contorno preto das cartas de letra', 'All cards, numbers and backs, with the same black outline as the letter cards'],
-      ['O site agora tem ícone próprio na aba do navegador: o chapéu de bobo vermelho', 'The site now has its own browser tab icon: the red jester hat'],
+      ['O site agora tem ícone próprio na aba do navegador: o naipe de Espadas', 'The site now has its own browser tab icon: the Spades suit'],
       ['Palcos dos Palhaços com contorno de 2 px; a ilustração das formigas perdeu o contorno extra', 'Jester stages now have a 2 px outline; the ant illustration lost its extra outline'],
       ['Corrigido: a barra de rolagem aparecia e tudo pulava no meio da animação de voltar; as janelas não mostram mais barra de rolagem', 'Fixed: the scrollbar appeared and everything jumped during the back animation; windows no longer show a scrollbar'],
       ['Toda troca de tela do menu anima, indo e voltando: a tela antiga sai, a nova entra, e os botões do início voltam de baixo', 'Every menu screen change animates both ways: the old screen leaves, the new one enters, and the home buttons rise back from below'],

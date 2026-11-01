@@ -123,8 +123,8 @@ window.SS = window.SS || {};
     ganhoMusica = ctx.createGain();
     ganhoMusica.gain.value = VOLUME_MUSICA * volumeMusica;
     ganhoMusica.connect(ctx.destination); // fora do compressor dos efeitos (para a música não "bombear")
-    const primeira = Math.floor(Math.random() * FAIXAS.length);
-    faixaAtual = primeira - 1; // (a próxima a tocar é a sorteada)
+    const primeira = 0; // o jogo sempre começa com a mesma música (a introdução é sincronizada com a batida dela)
+    faixaAtual = primeira - 1; // (a próxima a tocar é ela)
     const carregarFaixa = k => fetch(PASTA + FAIXAS[k] + VERSAO).then(r => (r.ok ? r.arrayBuffer() : null))
       .then(b => (b ? new Promise((ok, erro) => ctx.decodeAudioData(b, ok, erro)) : null))
       .then(buf => { if (buf) { bufFaixas[k] = semSilencioNoFim(semSilencioInicial(buf)); tocarMusica(); } })
@@ -204,8 +204,31 @@ window.SS = window.SS || {};
     }
   }
 
-  // Toca a próxima faixa que já carregou; quando ela acaba, vem a seguinte (comFade: só ao começar a música).
-  function tocarProximaFaixa(comFade) {
+  // Onde cai a primeira batida forte da faixa (s): nos primeiros 4 s, o primeiro ponto com pelo menos 75% do volume máximo.
+  const batidas = new WeakMap();
+  function batidaDe(buf) {
+    if (batidas.has(buf)) return batidas.get(buf);
+    const d = buf.getChannelData(0), passo = Math.floor(buf.sampleRate * 0.01), fim = Math.min(d.length, buf.sampleRate * 4), niveis = [];
+    for (let i = 0; i + passo <= fim; i += passo) {
+      let soma = 0;
+      for (let k = 0; k < passo; k++) soma += d[i + k] * d[i + k];
+      niveis.push(Math.sqrt(soma / passo));
+    }
+    const limite = Math.max(...niveis) * 0.75, t = Math.max(0, niveis.findIndex(v => v >= limite)) * 0.01;
+    batidas.set(buf, t);
+    return t;
+  }
+  // Começa a música com a primeira batida caindo daqui a ateBatida segundos: sem fade, pula o que vem antes dela
+  // (ou espera um pouquinho, se a batida vem antes disso). Sem faixa carregada, começa do jeito normal assim que der.
+  function musicaNaBatida(nome, ateBatida) {
+    musicaPedida = nome || null;
+    if (!ctx || !ganhoMusica || !ligado.musica || fonteMusica || !bufFaixas.some(Boolean)) return tocarMusica();
+    tocarProximaFaixa(false, ateBatida);
+  }
+
+  // Toca a próxima faixa que já carregou; quando ela acaba, vem a seguinte (comFade: só ao começar a música;
+  // ateBatida: para sincronizar a primeira batida, veja musicaNaBatida).
+  function tocarProximaFaixa(comFade, ateBatida) {
     let k = faixaAtual;
     for (let n = 0; n < FAIXAS.length; n++) {
       k = (k + 1) % FAIXAS.length;
@@ -226,6 +249,13 @@ window.SS = window.SS || {};
     if (comFade) {
       ganhoMusica.gain.setValueAtTime(0, ctx.currentTime);
       ganhoMusica.gain.linearRampToValueAtTime(VOLUME_MUSICA * volumeMusica, ctx.currentTime + 0.8);
+    }
+    if (ateBatida != null) {
+      const b = batidaDe(f.buffer);
+      ganhoMusica.gain.cancelScheduledValues(ctx.currentTime);
+      ganhoMusica.gain.setValueAtTime(VOLUME_MUSICA * volumeMusica, ctx.currentTime);
+      f.start(ctx.currentTime + Math.max(0, ateBatida - b), Math.max(0, b - ateBatida));
+      return;
     }
     f.start();
   }
@@ -254,7 +284,8 @@ window.SS = window.SS || {};
   addEventListener('click', ev => { if (ev.target.closest && ev.target.closest('button')) tocar('clique'); }, true);
 
   SS.Som = {
-    tocar, parar, musica, configurar,
+    tocar, parar, musica, musicaNaBatida, configurar,
+    musicaCarregada: () => bufFaixas.some(Boolean),
     tem: nome => !!(buffers[nome] && buffers[nome].length), // o som já carregou (existe o arquivo)?
     // Para conferir pelo console quais arquivos o jogo achou e o que está tocando.
     depurar: () => ({ efeitos: Object.keys(EFEITOS).filter(n => buffers[n] && buffers[n].length).map(n => n + ' ×' + buffers[n].length), faltando: Object.keys(EFEITOS).filter(n => !buffers[n] || !buffers[n].length), musica: fonteMusica ? musicaPedida : null, faixa: fonteMusica ? FAIXAS[faixaAtual] : null, faixasCarregadas: bufFaixas.map((b, k) => (b ? FAIXAS[k] : null)).filter(Boolean) }),
