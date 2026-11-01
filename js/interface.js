@@ -2549,6 +2549,7 @@ window.SS = window.SS || {};
   async function investida(cena, danos) {
     const fa = cena.unidades.find(f => f.uid === cena.atacante);
     if (!fa || !fa.caixa || !fa.html || !cena.alvo || !cena.de) return;
+    if (cena.final) return golpeFinal(cena, danos, fa);
     const dx = cena.alvo.x - cena.de.x, dy = cena.alvo.y - cena.de.y, dist = Math.hypot(dx, dy) || 1;
     const n = { x: dx / dist, y: dy / dist }, k = Math.max(0, dist - 74);
     const setas = $('#setas');
@@ -2671,6 +2672,117 @@ window.SS = window.SS || {};
     pilha.classList.remove('girando');
     void pilha.offsetWidth;
     pilha.classList.add('girando');
+  }
+
+  // Golpe final (o que zera o Palhaço): a mesa escurece com faixas de cinema, o atacante toma
+  // impulso em câmera lenta, dispara e o impacto para o tempo: clarão, ondas, rachadura, faíscas, a mesa inteira
+  // pula, a tela treme forte e aparece o NOCAUTE. Logo depois entra a tela de vitória/derrota.
+  async function golpeFinal(cena, danos, fa) {
+    const dx = cena.alvo.x - cena.de.x, dy = cena.alvo.y - cena.de.y, dist = Math.hypot(dx, dy) || 1;
+    const n = { x: dx / dist, y: dy / dist }, k = Math.max(0, dist - 74);
+    const setas = $('#setas'), app = $('#app'), palco = $('#palco');
+    setas.style.opacity = '0';
+    const copia = copiaFlutuante(fa);
+    copia.style.zIndex = 61;
+    const giro = (n.x >= 0 ? -1 : 1) * 7;
+    const P = a => `translate(${(n.x * a).toFixed(1)}px, ${(n.y * a).toFixed(1)}px)`;
+    // véu escuro com o foco no alvo + faixas de cinema
+    const veu = document.createElement('div');
+    veu.className = 'fx-final-veu';
+    veu.style.setProperty('--fx', cena.alvo.x + 'px');
+    veu.style.setProperty('--fy', cena.alvo.y + 'px');
+    const barras = ['cima', 'baixo'].map(lado => { const b = document.createElement('div'); b.className = 'fx-final-barra ' + lado; return b; });
+    app.append(veu, ...barras);
+    veu.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 500, fill: 'forwards' });
+    barras.forEach(b => b.animate([{ scale: '1 0' }, { scale: '1 1' }], { duration: 500, easing: 'cubic-bezier(.3, .8, .3, 1)', fill: 'forwards' }));
+    Som.tocar('pv-baixo');
+    // 1) câmera lenta: sobe, recua tomando impulso e treme de força
+    const LENTO = 1500, DISPARO = 170;
+    Som.tocar('investida', { atraso: LENTO - 120 });
+    copia.animate([
+      { transform: 'translate(0, 0) scale(1) rotate(0deg)', filter: 'drop-shadow(0 2px 3px rgba(0,0,0,.4))', easing: 'cubic-bezier(.3, .7, .4, 1)' },
+      { transform: 'translate(0, -26px) scale(1.22) rotate(0deg)', filter: 'drop-shadow(0 22px 16px rgba(0,0,0,.45)) brightness(1.1)', offset: 0.35, easing: 'ease-in-out' },
+      { transform: `translate(${(-n.x * 62).toFixed(1)}px, ${(-n.y * 62 - 26).toFixed(1)}px) scale(1.26) rotate(${giro * 1.8}deg)`, filter: 'drop-shadow(0 26px 18px rgba(0,0,0,.45)) brightness(1.25)', offset: 0.9 },
+      { transform: `translate(${(-n.x * 66 + 2).toFixed(1)}px, ${(-n.y * 66 - 27).toFixed(1)}px) scale(1.27) rotate(${giro * 2}deg)`, filter: 'drop-shadow(0 26px 18px rgba(0,0,0,.45)) brightness(1.3)' },
+    ], { duration: LENTO, fill: 'forwards' });
+    await esperar(LENTO);
+    // 2) disparo
+    copia.animate([
+      { transform: `translate(${(-n.x * 66).toFixed(1)}px, ${(-n.y * 66 - 27).toFixed(1)}px) scale(1.27) rotate(${giro * 2}deg)` },
+      { transform: `${P(k)} scale(1.14) rotate(${-giro}deg)` },
+    ], { duration: DISPARO, easing: 'cubic-bezier(.7, 0, 1, .7)', fill: 'forwards' });
+    await esperar(DISPARO);
+    // 3) MEGA IMPACTO
+    const contato = { x: cena.de.x + n.x * (k + 34), y: cena.de.y + n.y * (k + 34) };
+    Som.tocar('impacto-forte');
+    Som.tocar('impacto-forte', { atraso: 70 });
+    Som.tocar('palhaco-dano-forte', { atraso: 120 });
+    if (danos.some(d => d.f && d.morreu)) Som.tocar('senhor-morre', { atraso: 200 });
+    const clarao = document.createElement('div');
+    clarao.className = 'fx-final-clarao';
+    app.appendChild(clarao);
+    clarao.animate([{ opacity: 1 }, { opacity: .85, offset: .15 }, { opacity: 0 }], { duration: 650, easing: 'ease-out' }).onfinish = () => clarao.remove();
+    particulas(contato, 40, true);
+    particulas(contato, 26, true, '255, 210, 80');
+    particulas(contato, 18, true, '255, 70, 50');
+    ondaEm(contato, '255, 255, 255', 4.5);
+    ondaEm(contato, '255, 200, 70', 3.6, 110);
+    ondaEm(contato, '255, 70, 50', 5.5, 220);
+    animarPeca(peca('fx-racha', contato.x, contato.y), [
+      { transform: 'translate(-50%, -50%) scale(.6) rotate(12deg)', opacity: 0 },
+      { transform: 'translate(-50%, -50%) scale(2.4) rotate(12deg)', opacity: 1, offset: .1 },
+      { transform: 'translate(-50%, -50%) scale(2.5) rotate(12deg)', opacity: 0 },
+    ], { duration: 1600, easing: 'ease-out' });
+    const ra = app.getBoundingClientRect();
+    pulinhoMesa(3, ra.left + contato.x * escala, ra.top + contato.y * escala);
+    setTimeout(() => pulinhoMesa(2, ra.left + contato.x * escala, ra.top + contato.y * escala), 260);
+    tremorFinal();
+    // quem apanha voa longe (o Palhaço) ou é rasgado (Senhores mortos)
+    for (const d of danos) {
+      if (d.heroi != null) {
+        const el = elRetrato(d.heroi);
+        if (el) el.animate([
+          { transform: 'none', filter: 'none' },
+          { transform: `translate(${(n.x * 46).toFixed(1)}px, ${(n.y * 46).toFixed(1)}px) rotate(${(n.x * 14).toFixed(1)}deg) scale(.94)`, filter: 'brightness(2) sepia(1) saturate(6) hue-rotate(-30deg)', offset: .15 },
+          { transform: `translate(${(n.x * 22).toFixed(1)}px, ${(n.y * 22).toFixed(1)}px) rotate(${(n.x * 9).toFixed(1)}deg)`, filter: 'grayscale(.6) brightness(.8)', offset: .6 },
+          { transform: `translate(${(n.x * 26).toFixed(1)}px, ${(n.y * 26).toFixed(1)}px) rotate(${(n.x * 11).toFixed(1)}deg)`, filter: 'grayscale(.8) brightness(.7)' },
+        ], { duration: 1100, easing: 'ease-out', fill: 'forwards' });
+      } else if (d.f && d.f.uid !== cena.atacante && d.f.caixa && d.f.html) {
+        const el = copiaFlutuante(d.f);
+        if (d.morreu) setTimeout(() => rasgarCarta(el, n, d.f.p), 60);
+        setTimeout(() => soltarCopia(d.f, el), 1300);
+      }
+    }
+    // o tempo para um instante no golpe (a carta fica cravada) e aparece o NOCAUTE
+    const txt = document.createElement('div');
+    txt.className = 'que-vergonha fx-nocaute';
+    txt.textContent = t('fx.nocaute');
+    app.appendChild(txt);
+    txt.animate([
+      { opacity: 0, transform: 'translate(-50%, -50%) scale(3) rotate(-14deg)' },
+      { opacity: 1, transform: 'translate(-50%, -50%) scale(.9) rotate(-6deg)', offset: .12 },
+      { opacity: 1, transform: 'translate(-50%, -50%) scale(1.04) rotate(-7deg)', offset: .2 },
+      { opacity: 1, transform: 'translate(-50%, -50%) scale(1) rotate(-6deg)', offset: .8 },
+      { opacity: 0, transform: 'translate(-50%, -50%) scale(1.08) rotate(-6deg)' },
+    ], { duration: 1500, delay: 120, fill: 'both' }).onfinish = () => txt.remove();
+    await esperar(1150);
+    // 4) a carta volta e a cena clareia enquanto a tela do fim entra
+    copia.animate([{ transform: `${P(k)} scale(1.14) rotate(${-giro}deg)` }, { transform: 'translate(0, 0) scale(1) rotate(0deg)' }],
+      { duration: 380, easing: 'cubic-bezier(.3, .8, .3, 1)', fill: 'forwards' });
+
+    for (const el of [veu, ...barras]) el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 700, delay: 250, fill: 'forwards' }).onfinish = () => el.remove();
+    setTimeout(() => { soltarCopia(fa, copia); setas.style.opacity = ''; }, 1000);
+    await esperar(260);
+  }
+  // Tremor bem mais forte e mais longo que o do golpe comum.
+  function tremorFinal() {
+    const quadros = [];
+    for (let k = 0; k < 14; k++) {
+      const a = 18 * (1 - k / 14);
+      quadros.push({ transform: `translate(${((Math.random() * 2 - 1) * a).toFixed(1)}px, ${((Math.random() * 2 - 1) * a).toFixed(1)}px)` });
+    }
+    quadros.push({ transform: 'translate(0, 0)' });
+    $('#palco').animate(quadros, { duration: 900, easing: 'linear', composite: 'add' });
   }
 
   // Defensor no contra-ataque: pega impulso para trás (empurrado pelo golpe, piscando vermelho) ou, se o golpe
@@ -4813,12 +4925,22 @@ window.SS = window.SS || {};
       const cena = prepararInvestida(at);
       const resGolpe = M.resolverProximo(jogo, rolagens);
       cena.errou = !!resGolpe.errou;
+      // Golpe que zera um Palhaço: câmera lenta, mega impacto e a tela de vitória emenda logo depois.
+      cena.final = jogo.vencedor != null && !cena.errou && [0, 1].some(p => jogo.jogadores[p].pv <= 0 && cena.pv[p] > 0)
+        && cfg.modo !== 'tutorial' && !MOVIMENTO_REDUZIDO;
       const linhas = jogo.log.slice(antes);
       await seloDoDado(cena, resGolpe);
       if (id !== partida) return;
       mostrarRegua(cena, resGolpe);
       await investida(cena, danosDesde(cena));
       if (id !== partida) return;
+      if (cena.final) {
+        SS.Dados.sumir();
+        SS.Dados.definirArena(null);
+        ui.duelo = false;
+        ui.foco = null;
+        return fimDeJogo();
+      }
       if (cena.errou) await queVergonha();
       if (id !== partida) return;
       render();
@@ -5416,8 +5538,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 132, data: '01/11/2026',
+    n: 133, data: '01/11/2026',
     novidades: [
+      ['Golpe final: o ataque que zera o Palhaço vem em câmera lenta, com faixas de cinema, mega impacto, NOCAUTE e a tela de vitória emendando', 'Final blow: the attack that knocks out the Jester comes in slow motion, with cinema bars, a mega impact, K.O. and the victory screen right after'],
       ['Bloqueando quem ataca 2 vezes: solte a seta azul na etiqueta "1º ataque" ou "2º ataque" para escolher qual defender', 'Blocking a double attacker: drop the blue arrow on the "1st attack" or "2nd attack" tag to pick which one to block'],
       ['Corrigido: no ataque que erra (dado 1), a carta ficava parada no lugar enquanto a cópia fazia a animação', 'Fixed: on a missed attack (die 1), the card stayed in place while its copy animated'],
       ['Contorno das artes da mesa padronizado (palcos, enfeites e cobra com a mesma espessura de traço)', 'Table art outlines standardized (stages, decorations and snake with the same line weight)'],
