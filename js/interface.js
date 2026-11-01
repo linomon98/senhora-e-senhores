@@ -3909,7 +3909,7 @@ window.SS = window.SS || {};
     m.classList.toggle('modal-papel', !jogo || /class="(menu-tema|confirmacao)/.test(html));
     m.hidden = false;
     // (no celular, depois de cada clique a janela pode ter crescido ou mudado: encaixa de novo)
-    m.onclick = aoClicarModal ? ev => { aoClicarModal(ev); requestAnimationFrame(encaixarModal); } : null;
+    m.onclick = aoClicarModal ? ev => { aoClicarModal(ev); requestAnimationFrame(() => encaixarModal(true)); } : null;
     encaixarModal();
   }
 
@@ -5408,8 +5408,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 129, data: '01/11/2026',
+    n: 130, data: '01/11/2026',
     novidades: [
+      ['Corrigido: trocar cartas no Mulligan deixava a janela minúscula', 'Fixed: swapping cards in the Mulligan made the window tiny'],
       ['Escolha do baralho: o nome vai escrito na caixa (o do Palhaço leva o nome dele) e o Tradicional fica sempre na ponta', 'Deck choice: the name is written on the box (the Jester one shows their name) and the Classic one is always last'],
       ['Escolha do Palhaço: a caixa mostra só passiva e poder, sempre do mesmo tamanho', 'Jester choice: the box shows only passive and power, always the same size'],
       ['A seta de mira volta a sair da carta de ação na faixa (só o Refletir flutua no meio da mesa)', 'The aiming arrow comes from the action card in the strip again (only Reflect floats in the middle)'],
@@ -6480,7 +6481,9 @@ window.SS = window.SS || {};
 
   // Celular: a janela aberta encolhe (zoom) até caber na tela, sem passar de um mínimo legível (aí ela rola).
   const ZOOMS_MODAL = [1, .95, .9, .85, .8, .75, .7, .65, .6, .56];
-  function encaixarModal() {
+  // depoisDeClique: medida refeita com a tela já aberta (clique ou imagem carregando). Aí as cartas podem estar voando
+  // com translate para fora da caixa e a largura de rolagem mente; vale só a altura do layout.
+  function encaixarModal(depoisDeClique) {
     const c = $('#modal > .caixa');
     if (!c) return;
     c.style.zoom = '';
@@ -6498,12 +6501,13 @@ window.SS = window.SS || {};
       c.style.zoom = z;
       c.style.setProperty('--zm', z);
       const r = c.getBoundingClientRect();
-      if (alturaConteudo() <= c.clientHeight + 2 && c.scrollWidth <= c.clientWidth + 2 && r.height <= innerHeight - 6 && r.width <= innerWidth - 6) break;
+      const largOk = depoisDeClique === true || c.scrollWidth <= c.clientWidth + 2;
+      if (alturaConteudo() <= c.clientHeight + 2 && largOk && r.height <= innerHeight - 6 && r.width <= innerWidth - 6) break;
     }
   }
   // (as cartas do palco voam com translate dentro da caixa encolhida: a distância da tela é dividida pelo zoom)
   let refazerModal = null;
-  $('#modal').addEventListener('load', () => { clearTimeout(refazerModal); refazerModal = setTimeout(encaixarModal, 40); }, true);
+  $('#modal').addEventListener('load', () => { clearTimeout(refazerModal); refazerModal = setTimeout(() => encaixarModal(true), 40); }, true);
   const zoomModal = () => parseFloat(($('#modal > .caixa') || { style: {} }).style.zoom) || 1;
 
   function ajustarEscala() {
