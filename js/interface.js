@@ -5713,7 +5713,7 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 143, data: '02/11/2026',
+    n: 144, data: '02/11/2026',
     novidades: [
       ['Valete de Copas espelhado', 'Jack of Hearts mirrored'],
       ['Todas as cartas, de número e de costas, com o mesmo contorno preto das cartas de letra', 'All cards, numbers and backs, with the same black outline as the letter cards'],
