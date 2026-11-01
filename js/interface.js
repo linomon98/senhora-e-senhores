@@ -3523,7 +3523,7 @@ window.SS = window.SS || {};
         ])}
         ${bloco('um', x('Recursos', 'Resources'), [
           linha(`${c('6', 'copas')}${op('→')}${ic('cura')}`, `+3 / +4 ${np('copas')}`),
-          linha(`${c('4', 'ouros')}${op('→')}${ic('comprar')}${ic('dado')}`, `+1 ${x('carta', 'card')} ${x('ou', 'or')} +1 ${dado}`),
+          linha(`${c('4', 'ouros')}${op('→')}${ic('comprar')}${ic('dado')}`, `<span class="cola-duas"><span>+1 ${x('carta', 'card')}</span><span>${x('ou', 'or')} +1 ${dado}</span></span>`),
           linha(`${c('5', 'espadas')}${op('→')}${ic('dano')}`, `+1 ${atk}`),
           linha(`${c('7', 'paus')}${op('→')}${ic('berserk')}`, 'Berserk'),
         ])}
@@ -5350,8 +5350,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 119, data: '01/11/2026',
+    n: 120, data: '01/11/2026',
     novidades: [
+      ['Colinha: Dado de dano e Defesa no topo, Senhores, Naipado e Ás no meio, Recursos e Pargias embaixo', 'Crib sheet: Damage die and Defense on top, Gentlemen, Suited and Ace in the middle, Resources and Pairgics below'],
       ['Os pedaços rasgados voam direto para o cemitério, sem parar no caminho, e somem já chegando nele', 'Torn pieces fly straight into the graveyard without stalling, fading out as they arrive'],
       ['Colinha reorganizada: Senhores, Naipado e Ás em cima; Pargias e Recursos no meio; Dado de dano e Defesa embaixo', 'Crib sheet rearranged: Gentlemen, Suited and Ace on top; Pairgics and Resources in the middle; Damage die and Defense below'],
       ['Os pedaços da carta rasgada voam para o cemitério', 'Torn card pieces fly into the graveyard'],
