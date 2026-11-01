@@ -5713,8 +5713,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 142, data: '02/11/2026',
+    n: 143, data: '02/11/2026',
     novidades: [
+      ['Valete de Copas espelhado', 'Jack of Hearts mirrored'],
       ['Todas as cartas, de número e de costas, com o mesmo contorno preto das cartas de letra', 'All cards, numbers and backs, with the same black outline as the letter cards'],
       ['O site agora tem ícone próprio na aba do navegador: o chapéu de bobo vermelho', 'The site now has its own browser tab icon: the red jester hat'],
       ['Palcos dos Palhaços com contorno de 2 px; a ilustração das formigas perdeu o contorno extra', 'Jester stages now have a 2 px outline; the ant illustration lost its extra outline'],
