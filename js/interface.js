@@ -5654,7 +5654,7 @@ window.SS = window.SS || {};
   }
 
   // Introdução ao abrir o jogo: "Clique para começar" (sem um clique o navegador não deixa tocar som, e a música tem de
-  // entrar junto com os botões), depois "Linomon apresenta", o logo salta embaixo do texto, o texto some, o logo vai para
+  // entrar junto com os botões), depois "Linomon apresenta" no meio da tela, o logo sobe com um salto, toma o meio e empurra o texto para cima, o texto some, o logo vai para
   // o lugar dele no menu e a música começa junto com os botões subindo. Durante a abertura, clicar ou apertar uma tecla pula.
   async function introducao() {
     const intro = $('#intro');
@@ -5702,11 +5702,11 @@ window.SS = window.SS || {};
     await Promise.race([Promise.all([real.decode().catch(() => {}), document.fonts.load('40px Marlboro').catch(() => {})]), espera(1500)]);
     if (acabou) return;
     const r = real.getBoundingClientRect(), s = Math.min(1.2, innerWidth * 0.8 / r.width, innerHeight * 0.55 / r.height);
-    const cy = innerHeight * 0.56, de = `translate(${(innerWidth / 2 - r.left - r.width / 2).toFixed(1)}px, ${(cy - r.top - r.height / 2).toFixed(1)}px) scale(${s.toFixed(3)})`;
+    const cy = innerHeight / 2, de = `translate(${(innerWidth / 2 - r.left - r.width / 2).toFixed(1)}px, ${(cy - r.top - r.height / 2).toFixed(1)}px) scale(${s.toFixed(3)})`;
     const texto = document.createElement('div');
     texto.className = 'intro-texto';
     texto.textContent = t('intro.apresenta');
-    texto.style.top = (cy - r.height * s / 2 - innerHeight * 0.03).toFixed(0) + 'px';
+    texto.style.top = cy + 'px';
     const logo = document.createElement('div');
     logo.className = 'intro-logo';
     Object.assign(logo.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px', transform: de });
@@ -5719,12 +5719,18 @@ window.SS = window.SS || {};
     texto.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 600, fill: 'both' });
     await espera(1500);
     if (acabou) return;
-    // o logo salta bem elástico embaixo do texto
-    img.animate([
-      { opacity: 1, scale: '0' }, { opacity: 1, scale: '1.24', offset: .34 }, { opacity: 1, scale: '.88', offset: .54 },
-      { opacity: 1, scale: '1.08', offset: .72 }, { opacity: 1, scale: '.97', offset: .87 }, { opacity: 1, scale: '1' },
-    ], { duration: 780, easing: 'ease-out', fill: 'forwards' });
-    await espera(1700);
+    // o logo sobe de baixo com um salto elástico, toma o meio da tela e empurra o texto para cima
+    const altura = r.height * s, baixo = (innerHeight / 2 + altura / 2 + 20) / s;
+    const empurra = altura / 2 + texto.offsetHeight / 2 + innerHeight * 0.025;
+    const px = v => `0px ${v.toFixed(1)}px`;
+    const SALTO = [[.5, -34], [.72, 14], [.88, -5], [1, 0]];
+    // (até encostar no texto o logo sobe sozinho; dali em diante os dois andam colados, com a mesma curva)
+    const ENCOSTA = .16, EMPURRAO = 'cubic-bezier(.2, .7, .3, 1)';
+    img.animate([{ opacity: 1, translate: px(baixo), offset: 0 }, { opacity: 1, translate: px(empurra / s), offset: ENCOSTA, easing: EMPURRAO }].concat(SALTO.map(([o, v]) => ({ opacity: 1, translate: px(v / s), offset: o, easing: 'ease-in-out' }))),
+      { duration: 950, fill: 'forwards' });
+    texto.animate([{ translate: px(0), offset: 0 }, { translate: px(0), offset: ENCOSTA, easing: EMPURRAO }].concat(SALTO.map(([o, v]) => ({ translate: px(v - empurra), offset: o, easing: 'ease-in-out' }))),
+      { duration: 950, fill: 'forwards' });
+    await espera(1950);
     if (acabou) return;
     texto.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 350, fill: 'forwards' });
     await espera(320);
@@ -5801,8 +5807,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 146, data: '02/11/2026',
+    n: 147, data: '02/11/2026',
     novidades: [
+      ['Introdução: o texto começa no meio da tela e o logo sobe empurrando ele para cima', 'Intro: the text starts in the middle and the logo rises, pushing it up'],
       ['Tela Clique para começar antes da introdução: agora a música entra junto com os botões', 'Click to start screen before the intro: the music now comes in with the buttons'],
       ['Introdução ao abrir o jogo: Linomon apresenta, o logo salta e vai para o menu com a música e os botões (clique para pular)', 'Intro when opening the game: Linomon presents, the logo bounces and moves to the menu with the music and buttons (click to skip)'],
       ['Valete de Copas espelhado', 'Jack of Hearts mirrored'],
