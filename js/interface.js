@@ -5811,8 +5811,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 149, data: '02/11/2026',
+    n: 150, data: '02/11/2026',
     novidades: [
+      ['Dado novo por padrão: gravidade 125% e altura 270%', 'New default die: 125% gravity and 270% height'],
       ['Logo um pouco mais à esquerda, no menu e na introdução', 'Logo moved slightly to the left, in the menu and the intro'],
       ['Introdução: a música começa com o logo, com a batida da bateria no instante em que ele chega', 'Intro: the music starts with the logo, with the drum hit landing as it arrives'],
       ['Introdução: o texto começa no meio da tela e o logo sobe empurrando ele para cima', 'Intro: the text starts in the middle and the logo rises, pushing it up'],
@@ -5892,13 +5893,14 @@ window.SS = window.SS || {};
   // ---------- Área de testes: bot × bot com decks escolhidos, simulação em massa e mesa livre ----------
 
   // Gravidade do dado (área de testes), em % da padrão; fica guardada neste navegador.
-  let gravidadeDado = (() => { try { return Number(localStorage.getItem('ss-gravidade-dado')) || 100; } catch (e) { return 100; } })();
+  const GRAVIDADE_PADRAO = 125, ALTURA_PADRAO = 270;
+  let gravidadeDado = (() => { try { return Number(localStorage.getItem('ss-gravidade-dado')) || GRAVIDADE_PADRAO; } catch (e) { return GRAVIDADE_PADRAO; } })();
   SS.Dados.definirGravidade(gravidadeDado);
-  const textoGravidade = () => gravidadeDado + '%' + (gravidadeDado === 100 ? ' ★' : '');
+  const textoGravidade = () => gravidadeDado + '%' + (gravidadeDado === GRAVIDADE_PADRAO ? ' ★' : '');
   // Altura de onde o dado cai (área de testes), em % da padrão; também fica guardada neste navegador.
-  let alturaDado = (() => { try { return Number(localStorage.getItem('ss-altura-dado')) || 100; } catch (e) { return 100; } })();
+  let alturaDado = (() => { try { return Number(localStorage.getItem('ss-altura-dado')) || ALTURA_PADRAO; } catch (e) { return ALTURA_PADRAO; } })();
   SS.Dados.definirAltura(alturaDado);
-  const textoAltura = () => alturaDado + '%' + (alturaDado === 100 ? ' ★' : '');
+  const textoAltura = () => alturaDado + '%' + (alturaDado === ALTURA_PADRAO ? ' ★' : '');
 
   function telaTestes() {
     const item = (m, icone, titulo, nota) => `<button class="btn-teste" data-m="${m}"><b>${icone} ${titulo}</b><span>${nota}</span></button>`;
