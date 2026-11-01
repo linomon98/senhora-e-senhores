@@ -5408,8 +5408,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 130, data: '01/11/2026',
+    n: 131, data: '01/11/2026',
     novidades: [
+      ['Contorno das artes da mesa padronizado (palcos, enfeites e cobra com a mesma espessura de traço)', 'Table art outlines standardized (stages, decorations and snake with the same line weight)'],
       ['Corrigido: trocar cartas no Mulligan deixava a janela minúscula', 'Fixed: swapping cards in the Mulligan made the window tiny'],
       ['Escolha do baralho: o nome vai escrito na caixa (o do Palhaço leva o nome dele) e o Tradicional fica sempre na ponta', 'Deck choice: the name is written on the box (the Jester one shows their name) and the Classic one is always last'],
       ['Escolha do Palhaço: a caixa mostra só passiva e poder, sempre do mesmo tamanho', 'Jester choice: the box shows only passive and power, always the same size'],

@@ -2677,3 +2677,23 @@ html.em-menu::before { display: none; }
 
 /* O nome do baralho vai escrito na frente da caixa (sem legenda embaixo) */
 #modal .grupo-decks button { padding: 12px 14px; }
+
+/* Contorno padronizado: cada arte veio numa escala diferente e o traço de fora ficava mais fino em umas do que em
+   outras. As mais finas ganham um reforço na mesma tinta do desenho, até ficarem com uns 2,3 px na mesa
+   (medido arte por arte; o palco azul do oponente e o do jogador já são grossos e ficam como estão). */
+:root { --tinta-arte: rgb(22, 20, 18); }
+.palco-op.palco-copas, .palco-op.palco-paus, .palco-op.palco-ouros, .palco-eu.palco-paus {
+  filter: drop-shadow(.8px 0 0 var(--tinta-arte)) drop-shadow(-.8px 0 0 var(--tinta-arte)) drop-shadow(0 .8px 0 var(--tinta-arte)) drop-shadow(0 -.8px 0 var(--tinta-arte))
+    drop-shadow(8px 11px 0 rgba(5, 18, 2, .42));
+}
+.deco-ratos .deco-base, .deco-cinzeiro .deco-base {
+  filter: drop-shadow(.9px 0 0 var(--tinta-arte)) drop-shadow(-.9px 0 0 var(--tinta-arte)) drop-shadow(0 .9px 0 var(--tinta-arte)) drop-shadow(0 -.9px 0 var(--tinta-arte))
+    drop-shadow(7px 9px 0 rgba(5, 18, 2, .42));
+}
+.deco-formigas .deco-base {
+  filter: drop-shadow(.9px 0 0 var(--tinta-arte)) drop-shadow(-.9px 0 0 var(--tinta-arte)) drop-shadow(0 .9px 0 var(--tinta-arte)) drop-shadow(0 -.9px 0 var(--tinta-arte));
+}
+#cobra {
+  filter: drop-shadow(.4px 0 0 var(--tinta-arte)) drop-shadow(-.4px 0 0 var(--tinta-arte)) drop-shadow(0 .4px 0 var(--tinta-arte)) drop-shadow(0 -.4px 0 var(--tinta-arte))
+    drop-shadow(0 7px 5px rgba(5, 18, 2, .4));
+}
