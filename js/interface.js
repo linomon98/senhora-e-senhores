@@ -5702,7 +5702,8 @@ window.SS = window.SS || {};
     await Promise.race([Promise.all([real.decode().catch(() => {}), document.fonts.load('40px Marlboro').catch(() => {})]), espera(1500)]);
     if (acabou) return;
     const r = real.getBoundingClientRect(), s = Math.min(1.2, innerWidth * 0.8 / r.width, innerHeight * 0.55 / r.height);
-    const cy = innerHeight / 2, de = `translate(${(innerWidth / 2 - r.left - r.width / 2).toFixed(1)}px, ${(cy - r.top - r.height / 2).toFixed(1)}px) scale(${s.toFixed(3)})`;
+    // (na mesma coluna do menu, onde o logo parece centralizado: dali ele só sobe)
+    const cy = innerHeight / 2, de = `translate(0px, ${(cy - r.top - r.height / 2).toFixed(1)}px) scale(${s.toFixed(3)})`;
     const texto = document.createElement('div');
     texto.className = 'intro-texto';
     texto.textContent = t('intro.apresenta');
@@ -5810,8 +5811,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 148, data: '02/11/2026',
+    n: 149, data: '02/11/2026',
     novidades: [
+      ['Logo um pouco mais à esquerda, no menu e na introdução', 'Logo moved slightly to the left, in the menu and the intro'],
       ['Introdução: a música começa com o logo, com a batida da bateria no instante em que ele chega', 'Intro: the music starts with the logo, with the drum hit landing as it arrives'],
       ['Introdução: o texto começa no meio da tela e o logo sobe empurrando ele para cima', 'Intro: the text starts in the middle and the logo rises, pushing it up'],
       ['Tela Clique para começar antes da introdução: agora a música entra junto com os botões', 'Click to start screen before the intro: the music now comes in with the buttons'],
