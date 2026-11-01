@@ -19,6 +19,8 @@ window.SS = window.SS || {};
   // ainda legível). Dá para mudar na área de testes.
   const GRAVIDADE_PADRAO = 260;
   let gravidade = GRAVIDADE_PADRAO;
+  // Altura de onde o dado cai (área de testes): fator sobre a altura padrão (1 = 100%).
+  let alturaFator = 1;
   let TAM = TAM_MESA;
   // Bandeja: elemento da página onde os dados rolam (null = a tela toda).
   let arena = null;
@@ -150,7 +152,7 @@ window.SS = window.SS || {};
     const r = arena && arena.isConnected ? arena.getBoundingClientRect() : null;
     // Área pequena (bandeja): dados menores. A mesa inteira usa o tamanho normal.
     TAM = r && r.width > 20 && r.width < 400 ? TAM_BANDEJA : TAM_MESA;
-    alturaMao = TAM === TAM_BANDEJA ? 6 : 11;
+    alturaMao = (TAM === TAM_BANDEJA ? 6 : 11) * alturaFator;
     limites = retanguloEm(0);
     // Onde os dados ficam enquanto você segura: dentro da bandeja no chão E vista do alto.
     const alto = retanguloEm(alturaMao);
@@ -268,7 +270,7 @@ window.SS = window.SS || {};
       corpo.angularDamping = 0.1;
       // Arremesso a partir do canto inferior direito (o seu lado da mesa) ou superior (oponente).
       const z0 = dentroZ(deCima ? L.minZ + 3 * f + k * 2.6 * f : L.maxZ - 3 * f - k * 2.6 * f);
-      corpo.position.set(L.maxX - TAM - k * 0.8 * f, (TAM === TAM_BANDEJA ? 5 : 11) + k * 2.4, z0);
+      corpo.position.set(L.maxX - TAM - k * 0.8 * f, (TAM === TAM_BANDEJA ? 5 : 11) * alturaFator + k * 2.4, z0);
       corpo.quaternion.setFromEuler(Math.random() * 6.28, Math.random() * 6.28, Math.random() * 6.28);
       const vz = (12 + Math.random() * 5) * (deCima ? 1 : -1) * Math.max(0.45, f);
       corpo.velocity.set(-(22 + Math.random() * 6) * Math.max(0.45, f), 5 + Math.random() * 5, vz);
@@ -497,7 +499,7 @@ window.SS = window.SS || {};
     mats.forEach(m => { m.opacity = 1; });
     // (o dado animado também acompanha a gravidade: mais leve, demora mais para cair e quicar)
     const lento = Math.min(2.2, Math.max(0.6, Math.sqrt(GRAVIDADE_PADRAO / gravidade)));
-    const L = limites, dur = (TAM === TAM_BANDEJA ? 1100 : 1300) * lento, alto = TAM === TAM_BANDEJA ? 1 : 1.6, inicio = performance.now();
+    const L = limites, dur = (TAM === TAM_BANDEJA ? 1100 : 1300) * lento, alto = (TAM === TAM_BANDEJA ? 1 : 1.6) * alturaFator, inicio = performance.now();
     const cima = new THREE.Vector3(0, 1, 0);
     const voos = valores.map((v, k) => {
       const malha = new THREE.Mesh(new THREE.BoxGeometry(TAM, TAM, TAM), mats);
@@ -589,6 +591,8 @@ window.SS = window.SS || {};
       gravidade = GRAVIDADE_PADRAO * Math.max(0.1, Number(pct) || 100) / 100;
       if (mundo) mundo.gravity.set(0, -gravidade, 0);
     },
+    // Altura de onde o dado cai (área de testes): em % da padrão.
+    definirAltura: pct => { alturaFator = Math.max(0.3, Math.min(3, (Number(pct) || 100) / 100)); },
     definirArena: el => { arena = el || null; },
     // Mostra um dado jogado por outra pessoa (multiplayer), terminando nos valores dados.
     mostrar: (valores, cor, deCima) => (iniciar() ? rolarPara(valores, cor, !!deCima) : rolarPara2D(valores, cor)),

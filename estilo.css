@@ -2658,3 +2658,12 @@ html::before {
 }
 html.em-menu::before { display: none; }
 @media (prefers-reduced-motion: reduce) { html::before { animation: none; } }
+
+/* Escolha do baralho antes da partida: a caixinha grande (80% da caixa "Baralhos" do menu) com o nome embaixo */
+#modal .grupo.grupo-decks { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; }
+#modal .grupo-decks button { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 12px 10px; min-width: 132px; }
+.deck-caixa { --u: .8px; position: relative; display: block; width: calc(126 * var(--u)); height: calc(150 * var(--u)); }
+.deck-caixa .maco { left: 0; top: 0; }
+.grupo-decks button:hover .maco-tampa { transform: translateY(-48%) rotate(-5deg); }
+.grupo-decks button:hover .maco-cartas { transform: translateY(-22%); }
+.deck-legenda { display: block; max-width: 140px; font: 700 14px/1.2 var(--fonte-ui); text-align: center; white-space: normal; }

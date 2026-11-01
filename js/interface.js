@@ -5420,8 +5420,10 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 124, data: '01/11/2026',
+    n: 125, data: '01/11/2026',
     novidades: [
+      ['Testes: slider de altura do dado, embaixo do de gravidade', 'Tests: dice height slider, below the gravity one'],
+      ['Escolha do baralho com caixas grandes e o nome embaixo; deck virou baralho em português', 'Deck choice with big boxes and the name below'],
       ['Botão de tela cheia no canto superior direito', 'Full screen button in the top right corner'],
       ['O turno fica dentro da caixa de ações, em letra maior', 'The turn number sits inside the actions box, in a bigger font'],
       ['Naipes andando na diagonal nas faixas coloridas dos lados da mesa', 'Suits drifting diagonally on the colored bands beside the table'],
@@ -5478,6 +5480,10 @@ window.SS = window.SS || {};
   let gravidadeDado = (() => { try { return Number(localStorage.getItem('ss-gravidade-dado')) || 100; } catch (e) { return 100; } })();
   SS.Dados.definirGravidade(gravidadeDado);
   const textoGravidade = () => gravidadeDado + '%' + (gravidadeDado === 100 ? ' ★' : '');
+  // Altura de onde o dado cai (área de testes), em % da padrão; também fica guardada neste navegador.
+  let alturaDado = (() => { try { return Number(localStorage.getItem('ss-altura-dado')) || 100; } catch (e) { return 100; } })();
+  SS.Dados.definirAltura(alturaDado);
+  const textoAltura = () => alturaDado + '%' + (alturaDado === 100 ? ' ★' : '');
 
   function telaTestes() {
     const item = (m, icone, titulo, nota) => `<button class="btn-teste" data-m="${m}"><b>${icone} ${titulo}</b><span>${nota}</span></button>`;
@@ -5494,6 +5500,9 @@ window.SS = window.SS || {};
       <div class="opcao gravidade-dado"><label>${DADO_IMG} ${t('teste.gravidade')} <b class="grav-v">${textoGravidade()}</b></label>
         <input type="range" class="grav-dado" min="20" max="250" step="5" value="${gravidadeDado}">
         <p class="nota">${t('teste.gravidadeNota')}</p></div>
+      <div class="opcao gravidade-dado"><label>${DADO_IMG} ${t('teste.alturaDado')} <b class="alt-v">${textoAltura()}</b></label>
+        <input type="range" class="alt-dado" min="30" max="300" step="10" value="${alturaDado}">
+        <p class="nota">${t('teste.alturaDadoNota')}</p></div>
       <div class="acoes-menu"><button class="btn" data-m="voltar">${t('btn.voltar')}</button></div></div>`,
     ev => {
       const b = ev.target.closest('[data-m]');
@@ -5514,6 +5523,12 @@ window.SS = window.SS || {};
       SS.Dados.definirGravidade(gravidadeDado);
       $('#modal .grav-v').textContent = textoGravidade();
       try { localStorage.setItem('ss-gravidade-dado', String(gravidadeDado)); } catch (e) { /* fica só nesta visita */ }
+    });
+    $('#modal .alt-dado').addEventListener('input', ev => {
+      alturaDado = Number(ev.target.value);
+      SS.Dados.definirAltura(alturaDado);
+      $('#modal .alt-v').textContent = textoAltura();
+      try { localStorage.setItem('ss-altura-dado', String(alturaDado)); } catch (e) { /* fica só nesta visita */ }
     });
   }
 
@@ -5992,7 +6007,7 @@ window.SS = window.SS || {};
       <h2 class="titulo-etapa">${t('menu.escolhaPalhaco')}</h2>
       <div class="mesa-cartas${sel ? ' com-escolha' : ''}">${P.LISTA.map((pal, k) => cartaJoker(pal, sel, k)).join('')}</div>
       <div class="info-carta">${sel ? caixaInfo(sel) : `<p class="dica-carta">${t('menu.cliqueCarta')}</p>`}</div>
-      <div class="opcao"><label>${t('menu.seuDeck')}</label>${grupoMenu('deck', decks.map(d => [d.id, `<span class="deck-mini">${SS.Decks.caixaDe(d.id, sel)}</span>${escapar(d.nome)}`]))}
+      <div class="opcao"><label>${t('menu.seuDeck')}</label>${grupoMenu('deck', decks.map(d => [d.id, `<span class="deck-caixa">${SS.Decks.caixaDe(d.id, sel)}</span><span class="deck-legenda">${escapar(d.nome)}</span>`])).replace('class="grupo"', 'class="grupo grupo-decks"')}
         <p class="nota nota-deck">${notaDeck()}</p></div>
       ${regrasModificadas(cfg.regras).length && modo !== 'convite' ? `<p class="nota aviso-regras">⚖ ${t('rg.aviso', { n: regrasModificadas(cfg.regras).length })}</p>` : ''}
       <div class="acoes-menu">
@@ -6009,7 +6024,7 @@ window.SS = window.SS || {};
         $('#modal .info-carta').innerHTML = caixaInfo(sel);
         $('#modal [data-m="confirmar"]').disabled = false;
         // A caixinha do "Deck do Palhaço" vira a do naipe do Palhaço escolhido.
-        const mini = $('#modal [data-grupo="deck"] [data-v="palhaco"] .deck-mini');
+        const mini = $('#modal [data-grupo="deck"] [data-v="palhaco"] .deck-caixa');
         if (mini) mini.innerHTML = SS.Decks.caixaDe('palhaco', sel);
         return;
       }
