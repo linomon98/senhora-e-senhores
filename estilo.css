@@ -2715,3 +2715,9 @@ html.celular #botoes-canto { --t: 64; --ic: 32; gap: calc(14 * var(--e)); }
 .regras-teste { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 18px; align-items: start; }
 .regras-teste > .titulo-etapa, .regras-teste > .nota, .regras-teste > .acoes-menu { grid-column: 1 / -1; }
 html.celular .regras-teste { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+/* Introdução ao abrir o jogo */
+#intro { position: fixed; inset: 0; z-index: 5000; overflow: hidden; background: #000; cursor: pointer; }
+.intro-texto { position: absolute; left: 0; right: 0; transform: translateY(-100%); text-align: center; color: #fff; font: 400 min(6.4vh, 7vw)/1.1 'Marlboro', var(--fonte-titulo); letter-spacing: .03em; user-select: none; }
+.intro-logo { position: absolute; transform-origin: 50% 50%; }
+.intro-logo img { display: block; width: 100%; height: 100%; }

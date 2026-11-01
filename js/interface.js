@@ -4137,6 +4137,13 @@ window.SS = window.SS || {};
   let voltandoTela = false;
   // Nome da tela que um HTML desenha: o mesmo nome é a mesma tela sendo redesenhada, sem animação.
   const chaveDaTela = html => (html.match(/<h2[^>]*>(.*?)<\/h2>/) || html.match(/class="([^"]+)"/) || [0, ''])[1];
+  // Os botões do início sobem de baixo, um logo depois do outro, e o resto só aparece.
+  function entrarBotoesInicio(raiz) {
+    const longe = Math.round(innerHeight * 1.25);
+    [...raiz.querySelectorAll(BOTOES_INICIO)].reverse().forEach((el, k) => el.animate([{ translate: `0 ${longe}px` }, { translate: '0 -8px', offset: .85 }, { translate: '0 0' }],
+      { duration: TROCA_TELA_MS + 60, delay: 70 + k * TROCA_TELA_ATRASO, easing: 'cubic-bezier(.2, .75, .3, 1)', fill: 'backwards' }));
+    raiz.querySelectorAll(RESTO_INICIO).forEach(el => el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 320, delay: 160, fill: 'backwards' }));
+  }
   let destravarRolagem = null;
   function animarTrocaDeTela(foto, voltando) {
     const longe = Math.round(innerHeight * 1.25), nova = $('#modal > .caixa');
@@ -4162,11 +4169,8 @@ window.SS = window.SS || {};
       const caixa = foto.querySelector('.caixa'), destino = (voltando ? -1 : 1) * longe * 1.6;
       if (caixa) caixa.animate([{ translate: '0 0' }, { translate: `0 ${destino}px` }], { duration: TROCA_TELA_MS, easing: 'cubic-bezier(.5, 0, .85, .45)', fill: 'forwards' });
     }
-    if (entrarNovos.length) {
-      [...entrarNovos].reverse().forEach((el, k) => el.animate([{ translate: `0 ${longe}px` }, { translate: '0 -8px', offset: .85 }, { translate: '0 0' }],
-        { duration: TROCA_TELA_MS + 60, delay: 70 + k * TROCA_TELA_ATRASO, easing: 'cubic-bezier(.2, .75, .3, 1)', fill: 'backwards' }));
-      nova.querySelectorAll(RESTO_INICIO).forEach(el => el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 320, delay: 160, fill: 'backwards' }));
-    } else if (nova && voltando) {
+    if (entrarNovos.length) entrarBotoesInicio(nova);
+    else if (nova && voltando) {
       nova.animate([{ translate: `0 ${longe * 1.6}px` }, { translate: '0 -10px', offset: .85 }, { translate: '0 0' }],
         { duration: TROCA_TELA_MS + 80, delay: 70, easing: 'cubic-bezier(.2, .75, .3, 1)', fill: 'backwards' });
     } else if (nova) {
@@ -5649,10 +5653,79 @@ window.SS = window.SS || {};
     }).catch(() => {});
   }
 
+  // Introdução ao abrir o jogo: tela preta, "Linomon apresenta", o logo salta embaixo do texto, o texto some, o logo vai
+  // para o lugar dele no menu e a música começa junto com os botões subindo. Clicar ou apertar uma tecla pula.
+  // (Sem nenhum clique antes, o navegador não deixa tocar som: nesse caso a música só começa no primeiro clique.)
+  async function introducao() {
+    const intro = $('#intro');
+    if (!intro) return;
+    const raiz = $('#modal .inicio-novo'), real = raiz && raiz.querySelector('.logo-menu');
+    if (MOVIMENTO_REDUZIDO || !real) {
+      intro.remove();
+      return Som.musica('menu');
+    }
+    real.style.visibility = 'hidden';
+    let acabou = false, entrou = false;
+    const entrar = () => {
+      if (entrou) return;
+      entrou = true;
+      Som.musica('menu');
+      entrarBotoesInicio(raiz);
+    };
+    const fim = () => {
+      if (acabou) return;
+      acabou = true;
+      entrar();
+      real.style.visibility = '';
+      intro.remove();
+      removeEventListener('keydown', fim, true);
+    };
+    intro.addEventListener('pointerdown', fim);
+    addEventListener('keydown', fim, true);
+    const espera = ms => new Promise(r => setTimeout(r, ms));
+    // (espera o logo e a fonte, com limite, para nada aparecer pela metade)
+    await Promise.race([Promise.all([real.decode().catch(() => {}), document.fonts.load('40px Marlboro').catch(() => {})]), espera(1500)]);
+    if (acabou) return;
+    const r = real.getBoundingClientRect(), s = Math.min(1.2, innerWidth * 0.8 / r.width, innerHeight * 0.55 / r.height);
+    const cy = innerHeight * 0.56, de = `translate(${(innerWidth / 2 - r.left - r.width / 2).toFixed(1)}px, ${(cy - r.top - r.height / 2).toFixed(1)}px) scale(${s.toFixed(3)})`;
+    const texto = document.createElement('div');
+    texto.className = 'intro-texto';
+    texto.textContent = t('intro.apresenta');
+    texto.style.top = (cy - r.height * s / 2 - innerHeight * 0.03).toFixed(0) + 'px';
+    const logo = document.createElement('div');
+    logo.className = 'intro-logo';
+    Object.assign(logo.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px', transform: de });
+    const img = new Image();
+    img.src = real.src;
+    img.alt = '';
+    img.style.opacity = '0';
+    logo.appendChild(img);
+    intro.append(texto, logo);
+    texto.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 600, fill: 'both' });
+    await espera(1500);
+    if (acabou) return;
+    // o logo salta bem elástico embaixo do texto
+    img.animate([
+      { opacity: 1, scale: '0' }, { opacity: 1, scale: '1.24', offset: .34 }, { opacity: 1, scale: '.88', offset: .54 },
+      { opacity: 1, scale: '1.08', offset: .72 }, { opacity: 1, scale: '.97', offset: .87 }, { opacity: 1, scale: '1' },
+    ], { duration: 780, easing: 'ease-out', fill: 'forwards' });
+    await espera(1700);
+    if (acabou) return;
+    texto.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 350, fill: 'forwards' });
+    await espera(320);
+    if (acabou) return;
+    // o preto some, o logo vai para o menu; a música e os botões entram juntos
+    intro.animate([{ backgroundColor: '#000' }, { backgroundColor: 'rgba(0, 0, 0, 0)' }], { duration: 650, fill: 'forwards' });
+    logo.animate([{ transform: de }, { transform: 'none' }], { duration: 800, easing: 'cubic-bezier(.5, 0, .2, 1)', fill: 'forwards' });
+    entrar();
+    await espera(830);
+    fim();
+  }
+
   function telaInicio() {
     atualizarCanto(); // (o idioma pode ter mudado)
     const convite = SS.Rede.codigoDoLink();
-    Som.musica('menu');
+    if (!$('#intro')) Som.musica('menu'); // (ao abrir o jogo, a introdução é que começa a música)
     // Fora da partida, as laterais da tela voltam ao verde.
     document.documentElement.style.removeProperty('--lado-esq');
     document.documentElement.style.removeProperty('--lado-dir');
@@ -5713,8 +5786,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 144, data: '02/11/2026',
+    n: 145, data: '02/11/2026',
     novidades: [
+      ['Introdução ao abrir o jogo: Linomon apresenta, o logo salta e vai para o menu com a música e os botões (clique para pular)', 'Intro when opening the game: Linomon presents, the logo bounces and moves to the menu with the music and buttons (click to skip)'],
       ['Valete de Copas espelhado', 'Jack of Hearts mirrored'],
       ['Todas as cartas, de número e de costas, com o mesmo contorno preto das cartas de letra', 'All cards, numbers and backs, with the same black outline as the letter cards'],
       ['O site agora tem ícone próprio na aba do navegador: o chapéu de bobo vermelho', 'The site now has its own browser tab icon: the red jester hat'],
@@ -6864,6 +6938,7 @@ window.SS = window.SS || {};
   document.addEventListener('pointermove', aoMover);
   document.addEventListener('keydown', aoTeclar);
   menu();
+  introducao();
   // Com o menu na tela, baixa por trás o que a partida vai usar (dado 3D) e, se veio de um convite, o online.
   setTimeout(() => {
     SS.Libs.dado();
