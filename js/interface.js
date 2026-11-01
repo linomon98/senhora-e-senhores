@@ -3490,32 +3490,6 @@ window.SS = window.SS || {};
   }
 
   // Quase tudo em imagem: as próprias cartas do jogo, as artes das ações, escudos e o dado; texto só nos rótulos curtos.
-  // Rabiscos de caderno nos cantos vazios da colinha (caneta azul): 4 pintinhos alados voando em bando e o porquinho
-  // feito com as letras E W W M S (orelhas M, patas W W, rabo S e o focinho E).
-  const PINTO_ALADO = `<g fill="none" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M2 20h7M4 25h6M3 30h5" stroke-width="1.2" opacity=".7"/>
-      <circle cx="16" cy="27" r="5.2"/><circle cx="23.5" cy="29.5" r="5.2"/>
-      <path d="M20 20.5 L41 15.5 Q49 13.5 50.5 19 Q52 24.5 44 25.5 L23 29"/>
-      <path d="M43.5 15.2 Q46.5 20 44.5 25.4"/><path d="M50 18.5 l1.6 .3"/>
-      <path d="M27 18.6 C22 9 27 3 31.5 9 C32 3.5 38 3 36.5 10.5 C39.5 7.5 43 10 38 16"/>
-      <path d="M30 13 l3 3.5M34 11 l1.5 4.5" stroke-width="1"/>
-    </g>`;
-  const RABISCO_PINTOS = `<svg viewBox="0 0 150 150">
-      <g transform="translate(0 2) rotate(-12 30 20) scale(1.4)">${PINTO_ALADO}</g>
-      <g transform="translate(84 18) rotate(8 30 20) scale(1.08)">${PINTO_ALADO}</g>
-      <g transform="translate(8 76) rotate(-4 30 20) scale(1.25)">${PINTO_ALADO}</g>
-      <g transform="translate(88 98) rotate(-22 30 20) scale(.95)">${PINTO_ALADO}</g>
-    </svg>`;
-  const RABISCO_PORCO = `<svg viewBox="0 0 150 150"><g fill="none" stroke-linecap="round" stroke-linejoin="round">
-      <ellipse cx="80" cy="74" rx="44" ry="28"/>
-      <text x="44" y="52" class="rab-letra" transform="rotate(-14 52 46)">M</text>
-      <text x="48" y="118" class="rab-letra">W</text><text x="88" y="118" class="rab-letra">W</text>
-      <text x="122" y="70" class="rab-letra" transform="rotate(18 128 62)">S</text>
-      <text x="22" y="86" class="rab-letra" transform="scale(-1 1) translate(-66 0)">E</text>
-      <circle cx="54" cy="64" r="2.2" fill="currentColor" stroke="none"/>
-      <path d="M60 86 q6 5 12 1"/>
-    </g></svg>`;
-
   function colinhaHtml() {
     const en = SS.Idioma.atual() === 'en', x = (pt, ing) => (en ? ing : pt);
     const c = (r, n, cls) => `<span class="cola-c${cls ? ' ' + cls : ''}">${C.frente({ rank: r, naipe: n })}</span>`;
@@ -3530,8 +3504,6 @@ window.SS = window.SS || {};
     const R = M.regras(), faixa = r => M.faixaFigura(r).join('–');
     return `<h2>${x('Colinha', 'Crib sheet')}</h2>
       <div class="cola-cols">
-        <div class="cola-rabisco cola-rab-esq" aria-hidden="true">${RABISCO_PINTOS}</div>
-        <div class="cola-rabisco cola-rab-dir" aria-hidden="true">${RABISCO_PORCO}</div>
         ${bloco('sen', x('Senhores', 'Gentlemen'), [
           linha(`${c('J', 'espadas')}${op('+')}${c('3', 'copas')}`, `${faixa('J')} · ${x('ataca já', 'attacks now')}`),
           linha(`${c('K', 'paus')}${op('+')}${c('7', 'copas')}${R.reiSacrificaValete ? op('✕') + c('J', 'ouros', 'cola-sac') : ''}`, `${faixa('K')} · ${x('ordem real', 'royal order')}`),
@@ -5378,9 +5350,8 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 121, data: '01/11/2026',
+    n: 120, data: '01/11/2026',
     novidades: [
-      ['Colinha ganhou rabiscos de caderno nos cantos', 'The crib sheet got notebook doodles in the corners'],
       ['Colinha: Dado de dano e Defesa no topo, Senhores, Naipado e Ás no meio, Recursos e Pargias embaixo', 'Crib sheet: Damage die and Defense on top, Gentlemen, Suited and Ace in the middle, Resources and Pairgics below'],
       ['Os pedaços rasgados voam direto para o cemitério, sem parar no caminho, e somem já chegando nele', 'Torn pieces fly straight into the graveyard without stalling, fading out as they arrive'],
       ['Colinha reorganizada: Senhores, Naipado e Ás em cima; Pargias e Recursos no meio; Dado de dano e Defesa embaixo', 'Crib sheet rearranged: Gentlemen, Suited and Ace on top; Pairgics and Resources in the middle; Damage die and Defense below'],
