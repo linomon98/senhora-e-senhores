@@ -4137,8 +4137,21 @@ window.SS = window.SS || {};
   let voltandoTela = false;
   // Nome da tela que um HTML desenha: o mesmo nome é a mesma tela sendo redesenhada, sem animação.
   const chaveDaTela = html => (html.match(/<h2[^>]*>(.*?)<\/h2>/) || html.match(/class="([^"]+)"/) || [0, ''])[1];
+  let destravarRolagem = null;
   function animarTrocaDeTela(foto, voltando) {
     const longe = Math.round(innerHeight * 1.25), nova = $('#modal > .caixa');
+    // A tela nova começa fora da janela: sem isto o #modal ganharia barra de rolagem e tudo pularia para o lado.
+    const real = $('#modal');
+    real.style.overflow = 'hidden';
+    clearTimeout(destravarRolagem);
+    // (só solta quando as animações de entrada acabarem de verdade: num computador lento elas atrasam; 3 s no máximo)
+    const limite = performance.now() + 3000;
+    const soltar = () => {
+      const voando = real.getAnimations({ subtree: true }).some(q => !(q instanceof CSSAnimation) && !(q instanceof CSSTransition) && q.playState === 'running');
+      if (voando && performance.now() < limite) destravarRolagem = setTimeout(soltar, 120);
+      else real.style.overflow = '';
+    };
+    destravarRolagem = setTimeout(soltar, 500);
     const sairAntigos = foto.querySelectorAll(BOTOES_INICIO), entrarNovos = nova ? nova.querySelectorAll(BOTOES_INICIO) : [];
     if (sairAntigos.length) {
       sairAntigos.forEach((el, k) => el.animate([{ translate: '0 0' }, { translate: `0 ${longe}px` }],
@@ -5700,8 +5713,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 138, data: '02/11/2026',
+    n: 139, data: '02/11/2026',
     novidades: [
+      ['Corrigido: a barra de rolagem aparecia e tudo pulava no meio da animação de voltar; as janelas não mostram mais barra de rolagem', 'Fixed: the scrollbar appeared and everything jumped during the back animation; windows no longer show a scrollbar'],
       ['Toda troca de tela do menu anima, indo e voltando: a tela antiga sai, a nova entra, e os botões do início voltam de baixo', 'Every menu screen change animates both ways: the old screen leaves, the new one enters, and the home buttons rise back from below'],
       ['Jogar, Multiplayer e Testes: os botões do menu caem da tela enquanto a caixa surge; o som da transição some junto com as cartas', 'Play, Multiplayer and Tests: the menu buttons drop off the screen as the box appears; the transition sound fades with the cards'],
       ['Transição só quando o fundo muda (baralhos, regras, batalha), com mais cartas, mais rápida e o som de dar cartas baixinho', 'Transition only when the background changes (decks, rules, battle), with more cards, faster, and a soft card-dealing sound'],

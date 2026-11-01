@@ -2708,3 +2708,13 @@ html.celular #botoes-canto { --t: 64; --ic: 32; gap: calc(14 * var(--e)); }
 /* Foto do início caindo por cima da tela nova: sem o fundo de papelão, para a caixa nova aparecer por baixo */
 #modal.foto-saida { background: none; overflow: hidden; }
 #modal.foto-saida::before { display: none; }
+
+/* Sem barra de rolagem nas janelas do jogo: elas encolhem para caber na tela */
+#modal, #modal .caixa, .cola-folha { scrollbar-width: none; }
+#modal::-webkit-scrollbar, #modal .caixa::-webkit-scrollbar, .cola-folha::-webkit-scrollbar { display: none; }
+
+/* Modificadores de regras: muitas opções, em colunas para caberem sem rolar */
+#modal .caixa:has(> .regras-teste) { max-width: calc(min(1500px, 96vw) / var(--zm, 1)); }
+.regras-teste { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 18px; align-items: start; }
+.regras-teste > .titulo-etapa, .regras-teste > .nota, .regras-teste > .acoes-menu { grid-column: 1 / -1; }
+html.celular .regras-teste { grid-template-columns: repeat(2, minmax(0, 1fr)); }
