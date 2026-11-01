@@ -4080,17 +4080,18 @@ window.SS = window.SS || {};
   // ---------- Janelas ----------
 
   // ---------- Transição entre telas ----------
-  // Um bando de cartas sobe da parte de baixo da tela, na diagonal, com o "fuish" do vento: quando elas cobrem tudo,
+  // Só quando o fundo muda (baralhos, regras, entrar na partida e voltar ao menu). Um bando de cartas sobe da parte
+  // de baixo da tela, na diagonal, com o "trrrr" de dar cartas: quando elas cobrem tudo,
   // a tela troca por trás (trocar()), e elas seguem até sair por cima.
   let emTransicao = false;
-  const TRANSICAO_MS = 950, TROCA_EM = 0.34;
+  const TRANSICAO_MS = 620, TROCA_EM = 0.34;
   const CARTAS_TRANSICAO = [['K', 'paus'], ['Q', 'copas'], ['J', 'espadas'], ['K', 'ouros'], ['Q', 'espadas'], ['J', 'copas']];
   function transicao(trocar) {
     if (emTransicao || MOVIMENTO_REDUZIDO) return trocar();
     emTransicao = true;
-    Som.tocar('golpe-no-vento');
-    const L = innerWidth, A = innerHeight, altC = A * 0.62, largC = altC * 0.71, passoX = largC * 0.72, passoY = altC * 0.62;
-    const INCLINA = 0.28, FILAS = 7, inicio = A * 1.1, curso = inicio + FILAS * passoY + altC;
+    Som.tocar('embaralhar', { vol: 0.22 }); // (bem baixinho)
+    const L = innerWidth, A = innerHeight, altC = A * 0.46, largC = altC * 0.71, passoX = largC * 0.72, passoY = altC * 0.62;
+    const INCLINA = 0.28, FILAS = 10, inicio = A * 1.1, curso = inicio + FILAS * passoY + altC;
     const camada = document.createElement('div');
     camada.id = 'transicao';
     const colIni = Math.floor(-(inicio * INCLINA + largC) / passoX) - 1, colFim = Math.ceil(L / passoX) + 1;
@@ -4126,15 +4127,8 @@ window.SS = window.SS || {};
     document.body.appendChild(foto); // (depois do original: quem procura #modal continua achando o de verdade)
     transicao(() => foto.remove());
   }
-  // Nome da tela de menu que um HTML desenha: o mesmo nome é a mesma tela sendo redesenhada, sem transição.
-  const chaveDaTela = html => (html.match(/<h2[^>]*>(.*?)<\/h2>/) || html.match(/class="([^"]+)"/) || [0, ''])[1];
-
   function modal(html, aoClicarModal) {
     const m = $('#modal');
-    const chave = chaveDaTela(html);
-    // (o VS tem a própria animação de entrada; configurações e confirmações abrem por cima da tela, sem trocar de tela)
-    if (!jogo && m.dataset.tela !== chave && !/lado-rivais|opcoes-jogo|class="confirmacao/.test(html)) transicaoComFoto();
-    m.dataset.tela = jogo ? '' : chave;
     m.innerHTML = `<div class="caixa">${html}</div>`;
     m.classList.toggle('modal-menu', !jogo);
     m.classList.toggle('modal-papel', !jogo || /class="(menu-tema|confirmacao)/.test(html));
@@ -4152,7 +4146,6 @@ window.SS = window.SS || {};
     m.innerHTML = '';
     m.classList.remove('modal-menu', 'modal-papel');
     m.onclick = null;
-    m.dataset.tela = '';
     $('#dica').hidden = true;
   }
 
@@ -5655,8 +5648,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 135, data: '02/11/2026',
+    n: 136, data: '02/11/2026',
     novidades: [
+      ['Transição só quando o fundo muda (baralhos, regras, batalha), com mais cartas, mais rápida e o som de dar cartas baixinho', 'Transition only when the background changes (decks, rules, battle), with more cards, faster, and a soft card-dealing sound'],
       ['Transição entre telas: um bando de cartas sobe na diagonal com o som de vento e esconde a troca', 'Screen transitions: a flock of cards sweeps up diagonally with a wind sound and hides the change'],
       ['Configurações e tela cheia agora ficam no canto em todas as telas', 'Settings and full screen are now in the corner of every screen'],
       ['Golpe final: sem tarjas pretas; a câmera dá zoom na carta e no oponente, com clarão branco no impacto', 'Final blow: no black bars; the camera zooms on the card and the opponent, with a white flash on impact'],
