@@ -203,8 +203,7 @@ window.SS = window.SS || {};
       const origem = botao || document.querySelector(`#mao-${jogo.vez} [data-mao="${cands[0].figura || cands[0].as}"]`);
       const c = centroDe(origem) || { x: 800, y: 700 };
       ui.pend.seta = { de: { x: c.x, y: c.y - 46 }, chave, rotulo: rotuloTipo(cands[0].tipo, cands[0]), icone: iconeDaAcao(cands[0]) };
-      ui.mouse = Object.assign({}, ORIGEM_REFLEXO);
-      mostrarAcaoFlutuante(origem, 0, ARTE_ACAO[ui.pend.seta.icone] || 'sumonar', t('carta.' + ui.pend.seta.icone));
+      ui.mouse = Object.assign({}, ui.pend.seta.de);
       Som.tocar('mira-seta');
     }
     avancarPendente();
@@ -771,8 +770,7 @@ window.SS = window.SS || {};
     const c = centroDe(carta);
     Som.tocar('mira-seta');
     ui.miraDado = { ouro: id.startsWith('TOKEN') ? 'TOKEN' : id, de: c ? { x: c.x, y: c.y - 40 } : { x: 300, y: 760 } };
-    ui.mouse = Object.assign({}, ORIGEM_REFLEXO);
-    mostrarAcaoFlutuante(carta, 0, ARTE_ACAO.dado || 'dado', t('carta.dado'));
+    ui.mouse = Object.assign({}, ui.miraDado.de);
     render();
   }
 
@@ -1333,15 +1331,12 @@ window.SS = window.SS || {};
       mira.de = de;
     };
     if (ui.mouse && ui.miraAs) setas.push({ de: { x: ui.miraAs.de.x, y: ui.miraAs.de.y - 50 }, para: ui.mouse, cor: 'mira-bloqueio', viva: true });
-    const flutuante = centroDe($('#app .refletir-flutuante'));
     if (ui.mouse && ui.miraDado) {
-      if (flutuante) ui.miraDado.de = flutuante;
-      else origemCarta('.carta-acao[data-acao="dado-adicional"]', ui.miraDado, 40);
+      origemCarta('.carta-acao[data-acao="dado-adicional"]', ui.miraDado, 40);
       setas.push({ de: ui.miraDado.de, para: ui.mouse, cor: 'mira-ataque', viva: true });
     }
     if (ui.mouse && mirandoCarta()) {
-      if (flutuante) ui.pend.seta.de = flutuante;
-      else origemCarta('.carta-acao.mirando-roxo', ui.pend.seta, 46);
+      origemCarta('.carta-acao.mirando-roxo', ui.pend.seta, 46);
       setas.push({ de: ui.pend.seta.de, para: ui.mouse, cor: 'mira-reflexo', viva: true });
     }
     if (ui.mouse && mirandoPoder()) {
@@ -3346,7 +3341,7 @@ window.SS = window.SS || {};
       } else if (ui.pend) {
         texto = textoPasso();
         extras = btn('cancelar', t('btn.cancelar'));
-        // (a carta que mira está flutuando no meio da mesa; aqui fica só o Cancelar)
+        if (ui.pend.seta) botoes = btnGrande('cancelar', ui.pend.seta.rotulo, ui.pend.seta.icone, 'mirando mirando-roxo');
       } else if (ui.destino != null && ui.sel.length === 1) {
         // Figura ou Ás esperando no campo: falta o número.
         texto = t('faixa.preparo');
@@ -3382,7 +3377,7 @@ window.SS = window.SS || {};
         // Um Ouros sozinho selecionado (carta ou ficha do Ás): também pode virar 1 dado a mais num ataque.
         const ouroSel = ui.sel.length === 1 && M.ourosDisponiveis(jogo, p).includes(ui.sel[0].startsWith('TOKEN') ? 'TOKEN' : ui.sel[0]);
         if (ouroSel && alguemAtaca) {
-          if (!ui.miraDado) botoes += btnGrande('dado-adicional', t('acao.dadoAdicional'), 'dado', ''); // (mirando: ela flutua no meio da mesa)
+          botoes += btnGrande('dado-adicional', t('acao.dadoAdicional'), 'dado', ui.miraDado ? 'mirando' : '');
           if (!botoes.includes('data-acao="tipo:')) texto = t('faixa.escolhaAcao');
         }
         // Par de Paus selecionado e todos os seus Senhores já no limite de defesa (sem inimigo para enfraquecer):
@@ -4281,8 +4276,7 @@ window.SS = window.SS || {};
     render();
   }
 
-  // A carta de ação que mira (Refletir, Invocar, Pargias, magias, Dado adicional…) sai de onde estava, sobe até
-  // o meio da mesa e fica flutuando: é dela que a seta sai.
+  // A carta Refletir sai do canto, sobe até o meio da mesa e fica flutuando: é dela que a seta roxa sai.
   function mostrarRefletirFlutuante(deEl, atraso) {
     mostrarAcaoFlutuante(deEl, atraso, 'reflexo', t('refl.titulo'));
   }
@@ -4315,7 +4309,7 @@ window.SS = window.SS || {};
   // Some quando a mira acaba (escolheu o ataque, cancelou ou confirmou a defesa).
   function sincronizarRefletirFlutuante() {
     const el = $('#app .refletir-flutuante');
-    if (!el || (ui.reflexoModo && ui.reflexoModo.etapa === 'alvo') || mirandoCarta() || ui.miraDado) return;
+    if (!el || (ui.reflexoModo && ui.reflexoModo.etapa === 'alvo')) return;
     el.classList.remove('refletir-flutuante');
     el.classList.add('refletir-saindo');
     el.animate([{ opacity: 1, transform: 'translate(-50%, -50%) scale(1)' }, { opacity: 0, transform: 'translate(-50%, -50%) scale(1.3)' }], { duration: 380, fill: 'forwards' }).onfinish = () => el.remove();
@@ -5420,8 +5414,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 126, data: '01/11/2026',
+    n: 127, data: '01/11/2026',
     novidades: [
+      ['A seta de mira volta a sair da carta de ação na faixa (só o Refletir flutua no meio da mesa)', 'The aiming arrow comes from the action card in the strip again (only Reflect floats in the middle)'],
       ['As janelas do menu encolhem um pouco para caber na tela, sem precisar rolar', 'Menu windows shrink a little to fit the screen, no scrolling'],
       ['Testes: slider de altura do dado, embaixo do de gravidade', 'Tests: dice height slider, below the gravity one'],
       ['Escolha do baralho com caixas grandes e o nome embaixo; deck virou baralho em português', 'Deck choice with big boxes and the name below'],
@@ -5429,7 +5424,6 @@ window.SS = window.SS || {};
       ['O turno fica dentro da caixa de ações, em letra maior', 'The turn number sits inside the actions box, in a bigger font'],
       ['Naipes andando na diagonal nas faixas coloridas dos lados da mesa', 'Suits drifting diagonally on the colored bands beside the table'],
       ['As cartas da mão deslizam para abrir espaço quando chegam cartas novas (inclusive as do Sai daqui!)', 'Hand cards slide aside to make room for incoming cards (including Get out!)'],
-      ['Toda carta de ação que mira com seta (Invocar, Pargias, magias, Dado adicional) voa para o meio da mesa e a seta sai dela, como no Refletir', 'Every action card that aims with an arrow (Summon, Pairgics, magic, Extra die) flies to the middle of the table and the arrow comes from it, like Reflect'],
       ['Mesa livre: botão Trocar de lado (você joga os dois lados: ataca com um e defende com o outro)', 'Free table: Switch sides button (you play both sides: attack with one, defend with the other)'],
       ['A colinha diminui sozinha para caber na tela, sem precisar rolar', 'The crib sheet shrinks to fit the screen, no scrolling'],
       ['Colinha: Dado de dano e Defesa no topo, Senhores, Naipado e Ás no meio, Recursos e Pargias embaixo', 'Crib sheet: Damage die and Defense on top, Gentlemen, Suited and Ace in the middle, Resources and Pairgics below'],
