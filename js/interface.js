@@ -3770,7 +3770,7 @@ window.SS = window.SS || {};
   // As configurações abrem por cima de qualquer tela e, ao voltar, ela reaparece exatamente como estava.
   function abrirOpcoesDoCanto() {
     if ($('#modal .opcoes-jogo')) return;
-    const m = $('#modal'), aberto = m.hidden ? null : m.firstElementChild, classes = m.className, clique = m.onclick;
+    const m = $('#modal'), aberto = m.hidden ? null : m.firstElementChild, classes = m.className, clique = m.onclick, nomeTela = m.dataset.tela;
     const telas = [...document.querySelectorAll('.tela')].filter(el => !el.hidden);
     if (aberto) aberto.remove();
     telas.forEach(el => { el.hidden = true; });
@@ -3779,6 +3779,7 @@ window.SS = window.SS || {};
         m.replaceChildren(aberto);
         m.className = classes;
         m.onclick = clique;
+        m.dataset.tela = nomeTela;
         encaixarModal();
       } else fecharModal();
       telas.forEach(el => { el.hidden = false; });
@@ -4127,35 +4128,65 @@ window.SS = window.SS || {};
     document.body.appendChild(foto); // (depois do original: quem procura #modal continua achando o de verdade)
     transicao(() => foto.remove());
   }
-  // Saindo do início (Jogar, Multiplayer, Testes): os botões caem até sair da tela, um logo depois do outro, o resto
-  // some aos poucos e a caixa da próxima tela surge por baixo deles.
-  function saidaDoInicio(ir) {
-    const m = $('#modal');
-    if (MOVIMENTO_REDUZIDO || m.hidden) return ir();
-    const foto = m.cloneNode(true);
-    foto.classList.add('foto-tela', 'foto-saida');
-    foto.onclick = null;
-    document.body.appendChild(foto); // (depois do original: quem procura #modal continua achando o de verdade)
-    const botoes = [...foto.querySelectorAll('.btn-grande-menu, .btn-medio-menu, .caixa-baralho, .btn-tutorial')];
-    botoes.forEach((el, k) => el.animate([{ translate: '0 0' }, { translate: `0 ${Math.round(innerHeight * 1.2)}px` }],
-      { duration: 440, delay: k * 40, easing: 'cubic-bezier(.5, 0, .85, .45)', fill: 'forwards' }));
-    foto.querySelectorAll('.logo-menu, .leque-inicio, .idiomas, .build-info').forEach(el => el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 260, fill: 'forwards' }));
-    ir();
-    const caixa = $('#modal > .caixa');
-    if (caixa) caixa.animate([{ opacity: 0, scale: '.86', translate: '0 -34px' }, { opacity: 1, scale: '1.02', translate: '0 0', offset: .75 }, { opacity: 1, scale: '1', translate: '0 0' }],
-      { duration: 420, delay: 110, easing: 'cubic-bezier(.25, .8, .35, 1)', fill: 'backwards' });
-    setTimeout(() => foto.remove(), 440 + botoes.length * 40 + 40);
+  // Troca de tela dentro do menu (mesmo fundo). Indo: a tela antiga cai para fora por baixo e a nova surge no lugar.
+  // Voltando: o contrário, a antiga sobe para fora por cima e a nova vem de baixo. No início, são os botões que se
+  // mexem, um logo depois do outro, e o resto (logo, cartas, bandeiras) só aparece ou some.
+  const BOTOES_INICIO = '.btn-grande-menu, .btn-medio-menu, .caixa-baralho, .btn-tutorial';
+  const RESTO_INICIO = '.logo-menu, .leque-inicio, .idiomas, .build-info';
+  const TROCA_TELA_MS = 420, TROCA_TELA_ATRASO = 40;
+  let voltandoTela = false;
+  // Nome da tela que um HTML desenha: o mesmo nome é a mesma tela sendo redesenhada, sem animação.
+  const chaveDaTela = html => (html.match(/<h2[^>]*>(.*?)<\/h2>/) || html.match(/class="([^"]+)"/) || [0, ''])[1];
+  function animarTrocaDeTela(foto, voltando) {
+    const longe = Math.round(innerHeight * 1.25), nova = $('#modal > .caixa');
+    const sairAntigos = foto.querySelectorAll(BOTOES_INICIO), entrarNovos = nova ? nova.querySelectorAll(BOTOES_INICIO) : [];
+    if (sairAntigos.length) {
+      sairAntigos.forEach((el, k) => el.animate([{ translate: '0 0' }, { translate: `0 ${longe}px` }],
+        { duration: TROCA_TELA_MS, delay: k * TROCA_TELA_ATRASO, easing: 'cubic-bezier(.5, 0, .85, .45)', fill: 'forwards' }));
+      foto.querySelectorAll(RESTO_INICIO).forEach(el => el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 260, fill: 'forwards' }));
+    } else {
+      // (a distância é maior porque a caixa pode estar encolhida pelo encaixe na tela)
+      const caixa = foto.querySelector('.caixa'), destino = (voltando ? -1 : 1) * longe * 1.6;
+      if (caixa) caixa.animate([{ translate: '0 0' }, { translate: `0 ${destino}px` }], { duration: TROCA_TELA_MS, easing: 'cubic-bezier(.5, 0, .85, .45)', fill: 'forwards' });
+    }
+    if (entrarNovos.length) {
+      [...entrarNovos].reverse().forEach((el, k) => el.animate([{ translate: `0 ${longe}px` }, { translate: '0 -8px', offset: .85 }, { translate: '0 0' }],
+        { duration: TROCA_TELA_MS + 60, delay: 70 + k * TROCA_TELA_ATRASO, easing: 'cubic-bezier(.2, .75, .3, 1)', fill: 'backwards' }));
+      nova.querySelectorAll(RESTO_INICIO).forEach(el => el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 320, delay: 160, fill: 'backwards' }));
+    } else if (nova && voltando) {
+      nova.animate([{ translate: `0 ${longe * 1.6}px` }, { translate: '0 -10px', offset: .85 }, { translate: '0 0' }],
+        { duration: TROCA_TELA_MS + 80, delay: 70, easing: 'cubic-bezier(.2, .75, .3, 1)', fill: 'backwards' });
+    } else if (nova) {
+      nova.animate([{ opacity: 0, scale: '.86', translate: '0 -34px' }, { opacity: 1, scale: '1.02', translate: '0 0', offset: .75 }, { opacity: 1, scale: '1', translate: '0 0' }],
+        { duration: TROCA_TELA_MS, delay: 110, easing: 'cubic-bezier(.25, .8, .35, 1)', fill: 'backwards' });
+    }
+    setTimeout(() => foto.remove(), TROCA_TELA_MS + sairAntigos.length * TROCA_TELA_ATRASO + 40);
   }
 
   function modal(html, aoClicarModal) {
     const m = $('#modal');
+    const chave = chaveDaTela(html), sobreposta = /opcoes-jogo|class="confirmacao/.test(html) || !!m.querySelector('.opcoes-jogo, .confirmacao');
+    let foto = null;
+    if (!jogo && !emTransicao && !MOVIMENTO_REDUZIDO && !m.hidden && m.firstElementChild && m.dataset.tela !== chave && !sobreposta) {
+      foto = m.cloneNode(true);
+      foto.classList.add('foto-tela', 'foto-saida');
+      foto.onclick = null;
+      document.body.appendChild(foto); // (depois do original: quem procura #modal continua achando o de verdade)
+    }
+    m.dataset.tela = jogo ? '' : chave;
     m.innerHTML = `<div class="caixa">${html}</div>`;
     m.classList.toggle('modal-menu', !jogo);
     m.classList.toggle('modal-papel', !jogo || /class="(menu-tema|confirmacao)/.test(html));
     m.hidden = false;
     // (no celular, depois de cada clique a janela pode ter crescido ou mudado: encaixa de novo)
-    m.onclick = aoClicarModal ? ev => { aoClicarModal(ev); requestAnimationFrame(() => encaixarModal(true)); } : null;
+    m.onclick = aoClicarModal ? ev => {
+      voltandoTela = !!ev.target.closest('[data-m="voltar"], [data-m="cancelar"]');
+      aoClicarModal(ev);
+      voltandoTela = false;
+      requestAnimationFrame(() => encaixarModal(true));
+    } : null;
     encaixarModal();
+    if (foto) animarTrocaDeTela(foto, voltandoTela || /inicio-novo/.test(html));
   }
 
   function fecharModal() {
@@ -4166,6 +4197,7 @@ window.SS = window.SS || {};
     m.innerHTML = '';
     m.classList.remove('modal-menu', 'modal-papel');
     m.onclick = null;
+    m.dataset.tela = '';
     $('#dica').hidden = true;
   }
 
@@ -5648,8 +5680,8 @@ window.SS = window.SS || {};
       if (!b) return;
       const m = b.dataset.m;
       if (m === 'tutorial') iniciarTutorial(1);
-      else if (m === 'jogar') saidaDoInicio(() => telaPalhacos('bot'));
-      else if (m === 'online') saidaDoInicio(() => telaPalhacos('online'));
+      else if (m === 'jogar') telaPalhacos('bot');
+      else if (m === 'online') telaPalhacos('online');
       else if (m === 'entrar-convite') telaPalhacos('convite');
       else if (m === 'decks') transicao(() => {
         fecharModal();
@@ -5659,7 +5691,7 @@ window.SS = window.SS || {};
         fecharModal();
         SS.Regras.abrir(telaInicio);
       });
-      else if (m === 'testes') saidaDoInicio(telaTestes);
+      else if (m === 'testes') telaTestes();
     });
     // Número e data da build num botãozinho no canto de baixo; clicando, abre a lista das novidades.
     $('#modal').insertAdjacentHTML('beforeend', `<details class="build-info"><summary>${t('build.titulo', { n: BUILD.n, d: BUILD.data })}</summary>
@@ -5668,8 +5700,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 137, data: '02/11/2026',
+    n: 138, data: '02/11/2026',
     novidades: [
+      ['Toda troca de tela do menu anima, indo e voltando: a tela antiga sai, a nova entra, e os botões do início voltam de baixo', 'Every menu screen change animates both ways: the old screen leaves, the new one enters, and the home buttons rise back from below'],
       ['Jogar, Multiplayer e Testes: os botões do menu caem da tela enquanto a caixa surge; o som da transição some junto com as cartas', 'Play, Multiplayer and Tests: the menu buttons drop off the screen as the box appears; the transition sound fades with the cards'],
       ['Transição só quando o fundo muda (baralhos, regras, batalha), com mais cartas, mais rápida e o som de dar cartas baixinho', 'Transition only when the background changes (decks, rules, battle), with more cards, faster, and a soft card-dealing sound'],
       ['Transição entre telas: um bando de cartas sobe na diagonal com o som de vento e esconde a troca', 'Screen transitions: a flock of cards sweeps up diagonally with a wind sound and hides the change'],
