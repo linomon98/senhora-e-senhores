@@ -132,7 +132,9 @@ window.SS = window.SS || {};
   const controle = p => {
     if (cfg.modo === 'bots') return 'bot';
     if (cfg.modo === 'online') return p === eu ? 'humano' : 'remoto';
-    return p === 0 ? 'humano' : 'bot';
+    // Mesa livre com "você joga os dois lados": dá para atacar de um lado e defender do outro.
+    if (cfg.modo === 'livre' && cfg.livre && cfg.livre.oponente === 'voce') return 'humano';
+    return p === eu ? 'humano' : 'bot';
   };
 
   // Cada tela mostra o próprio jogador embaixo: troca os ids das áreas de cima e de baixo
@@ -3564,8 +3566,22 @@ window.SS = window.SS || {};
       <button class="cola-fechar" aria-label="${t('btn.fechar')}">✕</button></div>`;
     el.addEventListener('click', ev => { if (!ev.target.closest('.cola-folha') || ev.target.closest('.cola-fechar')) fecharColinha(); });
     document.body.appendChild(el);
+    encaixarColinha();
     Som.tocar('palco-entra');
   }
+  // A folha inteira cabe na tela, sem rolar: se for mais alta que a janela, a colinha toda diminui (zoom)
+  // até caber; só numa janela muito baixa ela para de diminuir e volta a rolar.
+  function encaixarColinha() {
+    const wrap = $('#colinha-aberta .cola-wrap'), folha = wrap && wrap.querySelector('.cola-folha');
+    if (!folha || document.documentElement.classList.contains('celular')) return;
+    wrap.style.zoom = '';
+    folha.style.maxHeight = 'none';
+    const alto = folha.offsetHeight, cabe = innerHeight * 0.94;
+    const k = Math.max(0.55, Math.min(1, cabe / alto));
+    wrap.style.zoom = k < 1 ? k.toFixed(3) : '';
+    folha.style.maxHeight = k < 1 ? (cabe / k).toFixed(0) + 'px' : '';
+  }
+  window.addEventListener('resize', () => { if ($('#colinha-aberta')) encaixarColinha(); });
 
   // Registro da partida: fica escondido; o botão do canto superior direito abre uma caixa suspensa.
   function alternarLog(abrir) {
@@ -5350,8 +5366,10 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 120, data: '01/11/2026',
+    n: 122, data: '01/11/2026',
     novidades: [
+      ['Mesa livre: botão Trocar de lado (você joga os dois lados: ataca com um e defende com o outro)', 'Free table: Switch sides button (you play both sides: attack with one, defend with the other)'],
+      ['A colinha diminui sozinha para caber na tela, sem precisar rolar', 'The crib sheet shrinks to fit the screen, no scrolling'],
       ['Colinha: Dado de dano e Defesa no topo, Senhores, Naipado e Ás no meio, Recursos e Pargias embaixo', 'Crib sheet: Damage die and Defense on top, Gentlemen, Suited and Ace in the middle, Resources and Pairgics below'],
       ['Os pedaços rasgados voam direto para o cemitério, sem parar no caminho, e somem já chegando nele', 'Torn pieces fly straight into the graveyard without stalling, fading out as they arrive'],
       ['Colinha reorganizada: Senhores, Naipado e Ás em cima; Pargias e Recursos no meio; Dado de dano e Defesa embaixo', 'Crib sheet rearranged: Gentlemen, Suited and Ace on top; Pairgics and Resources in the middle; Damage die and Defense below'],
@@ -5626,7 +5644,7 @@ window.SS = window.SS || {};
       <p class="nota">${t('teste.livreNota2')}</p>
       <div class="opcao"><label>${t('teste.seuPalhaco')}</label>${grupo('pal', palhacos, 0)}</div>
       <div class="opcao"><label>${t('teste.palhacoOponente')}</label>${grupo('pal', palhacos, 1)}</div>
-      <div class="opcao"><label>${t('teste.oponente')}</label>${grupo('oponente', [['parado', t('teste.parado')], ['bot', t('teste.botJoga')]])}</div>
+      <div class="opcao"><label>${t('teste.oponente')}</label>${grupo('oponente', [['parado', t('teste.parado')], ['bot', t('teste.botJoga')], ['voce', t('teste.voceJoga')]])}</div>
       <div class="opcao"><label>${t('menu.dificuldade')}</label>${grupo('nivel', NIVEIS_BOT.map(n => [n, NOME_NIVEL[n]]))}</div>
       <div class="opcao"><label>${t('teste.maoInicial')}</label>${grupo('mao', [['vazia', t('teste.maoVazia')], ['normal', t('teste.maoNormal')]])}</div>
       <div class="acoes-menu"><button class="btn" data-m="voltar">${t('btn.voltar')}</button>
@@ -5763,6 +5781,7 @@ window.SS = window.SS || {};
     el.innerHTML = `<div class="ed-topo"><b>🛠 ${t('livre.editor')}</b><button data-ed="minimizar">${ui.editorFechado ? '▢' : '—'}</button></div>
       <div class="ed-corpo">
       <div class="ed-linha ed-lados"><button data-ed="lado:0" class="${p === 0 ? 'ativo' : ''}">${t('livre.voce')}</button><button data-ed="lado:1" class="${p === 1 ? 'ativo' : ''}">${t('livre.oponente')}</button></div>
+      <div class="ed-linha"><button data-ed="trocarLado" title="${escapar(t('livre.trocarLadoDica'))}">⇄ ${t('livre.trocarLado')}</button></div>
       <div class="ed-linha"><label>PV</label><button data-ed="pv:-5">−5</button><button data-ed="pv:-1">−1</button><b>${j.pv}</b><button data-ed="pv:1">+1</button><button data-ed="pv:5">+5</button></div>
       <div class="ed-titulo">${t('livre.mao')} (${j.mao.length})</div>
       <div class="ed-linha">${opcoesSel('rank', RANKS_FIG.concat(RANKS_NUM))}${naipes.replace('NOME', 'naipe')}<button data-ed="mao">${t('livre.porNaMao')}</button></div>
@@ -5800,6 +5819,21 @@ window.SS = window.SS || {};
       case 'dado': cfg.livre.dado = Number(a1) || null; break;
       case 'desfazer': return desfazerLivre();
       case 'lado': editorLado = Number(a1); break;
+      case 'trocarLado': {
+        // Você passa a jogar os dois lados e a mesa vira: o lado de baixo agora é o outro jogador.
+        if (ui.ocupado) break;
+        cfg.livre.oponente = 'voce';
+        eu = 1 - eu;
+        definirLados(eu);
+        editorLado = eu;
+        maoVista = [null, null];
+        campoVisto = [null, null];
+        posCampo = [{}, {}];
+        ui.sel = []; ui.pend = null; ui.destino = null;
+        render();
+        desenharEditor();
+        return;
+      }
       case 'pv': j.pv = Math.max(1, j.pv + Number(a1)); break;
       case 'mao': j.mao.push(novaCarta(p, valorSel('rank'), valorSel('naipe'))); break;
       case 'aleatoria': {
