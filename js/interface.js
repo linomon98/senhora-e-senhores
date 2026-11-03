@@ -86,7 +86,7 @@ window.SS = window.SS || {};
   // O espaço na fileira ("slot") só é perguntado (com a setinha) quando a carta não foi solta num lugar
   // e ainda sobra mais de um lugar possível.
   // Magia dos pares: "morto" (Copas, quem volta do cemitério), "as" (Ouros, o Ás do baralho) ou "alvo" (Paus/Espadas).
-  const PASSOS = { sumonar: ['sacrificios', 'slot'], invocarAs: ['slot'], espadas: ['alvo'], paus: ['alvo'], magia: ['morto', 'as', 'alvo'], pargia: ['alvo'], curar: [], comprar: [], poder: ['alvo'] };
+  const PASSOS = { sumonar: ['sacrificios', 'slot'], invocarAs: ['slot'], espadas: ['alvo'], paus: ['alvo'], magia: ['morto', 'as', 'alvo'], pargia: ['alvo'], trigica: ['alvo'], curar: [], comprar: [], poder: ['alvo'] };
   const CENTRO_FILEIRA = (M.ESPACOS - 1) / 2;
 
   // Entre as opções que só mudam de espaço, fica a mais perto de onde a carta foi solta.
@@ -159,7 +159,7 @@ window.SS = window.SS || {};
     switch (a.tipo) {
       case 'sumonar': return [a.figura, a.numero];
       case 'invocarAs': return [a.as, a.custo];
-      case 'magia': case 'pargia': return a.cartas.slice();
+      case 'magia': case 'pargia': case 'trigica': return a.cartas.slice();
       default: return [a.carta];
     }
   }
@@ -333,6 +333,7 @@ window.SS = window.SS || {};
       case 'comprar': return t(a.baralho === 'letras' ? 'acao.comprarLetra' : 'acao.comprarNumero');
       case 'magia': return t('acao.magia.' + a.naipe);
       case 'pargia': return t('acao.pargia.' + a.efeito);
+      case 'trigica': return t('acao.trigica.' + a.efeito);
     }
     return tipo;
   }
@@ -369,6 +370,7 @@ window.SS = window.SS || {};
       if (tipo === 'paus') return t('passo.paus');
       if (tipo === 'magia') return t(ui.pend.cands[0].naipe === 'paus' ? 'passo.magiaPaus' : 'passo.magiaEspadas');
       if (tipo === 'pargia') return t('passo.pargia.' + ui.pend.cands[0].efeito);
+      if (tipo === 'trigica') return t('passo.trigica.' + ui.pend.cands[0].efeito);
       const poder = palhacoDe(jogo.vez).poder;
       return t('passo.poder', { nome: poder.nome, texto: poder.texto });
     }
@@ -669,7 +671,7 @@ window.SS = window.SS || {};
       // Clique simples: liga/desliga o ataque direto ao oponente. O Rei (que escolhe onde bater) fica
       // com a seta presa no mouse até você clicar no alvo.
       if (ui.ataques.some(a => a.atacante === uid)) removerAtaquesDe(uid);
-      else if (M.localizar(jogo, uid).u.figura.rank === 'K' && M.alvosPossiveis(jogo, uid).length > 1) {
+      else if (M.localizar(jogo, uid).u.figura.rank === 'K' && !M.localizar(jogo, uid).u.sapo && M.alvosPossiveis(jogo, uid).length > 1) {
         ui.miraRei = uid;
         ui.atacanteSel = uid;
         ui.mouse = pontoNoApp(ev.clientX, ev.clientY);
@@ -1389,7 +1391,7 @@ window.SS = window.SS || {};
     }
     const nai = M.naipado(u), atk = M.ataque(jogo, p, i), res = M.resistencia(jogo, p, i), post = M.postura(jogo, p, i);
     const vizinhos = [i - 1, i + 1].map(k => jogo.jogadores[p].campo[k]).filter(w => w && w.tipo === 'as').map(w => w.naipe);
-    const partes = [t('du.numero', { v: M.valor(u.numero) })];
+    const partes = [u.sapo ? t('du.sapoAtaque') : t('du.numero', { v: M.valor(u.numero) })];
     if (nai === 'espadas') partes.push(t('du.naipadoEspadas'));
     vizinhos.filter(n => n === 'espadas').forEach(() => partes.push(t('du.asEspadas')));
     if (u.bonus.length) partes.push(t('du.bonusEspadas', { n: u.bonus.length, crit: u.bonus.reduce((s, v) => s + Math.floor(v / 2), 0) }));
@@ -1401,7 +1403,7 @@ window.SS = window.SS || {};
       u.berserk
         ? t('du.berserk', { levou: u.berserk.hits > 0 })
         : t('du.vida', { v: res - u.hits, r: res, fontes: fontesRes.length ? ` (${fontesRes.join(' + ')})` : '', estado: NOME_POSTURA[post] }),
-      habFigura(u.figura.rank),
+      u.sapo ? t('du.sapo') : habFigura(u.figura.rank),
     ];
     if (nai) linhas.push(habNaipado(nai));
     if (vizinhos.includes('copas')) linhas.push(t('du.asCopas'));
@@ -1410,7 +1412,7 @@ window.SS = window.SS || {};
     if (u.atacou && !u.vigilia) linhas.push(t('du.atacou'));
     if (!u.ativo) linhas.push(t('du.desativado'));
     else if (jogo.vez === p && M.podeAtacar(jogo, p, i)) linhas.push(t('du.pronto', { n: u.ataques }));
-    else if (jogo.vez === p && u.entrou === jogo.turno && u.figura.rank !== 'J') linhas.push(t('du.entrou'));
+    else if (jogo.vez === p && u.entrou === jogo.turno && (u.sapo || u.figura.rank !== 'J')) linhas.push(t('du.entrou'));
     linhas.push(`<span class="dica-regra">${t('du.regraBloqueio')}</span>`);
     return { titulo: M.nomeUnidade(u), sub: nai ? t('du.subNaipado', { n: NOME_NAIPE[nai] }) : t('du.sub'), linhas, arte: [u.figura, u.numero] };
   }
@@ -1616,7 +1618,7 @@ window.SS = window.SS || {};
   // Carta da mão do oponente usada como recurso (cura, +1 de ataque, Berserk, compra): antes de sumir da mão,
   // guarda de onde ela sai; depois ela aparece grande no meio da mesa, vira para frente e vai para o cemitério.
   // A carta de ação usada (Curar, +1 de ataque, Berserk, Comprar…) aparece na frente dela, para você saber o que ele fez.
-  const RECURSO = new Set(['curar', 'espadas', 'paus', 'comprar', 'dadoExtra', 'pargia']);
+  const RECURSO = new Set(['curar', 'espadas', 'paus', 'comprar', 'dadoExtra', 'pargia', 'trigica']);
   function antesDeRecurso(a) {
     if (!a || !RECURSO.has(a.tipo) || !jogo || controle(jogo.vez) === 'humano' || MOVIMENTO_REDUZIDO) return null;
     const p = jogo.vez, j = jogo.jogadores[p];
@@ -1854,6 +1856,11 @@ window.SS = window.SS || {};
     if (!jogo.eventos || MOVIMENTO_REDUZIDO) return;
     for (const ev of jogo.eventos) {
       if (ev.tipo !== 'fx') continue;
+      // (É meu!: a carta voa do lugar onde estava até o campo de quem tomou)
+      if (ev.fx === 'dominio') {
+        const de = document.querySelector(`[data-slot="${ev.de.p}:${ev.de.i}"]`);
+        if (de) vemDeOutroLado.set(ev.alvo.uid, de.getBoundingClientRect());
+      }
       for (const a of ev.alvos || (ev.alvo ? [ev.alvo] : [])) {
         if (a.fantasma || M.localizar(jogo, a.uid)) continue;
         const slot = document.querySelector(`[data-slot="${a.p}:${a.i}"]`);
@@ -2098,6 +2105,27 @@ window.SS = window.SS || {};
       ondaEm(c, '230, 240, 255', 2.4, 120);
       return 1350;
     },
+    // Polimorfia: fumaça verde e a carta vira sapo (ou volta ao normal).
+    polimorfia(ev) {
+      const s = slotDe(ev.alvo), c = centroDe(s);
+      if (!c) return 0;
+      Som.tocar('magia-par');
+      brasas(c, 18, ['90, 200, 90', '150, 230, 110', '60, 150, 70'], 44);
+      ondaEm(c, '110, 220, 100', 2.5);
+      particulas(c, 14, false, '120, 220, 100');
+      chacoalhar(s, 5, 400);
+      setTimeout(() => textoSubindo(c, t(ev.virou ? 'fx.sapo' : 'fx.desfez'), 'bom'), 220);
+      return 1000;
+    },
+    // É meu!: onda dourada onde o Senhor(a) chegou, depois de voar do outro lado da mesa.
+    dominio(ev) {
+      const s = slotDe(ev.alvo), c = centroDe(s);
+      if (!c) return 0;
+      ondaEm(c, '255, 207, 77', 2.8);
+      aura(s, '255, 207, 77', 2, 1000);
+      setTimeout(() => textoSubindo(c, t('fx.dominio'), 'bom'), 200);
+      return 1000;
+    },
     // Meteoro: uma bola de fogo cai em cada Senhor(a) da mesa; cada impacto explode e queima a carta.
     meteoro(ev, fantasmas) {
       const alvos = ev.alvos.map((a, k) => ({ a, f: fantasmas[k] })).filter(x => x.f);
@@ -2124,7 +2152,7 @@ window.SS = window.SS || {};
       if (!alvos.length) { tremor(6); pulinhoNoApp(2, { x: 800, y: 450 }); }
       return alvos.length ? (alvos.length - 1) * 170 + 560 + 950 : 0;
     },
-    // Trovão: o céu clareia e um raio cai no Senhor(a) (1 hit) ou no Palhaço (2 PV).
+    // Raio (par) e Trovão (trinca, forte): o céu clareia e um raio cai no Senhor(a) ou no Palhaço.
     raio(ev, [f]) {
       const alvoEl = ev.jogador != null ? elRetrato(ev.jogador) : (f || slotDe(ev.alvo)), c = centroDe(alvoEl);
       if (!c) return 0;
@@ -2142,9 +2170,9 @@ window.SS = window.SS || {};
       animarPeca(svg, [{ opacity: 0 }, { opacity: 1, offset: .05 }, { opacity: .2, offset: .2 }, { opacity: 1, offset: .3 }, { opacity: 1, offset: .55 }, { opacity: 0 }], { duration: 700 });
       setTimeout(() => {
         Som.tocar('impacto-forte');
-        tremor(8);
-        pulinhoNoApp(2, c);
-        particulas(c, 18, true, '255, 240, 120');
+        tremor(ev.forte ? 10 : 8);
+        pulinhoNoApp(ev.forte ? 3 : 2, c);
+        particulas(c, ev.forte ? 32 : 18, true, '255, 240, 120');
         ondaEm(c, '255, 245, 150', 2.6);
         ondaEm(c, '140, 200, 255', 1.8, 120);
         if (f) queimar(f, 120);
@@ -2162,7 +2190,7 @@ window.SS = window.SS || {};
   let cartasCampoVistas = [new Map(), new Map()];
   const voltasDoCampo = new Map(), voltasEsperando = new Set();
   let posCampo = [{}, {}]; // em que espaço estava cada Senhor(a) no último desenho (para animar quem foi empurrado)
-  const voando = new Set(), voandoCampo = new Set();
+  const voando = new Set(), voandoCampo = new Set(), vemDeOutroLado = new Map();
 
   function animarEntradas() {
     const maosAntes = maoVista.slice(); // foto das mãos antes deste desenho (para detectar roubo)
@@ -2292,7 +2320,12 @@ window.SS = window.SS || {};
     const w = r.width / escala, h = r.height / escala;
     const x = (r.left - ra.left) / escala, y = (r.top - ra.top) / escala;
     let de;
-    if (ui.vooDe && controle(p) === 'humano') {
+    const outroLado = vemDeOutroLado.get(uid);
+    vemDeOutroLado.delete(uid);
+    if (outroLado) {
+      const q = pontoNoApp(outroLado.left + outroLado.width / 2, outroLado.top + outroLado.height / 2);
+      de = { x: q.x, y: q.y, s: 1 };
+    } else if (ui.vooDe && controle(p) === 'humano') {
       const q = pontoNoApp(ui.vooDe.x, ui.vooDe.y);
       de = { x: q.x, y: q.y, s: Math.max(0.5, (ui.vooDe.w / escala) / 90) };
     } else {
@@ -3362,7 +3395,7 @@ window.SS = window.SS || {};
       ? `<span class="berserk">BERSERK${u.berserk.hits ? ' ✖' : ''}</span>`
       : ESCUDO.repeat(Math.max(0, res - u.hits)) + ESCUDO_APAGADO.repeat(Math.min(u.hits, res));
     return `<div class="${cls.join(' ')}${foco}"${virada ? ` style="--atraso:${virada.atraso.toFixed(0)}ms"` : ''}>
-      <div class="pilha-senhor${estiloGiro(u, post)}"><div class="carta numero">${C.frente(u.numero)}</div><div class="carta figura">${C.frente(u.figura)}</div></div>
+      <div class="pilha-senhor${estiloGiro(u, post)}">${u.sapo ? `<div class="carta figura">${C.sapo()}</div>` : `<div class="carta numero">${C.frente(u.numero)}</div><div class="carta figura">${C.frente(u.figura)}</div>`}</div>
       <div class="selo-vida">${vida}</div>
       <div class="selo-atk">⚔ ${atk}${atk > base ? `<small>+${atk - base}</small>` : ''}${bonusGolpeCerteiro(p, u) ? `<small class="bonus-lanca">+${bonusGolpeCerteiro(p, u)}♠</small>` : ''}</div>
       ${seloDado(u)}
@@ -3431,6 +3464,7 @@ window.SS = window.SS || {};
     if (a.tipo === 'invocarAs') return 'as';
     if (a.tipo === 'magia') return 'par-' + a.naipe;
     if (a.tipo === 'pargia') return 'pargia-' + a.efeito;
+    if (a.tipo === 'trigica') return 'trigica-' + a.efeito;
     if (a.tipo === 'comprar') return a.baralho === 'letras' ? 'comprarLetra' : 'comprarNumero';
     return a.tipo;
   }
@@ -3439,11 +3473,15 @@ window.SS = window.SS || {};
   // O título vem do idioma (a arte não tem texto, por causa da versão em inglês).
   const ARTE_ACAO = { atacar: 'atacar', espadas: 'dano', paus: 'berserk', escudo: 'defesa', curar: 'cura', comprar: 'comprar', reviver: 'cemiterio', sumonar: 'sumonar', rainha: 'sumonar', as: 'sumonar',
     'par-copas': 'cemiterio', 'par-ouros': 'parouros', 'par-paus': 'parpaus', 'par-espadas': 'parespadas', reflexo: 'reflexo',
-    'pargia-saiDaqui': 'tchau', 'pargia-meteoro': 'meteoro', 'pargia-raio': 'raio',
+    'pargia-saiDaqui': 'tchau', 'pargia-polimorfia': 'vazia', 'pargia-raio': 'raio',
+    'trigica-dominio': 'vazia', 'trigica-meteoro': 'meteoro', 'trigica-trovao': 'raio',
     passar: 'passar', preparar: 'preparar', naoDefender: 'naodefender', naoRefletir: 'naodefender',
     comprarLetra: 'comprarletra', comprarNumero: 'comprarnumero', dado: 'dado' };
   // Cartas ainda sem arte própria (placeholder): moldura vazia + um desenho simples (SVG) no meio.
-  const DESENHO_PROVISORIO = {};
+  const DESENHO_PROVISORIO = {
+    'pargia-polimorfia': '<svg viewBox="0 0 64 64"><ellipse cx="32" cy="42" rx="22" ry="17" fill="#62b548" stroke="#141414" stroke-width="3"/><circle cx="20" cy="22" r="9" fill="#62b548" stroke="#141414" stroke-width="3"/><circle cx="44" cy="22" r="9" fill="#62b548" stroke="#141414" stroke-width="3"/><circle cx="20" cy="21" r="3.5" fill="#141414"/><circle cx="44" cy="21" r="3.5" fill="#141414"/><path d="M20 38q12 9 24 0" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round"/></svg>',
+    'trigica-dominio': '<svg viewBox="0 0 64 64"><path d="M10 48V20l12 12 10-18 10 18 12-12v28z" fill="#ffc531" stroke="#141414" stroke-width="3" stroke-linejoin="round"/><path d="M10 54h44" stroke="#141414" stroke-width="5" stroke-linecap="round"/></svg>',
+  };
   const btnGrande = (acao, rotulo, icone, extra) => {
     const arte = ARTE_ACAO[icone] || 'sumonar', titulo = t('carta.' + icone);
     const sub = rotulo.replace(/^[^\p{L}\p{N}+]+/u, '');
@@ -3451,7 +3489,8 @@ window.SS = window.SS || {};
     // Custo (aparece numa caixinha quando o mouse para meio segundo em cima da carta)
     const ck = { sumonar: 'sumonar', rainha: 'rainha', as: 'as', espadas: 'espadas', paus: 'paus', curar: 'curar', comprarLetra: 'comprar', comprarNumero: 'comprar',
       'par-copas': 'magia', 'par-ouros': 'magia', 'par-paus': 'magia', 'par-espadas': 'magia', dado: 'dado', reflexo: 'reflexo',
-      'pargia-saiDaqui': 'pargia', 'pargia-meteoro': 'pargia', 'pargia-raio': 'pargia' }[icone];
+      'pargia-saiDaqui': 'pargia', 'pargia-polimorfia': 'pargia', 'pargia-raio': 'pargia',
+      'trigica-dominio': 'trigica', 'trigica-meteoro': 'trigica', 'trigica-trovao': 'trigica' }[icone];
     return `<button class="carta-acao arte-${arte} ${extra || ''}" data-acao="${acao}"${ck ? ` data-custo="${escapar(t('custo.' + ck))}"` : ` title="${escapar(sub)}"`}>
       <img src="arte/acoes/${arte}.webp" alt="" draggable="false">${DESENHO_PROVISORIO[icone] ? `<span class="ca-desenho">${DESENHO_PROVISORIO[icone]}</span>` : ''}<b class="ca-titulo${classeTitulo}">${titulo}</b><small class="ca-sub">${sub}</small></button>`;
   };
@@ -3549,7 +3588,7 @@ window.SS = window.SS || {};
       fase += ` · ${t('faixa.ataque')}`;
       if (humanoNaVez) {
         const temAs = M.alvosPossiveis(jogo).length > 1;
-        const temRei = atacantesRestantes().some(uid => M.localizar(jogo, uid).u.figura.rank === 'K');
+        const temRei = atacantesRestantes().some(uid => { const u = M.localizar(jogo, uid).u; return u.figura.rank === 'K' && !u.sapo; });
         const extra = [temAs ? t('faixa.dicaAs') : '', temRei ? t('faixa.dicaRei') : ''].filter(Boolean).join('; ');
         if (!M.atacantesAptos(jogo).length) texto = t(jogo.turno === 1 ? 'faixa.primeiroNaoAtaca' : 'faixa.ninguemApto');
         else texto = atacantesRestantes().length ? t('faixa.comoAtacar', { extra }) : t('faixa.ataquesDeclarados');
@@ -3666,6 +3705,7 @@ window.SS = window.SS || {};
     const en = SS.Idioma.atual() === 'en', x = (pt, ing) => (en ? ing : pt);
     const c = (r, n, cls) => `<span class="cola-c${cls ? ' ' + cls : ''}">${C.frente({ rank: r, naipe: n })}</span>`;
     const ic = arte => `<img class="cola-ic" src="arte/acoes/${arte}.webp" alt="" draggable="false">`;
+    const dese = icone => `<span class="cola-ic cola-dese">${DESENHO_PROVISORIO[icone]}</span>`;
     const np = n => `<img class="cola-n" src="arte/naipes/${n}.webp" alt="" draggable="false">`;
     const esc = (n, apagados) => `<span class="cola-esc">${Array.from({ length: n }, (_, k) => `<img class="${k >= n - (apagados || 0) ? 'apagado' : ''}" src="arte/icones/escudo.webp" alt="" draggable="false">`).join('')}</span>`;
     const dado = '<img class="cola-dado" src="arte/icones/dado.webp" alt="" draggable="false">';
@@ -3700,15 +3740,20 @@ window.SS = window.SS || {};
           linha(`${c('7', 'paus')}${op('→')}${ic('berserk')}`, 'Berserk'),
         ])}
         ${bloco('par', x('Pargia (mesmo naipe)', 'Pairgic (same suit)'), [
-          linha(`${c('3', 'copas')}${c('8', 'copas')}${op('→')}${ic('cemiterio')}`, x('revive', 'revive')),
+          linha(`${c('3', 'copas')}${c('8', 'copas')}${op('→')}${ic('cemiterio')}`, `${x('revive', 'revive')} ${esc(1)}`),
           linha(`${c('2', 'ouros')}${c('9', 'ouros')}${op('→')}${ic('parouros')}`, x('busca Ás', 'fetch Ace')),
           linha(`${c('4', 'paus')}${c('6', 'paus')}${op('→')}${ic('parpaus')}`, `±1 ${esc(1)}`),
           linha(`${c('5', 'espadas')}${c('10', 'espadas')}${op('→')}${ic('parespadas')}`, `±1 ${atk}`),
         ])}
+        ${bloco('tri', x('Trígica (trinca igual)', 'Trigic (equal trio)'), [
+          linha(`${c('6', 'ouros')}${c('6', 'espadas')}${c('6', 'paus')}${op('→')}${dese('trigica-dominio')}`, `${x('Toma o Senhor', 'Takes the Gentleman')} <small>(5–7)</small>`),
+          linha(`${c('9', 'copas')}${c('9', 'paus')}${c('9', 'ouros')}${op('→')}${ic('meteoro')}`, `${x('Limpa o tabuleiro', 'Clears the board')} <small>(8–10)</small>`),
+          linha(`${c('A', 'espadas')}${c('A', 'ouros')}${c('A', 'copas')}${op('→')}${ic('raio')}`, `${x(`${M.HITS_TROVAO} hits ou ${M.DANO_TROVAO_PALHACO} PV`, `${M.HITS_TROVAO} hits or ${M.DANO_TROVAO_PALHACO} HP`)} <small>(${x('Ases', 'Aces')})</small>`),
+        ])}
         ${bloco('pgi', x('Pargia (números iguais)', 'Pairgic (equal numbers)'), [
           linha(`${c('3', 'copas')}${c('3', 'paus')}${op('→')}${ic('reflexo')}`, `${x('Reflete o ataque', 'Reflects the attack')} <small>(${x('pares', 'pairs')} 2–4)</small>`),
           linha(`${c('6', 'ouros')}${c('6', 'espadas')}${op('→')}${ic('tchau')}`, `${x('Devolve o Senhor', 'Sends the Gentleman back')} <small>(5–7)</small>`),
-          linha(`${c('9', 'copas')}${c('9', 'paus')}${op('→')}${ic('meteoro')}`, `${x('Limpa o tabuleiro', 'Clears the board')} <small>(8–10)</small>`),
+          linha(`${c('9', 'copas')}${c('9', 'paus')}${op('→')}${dese('pargia-polimorfia')}`, `${x('Vira sapo ou desfaz', 'Frog or undo')} <small>(8–10)</small>`),
           linha(`${c('A', 'espadas')}${c('A', 'ouros')}${op('→')}${ic('raio')}`, `${x(`1 hit ou ${M.DANO_RAIO_PALHACO} PV`, `1 hit or ${M.DANO_RAIO_PALHACO} HP`)} <small>(${x('Ases', 'Aces')})</small>`),
         ])}
         ${bloco('dad', x('Dado de dano', 'Damage die'), [
@@ -5811,8 +5856,11 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 150, data: '02/11/2026',
+    n: 151, data: '02/11/2026',
     novidades: [
+      ['Trígicas, as magias de trinca: É meu! (5 a 7) toma um Senhor inimigo, Meteoro (8 a 10) e Trovão (Ases)', 'Trigics, the trio spells: Mine! (5 to 7) takes an enemy Gentleman, Meteor (8 to 10) and Thunder (Aces)'],
+      ['Polimorfia, o novo par de 8 a 10: vira sapo com 1 de ataque, e também desfaz; o par de Ases agora se chama Raio', 'Polymorph, the new pair of 8 to 10: turns into a frog with 1 attack, and also undoes it; the pair of Aces is now called Lightning'],
+      ['Reviver com o Par de Copas agora traz o Senhor com 1 escudo só', 'Reviving with the Pair of Hearts now brings the Gentleman back with just 1 shield'],
       ['Dado novo por padrão: gravidade 125% e altura 270%', 'New default die: 125% gravity and 270% height'],
       ['Logo um pouco mais à esquerda, no menu e na introdução', 'Logo moved slightly to the left, in the menu and the intro'],
       ['Introdução: a música começa com o logo, com a batida da bateria no instante em que ele chega', 'Intro: the music starts with the logo, with the drum hit landing as it arrives'],

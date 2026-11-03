@@ -144,7 +144,7 @@ window.SS = window.SS || {};
         F.uAtk += s * atk;
         F.uVida += s * Math.max(0, res - hits);
         if (M.naipado(u)) F.uNaipado += s;
-        if (u.figura.rank === 'K' || u.figura.rank === 'Q') F.uRealeza += s;
+        if (!u.sapo && (u.figura.rank === 'K' || u.figura.rank === 'Q')) F.uRealeza += s;
         if (!u.berserk && res > 1 && hits === res - 1) F.uPorUmFio -= s; // por um fio: o próximo hit mata
         if (e.vez === q && (!u.ativo || (u.atacou && !u.vigilia))) F.uNaoBloqueia -= s; // não bloqueia no turno do oponente
         if (e.vez === q && u.vigilia && !u.atacou) F.uVigilia += s; // ataca sem perder o bloqueio
@@ -417,7 +417,7 @@ window.SS = window.SS || {};
       for (let t = 0; t < u.ataques; t++) {
         let melhor = null, mv = base + (cfg.limiarAtaque != null ? cfg.limiarAtaque : cfg.limiar);
         const todos = M.alvosPossiveis(e, uid);
-        const alvos = cfg.alvosAs ? todos : todos.filter(a => a === 'jogador' || (u.figura.rank === 'K' && M.localizar(e, a).u.tipo === 'senhor'));
+        const alvos = cfg.alvosAs ? todos : todos.filter(a => a === 'jogador' || (u.figura.rank === 'K' && !u.sapo && M.localizar(e, a).u.tipo === 'senhor'));
         for (const alvo of alvos) {
           const maxDados = cfg.ourosDados ? Math.min(2, ourosLivres.length) : 0;
           for (let k = 0; k <= maxDados; k++) {

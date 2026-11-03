@@ -101,6 +101,17 @@ window.SS = window.SS || {};
 
   const cache = {};
 
+  // Senhor(a) transformado pela Polimorfia (desenho provisório, até vir uma arte).
+  const TINTA = 'stroke="#141414" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"';
+  const SAPO = `<svg class="svg-carta" viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg">${CREME}
+    <path d="M36 226c-16 12-22 22-20 28h48c0-10-6-22-14-30zM164 226c16 12 22 22 20 28h-48c0-10 6-22 14-30z" fill="#4f9e3a" ${TINTA}/>
+    <ellipse cx="100" cy="176" rx="72" ry="66" fill="#62b548" ${TINTA}/>
+    <ellipse cx="100" cy="194" rx="42" ry="38" fill="#d9e8a8" stroke="#141414" stroke-width="3"/>
+    <circle cx="62" cy="100" r="28" fill="#62b548" ${TINTA}/><circle cx="138" cy="100" r="28" fill="#62b548" ${TINTA}/>
+    <circle cx="62" cy="98" r="16" fill="#fdfbf3" stroke="#141414" stroke-width="3"/><circle cx="138" cy="98" r="16" fill="#fdfbf3" stroke="#141414" stroke-width="3"/>
+    <circle cx="66" cy="100" r="7" fill="#141414"/><circle cx="134" cy="100" r="7" fill="#141414"/>
+    <path d="M52 146q48 34 96 0" fill="none" ${TINTA}/>${BORDA}</svg>`;
+
   function frente(c) {
     const chave = c.rank + '-' + c.naipe;
     const arte = SS.ARTE[chave];
@@ -163,5 +174,5 @@ window.SS = window.SS || {};
     raiz.setProperty('--carpete', texturaCarpete());
   }
 
-  SS.Cartas = { frente, aplicarTexturas };
+  SS.Cartas = { frente, sapo: () => SAPO, aplicarTexturas };
 })(window.SS);

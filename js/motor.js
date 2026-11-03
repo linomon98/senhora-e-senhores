@@ -73,7 +73,7 @@ window.SS = window.SS || {};
   const faixaFigura = rank => REGRAS.faixa[rank] || [2, LIMITE_FIGURA[rank]];
   const foraDaFaixa = (rank, n) => { const [a, b] = faixaFigura(rank), v = valor(n); return v < a || v > b; };
   const pvInicial = pal => REGRAS.pv[pal] || PALHACOS[pal].pv;
-  const bonusDoNaipe = (u, naipe) => REGRAS.bonusNaipe && u.tipo === 'senhor' && u.numero.naipe === naipe;
+  const bonusDoNaipe = (u, naipe) => REGRAS.bonusNaipe && u.tipo === 'senhor' && !u.sapo && u.numero.naipe === naipe;
   const limiteDefesa = () => (REGRAS.limiteDefesa ? RESISTENCIA_MAX : Infinity);
   const ESPACOS = 8;
   const ACOES_POR_TURNO = 3;
@@ -135,6 +135,7 @@ window.SS = window.SS || {};
 
   function nomeUnidade(u) {
     if (u.tipo === 'as') return nomeCarta(u.carta);
+    if (u.sapo) return t('log.sapo', { u: nomeCarta(u.figura) });
     return `${nomeCarta(u.figura)} (${u.numero.rank}${SIMBOLO[u.numero.naipe]})`;
   }
 
@@ -335,11 +336,14 @@ window.SS = window.SS || {};
     return r;
   }
 
-  const naipado = u => (u.tipo === 'senhor' && u.figura.naipe === u.numero.naipe ? u.figura.naipe : null);
+  // Sapo (Polimorfia): 1 de ataque e sem nada da figura nem do naipe, até alguém desfazer.
+  const naipado = u => (u.tipo === 'senhor' && !u.sapo && u.figura.naipe === u.numero.naipe ? u.figura.naipe : null);
+  const eFigura = (u, rank) => u.tipo === 'senhor' && !u.sapo && u.figura.rank === rank;
 
   // Ataque sem o bônus temporário de Espadas.
   function ataqueBase(e, p, i) {
     const u = e.jogadores[p].campo[i];
+    if (u.sapo) return 1;
     let a = valor(u.numero);
     a += u.atkExtra || 0; // Par de Espadas: +1 de dano permanente
     if (naipado(u) === 'espadas') a++;
@@ -372,7 +376,7 @@ window.SS = window.SS || {};
   function podeAtacar(e, p, i) {
     const u = e.jogadores[p].campo[i];
     return !!u && u.tipo === 'senhor' && e.vez === p && e.turno > 1 && u.ativo && u.ataques > 0 &&
-      (u.entrou < e.turno || u.figura.rank === 'J');
+      (u.entrou < e.turno || eFigura(u, 'J'));
   }
 
   // ---------- Morte e dano ----------
@@ -569,14 +573,14 @@ window.SS = window.SS || {};
             }
             continue;
           }
-          for (const s of aptos) if (j.campo[s].figura.rank === 'K') r.push({ tipo: 'sumonar', figura: f.id, numero: n.id, sacrificio: j.campo[s].uid, sacrificio2: null, slot: s });
-          const valetes = aptos.filter(s => j.campo[s].figura.rank === 'J');
+          for (const s of aptos) if (eFigura(j.campo[s], 'K')) r.push({ tipo: 'sumonar', figura: f.id, numero: n.id, sacrificio: j.campo[s].uid, sacrificio2: null, slot: s });
+          const valetes = aptos.filter(s => eFigura(j.campo[s], 'J'));
           for (const sa of valetes) for (const sb of valetes) {
             if (sa !== sb) r.push({ tipo: 'sumonar', figura: f.id, numero: n.id, sacrificio: j.campo[sa].uid, sacrificio2: j.campo[sb].uid, slot: sb });
           }
         } else if (f.rank === 'K' && REGRAS.reiSacrificaValete) {
           // (modificador) O Rei sacrifica 1 Valete que já estava em campo e entra no lugar dele.
-          for (const s of aptos) if (j.campo[s].figura.rank === 'J') r.push({ tipo: 'sumonar', figura: f.id, numero: n.id, sacrificio: j.campo[s].uid, sacrificio2: null, slot: s });
+          for (const s of aptos) if (eFigura(j.campo[s], 'J')) r.push({ tipo: 'sumonar', figura: f.id, numero: n.id, sacrificio: j.campo[s].uid, sacrificio2: null, slot: s });
         } else for (const slot of vazios) r.push({ tipo: 'sumonar', figura: f.id, numero: n.id, sacrificio: null, slot });
       }
     }
@@ -620,13 +624,27 @@ window.SS = window.SS || {};
     const op = e.jogadores[1 - p], inimigos = op.campo.filter(u => u && u.tipo === 'senhor').map(u => u.uid);
     const algumAlvoMeteoro = j.campo.concat(op.campo).some(atingeMeteoro);
     const cartasPar = j.mao.filter(c => ehNumero(c) || ehAs(c));
+    // Polimorfia: vira sapo um Senhor(a) inimigo; num sapo seu, desfaz.
+    const alvosPolimorfia = op.campo.filter(u => u && u.tipo === 'senhor' && !u.sapo).concat(j.campo.filter(u => u && u.sapo)).map(u => u.uid);
     for (let x = 0; x < cartasPar.length; x++) for (let y = x + 1; y < cartasPar.length; y++) {
       const a = cartasPar[x], b = cartasPar[y];
       if (a.rank !== b.rank) continue;
       const efeito = EFEITO_PARGIA(valor(a)), base = { tipo: 'pargia', efeito, cartas: [a.id, b.id].sort() };
       if (efeito === 'saiDaqui') for (const uid of inimigos) r.push(Object.assign({ alvo: uid }, base));
-      else if (efeito === 'meteoro' && algumAlvoMeteoro) r.push(base);
+      else if (efeito === 'polimorfia') for (const uid of alvosPolimorfia) r.push(Object.assign({ alvo: uid }, base));
       else if (efeito === 'raio') {
+        for (const uid of inimigos) r.push(Object.assign({ alvo: uid }, base));
+        r.push(Object.assign({ alvo: 'jogador' }, base));
+      }
+    }
+    // Trígicas: trinca de números iguais (5 a 7, 8 a 10 ou Ases). 1 ação.
+    for (let x = 0; x < cartasPar.length; x++) for (let y = x + 1; y < cartasPar.length; y++) for (let z = y + 1; z < cartasPar.length; z++) {
+      const a = cartasPar[x];
+      if (a.rank !== cartasPar[y].rank || a.rank !== cartasPar[z].rank) continue;
+      const efeito = EFEITO_TRIGICA(valor(a)), base = { tipo: 'trigica', efeito, cartas: [a.id, cartasPar[y].id, cartasPar[z].id].sort() };
+      if (efeito === 'dominio') { if (vazios.length) for (const uid of inimigos) r.push(Object.assign({ alvo: uid }, base)); }
+      else if (efeito === 'meteoro') { if (algumAlvoMeteoro) r.push(base); }
+      else if (efeito === 'trovao') {
         for (const uid of inimigos) r.push(Object.assign({ alvo: uid }, base));
         r.push(Object.assign({ alvo: 'jogador' }, base));
       }
@@ -689,13 +707,15 @@ window.SS = window.SS || {};
   // Par de números iguais (ex.: dois 7, de qualquer naipe): na hora de bloquear, o defensor faz um
   // ataque do adversário bater no próprio dono.
   // Refletir só com pares baixos (Ás, 2 ou 3): incentiva a ter cartas baixas no deck.
-  // Pargias (pares de números iguais): 2 a 4 = Refletir (na defesa), 5 a 7 = Sai daqui!, 8 a 10 = Meteoro!,
-  // Ases = Trovão. As três últimas são ações do seu turno (1 ação cada).
+  // Pargias (pares de números iguais): 2 a 4 = Refletir (na defesa), 5 a 7 = Sai daqui!, 8 a 10 = Polimorfia,
+  // Ases = Raio. As três últimas são ações do seu turno (1 ação cada).
+  // Trígicas (trincas de números iguais, 1 ação): 5 a 7 = É meu!, 8 a 10 = Meteoro!, Ases = Trovão.
   const VALOR_MIN_REFLEXO = 2, VALOR_MAX_REFLEXO = 4;
   // O Meteoro derruba os Senhores(as) e os Ases da mesa; quem está em Berserk aguenta.
   const atingeMeteoro = u => !!u && (u.tipo === 'as' || (u.tipo === 'senhor' && !u.berserk));
-  const EFEITO_PARGIA = v => (v === 1 ? 'raio' : v >= 5 && v <= 7 ? 'saiDaqui' : v >= 8 ? 'meteoro' : null);
-  const DANO_RAIO_PALHACO = 2;
+  const EFEITO_PARGIA = v => (v === 1 ? 'raio' : v >= 5 && v <= 7 ? 'saiDaqui' : v >= 8 ? 'polimorfia' : null);
+  const EFEITO_TRIGICA = v => (v === 1 ? 'trovao' : v >= 5 && v <= 7 ? 'dominio' : v >= 8 ? 'meteoro' : null);
+  const DANO_RAIO_PALHACO = 2, DANO_TROVAO_PALHACO = 4, HITS_TROVAO = 2;
   function paresIguais(e, p) {
     const nums = e.jogadores[p].mao.filter(c => ehNumero(c) && valor(c) >= VALOR_MIN_REFLEXO && valor(c) <= VALOR_MAX_REFLEXO), r = [];
     for (let a = 0; a < nums.length; a++) {
@@ -793,8 +813,8 @@ window.SS = window.SS || {};
             if (j.campo[a.slot] && !sacs.some(s => s.i === a.slot)) throw new Error('Espaço ocupado');
           } else {
             // 1 Rei sozinho, ou 2 Valetes diferentes; ela entra no lugar do último sacrificado.
-            const rei = sacs.length === 1 && sacs[0].u.figura.rank === 'K';
-            const valetes = sacs.length === 2 && uids[0] !== uids[1] && sacs.every(s => s.u.figura.rank === 'J');
+            const rei = sacs.length === 1 && eFigura(sacs[0].u, 'K');
+            const valetes = sacs.length === 2 && uids[0] !== uids[1] && sacs.every(s => eFigura(s.u, 'J'));
             if (!rei && !valetes) throw new Error('A Rainha exige 1 Rei ou 2 Valetes');
             if (a.slot !== sacs[sacs.length - 1].i) throw new Error('A Rainha entra no lugar do Senhor sacrificado');
           }
@@ -808,7 +828,7 @@ window.SS = window.SS || {};
         const reiComSacrificio = f0.rank === 'K' && REGRAS.reiSacrificaValete;
         if (reiComSacrificio) {
           const s = a.sacrificio != null && a.sacrificio2 == null ? localizar(e, a.sacrificio) : null;
-          if (!s || s.p !== p || s.u.tipo !== 'senhor' || s.u.figura.rank !== 'J') throw new Error('O Rei exige o sacrifício de 1 Valete');
+          if (!s || s.p !== p || !eFigura(s.u, 'J')) throw new Error('O Rei exige o sacrifício de 1 Valete');
           if (s.u.entrou >= e.turno) throw new Error('Não pode sacrificar quem entrou neste turno');
           if (a.slot !== s.i) throw new Error('O Rei entra no lugar do Valete sacrificado');
           registrar(e, t('log.sacrificaRei', { j: j.nome, u: nomeUnidade(s.u) }));
@@ -937,6 +957,7 @@ window.SS = window.SS || {};
           };
           const k = espacoCentral(j);
           j.campo[k] = u;
+          u.hits = Math.max(0, resistencia(e, p, k) - 1); // volta com 1 escudo só
           registrar(e, t('log.magiaCopas', { j: j.nome, u: nomeUnidade(u) }));
           evento(e, { tipo: 'fx', fx: 'reviver', p, alvo: { p, i: k, uid: u.uid } });
         } else if (a.naipe === 'ouros') {
@@ -987,16 +1008,18 @@ window.SS = window.SS || {};
           if (e.desafio === l.u.uid) e.desafio = null;
           registrar(e, t('log.saiDaqui', { j: j.nome, u: nomeUnidade(l.u), d: op.nome }));
           verificarMortes(e);
-        } else if (efeito === 'meteoro') {
-          registrar(e, t('log.meteoro', { j: j.nome }));
-          const alvos = [];
-          for (const q of [p, d]) e.jogadores[q].campo.forEach((u, i) => { if (atingeMeteoro(u)) alvos.push({ p: q, i, uid: u.uid }); });
-          evento(e, { tipo: 'fx', fx: 'meteoro', p, alvos });
-          // (pelo uid: um Ás de Paus caindo pode levar junto o vizinho, e os lugares mudam no meio)
-          for (const a of alvos) {
-            const l = localizar(e, a.uid);
-            if (l) morrer(e, l.p, l.i, 'meteoro');
-          }
+        } else if (efeito === 'polimorfia') {
+          const l = localizar(e, a.alvo);
+          if (!l || l.u.tipo !== 'senhor' || (l.p === p) !== !!l.u.sapo) throw new Error('Alvo inválido');
+          const virou = !l.u.sapo;
+          if (virou) {
+            l.u.sapo = true;
+            l.u.ataques = Math.min(l.u.ataques, 1);
+            delete e.jogadores[1 - l.p].feridas[l.u.uid]; // (sapo não fere: a trava de cura do Naipado de Copas acaba)
+            l.u.hits = Math.min(l.u.hits, Math.max(0, resistencia(e, l.p, l.i) - 1)); // (sem o naipe aguenta menos, mas não morre por virar sapo)
+          } else delete l.u.sapo;
+          registrar(e, t(virou ? 'log.polimorfia' : 'log.polimorfiaDesfaz', { j: j.nome, u: nomeCarta(l.u.figura) }));
+          evento(e, { tipo: 'fx', fx: 'polimorfia', virou, p, alvo: { p: l.p, i: l.i, uid: l.u.uid } });
         } else {
           if (a.alvo === 'jogador') {
             registrar(e, t('log.raioPalhaco', { j: j.nome, d: op.nome, n: DANO_RAIO_PALHACO }));
@@ -1008,6 +1031,55 @@ window.SS = window.SS || {};
             registrar(e, t('log.raioSenhor', { j: j.nome, u: nomeUnidade(l.u) }));
             evento(e, { tipo: 'fx', fx: 'raio', p, alvo: { p: l.p, i: l.i, uid: l.u.uid } });
             aplicarHit(e, l.p, l.i);
+          }
+        }
+        break;
+      }
+      case 'trigica': {
+        const cs = (Array.isArray(a.cartas) ? a.cartas : []).map(id => j.mao.find(c => c.id === id));
+        if (cs.length !== 3 || !cs.every(Boolean) || new Set(cs).size !== 3 || cs.some(c => c.rank !== cs[0].rank) || !(ehNumero(cs[0]) || ehAs(cs[0]))) throw new Error('Trinca inválida');
+        const efeito = EFEITO_TRIGICA(valor(cs[0]));
+        if (!efeito || efeito !== a.efeito) throw new Error('Essa Trígica não combina com a trinca');
+        const d = 1 - p, op = e.jogadores[d];
+        for (const c of cs) j.cemiterio.push(tirarDaMao(j, c.id));
+        evento(e, { tipo: 'magia', p, cartas: cs.map(c => Object.assign({}, c)) });
+        if (efeito === 'dominio') {
+          // O Senhor(a) inimigo passa para o seu lado, para sempre. Acabou de chegar: só ataca neste turno se for Valete.
+          const l = localizar(e, a.alvo);
+          if (!l || l.p !== d || l.u.tipo !== 'senhor' || !j.campo.includes(null)) throw new Error('Alvo inválido');
+          const de = { p: d, i: l.i, uid: l.u.uid };
+          op.campo[l.i] = null;
+          const k = espacoCentral(j);
+          j.campo[k] = l.u;
+          l.u.entrou = e.turno;
+          delete j.feridas[l.u.uid];
+          delete op.feridas[l.u.uid];
+          if (e.desafio === l.u.uid) e.desafio = null;
+          registrar(e, t('log.dominio', { j: j.nome, u: nomeUnidade(l.u), d: op.nome }));
+          evento(e, { tipo: 'fx', fx: 'dominio', p, de, alvo: { p, i: k, uid: l.u.uid } });
+          verificarMortes(e); // (os vizinhos mudaram dos dois lados)
+        } else if (efeito === 'meteoro') {
+          registrar(e, t('log.meteoro', { j: j.nome }));
+          const alvos = [];
+          for (const q of [p, d]) e.jogadores[q].campo.forEach((u, i) => { if (atingeMeteoro(u)) alvos.push({ p: q, i, uid: u.uid }); });
+          evento(e, { tipo: 'fx', fx: 'meteoro', p, alvos });
+          // (pelo uid: um Ás de Paus caindo pode levar junto o vizinho, e os lugares mudam no meio)
+          for (const q of alvos) {
+            const l = localizar(e, q.uid);
+            if (l) morrer(e, l.p, l.i, 'meteoro');
+          }
+        } else if (a.alvo === 'jogador') {
+          registrar(e, t('log.trovaoPalhaco', { j: j.nome, d: op.nome, n: DANO_TROVAO_PALHACO }));
+          evento(e, { tipo: 'fx', fx: 'raio', forte: true, p, jogador: d });
+          perderPV(e, d, DANO_TROVAO_PALHACO);
+        } else {
+          const l = localizar(e, a.alvo);
+          if (!l || l.p !== d || l.u.tipo !== 'senhor') throw new Error('Alvo inválido');
+          registrar(e, t('log.trovaoSenhor', { j: j.nome, u: nomeUnidade(l.u), n: HITS_TROVAO }));
+          evento(e, { tipo: 'fx', fx: 'raio', forte: true, p, alvo: { p: l.p, i: l.i, uid: l.u.uid } });
+          for (let k = 0; k < HITS_TROVAO; k++) {
+            const q = localizar(e, l.u.uid);
+            if (q) aplicarHit(e, q.p, q.i);
           }
         }
         break;
@@ -1051,7 +1123,7 @@ window.SS = window.SS || {};
   function alvosPossiveis(e, atacante) {
     const r = ['jogador'];
     const loc = atacante != null ? localizar(e, atacante) : null;
-    const rei = !!loc && loc.u.tipo === 'senhor' && loc.u.figura.rank === 'K';
+    const rei = !!loc && eFigura(loc.u, 'K');
     for (const u of e.jogadores[1 - e.vez].campo) {
       if (!u) continue;
       if (u.tipo === 'as' || rei) r.push(u.uid);
@@ -1275,7 +1347,7 @@ window.SS = window.SS || {};
       if (localizar(e, uid)) todosMorreram = false;
     });
 
-    if (u.figura.rank === 'Q' && todosMorreram) {
+    if (eFigura(u, 'Q') && todosMorreram) {
       const sobra = dano - somaBloq;
       if (sobra > 0) {
         registrar(e, t('log.atropelar', { n: sobra, j: D.nome }));
@@ -1429,7 +1501,7 @@ window.SS = window.SS || {};
     desistir, REGRAS_DECK, RANKS, contagemPadrao, resumoDeck, validarDeck, cartasDoDeck,
     PALHACOS, CUSTO_TRANSFUSAO, CUSTO_SANGRIA, SACRIFICIOS_RAINHA, SENHORES_POR_TURNO, ASES_POR_TURNO, REDUCAO_POR_DEFENSOR, palhacoDe, limiteMao, ataqueDirecionado,
     NAIPES, SIMBOLO, LIMITE_FIGURA, PV_INICIAL, PV_MAX_CURA, RESISTENCIA_MAX, ESPACOS, ACOES_POR_TURNO, CUSTO_RAINHA, DADO_ATAQUE_TOTAL, LIMITE_MAO,
-    definirRng: f => { rng = f; }, rngAtual: () => rng, REGRAS_PADRAO, definirRegras, regras, limiteDefesa, faixaFigura, pvInicial, passivaAtiva, podeInvocar, EFEITO_PARGIA, DANO_RAIO_PALHACO, VALOR_MIN_REFLEXO, VALOR_MAX_REFLEXO, voltarAoPrincipal, refletir, paresIguais, contraRefletir, podeContraRefletir, CURA_AS_COPAS, CURA_NAIPADO_COPAS,
+    definirRng: f => { rng = f; }, rngAtual: () => rng, REGRAS_PADRAO, definirRegras, regras, limiteDefesa, faixaFigura, pvInicial, passivaAtiva, podeInvocar, EFEITO_PARGIA, EFEITO_TRIGICA, DANO_RAIO_PALHACO, DANO_TROVAO_PALHACO, HITS_TROVAO, VALOR_MIN_REFLEXO, VALOR_MAX_REFLEXO, voltarAoPrincipal, refletir, paresIguais, contraRefletir, podeContraRefletir, CURA_AS_COPAS, CURA_NAIPADO_COPAS,
     ehFigura, ehAs, ehNumero, ehSacrificavel, valor, nomeCarta, nomeNaipe, nomeUnidade, curaDe, curaPara, naipado,
     BARALHOS, NOME_BARALHO, baralhosDisponiveis, comprarDoTurno,
     criarJogo, registrar, figurasNoBaralho, escolherFiguras, mulligan, TROCAS_MULLIGAN, confirmarAbertura,
