@@ -3,7 +3,7 @@
    bloqueios são decididos pelo valor esperado de todas as rolagens possíveis.
    Todos os níveis usam os pesos treinados nas regras novas (js/pesos.js: PESOS_NOVOS).
    - Fácil: escolhas com muito acaso.
-   - Médio: quase sempre a melhor jogada da hora, com um pouco de acaso.
+   - Médio: a melhor jogada da hora, com algum acaso.
    - Difícil: planeja a sequência de jogadas do turno (a melhor 2ª jogada depois de cada 1ª).
    - Profissional: como o Difícil, olhando mais opções em cada passo. */
 window.SS = window.SS || {};
@@ -52,9 +52,9 @@ window.SS = window.SS || {};
     // (Medido em 27/10/2026: simular o resto do turno, como fazia o Profissional antigo, deixava o bot mais fraco
     // que o Difícil — a sorte dos dados pesa mais que as poucas simulações. A força agora vem dos pesos treinados
     // e de planejar a sequência de jogadas do turno.)
-    // (Medido em 03/11/2026: sem acaso, o Médio empata com o Difícil; é o acaso que separa os níveis de baixo.)
+    // (Medido em 03/11/2026: sem acaso, o Médio empata com o Difícil; é o acaso que separa os níveis de baixo. Com estes valores, o Difícil vence o Médio em 60% e o Médio vence o Fácil em 56%.)
     facil: { pesos: PESOS_NOVOS, ruido: 9, limiar: LIMIAR, alvosAs: true, ourosDados: true, pares: true, profundidade: 1 },
-    medio: { pesos: PESOS_NOVOS, ruido: 1.5, limiar: LIMIAR, alvosAs: true, ourosDados: true, pares: true, profundidade: 1 },
+    medio: { pesos: PESOS_NOVOS, ruido: 5, limiar: LIMIAR, alvosAs: true, ourosDados: true, pares: true, profundidade: 1 },
     dificil: { pesos: PESOS_NOVOS, ruido: 0, limiar: LIMIAR, alvosAs: true, ourosDados: true, pares: true, profundidade: 2, largura: 3 },
     profissional: { pesos: PESOS_NOVOS, ruido: 0, limiar: LIMIAR, alvosAs: true, ourosDados: true, pares: true, profundidade: 2, largura: 5 },
   };

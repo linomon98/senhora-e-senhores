@@ -5935,8 +5935,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 160, data: '03/11/2026',
+    n: 161, data: '03/11/2026',
     novidades: [
+      ['Bots: o nível Médio ficou mais fraco, para o Difícil se destacar', 'Bots: Medium is now weaker, so that Hard stands out'],
       ['Bots recalibrados para as regras novas: aproveitam melhor o Ás de Ouros, as trincas e a compra de 2 cartas', 'Bots recalibrated for the new rules: they make better use of the Ace of Diamonds, trios and the 2-card draw'],
       ['Deckbuilder: caixa para copiar e colar o código de um baralho', 'Deckbuilder: a box to copy and paste a deck code'],
       ['Ás de Ouros: agora dá só +1 dado aos Senhores ao lado, sem o Ouros extra (a regra antiga fica nos modificadores)', 'Ace of Diamonds: now only gives +1 die to neighboring Gentlemen, without the extra Diamond (the old rule stays in the modifiers)'],
