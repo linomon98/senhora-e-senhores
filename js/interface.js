@@ -3748,7 +3748,7 @@ window.SS = window.SS || {};
         ${bloco('um', x('Recursos', 'Resources'), [
           linha(`${c('6', 'copas')}${op('→')}${ic('cura')}`, `+3 / +4 ${np('copas')}`),
           linha(`${c('4', 'ouros')}${op('→')}${ic('comprar')}${ic('dado')}`, `<span class="cola-duas"><span>+1 ${x('carta', 'card')}</span><span>${x('ou', 'or')} +1 ${dado}</span></span>`),
-          linha(`${c('5', 'espadas')}${op('→')}${ic('dano')}`, `+1 ${atk}`),
+          linha(`${c('5', 'espadas')}${op('→')}${ic('dano')}`, `+1 ${atk} <small>(${x('apenas por 1 turno', 'for 1 turn only')})</small>`),
           linha(`${c('7', 'paus')}${op('→')}${ic('berserk')}`, 'Berserk'),
         ])}
         ${bloco('par', x('Pargia (mesmo naipe)', 'Pairgic (same suit)'), [
