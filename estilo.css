@@ -2063,7 +2063,8 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 .db-rot { margin: 0; font: 400 26px 'Marlboro', var(--fonte-titulo); color: #fff; text-shadow: 0 2px 0 #141414; text-align: center; }
 .db-copiar { display: flex; justify-content: center; gap: 4px; }
 .db-copiar .db-btn.mini { flex: 1 1 0; min-width: 0; padding: 4px 0; }
-.db-colecao.leitura .db-colecao-carta:not(.tem) { opacity: .45; }
+/* Carta que não está no deck: como uma camada branca de 50% por cima (sem deixar ver o que está atrás nem pintar os cantos) */
+.db-colecao.leitura .db-colecao-carta:not(.tem) .svg-carta, .db-colecao-carta.cheia:not(.tem) .svg-carta { filter: invert(1) brightness(.5) invert(1); }
 .db-nota { margin: 0; font-size: 13px; font-weight: 700; color: #fff; text-align: center; text-shadow: 0 1px 2px #000; }
 .db-salvo { color: #fff; opacity: .75; text-align: center; font-size: 12px; }
 
@@ -2082,7 +2083,7 @@ body.tut-compra .pilha.pulsando:not(.tut-destaque) .carta { animation: none !imp
 .db-colecao-carta { position: relative; width: 118px; height: 165px; flex: none; cursor: pointer; transition: transform .14s; filter: drop-shadow(2px 3px 0 rgba(0, 0, 0, .35)); }
 .db-colecao-carta + .db-colecao-carta { margin-left: -67px; }
 .db-colecao-carta:hover { transform: translateY(-14px); z-index: 5; }
-.db-colecao-carta.cheia:not(.tem) { filter: grayscale(.8) brightness(.8); opacity: .6; cursor: not-allowed; }
+.db-colecao-carta.cheia:not(.tem) { cursor: not-allowed; }
 .db-colecao.leitura .db-colecao-carta { cursor: default; }
 .db-colecao.leitura .db-colecao-carta:hover { transform: none; }
 /* Carta com o mouse em cima: as do lado se afastam um pouco para ela aparecer inteira (e elas também) */

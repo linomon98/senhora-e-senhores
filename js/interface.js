@@ -5935,8 +5935,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 156, data: '03/11/2026',
+    n: 157, data: '03/11/2026',
     novidades: [
+      ['Baralhos: as cartas fora do deck ficam esbranquiçadas em vez de transparentes', 'Decks: cards outside the deck look whitened instead of transparent'],
       ['As cartas de ação ficaram só com o título e a arte; o efeito e o custo aparecem na caixinha ao parar o mouse em cima', 'Action cards now show only the title and art; the effect and cost appear in the box when you hover'],
       ['Arraste uma carta dentro da sua mão para trocar o lugar dela, a qualquer momento', 'Drag a card within your hand to change its place, at any time'],
       ['Agora todo mundo compra 2 cartas no começo do turno (nos modificadores dá para voltar a 1)', 'Everyone now draws 2 cards at the start of the turn (you can go back to 1 in the modifiers)'],
