@@ -5941,8 +5941,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 162, data: '03/11/2026',
+    n: 163, data: '03/11/2026',
     novidades: [
+      ['Bots: o Profissional agora tem um jeito próprio de jogar com cada Palhaço', 'Bots: Professional now has its own playstyle for each Jester'],
       ['Tutorial novo: você enfrenta o Ourinhos com as regras oficiais e, no fim, termina o duelo sozinho; a colinha só aparece quando ele fala dela', 'New tutorial: you face Ourinhos with the official rules and, at the end, finish the duel on your own; the crib sheet only shows up once he mentions it'],
       ['Bots: o nível Médio ficou mais fraco, para o Difícil se destacar', 'Bots: Medium is now weaker, so that Hard stands out'],
       ['Bots recalibrados para as regras novas: aproveitam melhor o Ás de Ouros, as trincas e a compra de 2 cartas', 'Bots recalibrated for the new rules: they make better use of the Ace of Diamonds, trios and the 2-card draw'],
@@ -6211,9 +6212,9 @@ window.SS = window.SS || {};
   const compModificado = pal => SLIDERS_BOT.some(([k, , , padrao]) => valorComp(pal, k) !== padrao);
   function comportamentoDe(nivel, pal) {
     if (!pal || !compModificado(pal) || !Bot.NIVEIS[nivel]) return nivel;
-    const base = Bot.NIVEIS[nivel], pesos = Object.assign({}, base.pesos);
+    const base = Bot.NIVEIS[nivel], pesos = Object.assign({}, (base.pesosPalhaco && base.pesosPalhaco[pal]) || base.pesos);
     for (const [k, , , padrao, chaves] of SLIDERS_BOT) for (const w of chaves) if (w in pesos) pesos[w] *= valorComp(pal, k) / padrao;
-    return Object.assign({}, base, { nome: nivel, pesos, limiar: base.limiar * valorComp(pal, 'iniciativa') / 100, ruido: base.ruido + valorComp(pal, 'acaso') / 10 });
+    return Object.assign({}, base, { nome: nivel, pesos, pesosPalhaco: null, limiar: base.limiar * valorComp(pal, 'iniciativa') / 100, ruido: base.ruido + valorComp(pal, 'acaso') / 10 });
   }
 
   function telaComportamento(palSel) {

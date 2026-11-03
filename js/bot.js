@@ -5,7 +5,7 @@
    - Fácil: escolhas com muito acaso.
    - Médio: a melhor jogada da hora, com algum acaso.
    - Difícil: planeja a sequência de jogadas do turno (a melhor 2ª jogada depois de cada 1ª).
-   - Profissional: como o Difícil, olhando mais opções em cada passo. */
+   - Profissional: a melhor jogada da hora, com pesos próprios de cada Palhaço (js/pesos.js: PESOS_PRO_PALHACO). */
 window.SS = window.SS || {};
 (function (SS) {
   'use strict';
@@ -56,11 +56,11 @@ window.SS = window.SS || {};
     facil: { pesos: PESOS_NOVOS, ruido: 9, limiar: LIMIAR, alvosAs: true, ourosDados: true, pares: true, profundidade: 1 },
     medio: { pesos: PESOS_NOVOS, ruido: 5, limiar: LIMIAR, alvosAs: true, ourosDados: true, pares: true, profundidade: 1 },
     dificil: { pesos: PESOS_NOVOS, ruido: 0, limiar: LIMIAR, alvosAs: true, ourosDados: true, pares: true, profundidade: 2, largura: 3 },
-    profissional: { pesos: PESOS_NOVOS, ruido: 0, limiar: LIMIAR, alvosAs: true, ourosDados: true, pares: true, profundidade: 2, largura: 5 },
+    profissional: { pesos: PESOS_NOVOS, pesosPalhaco: SS.PESOS_PRO_PALHACO, ruido: 0, limiar: 0.06, alvosAs: true, ourosDados: true, pares: true, profundidade: 1 },
   };
   // Configuração de um nível (aceita também um objeto de configuração pronto, usado no treino).
   const configDe = nivel => (typeof nivel === 'object' ? nivel : NIVEIS[nivel] || NIVEIS.medio);
-  const usar = cfg => { W = cfg.pesos || PESOS_BASE; return cfg; };
+  const usar = (cfg, e, p) => { W = (cfg.pesosPalhaco && cfg.pesosPalhaco[e.jogadores[p].palhaco]) || cfg.pesos || PESOS_BASE; return cfg; };
   const sortear = arr => arr[Math.floor(Math.random() * arr.length)];
   const rolar = n => Array.from({ length: n }, () => 1 + Math.floor(Math.random() * 6));
 
@@ -107,7 +107,7 @@ window.SS = window.SS || {};
 
   // Escolhe o baralho da compra do turno pelo valor médio da mão depois de comprar.
   function escolherBaralho(e, p, nivel) {
-    usar(configDe(nivel));
+    usar(configDe(nivel), e, p);
     const j = e.jogadores[p];
     const opcoes = M.BARALHOS.filter(b => j[b].length);
     if (opcoes.length < 2) return opcoes[0] || 'numeros';
@@ -298,10 +298,10 @@ window.SS = window.SS || {};
           determinizar(c, p);
           aplicar(c);
           jogarAte(c, [politica, politica], e.turno + 2);
-          usar(cfg);
+          usar(cfg, e, p);
           soma += avaliar(c, p);
         } catch (erro) {
-          usar(cfg); // decisão ilegal ou simulação que travou: nunca é a escolhida
+          usar(cfg, e, p); // decisão ilegal ou simulação que travou: nunca é a escolhida
           soma -= 1e9;
         }
       }
@@ -313,7 +313,7 @@ window.SS = window.SS || {};
   }
 
   function proximaAcao(e, p, nivel) {
-    const cfg = usar(configDe(nivel));
+    const cfg = usar(configDe(nivel), e, p);
     const legais = M.acoesLegais(e).filter(a => a.tipo !== 'atacar');
     if (!legais.length) return { tipo: 'atacar' };
     const base = avaliar(e, p);
@@ -353,7 +353,7 @@ window.SS = window.SS || {};
           melhorS = n;
         }
       }
-      usar(cfg);
+      usar(cfg, e, p);
       return melhorS.a;
     }
     let melhor = null, melhorValor = -Infinity;
@@ -424,7 +424,7 @@ window.SS = window.SS || {};
   }
 
   function declararAtaques(e, p, nivel) {
-    const cfg = usar(configDe(nivel));
+    const cfg = usar(configDe(nivel), e, p);
     const aptos = M.atacantesAptos(e);
     const base = avaliar(e, p);
     let ourosLivres = M.ourosDisponiveis(e, p);
@@ -482,7 +482,7 @@ window.SS = window.SS || {};
         melhor = x;
       }
     }
-    usar(cfg);
+    usar(cfg, e, p);
     return melhor;
   }
 
@@ -514,7 +514,7 @@ window.SS = window.SS || {};
   }
 
   function bloquear(e, d, nivel) {
-    const cfg = usar(configDe(nivel));
+    const cfg = usar(configDe(nivel), e, d);
     const mapa = {}, usados = {};
     const marcar = op => op.forEach(uid => { usados[uid] = (usados[uid] || 0) + 1; });
     const ataques = e.combate.ataques;
@@ -564,7 +564,7 @@ window.SS = window.SS || {};
 
   // Descarte: tira, uma a uma, a carta cuja falta menos piora a nota da mesa (assim guarda pares e recursos).
   function descartar(e, p, nivel) {
-    usar(configDe(nivel));
+    usar(configDe(nivel), e, p);
     const j = e.jogadores[p], n = j.mao.length - M.limiteMao(j), fora = [];
     const c = clonar(e), mao = c.jogadores[p].mao;
     for (let k = 0; k < n; k++) {
