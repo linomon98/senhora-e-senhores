@@ -93,7 +93,7 @@ window.SS = window.SS || {};
   const PALHACOS = {
     lancalotte: { naipe: 'espadas', pv: 19, limiteMao: 7, poder: 'desafio', dadosPrimeiro: 1, ataquePrimeiro: 1 },
     infartitte: { naipe: 'copas', pv: 24, limiteMao: 7, poder: 'transfusao', curaExtra: 1 },
-    paumol: { naipe: 'paus', pv: 20, limiteMao: 7, poder: 'vigilia', reducaoDefesa: 2, soPaus: false },
+    paumol: { naipe: 'paus', pv: 26, limiteMao: 7, poder: 'vigilia', reducaoDefesa: 2, soPaus: false },
     ourinhos: { naipe: 'ouros', pv: 16, limiteMao: 6, poder: 'roubo', compraDupla: true }, // rouba 1 carta da mão do oponente
   };
   const SENHORES_POR_TURNO = 1; // Senhores que dá para sumonar por turno (a Rainha conta)

@@ -82,13 +82,13 @@ window.SS = window.SS || {};
     paumol: {
       pt: {
         titulo: 'o muro',
-        passiva: { nome: 'Casca grossa', texto: 'Seus Naipados de Paus recebem 1 de dano a menos ao defender. Começa com 20 PV.' },
+        passiva: { nome: 'Casca grossa', texto: 'Seus Naipados de Paus recebem 1 de dano a menos ao defender. Começa com 26 PV.' },
         poder: { nome: 'Vigília', texto: 'Escolha 1 Senhor(a) seu: ele(a) não vira para baixo no fim deste turno (ataca e ainda pode bloquear).' },
         plano: 'Ninguém passa: Reis e Rainhas de Paus Naipados seguram a fileira e Ouros dão dados extras.',
       },
       en: {
         titulo: 'the wall',
-        passiva: { nome: 'Thick Bark', texto: 'Your Clubs Suited take 1 less damage when defending. Starts with 20 HP.' },
+        passiva: { nome: 'Thick Bark', texto: 'Your Clubs Suited take 1 less damage when defending. Starts with 26 HP.' },
         poder: { nome: 'Vigil', texto: "Choose 1 of your Gentlemen: it doesn't flip face down at the end of this turn (it attacks and can still block)." },
         plano: 'None shall pass: Suited Clubs Kings and Queens hold the row and Diamonds give extra dice.',
       },
