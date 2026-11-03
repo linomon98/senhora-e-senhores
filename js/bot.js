@@ -2,8 +2,8 @@
    O bot escolhe, a cada momento, a jogada que deixa a mesa com a melhor "nota" (avaliar). Ataques e
    bloqueios são decididos pelo valor esperado de todas as rolagens possíveis.
    Todos os níveis usam os pesos treinados nas regras novas (js/pesos.js: PESOS_NOVOS).
-   - Fácil: escolhas com bastante acaso.
-   - Médio: sempre a melhor jogada da hora.
+   - Fácil: escolhas com muito acaso.
+   - Médio: quase sempre a melhor jogada da hora, com um pouco de acaso.
    - Difícil: planeja a sequência de jogadas do turno (a melhor 2ª jogada depois de cada 1ª).
    - Profissional: como o Difícil, olhando mais opções em cada passo. */
 window.SS = window.SS || {};
@@ -36,10 +36,12 @@ window.SS = window.SS || {};
     // Cartas guardadas na mão também valem (sem isso o bot gasta qualquer recurso por um ganho mínimo):
     // pares de números iguais (Pargia, Refletir), Ouros (dados extras, compras) e Copas (cura).
     maoParIgual: 2.5, maoOuros: 0.4, maoCopas: 0.3,
+    // Regras de 03/11/2026: trinca na mão (Trígicas), dados dos Ases de Ouros vizinhos e Na mosca! armado (por ponto de ataque).
+    maoTrinca: 2, uTotem: 0.5, uCheio: 0.6,
   };
   const PESOS_APRENDIDOS = Object.assign({}, PESOS_BASE, SS.PESOS_APRENDIDOS || {});
   const PESOS_PRO = Object.assign({}, PESOS_APRENDIDOS, SS.PESOS_PRO || {});
-  // Pesos treinados nas regras e decks novos (27/10/2026); sem eles (pesos.js antigo), ficam os aprendidos.
+  // Pesos treinados nas regras e decks novos (03/11/2026); sem eles (pesos.js antigo), ficam os aprendidos.
   const PESOS_NOVOS = Object.assign({}, PESOS_APRENDIDOS, SS.PESOS_NOVOS || {});
   const LIMIAR = SS.LIMIAR_NOVO != null ? SS.LIMIAR_NOVO : 0.15;
   // Pesos em uso na decisão atual (as decisões são síncronas, então dá para trocar por nível).
@@ -50,8 +52,9 @@ window.SS = window.SS || {};
     // (Medido em 27/10/2026: simular o resto do turno, como fazia o Profissional antigo, deixava o bot mais fraco
     // que o Difícil — a sorte dos dados pesa mais que as poucas simulações. A força agora vem dos pesos treinados
     // e de planejar a sequência de jogadas do turno.)
-    facil: { pesos: PESOS_NOVOS, ruido: 5, limiar: LIMIAR, alvosAs: true, ourosDados: true, pares: true, profundidade: 1 },
-    medio: { pesos: PESOS_NOVOS, ruido: 0, limiar: LIMIAR, alvosAs: true, ourosDados: true, pares: true, profundidade: 1 },
+    // (Medido em 03/11/2026: sem acaso, o Médio empata com o Difícil; é o acaso que separa os níveis de baixo.)
+    facil: { pesos: PESOS_NOVOS, ruido: 9, limiar: LIMIAR, alvosAs: true, ourosDados: true, pares: true, profundidade: 1 },
+    medio: { pesos: PESOS_NOVOS, ruido: 1.5, limiar: LIMIAR, alvosAs: true, ourosDados: true, pares: true, profundidade: 1 },
     dificil: { pesos: PESOS_NOVOS, ruido: 0, limiar: LIMIAR, alvosAs: true, ourosDados: true, pares: true, profundidade: 2, largura: 3 },
     profissional: { pesos: PESOS_NOVOS, ruido: 0, limiar: LIMIAR, alvosAs: true, ourosDados: true, pares: true, profundidade: 2, largura: 5 },
   };
@@ -84,13 +87,20 @@ window.SS = window.SS || {};
   // A mão vale mais quando tem pares figura + número (um Senhor pronto para sumonar).
   function valorMao(mao) {
     let figuras = 0, numeros = 0, v = 0;
+    const porValor = {};
     for (const c of mao) {
       if (M.ehFigura(c)) figuras++;
-      else if (M.ehNumero(c)) {
-        numeros++;
-        v += M.valor(c) * W.maoNum;
-      } else v += W.maoAs;
+      else {
+        if (M.ehNumero(c)) {
+          numeros++;
+          v += M.valor(c) * W.maoNum;
+        } else v += W.maoAs;
+        porValor[c.rank] = (porValor[c.rank] || 0) + 1;
+        if (c.naipe === 'ouros') v += W.maoOuros;
+        else if (c.naipe === 'copas') v += W.maoCopas;
+      }
     }
+    for (const r in porValor) v += Math.floor(porValor[r] / 2) * W.maoParIgual + Math.floor(porValor[r] / 3) * W.maoTrinca;
     const pares = Math.min(figuras, numeros);
     return v + pares * W.maoPar + (figuras - pares) * W.maoFigSolta + (numeros - pares) * W.maoNumSolto;
   }
@@ -148,7 +158,11 @@ window.SS = window.SS || {};
         if (!u.berserk && res > 1 && hits === res - 1) F.uPorUmFio -= s; // por um fio: o próximo hit mata
         if (e.vez === q && (!u.ativo || (u.atacou && !u.vigilia))) F.uNaoBloqueia -= s; // não bloqueia no turno do oponente
         if (e.vez === q && u.vigilia && !u.atacou) F.uVigilia += s; // ataca sem perder o bloqueio
-        if (M.podeAtacar(e, q, i)) F.uBonus += s * u.bonus.length;
+        F.uTotem += s * M.dadosDoTotem(e, q, i) * atk;
+        if (M.podeAtacar(e, q, i)) {
+          F.uBonus += s * u.bonus.length;
+          if (u.danoCheio) F.uCheio += s * atk;
+        }
       }
     }
     let figuras = 0, numeros = 0;
@@ -168,7 +182,10 @@ window.SS = window.SS || {};
       if (c.naipe === 'ouros') F.maoOuros++;
       else if (c.naipe === 'copas') F.maoCopas++;
     }
-    for (const r in porValor) F.maoParIgual += Math.floor(porValor[r] / 2);
+    for (const r in porValor) {
+      F.maoParIgual += Math.floor(porValor[r] / 2);
+      F.maoTrinca += Math.floor(porValor[r] / 3);
+    }
     F.maoFigSolta = figuras - pares;
     F.maoNumSolto = numeros - pares;
     F.opMao = -op.mao.length;

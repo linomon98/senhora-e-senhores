@@ -987,7 +987,7 @@ window.SS = window.SS || {};
 
   // Aparelho de toque (html.toque): a chave "x@toque", quando existe, troca o mouse por tocar e segurar.
   function t(chave, p) {
-    if (document.documentElement.classList.contains('toque') && (D[atual][chave + '@toque'] !== undefined || D.pt[chave + '@toque'] !== undefined)) chave += '@toque';
+    if (typeof document !== 'undefined' && document.documentElement.classList.contains('toque') && (D[atual][chave + '@toque'] !== undefined || D.pt[chave + '@toque'] !== undefined)) chave += '@toque';
     let txt = D[atual][chave];
     if (txt === undefined) txt = D.pt[chave];
     if (txt === undefined) return chave;

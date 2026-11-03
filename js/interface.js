@@ -5935,8 +5935,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 159, data: '03/11/2026',
+    n: 160, data: '03/11/2026',
     novidades: [
+      ['Bots recalibrados para as regras novas: aproveitam melhor o Ás de Ouros, as trincas e a compra de 2 cartas', 'Bots recalibrated for the new rules: they make better use of the Ace of Diamonds, trios and the 2-card draw'],
       ['Deckbuilder: caixa para copiar e colar o código de um baralho', 'Deckbuilder: a box to copy and paste a deck code'],
       ['Ás de Ouros: agora dá só +1 dado aos Senhores ao lado, sem o Ouros extra (a regra antiga fica nos modificadores)', 'Ace of Diamonds: now only gives +1 die to neighboring Gentlemen, without the extra Diamond (the old rule stays in the modifiers)'],
       ['Baralhos: as cartas fora do deck ficam esbranquiçadas em vez de transparentes', 'Decks: cards outside the deck look whitened instead of transparent'],
@@ -6191,8 +6192,8 @@ window.SS = window.SS || {};
     ['palhaco', 0, 250, 100, ['pvBaixo', 'pvAlto', 'perigo']],
     ['senhores', 0, 250, 100, ['uBase', 'uAtk', 'uVida', 'uNaipado', 'uRealeza']],
     ['cautela', 0, 300, 100, ['uPorUmFio', 'uNaoBloqueia', 'ameaca', 'bloqueadores']],
-    ['guardar', 0, 300, 100, ['maoNum', 'maoAs', 'maoPar', 'maoFigSolta', 'maoNumSolto', 'maoParIgual', 'maoOuros', 'maoCopas']],
-    ['ases', 0, 300, 100, ['asBase', 'asVizinho']],
+    ['guardar', 0, 300, 100, ['maoNum', 'maoAs', 'maoPar', 'maoFigSolta', 'maoNumSolto', 'maoParIgual', 'maoTrinca', 'maoOuros', 'maoCopas']],
+    ['ases', 0, 300, 100, ['asBase', 'asVizinho', 'uTotem']],
     ['iniciativa', 0, 300, 100, []], // limiar: quanto melhor a jogada precisa ser para ele agir (alto = mais parado)
     ['acaso', 0, 100, 0, []], // ruído: escolhas menos previsíveis
   ];
