@@ -76,6 +76,7 @@ window.SS = window.SS || {};
   const habNaipado = (naipe, comNumero) => blocoHab(t('dc.naipadoTitulo', { n: NOME_NAIPE[naipe], hab: t('naiHab.' + naipe) }),
     (txt => comNumero ? t('dc.naipadoCom', { n: NOME_NAIPE[naipe] }) + txt[0].toLowerCase() + txt.slice(1) : txt)(t('naipado.' + naipe, { n: M.CURA_NAIPADO_COPAS })), 'naipe-' + naipe);
   const PODER_AS = tabela('as.');
+  const poderAs = n => PODER_AS[n] + (n === 'ouros' && M.regras().asOurosDado ? ' ' + t('as.ourosDado') : '');
   const NOME_POSTURA = tabela('postura.');
   const EFEITO_NUMERO = new Proxy({}, {
     get: (_, naipe) => c => t('efeito.' + String(naipe), { cura: M.curaDe(c), max: M.PV_MAX_CURA, crit: Math.floor(M.valor(c) / 2) }),
@@ -99,9 +100,16 @@ window.SS = window.SS || {};
 
   const cfg = { palhaco: 'lancalotte', rival: 'aleatorio', nivel: 'medio', modo: 'bot', deck: 'palhaco' };
   // Modificadores de regras (área de testes): valem contra o bot, no Bot × bot, na simulação, na mesa livre
-  // e no online (lá valem as regras do dono da sala); o tutorial sempre usa as regras oficiais.
+  // e no online (lá valem as regras do dono da sala); o tutorial tem regras próprias (veja iniciarTutorial).
   const CHAVE_REGRAS = 'ss-regras';
-  cfg.regras = (() => { try { return M.definirRegras(JSON.parse(localStorage.getItem(CHAVE_REGRAS))); } catch (err) { return M.definirRegras(null); } })();
+  cfg.regras = (() => {
+    try {
+      const salvas = JSON.parse(localStorage.getItem(CHAVE_REGRAS));
+      // (quem salvou antes da compra de 2 cartas virar oficial guardou "1 carta" sem escolher: passa a valer o padrão novo)
+      if (salvas && !('asOurosDado' in salvas)) delete salvas.todosCompram2;
+      return M.definirRegras(salvas);
+    } catch (err) { return M.definirRegras(null); }
+  })();
   M.definirRegras(null);
   const salvarRegras = () => { try { localStorage.setItem(CHAVE_REGRAS, JSON.stringify(cfg.regras)); } catch (err) { /* fica só nesta visita */ } };
   const regrasModificadas = r => Object.keys(M.REGRAS_PADRAO).filter(k => r && JSON.stringify(r[k]) !== JSON.stringify(M.REGRAS_PADRAO[k]));
@@ -1380,14 +1388,14 @@ window.SS = window.SS || {};
       };
     }
     if (M.ehAs(c)) {
-      return { titulo: nome, sub: t('dc.totem'), linhas: [PODER_AS[c.naipe], t('dc.asInvocar', { n: NOME_NAIPE[c.naipe] }), t('dc.asOcupa')] };
+      return { titulo: nome, sub: t('dc.totem'), linhas: [poderAs(c.naipe), t('dc.asInvocar', { n: NOME_NAIPE[c.naipe] }), t('dc.asOcupa')] };
     }
     return { titulo: nome, sub: t('dc.numero', { n: NOME_NAIPE[c.naipe] }), linhas: [t('dc.numeroAtaque', { v: M.valor(c) }), EFEITO_NUMERO[c.naipe](c)] };
   }
 
   function dicaUnidade(p, i, u) {
     if (u.tipo === 'as') {
-      return { titulo: M.nomeCarta(u.carta), sub: t('dc.totem'), linhas: [PODER_AS[u.naipe], t('dc.asNaoAtaca'), t('dc.asAlvo')], arte: [u.carta] };
+      return { titulo: M.nomeCarta(u.carta), sub: t('dc.totem'), linhas: [poderAs(u.naipe), t('dc.asNaoAtaca'), t('dc.asAlvo')], arte: [u.carta] };
     }
     const nai = M.naipado(u), atk = M.ataque(jogo, p, i), res = M.resistencia(jogo, p, i), post = M.postura(jogo, p, i);
     const vizinhos = [i - 1, i + 1].map(k => jogo.jogadores[p].campo[k]).filter(w => w && w.tipo === 'as').map(w => w.naipe);
@@ -1407,6 +1415,7 @@ window.SS = window.SS || {};
     ];
     if (nai) linhas.push(habNaipado(nai));
     if (vizinhos.includes('copas')) linhas.push(t('du.asCopas'));
+    if (M.dadosDoTotem(jogo, p, i)) linhas.push(t('du.asOuros', { n: M.dadosDoTotem(jogo, p, i) }));
     if (u.danoCheio) linhas.push(t('du.cheio'));
     if (u.vigilia) linhas.push(t('du.vigilia'));
     if (jogo.desafio === u.uid) linhas.push(t('du.desafiado'));
@@ -1781,6 +1790,7 @@ window.SS = window.SS || {};
         vizinhos.filter(u => u.tipo === 'senhor').forEach((u, k) => voarIcone(esp, () => elUnidade(u.uid), iconeBonus(naipe), 'bonus-' + naipe, 420 + k * 140));
       } else if (naipe === 'ouros') {
         voarToken(esp, p, 420, reserva);
+        if (M.regras().asOurosDado) vizinhos.filter(u => u.tipo === 'senhor').forEach((u, k) => voarIcone(esp, () => elUnidade(u.uid), DADO_IMG, 'dado-voando', 420 + k * 140));
       } else if (naipe === 'copas') {
         voarIcone(esp, pvDe(p), '<span>♥</span>', 'bola-cura', 420);
       }
@@ -1788,6 +1798,10 @@ window.SS = window.SS || {};
       vizinhos.filter(u => u.tipo === 'as' && (u.naipe === 'espadas' || u.naipe === 'paus')).forEach((a, k) => {
         const de = elUnidade(a.uid);
         if (de) voarIcone(de, () => elUnidade(uid), iconeBonus(a.naipe), 'bonus-' + a.naipe, 120 + k * 140);
+      });
+      if (M.regras().asOurosDado) vizinhos.filter(u => u.tipo === 'as' && u.naipe === 'ouros').forEach((a, k) => {
+        const de = elUnidade(a.uid);
+        if (de) voarIcone(de, () => elUnidade(uid), DADO_IMG, 'dado-voando', 120 + k * 140);
       });
     }
   }
@@ -3365,10 +3379,11 @@ window.SS = window.SS || {};
   };
   const selosPoder = u => (jogo.desafio === u.uid ? seloPoder(u, 'desafio', 'espadas') : '') + (u.vigilia ? seloPoder(u, 'vigilia', 'paus') : '');
   function seloDado(u) {
-    if (!u.dadosExtra && !u.danoCheio) return '';
-    const e = entradaSelo(u.uid + ':dado:' + (u.dadosExtra || 0) + (u.danoCheio ? ':cheio' : '')); // (cada dado novo guardado entra de novo)
-    const dica = [u.dadosExtra ? t('ui.dadoExtra', { n: u.dadosExtra }) : '', u.danoCheio ? t('ui.danoCheio') : ''].filter(Boolean).join(' · ');
-    return `<div class="selo-dado${e.cls}"${e.estilo} title="${dica}">${DADO_IMG}${u.dadosExtra > 1 ? '<b>×' + u.dadosExtra + '</b>' : ''}${u.danoCheio ? '<b>✓</b>' : ''}</div>`;
+    const l = M.localizar(jogo, u.uid), totem = l ? M.dadosDoTotem(jogo, l.p, l.i) : 0, n = (u.dadosExtra || 0) + totem;
+    if (!n && !u.danoCheio) return '';
+    const e = entradaSelo(u.uid + ':dado:' + n + (u.danoCheio ? ':cheio' : '')); // (cada dado novo guardado entra de novo)
+    const dica = [u.dadosExtra ? t('ui.dadoExtra', { n: u.dadosExtra }) : '', totem ? t('ui.dadoTotem', { n: totem }) : '', u.danoCheio ? t('ui.danoCheio') : ''].filter(Boolean).join(' · ');
+    return `<div class="selo-dado${e.cls}"${e.estilo} title="${dica}">${DADO_IMG}${n > 1 ? '<b>×' + n + '</b>' : ''}${u.danoCheio ? '<b>✓</b>' : ''}</div>`;
   }
 
   // Lançalotte (Golpe certeiro): o 1º ataque do turno ganha +1 de ataque (e +1 dado). Aparece no selo de ataque
@@ -3441,7 +3456,7 @@ window.SS = window.SS || {};
     const loc = M.localizar(jogo, a.atacante);
     const temOuros = ourosLivres().length > 0;
     const n = ui.ataques.length;
-    const guardados = ui.ataques.findIndex(x => x.atacante === a.atacante) === k ? loc.u.dadosExtra || 0 : 0;
+    const guardados = (ui.ataques.findIndex(x => x.atacante === a.atacante) === k ? loc.u.dadosExtra || 0 : 0) + M.dadosDoTotem(jogo, loc.p, loc.i);
     return `<div class="cb-item">
       <span class="cb-num">${k + 1}</span>
       <span class="cb-txt"><b>${M.nomeUnidade(loc.u)} <em>⚔${M.ataque(jogo, loc.p, loc.i)}</em></b><span>→ ${nomeAlvo(a)}</span>
@@ -3738,7 +3753,9 @@ window.SS = window.SS || {};
           linha(`${c('A', 'paus')}${c('2', 'paus')}`, `↔ +${esc(1)}`),
           linha(`${c('A', 'espadas')}${c('2', 'espadas')}`, `↔ +1 ${atk}`),
           linha(`${c('A', 'copas')}${c('2', 'copas')}`, `+${M.CURA_AS_COPAS} ${np('copas')} / ${x('turno', 'turn')}`),
-          linha(`${c('A', 'ouros')}${c('2', 'ouros')}`, `+1 ${np('ouros')} / ${x('turno', 'turn')}`),
+          linha(`${c('A', 'ouros')}${c('2', 'ouros')}`, M.regras().asOurosDado
+            ? `<span class="cola-duas"><span>+1 ${np('ouros')} / ${x('turno', 'turn')}</span><span>↔ +1 ${dado}</span></span>`
+            : `+1 ${np('ouros')} / ${x('turno', 'turn')}`),
         ])}
         ${bloco('um', x('Recursos', 'Resources'), [
           linha(`${c('6', 'copas')}${op('→')}${ic('cura')}`, `+3 / +4 ${np('copas')}`),
@@ -5226,7 +5243,7 @@ window.SS = window.SS || {};
     if (document.documentElement.classList.contains('em-menu')) transicaoComFoto();
     cfg.modo = 'tutorial';
     cfg.aula = n;
-    M.definirRegras(null); // regras oficiais
+    M.definirRegras({ todosCompram2: false, asOurosDado: false }); // (as aulas foram escritas para a compra de 1 carta)
     const id = ++partida;
     prepararMesa();
     Som.musica('partida');
@@ -5864,8 +5881,10 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 153, data: '02/11/2026',
+    n: 154, data: '03/11/2026',
     novidades: [
+      ['Agora todo mundo compra 2 cartas no começo do turno (nos modificadores dá para voltar a 1)', 'Everyone now draws 2 cards at the start of the turn (you can go back to 1 in the modifiers)'],
+      ['Ás de Ouros: os Senhores ao lado rolam +1 dado no ataque (também nos modificadores)', 'Ace of Diamonds: neighboring Gentlemen roll +1 die when attacking (also in the modifiers)'],
       ['Artes novas: Polimorfia, Raio, Vem pra cá! (o antigo É meu!), Na mosca! e o sapo dos Senhores transformados', 'New art: Polymorph, Lightning, Come here! (formerly Mine!), Bullseye! and the frog for transformed Gentlemen'],
       ['Nova Trígica de 2 a 4, Na mosca!: garante o dano cheio do Senhor que atacar, seja qual for o dado', 'New Trigic of 2 to 4, Bullseye!: guarantees full damage for the attacking Gentleman, whatever the die shows'],
       ['Trígicas, as magias de trinca: Vem pra cá! (5 a 7) toma um Senhor inimigo, Meteoro (8 a 10) e Trovão (Ases)', 'Trigics, the trio spells: Come here! (5 to 7) takes an enemy Gentleman, Meteor (8 to 10) and Thunder (Aces)'],
@@ -6026,7 +6045,8 @@ window.SS = window.SS || {};
       ${linha('limitePV', [['true', t('rg.pvAte', { n: M.PV_MAX_CURA })], ['false', t('rg.semLimite')]])}
       ${linha('invocacoes', [['umPorTurno', t('rg.umPorTurno')], ['umPorLetra', t('rg.umPorLetra')], ['ilimitadas', t('rg.ilimitadas')]])}
       ${linha('passivaOurinhos', [['dividendos', t('rg.dividendos')], ['juros', t('rg.juros')]])}
-      ${linha('todosCompram2', [['false', t('rg.desligado')], ['true', t('rg.ligado')]])}
+      ${linha('todosCompram2', [['false', t('rg.umaCarta')], ['true', t('rg.duasCartas')]])}
+      ${linha('asOurosDado', [['false', t('rg.desligado')], ['true', t('rg.ligado')]])}
       <div class="opcao"><label>${t('rg.semPassiva')}</label><div class="grupo" data-passivas>${P.LISTA.map(pal =>
         `<button data-pal="${pal.id}" class="${r.semPassiva && r.semPassiva[pal.id] ? '' : 'ativo'}">${SIMB[pal.naipe]} ${pal.passiva.nome}</button>`).join('')}</div>
         <p class="nota">${t('rg.semPassivaNota')}</p></div>

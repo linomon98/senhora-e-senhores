@@ -29,12 +29,13 @@ window.SS = window.SS || {};
   //   pv: { palhaço: PV inicial } (vazio = o PV de cada Palhaço)
   //   faixa: { J: [mín, máx], Q: [...], K: [...] } números que cada figura pode equipar (vazio = 2 até LIMITE_FIGURA)
   //   semPassiva: { palhaço: true } desliga a habilidade passiva dele (o poder continua)
-  //   todosCompram2: todo mundo compra 2 cartas no começo do turno (só para testes)
+  //   todosCompram2: true (oficial desde 03/11/2026: todo mundo compra 2 cartas no começo do turno) | false (compra 1)
+  //   asOurosDado: true (oficial desde 03/11/2026: cada Ás de Ouros vizinho dá +1 dado nos ataques do Senhor(a)) | false
   //   passivaOurinhos: 'dividendos' (oficial desde 27/10/2026) ou 'juros' (Juros compostos, a passiva antiga, para testes)
   //   invocacoes: 'umPorTurno' (1 Senhor(a) por turno) | 'umPorLetra' (1 Valete, 1 Rainha e 1 Rei por turno) | 'ilimitadas'
   // Regras oficiais (27/10/2026): Casca grossa −1 só nos Naipados de Paus, defesa sem limite, Rei sacrifica 1 Valete,
   // cura sem teto e 1 invocação de cada letra por turno.
-  const REGRAS_PADRAO = Object.freeze({ casca: 'paus1', limiteDefesa: false, rainha: 'reiOuValetes', reiSacrificaValete: true, asesRecurso: true, asesNasLetras: false, bonusNaipe: false, limitePV: false, pv: Object.freeze({}), faixa: Object.freeze({}), semPassiva: Object.freeze({}), invocacoes: 'umPorLetra', passivaOurinhos: 'dividendos', todosCompram2: false });
+  const REGRAS_PADRAO = Object.freeze({ casca: 'paus1', limiteDefesa: false, rainha: 'reiOuValetes', reiSacrificaValete: true, asesRecurso: true, asesNasLetras: false, bonusNaipe: false, limitePV: false, pv: Object.freeze({}), faixa: Object.freeze({}), semPassiva: Object.freeze({}), invocacoes: 'umPorLetra', passivaOurinhos: 'dividendos', todosCompram2: true, asOurosDado: true });
   let REGRAS = Object.assign({}, REGRAS_PADRAO);
   // Aceita só chaves e valores conhecidos (as regras do dono da sala chegam pela rede).
   function definirRegras(r) {
@@ -329,6 +330,8 @@ window.SS = window.SS || {};
     return null;
   }
 
+  // Dados a mais que os Ases de Ouros vizinhos dão em cada ataque do Senhor(a) (os dois lados acumulam).
+  const dadosDoTotem = (e, p, i) => (REGRAS.asOurosDado ? asesVizinhos(e, p, i).filter(n => n === 'ouros').length : 0);
   function asesVizinhos(e, p, i) {
     const campo = e.jogadores[p].campo;
     const r = [];
@@ -497,7 +500,7 @@ window.SS = window.SS || {};
       }
     }
     // Ourinhos com Juros compostos (testes): compra 2 cartas, escolhendo o monte de cada uma.
-    // (o modificador de teste "todos compram 2" vale para todos os Palhaços)
+    // (a compra de 2 cartas, regra oficial, vale para todos os Palhaços; com ela desligada, cada um compra 1)
     e.compras = REGRAS.todosCompram2 || (palhacoDe(j) && palhacoDe(j).compraDupla && jurosCompostos()) ? 2 : 1;
     if (e.turno === 1) registrar(e, t('log.primeiroTurno', { j: j.nome }));
     else if (!j.letras.length && !j.numeros.length) comprar(e, p, e.compras, 'numeros'); // sem cartas: perde PV
@@ -1182,7 +1185,7 @@ window.SS = window.SS || {};
       // Lançalotte (Golpe certeiro): o 1º ataque do turno ganha dado (e ataque) extra.
       const golpe = k === 0 && temPassiva(j, 'lancalotte') ? PALHACOS.lancalotte : null;
       ataques.push({
-        n: k + 1, atacante: d.atacante, alvo: d.alvo, dados: 1 + extras.length + (golpe ? golpe.dadosPrimeiro : 0) + dadosGuardados(d.atacante) + (bonusDoNaipe(localizar(e, d.atacante).u, 'ouros') ? 1 : 0),
+        n: k + 1, atacante: d.atacante, alvo: d.alvo, dados: 1 + extras.length + (golpe ? golpe.dadosPrimeiro : 0) + dadosGuardados(d.atacante) + dadosDoTotem(e, p, localizar(e, d.atacante).i) + (bonusDoNaipe(localizar(e, d.atacante).u, 'ouros') ? 1 : 0),
         bonusAtaque: golpe ? golpe.ataquePrimeiro : 0, bloqueadores: [], resultado: null,
       });
     });
@@ -1512,7 +1515,7 @@ window.SS = window.SS || {};
     desistir, REGRAS_DECK, RANKS, contagemPadrao, resumoDeck, validarDeck, cartasDoDeck,
     PALHACOS, CUSTO_TRANSFUSAO, CUSTO_SANGRIA, SACRIFICIOS_RAINHA, SENHORES_POR_TURNO, ASES_POR_TURNO, REDUCAO_POR_DEFENSOR, palhacoDe, limiteMao, ataqueDirecionado,
     NAIPES, SIMBOLO, LIMITE_FIGURA, PV_INICIAL, PV_MAX_CURA, RESISTENCIA_MAX, ESPACOS, ACOES_POR_TURNO, CUSTO_RAINHA, DADO_ATAQUE_TOTAL, LIMITE_MAO,
-    definirRng: f => { rng = f; }, rngAtual: () => rng, REGRAS_PADRAO, definirRegras, regras, limiteDefesa, faixaFigura, pvInicial, passivaAtiva, podeInvocar, EFEITO_PARGIA, EFEITO_TRIGICA, DANO_RAIO_PALHACO, DANO_TROVAO_PALHACO, HITS_TROVAO, VALOR_MIN_REFLEXO, VALOR_MAX_REFLEXO, voltarAoPrincipal, refletir, paresIguais, contraRefletir, podeContraRefletir, CURA_AS_COPAS, CURA_NAIPADO_COPAS,
+    definirRng: f => { rng = f; }, rngAtual: () => rng, REGRAS_PADRAO, definirRegras, regras, dadosDoTotem, limiteDefesa, faixaFigura, pvInicial, passivaAtiva, podeInvocar, EFEITO_PARGIA, EFEITO_TRIGICA, DANO_RAIO_PALHACO, DANO_TROVAO_PALHACO, HITS_TROVAO, VALOR_MIN_REFLEXO, VALOR_MAX_REFLEXO, voltarAoPrincipal, refletir, paresIguais, contraRefletir, podeContraRefletir, CURA_AS_COPAS, CURA_NAIPADO_COPAS,
     ehFigura, ehAs, ehNumero, ehSacrificavel, valor, nomeCarta, nomeNaipe, nomeUnidade, curaDe, curaPara, naipado,
     BARALHOS, NOME_BARALHO, baralhosDisponiveis, comprarDoTurno,
     criarJogo, registrar, figurasNoBaralho, escolherFiguras, mulligan, TROCAS_MULLIGAN, confirmarAbertura,

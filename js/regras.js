@@ -46,8 +46,8 @@ window.SS = window.SS || {};
         ${bloco(x('Dois baralhos', 'Two decks'),
           `<div class="rg-linha"><span class="rg-pilha">${dorso('vermelho')}<small>J Q K</small><b>${x('Letras', 'Faces')}</b><em>${x('até', 'up to')} ${R.letras}</em></span>
             <span class="rg-pilha">${dorso('vermelho')}<small>A–10</small><b>${x('Números', 'Numbers')}</b><em>${x('até', 'up to')} ${R.numeros}</em></span></div>`,
-          x(`O baralho de <b>Letras</b> tem as figuras (Valete, Rainha e Rei). O de <b>Números</b> tem do Ás ao 10. No começo do turno você compra 1 carta do baralho que quiser.`,
-            `The <b>Faces</b> deck holds the face cards (Jack, Queen and King). The <b>Numbers</b> deck goes from Ace to 10. At the start of your turn you draw 1 card from the deck you want.`))}
+          x(`O baralho de <b>Letras</b> tem as figuras (Valete, Rainha e Rei). O de <b>Números</b> tem do Ás ao 10. No começo do turno você compra 2 cartas, cada uma do baralho que quiser.`,
+            `The <b>Faces</b> deck holds the face cards (Jack, Queen and King). The <b>Numbers</b> deck goes from Ace to 10. At the start of your turn you draw 2 cards, each from the deck you want.`))}
         ${bloco(x('A ideia', 'The idea'),
           `<div class="rg-linha">${carta('K', 'paus')}${op('+')}${carta('6', 'paus')}${op('=')}${senhor(['K', 'paus'], ['6', 'paus'], 6)}</div>`,
           x(`<b>1 figura + 1 número</b> viram um <b>Senhor(a)</b>: o número é o ataque dele(a). Os números também servem sozinhos como <b>recursos</b> (curar, comprar, +1 de ataque...), e os pares de números viram <b>magias</b>.`,
@@ -55,7 +55,7 @@ window.SS = window.SS || {};
         <h3>${x('O turno', 'The turn')}</h3>
         <ol class="rg-passos">
           <li><b>${x('Acorda', 'Wake up')}</b><span>${x('Os seus Senhores virados voltam a ficar ativos.', 'Your flipped Gentlemen become ready again.')}</span></li>
-          <li><b>${x('Compra', 'Draw')}</b><span>${x('1 carta de Letras ou de Números.', '1 card from Faces or Numbers.')}</span></li>
+          <li><b>${x('Compra', 'Draw')}</b><span>${x('2 cartas, de Letras ou de Números.', '2 cards, from Faces or Numbers.')}</span></li>
           <li><b>${M.ACOES_POR_TURNO} ${x('ações', 'actions')}</b><span>${x('Invocar, usar recursos, magias, o poder do Palhaço.', 'Summon, use resources, spells, the Jester\'s power.')}</span></li>
           <li><b>${x('Ataque', 'Attack')}</b><span>${x('Prepare o ataque, escolha os alvos e role o dado.', 'Prepare the attack, choose targets and roll the die.')}</span></li>
           <li><b>${x('Fim', 'End')}</b><span>${x(`Quem atacou vira para baixo; mais de ${M.LIMITE_MAO} cartas na mão, descarte.`, `Whoever attacked flips face down; more than ${M.LIMITE_MAO} cards in hand, discard.`)}</span></li>
@@ -104,7 +104,7 @@ window.SS = window.SS || {};
         ${grade([
           bloco('', carta('A', 'paus'), x('<b>Paus:</b> vizinhos aguentam +1 hit.', '<b>Clubs:</b> neighbors take +1 hit.'), 'rg-mini'),
           bloco('', carta('A', 'espadas'), x('<b>Espadas:</b> vizinhos +1 de ataque.', '<b>Spades:</b> neighbors +1 attack.'), 'rg-mini'),
-          bloco('', carta('A', 'ouros'), x('<b>Ouros:</b> vale 1 Ouros extra por turno.', '<b>Diamonds:</b> counts as 1 extra Diamond per turn.'), 'rg-mini'),
+          bloco('', carta('A', 'ouros'), x('<b>Ouros:</b> vale 1 Ouros extra por turno, e os Senhores ao lado rolam +1 dado no ataque.', '<b>Diamonds:</b> counts as 1 extra Diamond per turn, and neighboring Gentlemen roll +1 die when attacking.'), 'rg-mini'),
           bloco('', carta('A', 'copas'), x(`<b>Copas:</b> cura ${M.CURA_AS_COPAS} PV no começo do seu turno.`, `<b>Hearts:</b> heals ${M.CURA_AS_COPAS} HP at the start of your turn.`), 'rg-mini'),
         ])}`,
     },
