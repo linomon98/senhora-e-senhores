@@ -1414,7 +1414,7 @@ window.SS = window.SS || {};
     else if (jogo.vez === p && M.podeAtacar(jogo, p, i)) linhas.push(t('du.pronto', { n: u.ataques }));
     else if (jogo.vez === p && u.entrou === jogo.turno && (u.sapo || u.figura.rank !== 'J')) linhas.push(t('du.entrou'));
     linhas.push(`<span class="dica-regra">${t('du.regraBloqueio')}</span>`);
-    return { titulo: M.nomeUnidade(u), sub: nai ? t('du.subNaipado', { n: NOME_NAIPE[nai] }) : t('du.sub'), linhas, arte: [u.figura, u.numero] };
+    return { titulo: M.nomeUnidade(u), sub: nai ? t('du.subNaipado', { n: NOME_NAIPE[nai] }) : t('du.sub'), naipe: nai, linhas, arte: [u.figura, u.numero] };
   }
 
   function dicaPara(el) {
@@ -1475,7 +1475,7 @@ window.SS = window.SS || {};
       caixa.hidden = true;
       return;
     }
-    const texto = `<div class="dica-titulo">${escapar(d.titulo)}</div>${d.sub ? `<div class="dica-sub">${escapar(d.sub)}</div>` : ''}${d.linhas.filter(Boolean).map(l => `<p>${l}</p>`).join('')}`;
+    const texto = `<div class="dica-titulo">${escapar(d.titulo)}</div>${d.sub ? `<div class="dica-sub${d.naipe ? ' naipe-' + d.naipe : ''}">${escapar(d.sub)}</div>` : ''}${d.linhas.filter(Boolean).map(l => `<p>${l}</p>`).join('')}`;
     // Cartas em campo: a arte em tamanho grande ao lado do texto (a figura grande, o número encaixado no canto dela).
     caixa.classList.toggle('com-arte', !!d.arte);
     caixa.innerHTML = d.arte
