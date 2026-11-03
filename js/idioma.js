@@ -875,7 +875,7 @@ window.SS = window.SS || {};
     'dbc.titulo': ['Copiar e colar baralho', 'Copy and paste deck'],
     'dbc.placeholder': ['Cole aqui o código de um baralho', 'Paste a deck code here'],
     'dbc.dica': ['Copie o código para compartilhar, ou cole um aqui.', 'Copy the code to share it, or paste one here.'],
-    'dbc.copiar': ['Copiar', 'Copy'],
+    'dbc.copiar': ['Copiar código', 'Copy code'],
     'dbc.usar': ['Usar código', 'Use code'],
     'dbc.substituir': ['Substituir?', 'Replace?'],
     'dbc.copiado': ['Copiado!', 'Copied!'],

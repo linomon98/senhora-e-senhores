@@ -377,7 +377,7 @@ window.SS = window.SS || {};
   }
   function painelCola(d) {
     const e = estadoCola(d), texto = textoCola != null ? textoCola : d ? codigoDe(d) : '', confirma = pedido === 'colar';
-    return `<section class="db-cola"><h2>${tr('dbc.titulo')}</h2>
+    return `<section class="db-cola${palBot ? " bot" : ""}"><h2>${tr('dbc.titulo')}</h2>
       <textarea class="db-codigo" spellcheck="false" placeholder="${tr('dbc.placeholder')}">${escapar(texto)}</textarea>
       <p class="db-cola-aviso${e.classe}">${e.aviso}</p>
       <div class="db-acoes-linha"><button class="db-btn" data-cmd="copiarCodigo"${texto.trim() ? '' : ' disabled'}>${tr('dbc.copiar')}</button>
