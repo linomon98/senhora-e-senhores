@@ -76,7 +76,7 @@ window.SS = window.SS || {};
   const habNaipado = (naipe, comNumero) => blocoHab(t('dc.naipadoTitulo', { n: NOME_NAIPE[naipe], hab: t('naiHab.' + naipe) }),
     (txt => comNumero ? t('dc.naipadoCom', { n: NOME_NAIPE[naipe] }) + txt[0].toLowerCase() + txt.slice(1) : txt)(t('naipado.' + naipe, { n: M.CURA_NAIPADO_COPAS })), 'naipe-' + naipe);
   const PODER_AS = tabela('as.');
-  const poderAs = n => PODER_AS[n] + (n === 'ouros' && M.regras().asOurosDado ? ' ' + t('as.ourosDado') : '');
+  const poderAs = n => (n === 'ouros' && M.regras().asOurosDado ? t('as.ourosDado') : PODER_AS[n]);
   const NOME_POSTURA = tabela('postura.');
   const EFEITO_NUMERO = new Proxy({}, {
     get: (_, naipe) => c => t('efeito.' + String(naipe), { cura: M.curaDe(c), max: M.PV_MAX_CURA, crit: Math.floor(M.valor(c) / 2) }),
@@ -1839,8 +1839,8 @@ window.SS = window.SS || {};
       if (naipe === 'espadas' || naipe === 'paus') {
         vizinhos.filter(u => u.tipo === 'senhor').forEach((u, k) => voarIcone(esp, () => elUnidade(u.uid), iconeBonus(naipe), 'bonus-' + naipe, 420 + k * 140));
       } else if (naipe === 'ouros') {
-        voarToken(esp, p, 420, reserva);
-        if (M.regras().asOurosDado) vizinhos.filter(u => u.tipo === 'senhor').forEach((u, k) => voarIcone(esp, () => elUnidade(u.uid), DADO_IMG, 'dado-voando', 420 + k * 140));
+        if (!M.regras().asOurosDado) voarToken(esp, p, 420, reserva);
+        else vizinhos.filter(u => u.tipo === 'senhor').forEach((u, k) => voarIcone(esp, () => elUnidade(u.uid), DADO_IMG, 'dado-voando', 420 + k * 140));
       } else if (naipe === 'copas') {
         voarIcone(esp, pvDe(p), '<span>♥</span>', 'bola-cura', 420);
       }
@@ -2275,7 +2275,7 @@ window.SS = window.SS || {};
       if (campoVisto[p]) noCampo.filter(u => !campoVisto[p].has(u.uid)).forEach(u => {
         voarParaCampo(p, u.uid);
         // Ás de Ouros: o botão da ficha nova fica escondido até o naipe voar do totem até ele.
-        const reserva = u.tipo === 'as' && u.naipe === 'ouros' && !MOVIMENTO_REDUZIDO ? reservarToken(p) : null;
+        const reserva = u.tipo === 'as' && u.naipe === 'ouros' && !M.regras().asOurosDado && !MOVIMENTO_REDUZIDO ? reservarToken(p) : null;
         setTimeout(() => { Som.tocar('soltar-carta'); efeitoEntrada(p, u.uid, reserva); }, Math.round(VOO_CAMPO_MS * POUSO_CAMPO)); // na batida
       });
       campoVisto[p] = new Set(noCampo.map(u => u.uid));
@@ -3808,7 +3808,7 @@ window.SS = window.SS || {};
           linha(`${c('A', 'espadas')}${c('2', 'espadas')}`, `↔ +1 ${atk}`),
           linha(`${c('A', 'copas')}${c('2', 'copas')}`, `+${M.CURA_AS_COPAS} ${np('copas')} / ${x('turno', 'turn')}`),
           linha(`${c('A', 'ouros')}${c('2', 'ouros')}`, M.regras().asOurosDado
-            ? `<span class="cola-duas"><span>+1 ${np('ouros')} / ${x('turno', 'turn')}</span><span>↔ +1 ${dado}</span></span>`
+            ? `↔ +1 ${dado}`
             : `+1 ${np('ouros')} / ${x('turno', 'turn')}`),
         ])}
         ${bloco('um', x('Recursos', 'Resources'), [
@@ -5935,8 +5935,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 157, data: '03/11/2026',
+    n: 158, data: '03/11/2026',
     novidades: [
+      ['Ás de Ouros: agora dá só +1 dado aos Senhores ao lado, sem o Ouros extra (a regra antiga fica nos modificadores)', 'Ace of Diamonds: now only gives +1 die to neighboring Gentlemen, without the extra Diamond (the old rule stays in the modifiers)'],
       ['Baralhos: as cartas fora do deck ficam esbranquiçadas em vez de transparentes', 'Decks: cards outside the deck look whitened instead of transparent'],
       ['As cartas de ação ficaram só com o título e a arte; o efeito e o custo aparecem na caixinha ao parar o mouse em cima', 'Action cards now show only the title and art; the effect and cost appear in the box when you hover'],
       ['Arraste uma carta dentro da sua mão para trocar o lugar dela, a qualquer momento', 'Drag a card within your hand to change its place, at any time'],
@@ -6103,7 +6104,7 @@ window.SS = window.SS || {};
       ${linha('invocacoes', [['umPorTurno', t('rg.umPorTurno')], ['umPorLetra', t('rg.umPorLetra')], ['ilimitadas', t('rg.ilimitadas')]])}
       ${linha('passivaOurinhos', [['dividendos', t('rg.dividendos')], ['juros', t('rg.juros')]])}
       ${linha('todosCompram2', [['false', t('rg.umaCarta')], ['true', t('rg.duasCartas')]])}
-      ${linha('asOurosDado', [['false', t('rg.desligado')], ['true', t('rg.ligado')]])}
+      ${linha('asOurosDado', [['true', t('rg.asDado')], ['false', t('rg.asFicha')]])}
       <div class="opcao"><label>${t('rg.semPassiva')}</label><div class="grupo" data-passivas>${P.LISTA.map(pal =>
         `<button data-pal="${pal.id}" class="${r.semPassiva && r.semPassiva[pal.id] ? '' : 'ativo'}">${SIMB[pal.naipe]} ${pal.passiva.nome}</button>`).join('')}</div>
         <p class="nota">${t('rg.semPassivaNota')}</p></div>

@@ -30,7 +30,7 @@ window.SS = window.SS || {};
   //   faixa: { J: [mín, máx], Q: [...], K: [...] } números que cada figura pode equipar (vazio = 2 até LIMITE_FIGURA)
   //   semPassiva: { palhaço: true } desliga a habilidade passiva dele (o poder continua)
   //   todosCompram2: true (oficial desde 03/11/2026: todo mundo compra 2 cartas no começo do turno) | false (compra 1)
-  //   asOurosDado: true (oficial desde 03/11/2026: cada Ás de Ouros vizinho dá +1 dado nos ataques do Senhor(a)) | false
+  //   asOurosDado: true (oficial desde 03/11/2026: cada Ás de Ouros vizinho dá +1 dado nos ataques do Senhor(a), sem ficha) | false (a regra antiga: 1 Ouros extra por turno, sem dado)
   //   passivaOurinhos: 'dividendos' (oficial desde 27/10/2026) ou 'juros' (Juros compostos, a passiva antiga, para testes)
   //   invocacoes: 'umPorTurno' (1 Senhor(a) por turno) | 'umPorLetra' (1 Valete, 1 Rainha e 1 Rei por turno) | 'ilimitadas'
   // Regras oficiais (27/10/2026): Casca grossa −1 só nos Naipados de Paus, defesa sem limite, Rei sacrifica 1 Valete,
@@ -478,7 +478,7 @@ window.SS = window.SS || {};
         u.atacou = false;
         u.vigilia = false;
         u.ataques = naipado(u) === 'ouros' ? 2 : 1;
-      } else if (u.naipe === 'ouros') {
+      } else if (u.naipe === 'ouros' && !REGRAS.asOurosDado) {
         j.tokens++;
         evento(e, { tipo: 'token', p, de: u.uid });
       }
@@ -860,7 +860,7 @@ window.SS = window.SS || {};
         if (!ehAs(as) || !ehSacrificavel(custo) || custo.naipe !== as.naipe) throw new Error('Invocação de Ás inválida');
         j.cemiterio.push(custo);
         const empurrou = inserirNoCampo(j, a.slot, { uid: e.proximoUid++, tipo: 'as', carta: as, naipe: as.naipe });
-        if (as.naipe === 'ouros') j.tokens++;
+        if (as.naipe === 'ouros' && !REGRAS.asOurosDado) j.tokens++;
         registrar(e, t('log.invocouAs', { j: j.nome, as: nomeCarta(as), c: nomeCarta(custo), emp: empurrou }));
         verificarMortes(e); // os vizinhos mudaram: a resistência de alguém pode ter mudado
         break;
@@ -973,7 +973,7 @@ window.SS = window.SS || {};
           const unidadeAs = { uid: e.proximoUid++, tipo: 'as', carta: as, naipe: as.naipe };
           if (a.slot != null) inserirNoCampo(j, a.slot, unidadeAs);
           else j.campo[espacoCentral(j)] = unidadeAs;
-          if (as.naipe === 'ouros') j.tokens++;
+          if (as.naipe === 'ouros' && !REGRAS.asOurosDado) j.tokens++;
           registrar(e, t('log.magiaOuros', { j: j.nome, as: nomeCarta(as) }));
           verificarMortes(e);
         } else {

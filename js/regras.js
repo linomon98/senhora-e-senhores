@@ -104,7 +104,7 @@ window.SS = window.SS || {};
         ${grade([
           bloco('', carta('A', 'paus'), x('<b>Paus:</b> vizinhos aguentam +1 hit.', '<b>Clubs:</b> neighbors take +1 hit.'), 'rg-mini'),
           bloco('', carta('A', 'espadas'), x('<b>Espadas:</b> vizinhos +1 de ataque.', '<b>Spades:</b> neighbors +1 attack.'), 'rg-mini'),
-          bloco('', carta('A', 'ouros'), x('<b>Ouros:</b> vale 1 Ouros extra por turno, e os Senhores ao lado rolam +1 dado no ataque.', '<b>Diamonds:</b> counts as 1 extra Diamond per turn, and neighboring Gentlemen roll +1 die when attacking.'), 'rg-mini'),
+          bloco('', carta('A', 'ouros'), x('<b>Ouros:</b> os Senhores ao lado rolam +1 dado no ataque.', '<b>Diamonds:</b> neighboring Gentlemen roll +1 die when attacking.'), 'rg-mini'),
           bloco('', carta('A', 'copas'), x(`<b>Copas:</b> cura ${M.CURA_AS_COPAS} PV no começo do seu turno.`, `<b>Hearts:</b> heals ${M.CURA_AS_COPAS} HP at the start of your turn.`), 'rg-mini'),
         ])}`,
     },
