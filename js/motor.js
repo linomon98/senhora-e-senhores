@@ -642,7 +642,8 @@ window.SS = window.SS || {};
       const a = cartasPar[x];
       if (a.rank !== cartasPar[y].rank || a.rank !== cartasPar[z].rank) continue;
       const efeito = EFEITO_TRIGICA(valor(a)), base = { tipo: 'trigica', efeito, cartas: [a.id, cartasPar[y].id, cartasPar[z].id].sort() };
-      if (efeito === 'dominio') { if (vazios.length) for (const uid of inimigos) r.push(Object.assign({ alvo: uid }, base)); }
+      if (efeito === 'cheio') j.campo.forEach((u, i) => { if (u && !u.danoCheio && podeAtacar(e, p, i)) r.push(Object.assign({ alvo: u.uid }, base)); });
+      else if (efeito === 'dominio') { if (vazios.length) for (const uid of inimigos) r.push(Object.assign({ alvo: uid }, base)); }
       else if (efeito === 'meteoro') { if (algumAlvoMeteoro) r.push(base); }
       else if (efeito === 'trovao') {
         for (const uid of inimigos) r.push(Object.assign({ alvo: uid }, base));
@@ -709,12 +710,12 @@ window.SS = window.SS || {};
   // Refletir só com pares baixos (Ás, 2 ou 3): incentiva a ter cartas baixas no deck.
   // Pargias (pares de números iguais): 2 a 4 = Refletir (na defesa), 5 a 7 = Sai daqui!, 8 a 10 = Polimorfia,
   // Ases = Raio. As três últimas são ações do seu turno (1 ação cada).
-  // Trígicas (trincas de números iguais, 1 ação): 5 a 7 = É meu!, 8 a 10 = Meteoro!, Ases = Trovão.
+  // Trígicas (trincas de números iguais, 1 ação): 2 a 4 = Na mosca!, 5 a 7 = É meu!, 8 a 10 = Meteoro!, Ases = Trovão.
   const VALOR_MIN_REFLEXO = 2, VALOR_MAX_REFLEXO = 4;
   // O Meteoro derruba os Senhores(as) e os Ases da mesa; quem está em Berserk aguenta.
   const atingeMeteoro = u => !!u && (u.tipo === 'as' || (u.tipo === 'senhor' && !u.berserk));
   const EFEITO_PARGIA = v => (v === 1 ? 'raio' : v >= 5 && v <= 7 ? 'saiDaqui' : v >= 8 ? 'polimorfia' : null);
-  const EFEITO_TRIGICA = v => (v === 1 ? 'trovao' : v >= 5 && v <= 7 ? 'dominio' : v >= 8 ? 'meteoro' : null);
+  const EFEITO_TRIGICA = v => (v === 1 ? 'trovao' : v <= 4 ? 'cheio' : v <= 7 ? 'dominio' : 'meteoro');
   const DANO_RAIO_PALHACO = 2, DANO_TROVAO_PALHACO = 4, HITS_TROVAO = 2;
   function paresIguais(e, p) {
     const nums = e.jogadores[p].mao.filter(c => ehNumero(c) && valor(c) >= VALOR_MIN_REFLEXO && valor(c) <= VALOR_MAX_REFLEXO), r = [];
@@ -1043,7 +1044,14 @@ window.SS = window.SS || {};
         const d = 1 - p, op = e.jogadores[d];
         for (const c of cs) j.cemiterio.push(tirarDaMao(j, c.id));
         evento(e, { tipo: 'magia', p, cartas: cs.map(c => Object.assign({}, c)) });
-        if (efeito === 'dominio') {
+        if (efeito === 'cheio') {
+          // Na mosca!: até o fim do turno, os ataques desse Senhor(a) saem cheios, mesmo com o dado em 1 (o 6 ainda vale crítico).
+          const l = localizar(e, a.alvo);
+          if (!l || l.p !== p || l.u.tipo !== 'senhor' || l.u.danoCheio || !podeAtacar(e, p, l.i)) throw new Error('Esse Senhor(a) não pode atacar');
+          l.u.danoCheio = true;
+          registrar(e, t('log.cheio', { j: j.nome, u: nomeUnidade(l.u) }));
+          evento(e, { tipo: 'fx', fx: 'cheio', p, alvo: { p, i: l.i, uid: l.u.uid } });
+        } else if (efeito === 'dominio') {
           // O Senhor(a) inimigo passa para o seu lado, para sempre. Acabou de chegar: só ataca neste turno se for Valete.
           const l = localizar(e, a.alvo);
           if (!l || l.p !== d || l.u.tipo !== 'senhor' || !j.campo.includes(null)) throw new Error('Alvo inválido');
@@ -1279,8 +1287,10 @@ window.SS = window.SS || {};
     const total = Math.max(0, base + bonus - reducaoGrupo);
     // Dado em 1: erra o golpe, contra quem for (Palhaço, Ás, Senhor que defende, ataque refletido). Ninguém leva
     // hit, nem o contra-ataque (que vergonha!).
-    const errou = maior === 1;
-    const cheio = maior >= DADO_ATAQUE_TOTAL;
+    // (Na mosca! garante o golpe de quem ataca; se foi refletido, o dado decide normal)
+    const garantido = !!u.danoCheio && !at.refletido;
+    const errou = maior === 1 && !garantido;
+    const cheio = maior >= DADO_ATAQUE_TOTAL || garantido;
     // (o golpe refletido bate normal: o Refletir já é limitado aos pares baixos)
     const dano = errou ? 0 : cheio ? total : Math.floor(total / 2);
     const numeroAtacante = base + u.bonus.length;
@@ -1294,7 +1304,7 @@ window.SS = window.SS || {};
       evento(e, { tipo: 'errou', p, de: u.uid });
       return fim();
     }
-    registrar(e, t('log.rolou', { n: at.n, u: nomeUnidade(u), r: rolagens.join(', '), cheio: maior >= DADO_ATAQUE_TOTAL, crit: maior === 6 && u.bonus.length > 0, d: dano }));
+    registrar(e, t('log.rolou', { n: at.n, u: nomeUnidade(u), r: rolagens.join(', '), cheio, crit: maior === 6 && u.bonus.length > 0, d: dano }));
     // Refletido (par de números do defensor): o golpe acerta o próprio dono do atacante.
     // Refletido de volta (par do atacante): volta para o Palhaço do defensor, sem bloqueio.
     if (at.refletido) {
@@ -1374,6 +1384,7 @@ window.SS = window.SS || {};
       if (!u || u.tipo !== 'senhor') continue;
       u.bonus = [];
       u.dadosExtra = 0; // dado adicional que não foi usado num ataque se perde
+      delete u.danoCheio;
       if (u.atacou) {
         if (!u.vigilia) u.ativo = false; // vira para baixo: não bloqueia no turno do oponente
         else registrar(e, t('log.vigiliaPe', { u: nomeUnidade(u) }));
