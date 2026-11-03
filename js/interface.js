@@ -5935,8 +5935,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 158, data: '03/11/2026',
+    n: 159, data: '03/11/2026',
     novidades: [
+      ['Deckbuilder: caixa para copiar e colar o código de um baralho', 'Deckbuilder: a box to copy and paste a deck code'],
       ['Ás de Ouros: agora dá só +1 dado aos Senhores ao lado, sem o Ouros extra (a regra antiga fica nos modificadores)', 'Ace of Diamonds: now only gives +1 die to neighboring Gentlemen, without the extra Diamond (the old rule stays in the modifiers)'],
       ['Baralhos: as cartas fora do deck ficam esbranquiçadas em vez de transparentes', 'Decks: cards outside the deck look whitened instead of transparent'],
       ['As cartas de ação ficaram só com o título e a arte; o efeito e o custo aparecem na caixinha ao parar o mouse em cima', 'Action cards now show only the title and art; the effect and cost appear in the box when you hover'],

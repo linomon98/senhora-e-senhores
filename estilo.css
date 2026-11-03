@@ -2728,3 +2728,13 @@ html.celular .regras-teste { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
 /* Trígica na colinha */
 .cola-tri { grid-area: tri; }
+
+/* Deckbuilder: caixa de copiar e colar baralho */
+.db-cola { position: absolute; left: 1229px; top: 582px; width: 347px; height: 259px; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px; padding: 10px 14px 12px; background: #fff; border: 4px solid #141414; border-radius: 22px; box-shadow: 0 8px 0 #141414; }
+.db-cola h2 { margin: 0; font-size: 28px; line-height: 1; text-align: center; }
+.db-codigo { flex: 1; min-height: 0; resize: none; box-sizing: border-box; padding: 6px 8px; border: 3px solid #141414; border-radius: 10px; background: #fffdf4; color: #141414; font: 700 13px/1.3 Consolas, 'Courier New', monospace; user-select: text; scrollbar-width: none; }
+.db-codigo:focus { outline: 3px solid #ffc21a; }
+.db-cola-aviso { margin: 0; font-size: 13px; font-weight: 700; line-height: 1.2; color: #444; text-align: center; }
+.db-cola-aviso.ok { color: #137a1c; }
+.db-cola-aviso.falha { color: #b0101e; }
+.db-cola .db-acoes-linha .db-btn { flex: 1 1 0; min-width: 0; padding: 5px 4px; font-size: 21px; }

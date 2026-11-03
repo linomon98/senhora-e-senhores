@@ -162,6 +162,7 @@ window.SS = window.SS || {};
   // extras.bot: abre o deckbuilder dos decks de bot (escolhendo o Palhaço em cima).
   function abrir(voltar, mais) {
     aoVoltar = voltar;
+    soltarCola();
     extras = mais || {};
     palBot = extras.bot ? (palBot || SS.Palhacos.LISTA[0].id) : null;
     carregarEspacos();
@@ -212,7 +213,7 @@ window.SS = window.SS || {};
   // O que está aberto em cima: { nome, cont, visual, leitura }.
   function aberto() {
     const pr = prontoAtual();
-    if (pr) return { nome: pr.nome, cont: pr.cont, visual: pr.visual, leitura: true, sub: pr.sub };
+    if (pr) return { nome: pr.nome, curto: pr.curto, cont: pr.cont, visual: pr.visual, leitura: true, sub: pr.sub };
     const s = slotAtual();
     return s ? { nome: s.nome || `Deck ${atual + 1}`, cont: s.cont, visual: visualDe(s, atual), leitura: false } : null;
   }
@@ -327,6 +328,80 @@ window.SS = window.SS || {};
       <div class="db-deck-cartas${d.leitura ? ' leitura' : ''}${animar === 'vista' ? ' entra' : ''}">${corpo}</div></section>`;
   }
 
+  // ---------- Copiar e colar baralho ----------
+  // O código é um texto: SS1;nome;tampa,ícone,cor do ícone;cartas (cada carta = valor + letra do naipe + cópias, ex.: Jp6 Ao2).
+  const LETRA_NAIPE = { paus: 'p', copas: 'c', espadas: 'e', ouros: 'o' };
+  const codigoDe = d => {
+    const cartas = [];
+    for (const naipe of NAIPES) for (const rank of ORDEM_COLECAO) {
+      const n = d.cont[chaveDe(rank, naipe)];
+      if (n) cartas.push(rank + LETRA_NAIPE[naipe] + n);
+    }
+    const nome = String(d.curto || d.nome || '').replace(/[;\s]+/g, ' ').trim();
+    return ['SS1', nome, [d.visual.tampa, d.visual.icone, d.visual.corIcone].join(','), cartas.join(' ')].join(';');
+  };
+  // Devolve { nome, cont, visual } ou null, se o código não servir (também vale para o baralho que passa dos limites).
+  function lerCodigo(texto) {
+    const partes = String(texto).trim().split(';');
+    if (partes.length !== 4 || partes[0] !== 'SS1') return null;
+    const R = M.REGRAS_DECK, cont = {}, naipeDa = Object.fromEntries(NAIPES.map(n => [LETRA_NAIPE[n], n]));
+    const tokens = partes[3].trim().split(/\s+/).filter(Boolean);
+    if (!tokens.length) return null;
+    for (const tk of tokens) {
+      const m = tk.match(/^(A|10|[2-9]|J|Q|K)([pceo])([1-9])$/);
+      if (!m || Number(m[3]) > R.copias) return null;
+      const chave = chaveDe(m[1], naipeDa[m[2]]);
+      if (cont[chave]) return null;
+      cont[chave] = Number(m[3]);
+    }
+    const r = M.resumoDeck(cont);
+    if (r.letras > R.letras || r.numeros > R.numeros) return null;
+    const [tampa, icone, corIcone] = partes[2].split(',');
+    const visual = {};
+    if (CORES[tampa]) visual.tampa = tampa;
+    if (ICONES.includes(icone)) visual.icone = icone;
+    if (corIcone === 'original' || COR_ICONE[corIcone]) visual.corIcone = corIcone;
+    return { nome: partes[1].trim().slice(0, MAX_NOME), cont, visual };
+  }
+  // textoCola: o que a pessoa colou ou digitou (null = a caixa mostra o código do baralho aberto).
+  let textoCola = null, avisoCola = '';
+  const soltarCola = () => { textoCola = null; avisoCola = ''; };
+  function estadoCola(d) {
+    if (textoCola == null) return { codigo: null, aviso: avisoCola === 'copiado' ? tr('dbc.copiado') : avisoCola === 'colado' ? tr('dbc.colado') : tr('dbc.dica'), classe: avisoCola ? ' ok' : '' };
+    if (!textoCola.trim()) return { codigo: null, aviso: tr('dbc.dica'), classe: '' };
+    const codigo = lerCodigo(textoCola);
+    if (!codigo) return { codigo: null, aviso: tr('dbc.invalido'), classe: ' falha' };
+    if (typeof atual !== 'number') return { codigo: null, aviso: tr('dbc.escolha'), classe: ' falha' };
+    const r = M.resumoDeck(codigo.cont);
+    return { codigo, aviso: tr('dbc.pronto', { l: r.letras, n: r.numeros }), classe: ' ok' };
+  }
+  function painelCola(d) {
+    const e = estadoCola(d), texto = textoCola != null ? textoCola : d ? codigoDe(d) : '', confirma = pedido === 'colar';
+    return `<section class="db-cola"><h2>${tr('dbc.titulo')}</h2>
+      <textarea class="db-codigo" spellcheck="false" placeholder="${tr('dbc.placeholder')}">${escapar(texto)}</textarea>
+      <p class="db-cola-aviso${e.classe}">${e.aviso}</p>
+      <div class="db-acoes-linha"><button class="db-btn" data-cmd="copiarCodigo"${texto.trim() ? '' : ' disabled'}>${tr('dbc.copiar')}</button>
+      <button class="db-btn principal${confirma ? ' perigo confirmar' : ''}" data-cmd="usarCodigo"${e.codigo ? '' : ' disabled'}>${tr(confirma ? 'dbc.substituir' : 'dbc.usar')}</button></div></section>`;
+  }
+  // Atualiza só o aviso e o botão, para não perder o foco da caixa enquanto digita.
+  function atualizarCola() {
+    const painel = tela().querySelector('.db-cola');
+    if (!painel) return;
+    const e = estadoCola(aberto()), aviso = painel.querySelector('.db-cola-aviso');
+    aviso.textContent = e.aviso;
+    aviso.className = 'db-cola-aviso' + e.classe;
+    painel.querySelector('[data-cmd="usarCodigo"]').disabled = !e.codigo;
+    painel.querySelector('[data-cmd="copiarCodigo"]').disabled = !painel.querySelector('.db-codigo').value.trim();
+  }
+  function copiarCodigo() {
+    const caixaTexto = tela().querySelector('.db-codigo');
+    const pronto = () => { avisoCola = 'copiado'; if (textoCola == null) atualizarCola(); else { const a = tela().querySelector('.db-cola-aviso'); a.textContent = tr('dbc.copiado'); a.className = 'db-cola-aviso ok'; } };
+    const reserva = () => { caixaTexto.select(); try { if (document.execCommand('copy')) pronto(); } catch (err) { /* a pessoa ainda pode usar Ctrl+C: o texto ficou selecionado */ } };
+    caixaTexto.select();
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(caixaTexto.value).then(pronto, reserva);
+    else reserva();
+  }
+
   // Personalizar a caixinha: nome, ícone, cor do ícone e cor da tampa (a caixa ao lado mostra como fica).
   function painelEditar(d) {
     const v = d.visual;
@@ -366,7 +441,7 @@ window.SS = window.SS || {};
       ${palBot ? `<div class="db-palhacos">${SS.Palhacos.LISTA.map(p => `<button class="db-palhaco cor-${p.cor}${p.id === palBot ? ' ativo' : ''}" data-palbot="${p.id}">
         <img src="arte/naipes/${p.naipe}.webp" alt="" draggable="false">${p.nome}${doBot(p.id).padrao != null ? ' ★' : ''}</button>`).join('')}</div>` : ''}
       <div class="db-vistas">${[1, 2].map(n => `<button class="db-vista${vista === n ? ' ativa' : ''}" data-vista="${n}" title="${tr('db.vista' + n)}">${n}</button>`).join('')}</div>
-      ${painelLista()}${painelDeck(d)}${painelLimites(d)}${colecao(d)}
+      ${painelLista()}${painelDeck(d)}${painelLimites(d)}${colecao(d)}${painelCola(d)}
       ${editando && d && !d.leitura ? painelEditar(d) : ''}
     </div>`;
     animar = null;
@@ -441,6 +516,11 @@ window.SS = window.SS || {};
 
   function aoClicar(ev) {
     const t = ev.target, antes = pedido;
+    // Clicar na caixa do código seleciona tudo, pronto para Ctrl+C ou para colar por cima.
+    if (t.classList.contains('db-codigo')) {
+      if (t.selectionStart === t.selectionEnd) t.select();
+      return;
+    }
     pedido = null;
     const ab = t.closest('[data-aba]');
     if (ab) {
@@ -480,6 +560,7 @@ window.SS = window.SS || {};
     if (b) {
       const cmd = b.dataset.cmd;
       if (cmd === 'voltar') return fechar();
+      if (cmd === 'copiarCodigo') return copiarCodigo();
       if (cmd === 'padraoBot' && palBot && s) {
         padraoBot = padraoBot === atual ? null : atual;
         guardar();
@@ -488,6 +569,16 @@ window.SS = window.SS || {};
       if (cmd === 'editar') { editando = true; return desenhar(); }
       if (cmd === 'fecharEditar') { editando = false; return desenhar(); }
       if (typeof atual !== 'number') return;
+      if (cmd === 'usarCodigo') {
+        const c = lerCodigo(textoCola || '');
+        if (!c) return;
+        if (s && Object.keys(s.cont).length && antes !== 'colar') { pedido = 'colar'; return desenhar(); }
+        slots[atual] = { nome: c.nome || `Deck ${atual + 1}`, cont: c.cont, visual: Object.assign(visualDe(null, atual), c.visual) };
+        textoCola = null;
+        avisoCola = 'colado';
+        guardar();
+        return desenhar();
+      }
       if (cmd === 'novo' || cmd === 'novoPadrao') {
         slots[atual] = { nome: `Deck ${atual + 1}`, cont: cmd === 'novoPadrao' ? M.contagemPadrao() : {}, visual: visualDe(null, atual) };
         editando = true;
@@ -505,6 +596,7 @@ window.SS = window.SS || {};
     const pr = t.closest('[data-pronto]');
     if (pr) {
       atual = pr.dataset.pronto;
+      soltarCola();
       avisoSalvo = '';
       editando = false;
       return desenhar();
@@ -514,6 +606,7 @@ window.SS = window.SS || {};
       palBot = pb.dataset.palbot;
       carregarEspacos();
       atual = 0;
+      soltarCola();
       avisoSalvo = '';
       editando = false;
       return desenhar();
@@ -521,11 +614,13 @@ window.SS = window.SS || {};
     const sl = t.closest('[data-slot-deck]');
     if (sl) {
       atual = Number(sl.dataset.slotDeck);
+      soltarCola();
       avisoSalvo = '';
       editando = false;
       return desenhar();
     }
     const por = t.closest('[data-por]'), tirar = t.closest('[data-tirar]');
+    if (por || tirar) soltarCola();
     if (por) return mudar(por.dataset.por, 1, por);
     if (tirar) return mudar(tirar.dataset.tirar, -1, tirar);
   }
@@ -538,6 +633,12 @@ window.SS = window.SS || {};
   }
 
   function aoDigitar(ev) {
+    if (ev.target.classList.contains('db-codigo')) {
+      textoCola = ev.target.value;
+      avisoCola = '';
+      if (pedido === 'colar') { pedido = null; const b = tela().querySelector('[data-cmd="usarCodigo"]'); b.classList.remove('perigo', 'confirmar'); b.textContent = tr('dbc.usar'); }
+      return atualizarCola();
+    }
     const s = slotAtual();
     if (!ev.target.classList.contains('nome-deck') || !s) return;
     s.nome = ev.target.value;
