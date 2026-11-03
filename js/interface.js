@@ -3564,13 +3564,12 @@ window.SS = window.SS || {};
     const arte = ARTE_ACAO[icone] || 'sumonar', titulo = t('carta.' + icone);
     const sub = rotulo.replace(/^[^\p{L}\p{N}+]+/u, '');
     const classeTitulo = titulo.length > 10 && titulo.includes(' ') ? ' duas-linhas' : titulo.length > 7 ? ' longo' : '';
-    // Custo (aparece numa caixinha quando o mouse para meio segundo em cima da carta)
-    const ck = { sumonar: 'sumonar', rainha: 'rainha', as: 'as', espadas: 'espadas', paus: 'paus', curar: 'curar', comprarLetra: 'comprar', comprarNumero: 'comprar',
-      'par-copas': 'magia', 'par-ouros': 'magia', 'par-paus': 'magia', 'par-espadas': 'magia', dado: 'dado', reflexo: 'reflexo',
-      'pargia-saiDaqui': 'pargia', 'pargia-polimorfia': 'pargia', 'pargia-raio': 'pargia',
-      'trigica-cheio': 'trigica', 'trigica-dominio': 'trigica', 'trigica-meteoro': 'trigica', 'trigica-trovao': 'trigica' }[icone];
-    return `<button class="carta-acao arte-${arte} ${extra || ''}" data-acao="${acao}"${ck ? ` data-custo="${escapar(t('custo.' + ck))}"` : ` title="${escapar(sub)}"`}>
-      <img src="arte/acoes/${arte}.webp" alt="" draggable="false">${DESENHO_PROVISORIO[icone] ? `<span class="ca-desenho">${DESENHO_PROVISORIO[icone]}</span>` : ''}<b class="ca-titulo${classeTitulo}">${titulo}</b><small class="ca-sub">${sub}</small></button>`;
+    // Efeito e custo (aparecem numa caixinha quando o mouse para meio segundo em cima da carta). A carta que não tem
+    // efeito escrito (a cura, que depende do número) usa o próprio rótulo.
+    const chaveEf = 'ca.ef.' + (acao.startsWith('cancelar') ? 'cancelar' : icone), chaveCusto = 'ca.custo.' + icone;
+    const efeito = t(chaveEf) === chaveEf ? sub : t(chaveEf), custo = acao.startsWith('cancelar') || t(chaveCusto) === chaveCusto ? '' : t(chaveCusto);
+    return `<button class="carta-acao arte-${arte} ${extra || ''}" data-acao="${acao}" data-efeito="${escapar(efeito)}"${custo ? ` data-custo="${escapar(custo)}"` : ''}>
+      <img src="arte/acoes/${arte}.webp" alt="" draggable="false">${DESENHO_PROVISORIO[icone] ? `<span class="ca-desenho">${DESENHO_PROVISORIO[icone]}</span>` : ''}<b class="ca-titulo${classeTitulo}">${titulo}</b></button>`;
   };
 
   // Carta de ação da opção "todas as ações" (dado adicional tem a própria arte)
@@ -5936,8 +5935,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 155, data: '03/11/2026',
+    n: 156, data: '03/11/2026',
     novidades: [
+      ['As cartas de ação ficaram só com o título e a arte; o efeito e o custo aparecem na caixinha ao parar o mouse em cima', 'Action cards now show only the title and art; the effect and cost appear in the box when you hover'],
       ['Arraste uma carta dentro da sua mão para trocar o lugar dela, a qualquer momento', 'Drag a card within your hand to change its place, at any time'],
       ['Agora todo mundo compra 2 cartas no começo do turno (nos modificadores dá para voltar a 1)', 'Everyone now draws 2 cards at the start of the turn (you can go back to 1 in the modifiers)'],
       ['Ás de Ouros: os Senhores ao lado rolam +1 dado no ataque (também nos modificadores)', 'Ace of Diamonds: neighboring Gentlemen roll +1 die when attacking (also in the modifiers)'],
@@ -6898,7 +6898,7 @@ window.SS = window.SS || {};
   const esconderCusto = () => { clearTimeout(custoTimer); custoTimer = null; custoCarta = null; caixaCusto().hidden = true; };
   document.addEventListener('mouseover', ev => {
     if (ultimoPonteiro !== 'mouse') return; // (o toque também solta um "mouseover": no dedo, o custo é de segurar)
-    const carta = ev.target.closest && ev.target.closest('.carta-acao[data-custo]');
+    const carta = ev.target.closest && ev.target.closest('.carta-acao[data-efeito]');
     if (carta === custoCarta) return;
     esconderCusto();
     if (!carta) return;
@@ -6908,7 +6908,7 @@ window.SS = window.SS || {};
   function mostrarCusto(carta) {
     if (!carta.isConnected) return;
     const caixa = caixaCusto(), r = carta.getBoundingClientRect();
-    caixa.innerHTML = `<b>${t('custo.titulo')}</b> ${escapar(carta.dataset.custo)}`;
+    caixa.innerHTML = `<p><b>${t('ca.efeito')}</b> ${escapar(carta.dataset.efeito)}</p>${carta.dataset.custo ? `<p><b>${t('ca.custo')}</b> ${escapar(carta.dataset.custo)}</p>` : ''}`;
     caixa.hidden = false;
     const cw = caixa.offsetWidth, ch = caixa.offsetHeight;
     caixa.style.left = Math.max(8, Math.min(innerWidth - cw - 8, r.left + r.width / 2 - cw / 2)) + 'px';
@@ -6950,7 +6950,7 @@ window.SS = window.SS || {};
     if (!s) return;
     const el = document.elementFromPoint(s.x, s.y);
     if (!el || el.closest('#tela-decks')) return; // (no deckbuilder, segurar é o "botão direito": tira a carta)
-    const custo = el.closest('.carta-acao[data-custo]');
+    const custo = el.closest('.carta-acao[data-efeito]');
     if (!custo && !dicaPara(el)) return;
     s.mostrou = true;
     dedoSegurou = true;
@@ -6981,7 +6981,7 @@ window.SS = window.SS || {};
     // Com a dica aberta, deslizar o dedo mostra a dica do que estiver embaixo.
     const el = document.elementFromPoint(ev.clientX, ev.clientY);
     if (!el) return;
-    const custo = el.closest('.carta-acao[data-custo]');
+    const custo = el.closest('.carta-acao[data-efeito]');
     if (custo) { $('#dica').hidden = true; if (custo !== custoCarta) { esconderCusto(); custoCarta = custo; mostrarCusto(custo); } return; }
     esconderCusto();
     atualizarDica({ target: el, clientX: ev.clientX, clientY: ev.clientY, pointerType: 'touch' });

@@ -1149,7 +1149,6 @@ html.em-menu #mesa { background: none; }
   position: absolute; left: 17%; right: 17%; top: 13%; pointer-events: none; text-align: center;
   font: 400 21px/1 var(--fonte-titulo); color: var(--ca-cor); letter-spacing: .3px; text-shadow: 0 1px 0 rgba(255, 255, 255, .9);
 }
-.ca-sub { position: absolute; left: 17%; right: 17%; bottom: 13.5%; pointer-events: none; text-align: center; font: 700 10px/1.15 var(--fonte-ui); color: #3a3a3a; }
 .arte-atacar { --ca-cor: #d8322f; } .arte-defesa { --ca-cor: #1f5fd6; } .arte-comprar { --ca-cor: #b98310; } .arte-sumonar { --ca-cor: #1a1a1a; } .arte-cemiterio { --ca-cor: #8a10b0; }
 @keyframes carta-acao-entra { from { opacity: 0; transform: translateY(60px) rotate(var(--r)); } }
 .acoes-extra { display: flex; flex-direction: column; gap: 8px; }
@@ -1571,7 +1570,7 @@ html.sem-caixa-meio #faixa .caixa-faixa { display: none; }
 .leque-acoes:has(> .carta-acao:nth-child(9)) .carta-acao { margin-left: -88px; }
 .leque-acoes:has(> .carta-acao:nth-child(9)) .carta-acao:first-child { margin-left: 0; }
 
-/* Caixinha de custo das cartas de ação */
+/* Caixinha de efeito e custo das cartas de ação */
 /* Carta de cura com o PV já no limite: meio apagada (clicar nela mostra o "não") */
 .carta-acao.cura-no-limite { filter: grayscale(.7) brightness(.92); }
 /* Aviso "o limite é 4 de defesa" (ou de PV) em cima do Senhor(a) ou do Palhaço */
@@ -1586,7 +1585,9 @@ html.sem-caixa-meio #faixa .caixa-faixa { display: none; }
   font: 600 13px/1.35 var(--fonte-ui); color: var(--tinta); background: #fffdf6; border: 2px solid var(--tinta);
   box-shadow: 3px 4px 0 rgba(5, 18, 2, .45); animation: custo-entra .12s ease-out;
 }
-#caixa-custo b { color: #8a10b0; margin-right: 4px; }
+#caixa-custo p { margin: 0; }
+#caixa-custo p + p { margin-top: 4px; }
+#caixa-custo b { color: #8a10b0; margin-right: 2px; }
 #caixa-custo[hidden] { display: none; }
 @keyframes custo-entra { from { opacity: 0; transform: translateY(4px); } }
 
@@ -2706,8 +2707,8 @@ html.celular #botoes-canto { --t: 64; --ic: 32; gap: calc(14 * var(--e)); }
 #modal.foto-saida::before { display: none; }
 
 /* Sem barra de rolagem nas janelas do jogo: elas encolhem para caber na tela */
-#modal, #modal .caixa, .cola-folha { scrollbar-width: none; }
-#modal::-webkit-scrollbar, #modal .caixa::-webkit-scrollbar, .cola-folha::-webkit-scrollbar { display: none; }
+#modal, #modal .caixa, .cola-folha, #tela-regras { scrollbar-width: none; }
+#modal::-webkit-scrollbar, #modal .caixa::-webkit-scrollbar, .cola-folha::-webkit-scrollbar, #tela-regras::-webkit-scrollbar { display: none; }
 
 /* Modificadores de regras: muitas opções, em colunas para caberem sem rolar */
 #modal .caixa:has(> .regras-teste) { max-width: calc(min(1500px, 96vw) / var(--zm, 1)); }
