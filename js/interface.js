@@ -5337,6 +5337,7 @@ window.SS = window.SS || {};
         ui.dicaFixa = true;
       },
       soltarDica: () => { if (ui) ui.dicaFixa = false; $('#dica').hidden = true; },
+      abrirColinha,
       negar: (sel, texto) => negar(sel && document.querySelector(sel), texto, []),
     });
     await tutGancho('mesa');
@@ -5941,8 +5942,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 163, data: '03/11/2026',
+    n: 164, data: '03/11/2026',
     novidades: [
+      ['Tutorial: texto revisado, menos Rainhas seguidas, cartas de ação no quadro dos recursos e aviso das Pargias com a colinha', 'Tutorial: revised text, fewer Queens in a row, action cards in the resources chart and a Pairgics notice with the crib sheet'],
       ['Bots: o Profissional agora tem um jeito próprio de jogar com cada Palhaço', 'Bots: Professional now has its own playstyle for each Jester'],
       ['Tutorial novo: você enfrenta o Ourinhos com as regras oficiais e, no fim, termina o duelo sozinho; a colinha só aparece quando ele fala dela', 'New tutorial: you face Ourinhos with the official rules and, at the end, finish the duel on your own; the crib sheet only shows up once he mentions it'],
       ['Bots: o nível Médio ficou mais fraco, para o Difícil se destacar', 'Bots: Medium is now weaker, so that Hard stands out'],
