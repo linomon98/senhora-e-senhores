@@ -131,7 +131,7 @@ window.SS = window.SS || {};
     ocupado: false, foco: null, aoConfirmarBloqueio: null, aoContinuar: null, mira: null, mouse: null,
     // Arrastar da mão: carta sendo arrastada, espaço onde uma figura/Ás espera o número,
     // e de onde a carta voa até o campo.
-    arrasto: null, destino: null, vooDe: null, mostrarFila: false, duelo: false,
+    arrasto: null, ordemMao: { 0: [], 1: [] }, destino: null, vooDe: null, mostrarFila: false, duelo: false,
     tokensChegando: [0, 0], // fichas do Ás de Ouros ainda voando até o botão "♦ EXTRA"
   });
   // eu: o jogador desta tela (0 contra o bot; no online, 0 para quem criou a sala e 1 para o amigo).
@@ -620,7 +620,16 @@ window.SS = window.SS || {};
     if (naMao && jogo.fase === 'ataque' && humanoAtaca() && ui.miraRei == null && !ui.pend) entrarAcoesNoAtaque();
     if (naMao && jogo.fase === 'principal' && controle(jogo.vez) === 'humano' && !ui.ocupado && !ui.pend) {
       ev.preventDefault();
-      return iniciarArrasto(ev, naMao.dataset.mao);
+      return iniciarArrasto(ev, naMao.dataset.mao, jogo.vez, false);
+    }
+    // Fora disso (turno do oponente, ataque, bloqueio), arrastar uma carta da sua mão só troca o lugar dela.
+    const naMinhaMao = ev.target.closest('.mao .carta[data-voo]:not(.dorso)');
+    if (naMinhaMao && !ui.pend && !ui.mira && ui.miraRei == null && ui.atacanteSel == null && ui.bloqSel == null && !mirandoSeta()) {
+      const dono = Number(naMinhaMao.closest('.mao').id.replace('mao-', ''));
+      if (controle(dono) === 'humano') {
+        ev.preventDefault();
+        return iniciarArrasto(ev, naMinhaMao.dataset.voo, dono, true);
+      }
     }
     // Mirando com o Rei: o clique escolhe o alvo (o Palhaço, um Ás ou um Senhor); fora de um alvo, desiste.
     if (ui.miraRei != null && humanoAtaca()) {
@@ -991,8 +1000,35 @@ window.SS = window.SS || {};
     return { campo: i, vao: dest.vao };
   }
 
-  function iniciarArrasto(ev, id) {
-    ui.arrasto = { id, x0: ev.clientX, y0: ev.clientY, moveu: false, el: null, dest: null };
+  function iniciarArrasto(ev, id, p, soOrdem) {
+    ui.arrasto = { id, p, soOrdem, x0: ev.clientX, y0: ev.clientY, moveu: false, el: null, dest: null };
+  }
+
+  // Trocar o lugar das cartas na mão: a ordem é só da tela (o motor e o online não veem); carta nova entra à direita.
+  function maoNaOrdem(p) {
+    const ordem = ui.ordemMao[p], lugar = c => { const k = ordem.indexOf(c.id); return k < 0 ? 1e9 : k; };
+    return jogo.jogadores[p].mao.slice().sort((a, b) => lugar(a) - lugar(b));
+  }
+  // A carta está sendo solta na mão? (A parte de baixo da mão é do Palhaço: uma carta que cura ainda pode cair lá.)
+  function naZonaDaMao(p, x, y, temEfeito) {
+    const r = $('#mao-' + p).getBoundingClientRect(), folga = 30 * escala;
+    return x >= r.left - folga && x <= r.right + folga && y >= r.top - folga && y <= (temEfeito ? r.top + r.height * 0.6 : r.bottom + folga);
+  }
+  // Os lugares são medidos uma vez só: medir as cartas enquanto elas deslizam faria a troca ficar piscando.
+  const lugaresDaMao = maoEl => [...maoEl.children].map(e => { const r = e.getBoundingClientRect(); return r.left + r.width / 2; });
+  function moverNaMao(a, x) {
+    const maoEl = $('#mao-' + a.p), cartas = [...maoEl.children];
+    if (!a.lugares || a.lugares.length !== cartas.length) a.lugares = lugaresDaMao(maoEl);
+    const destino = a.lugares.reduce((m, c, k) => (Math.abs(c - x) < Math.abs(a.lugares[m] - x) ? k : m), 0);
+    const el = cartas.find(e => e.dataset.voo === a.id);
+    if (!el || cartas.indexOf(el) === destino) return;
+    const antes = posicoesDaMao(maoEl), outras = cartas.filter(e => e !== el);
+    maoEl.insertBefore(el, outras[destino] || null);
+    ajustarSobreposicao(maoEl);
+    deslizarMao(maoEl, antes);
+    const vistas = [...maoEl.children].map(e => e.dataset.voo);
+    ui.ordemMao[a.p] = vistas.concat(maoNaOrdem(a.p).map(c => c.id).filter(id => !vistas.includes(id)));
+    Som.tocar('selecionar-carta');
   }
 
   function moverArrasto(ev) {
@@ -1000,23 +1036,30 @@ window.SS = window.SS || {};
     if (!a.moveu) {
       if (Math.hypot(ev.clientX - a.x0, ev.clientY - a.y0) < 8) return;
       a.moveu = true;
-      const origem = document.querySelector(`#mao-${jogo.vez} [data-mao="${a.id}"]`);
+      const origem = document.querySelector(`#mao-${a.p} [data-voo="${a.id}"]`);
       const r = origem ? origem.getBoundingClientRect() : { width: 86 * escala, height: 120 * escala };
+      a.lugares = lugaresDaMao($('#mao-' + a.p));
       a.el = document.createElement('div');
       a.el.className = 'carta-arrastada';
-      a.el.innerHTML = C.frente(cartaDaMao(a.id));
+      a.el.innerHTML = C.frente(jogo.jogadores[a.p].mao.find(c => c.id === a.id));
       Object.assign(a.el.style, { width: r.width + 'px', height: r.height + 'px' });
       document.body.appendChild(a.el);
       if (origem) origem.classList.add('arrastando');
       $('#dica').hidden = true;
-      a.centros = centrosFileira(jogo.vez);
+      if (!a.soOrdem) a.centros = centrosFileira(jogo.vez);
     }
     const dx = ev.clientX - (a.ux != null ? a.ux : ev.clientX);
     a.ux = ev.clientX;
     a.giro = Math.max(-14, Math.min(14, (a.giro || 0) * 0.7 + dx * 0.9));
     a.el.style.transform = `translate(${ev.clientX}px, ${ev.clientY}px) translate(-50%, -50%) rotate(${a.giro.toFixed(1)}deg) scale(1.08)`;
-    const dest = destinoEm(ev.clientX, ev.clientY, a.centros, a.vaoA);
-    const ef = efeitoDoDestino(a.id, dest);
+    const dest = a.soOrdem ? null : destinoEm(ev.clientX, ev.clientY, a.centros, a.vaoA);
+    let ef = a.soOrdem ? null : efeitoDoDestino(a.id, dest);
+    a.naMao = naZonaDaMao(a.p, ev.clientX, ev.clientY, !!ef);
+    if (a.naMao) {
+      ef = null;
+      moverNaMao(a, ev.clientX);
+    }
+    if (a.soOrdem) return;
     a.dest = ef ? dest : null;
     a.vaoA = dest ? dest.vaoA : null;
     marcarDestino(ef ? dest : null, ef);
@@ -1056,6 +1099,13 @@ window.SS = window.SS || {};
     setTimeout(() => { ui.ignorarClique = false; }, 0);
     const voo = a.el.getBoundingClientRect();
     a.el.remove();
+    // Solta na mão: a carta fica no lugar novo, sem jogar nada.
+    if (a.soOrdem || a.naMao) {
+      if (!a.soOrdem) marcarDestino(null);
+      $('#campo-' + jogo.vez).classList.remove('soltando');
+      document.querySelectorAll('.arrastando').forEach(e => e.classList.remove('arrastando'));
+      return true;
+    }
     marcarDestino(null);
     $('#campo-' + jogo.vez).classList.remove('soltando');
     const destSolto = destinoEm(ev.clientX, ev.clientY, a.centros, a.vaoA), ef = efeitoDoDestino(a.id, destSolto);
@@ -3021,6 +3071,18 @@ window.SS = window.SS || {};
   }
 
   // A mão fica ao lado do Palhaço: com muitas cartas, elas se sobrepõem mais para caber.
+  // Onde cada carta da mão estava: as que ficaram deslizam até o lugar novo.
+  const posicoesDaMao = maoEl => new Map([...maoEl.querySelectorAll('[data-voo]')].map(e => [e.dataset.voo, e.getBoundingClientRect().left]));
+  function deslizarMao(maoEl, antes) {
+    if (MOVIMENTO_REDUZIDO || !antes.size) return;
+    for (const e of maoEl.querySelectorAll('[data-voo]')) {
+      const x0 = antes.get(e.dataset.voo);
+      if (x0 == null) continue;
+      const dx = (x0 - e.getBoundingClientRect().left) / escala;
+      if (Math.abs(dx) > 1) e.animate([{ translate: `${dx.toFixed(1)}px 0px` }, { translate: '0px 0px' }], { duration: 340, easing: 'cubic-bezier(.3, .8, .3, 1)', composite: 'add' });
+    }
+  }
+
   function ajustarSobreposicao(mao) {
     const cartas = mao.children;
     if (!cartas.length) return;
@@ -3226,19 +3288,12 @@ window.SS = window.SS || {};
       || (!MOVIMENTO_REDUZIDO && maoVista[p] && !maoVista[p].has(c.id) && cartasCampoVistas[p].has(c.id));
     // Onde cada carta estava antes deste desenho: as que ficaram deslizam até o lugar novo.
     const maoEl = $('#mao-' + p);
-    const antes = new Map([...maoEl.querySelectorAll('[data-voo]')].map(e => [e.dataset.voo, e.getBoundingClientRect().left]));
-    maoEl.innerHTML = j.mao.filter(c => c.id !== noCampo && !reservada(c)).map(c => (visivel
-      ? `<div class="carta${ui.sel.includes(c.id) ? ' selecionada' : ''}${podeJogar ? ' jogavel' : ''}${estilo(c)}${classePar(c)}"${podeJogar ? ` data-mao="${c.id}"` : ` data-carta="${c.id}"`}${candidatas.has(c.id) ? ` data-par="${c.id}"` : ''} data-voo="${c.id}"${oculta(c.id)}>${C.frente(c)}</div>`
+    const antes = posicoesDaMao(maoEl);
+    maoEl.innerHTML = maoNaOrdem(p).filter(c => c.id !== noCampo && !reservada(c)).map(c => (visivel
+      ? `<div class="carta${ui.sel.includes(c.id) ? ' selecionada' : ''}${podeJogar ? ' jogavel' : ''}${estilo(c)}${classePar(c)}${ui.arrasto && ui.arrasto.moveu && ui.arrasto.id === c.id ? ' arrastando' : ''}"${podeJogar ? ` data-mao="${c.id}"` : ` data-carta="${c.id}"`}${candidatas.has(c.id) ? ` data-par="${c.id}"` : ''} data-voo="${c.id}"${oculta(c.id)}>${C.frente(c)}</div>`
       : `<div class="carta dorso ${cor}" data-voo="${c.id}"${oculta(c.id)}></div>`)).join('');
     ajustarSobreposicao(maoEl);
-    if (!MOVIMENTO_REDUZIDO && antes.size) {
-      for (const e of maoEl.querySelectorAll('[data-voo]')) {
-        const x0 = antes.get(e.dataset.voo);
-        if (x0 == null) continue;
-        const dx = (x0 - e.getBoundingClientRect().left) / escala;
-        if (Math.abs(dx) > 1) e.animate([{ translate: `${dx.toFixed(1)}px 0px` }, { translate: '0px 0px' }], { duration: 340, easing: 'cubic-bezier(.3, .8, .3, 1)', composite: 'add' });
-      }
-    }
+    deslizarMao(maoEl, antes);
     const topo = j.cemiterio[j.cemiterio.length - 1];
     $('#pilhas-' + p).innerHTML = `
       ${M.BARALHOS.map(b => {
@@ -5881,8 +5936,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 154, data: '03/11/2026',
+    n: 155, data: '03/11/2026',
     novidades: [
+      ['Arraste uma carta dentro da sua mão para trocar o lugar dela, a qualquer momento', 'Drag a card within your hand to change its place, at any time'],
       ['Agora todo mundo compra 2 cartas no começo do turno (nos modificadores dá para voltar a 1)', 'Everyone now draws 2 cards at the start of the turn (you can go back to 1 in the modifiers)'],
       ['Ás de Ouros: os Senhores ao lado rolam +1 dado no ataque (também nos modificadores)', 'Ace of Diamonds: neighboring Gentlemen roll +1 die when attacking (also in the modifiers)'],
       ['Artes novas: Polimorfia, Raio, Vem pra cá! (o antigo É meu!), Na mosca! e o sapo dos Senhores transformados', 'New art: Polymorph, Lightning, Come here! (formerly Mine!), Bullseye! and the frog for transformed Gentlemen'],
