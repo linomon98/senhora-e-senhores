@@ -171,8 +171,8 @@
         { gancho: 'antesDado', quando: d => d.p === 0 && turno() === 2, passos: [
           { fala: ['Não é porque o seu Valete tem 4 de força que ele vai dar 4 de dano obrigatoriamente.', 'Just because your Jack has 4 strength doesn\'t mean it will necessarily deal 4 damage.'] },
           { fala: ['O que determina isso é o <b>DADO DE DANO</b>.', 'What determines that is the <b>DAMAGE DIE</b>.'] },
-          { tremer: true, fala: ['<b>DADO DE DANO DADO DE DANO DADO DE DANO</b>', '<b>DAMAGE DIE DAMAGE DIE DAMAGE DIE</b>'] },
-          { fala: ['Nossa, repetir isso 3 vezes é divertido.', 'Wow, repeating that 3 times is fun.'] },
+          { se: () => !L(), tremer: true, fala: ['<b>DADO DE DANO DADO DE DANO DADO DE DANO</b>', '<b>DAMAGE DIE DAMAGE DIE DAMAGE DIE</b>'] },
+          { se: () => !L(), fala: ['Nossa, repetir isso 3 vezes é divertido.', 'Wow, repeating that 3 times is fun.'] },
           { fala: [`<div class="tut-dados"><div><i>⚃ ⚄ ⚅</i><b>4 a 6</b><span>dano cheio, igual à sua força</span></div><div><i>⚁ ⚂</i><b>2 ou 3</b><span>metade, arredondado para baixo</span></div><div class="ruim"><i>⚀</i><b>1</b><span>você erra</span></div></div>`,
             `<div class="tut-dados"><div><i>⚃ ⚄ ⚅</i><b>4 to 6</b><span>full damage, equal to your strength</span></div><div><i>⚁ ⚂</i><b>2 or 3</b><span>half, rounded down</span></div><div class="ruim"><i>⚀</i><b>1</b><span>you miss</span></div></div>`] },
         ] },
@@ -313,7 +313,7 @@
           : ['Se você fosse <b>INTELIGENTE</b> e tivesse colocado o Valete do lado do Ás, teria um bônus de <b>+2 de ataque</b>.', 'If you were <b>SMART</b> and had placed the Jack next to the Ace, you would have a <b>+2 attack</b> bonus.']) },
         { foco: '#info-0 .poder-naipe', fala: ['Tá na hora de você descobrir o que o <b>Poder de Palhaço</b> do <b>Infartitte</b> faz: ele pode <b>curar um hit</b> de um Senhor sacrificando <b>2 de PV</b> ouuu <b>dar 1 hit</b> em um inimigo sacrificando <b>4 de PV</b>.',
           'Time for you to find out what <b>Infartitte\'s</b> <b>Jester Power</b> does: he can <b>heal a hit</b> from a Gentleman by sacrificing <b>2 HP</b> orrr <b>deal 1 hit</b> to an enemy by sacrificing <b>4 HP</b>.'] },
-        { semVeu: true, embaixo: true, permitir: ['#info-0 .poder-naipe', '#campo-0', '#campo-1'], alvo: api => (api.ui().pend ? null : '#info-0 .poder-naipe'),
+        { semVeu: true, noTopo: true, permitir: ['#info-0 .poder-naipe', '#campo-0', '#campo-1'], alvo: api => (api.ui().pend ? null : '#info-0 .poder-naipe'),
           fala: ['Clique no naipe e faça a escolha certa!', 'Click the suit and make the right choice!'],
           esperar: api => !!api.jogo().poderUsado },
         { espera: 1300 },
@@ -437,11 +437,11 @@
     raiz.classList.toggle('livre', p.permitir === '*');
     let bx, by;
     const bw = balao.offsetWidth, bh = balao.offsetHeight;
-    if (p.embaixo) { // (em cima de uma janela: o balão fica no pé da tela, sem cobrir o título dela)
+    if (p.embaixo || p.noTopo) { // (em cima de uma janela, no pé da tela, sem cobrir o título dela; noTopo: no alto, sem cobrir a mesa)
       if (r) Object.assign(foco.style, { left: r.left - folga + 'px', top: r.top - folga + 'px', width: r.width + folga * 2 + 'px', height: r.height + folga * 2 + 'px' });
       if (ra) Object.assign(seta.style, { left: ra.left + ra.width / 2 + 'px', top: ra.top - 40 + 'px' });
       bx = innerWidth / 2 - bw / 2;
-      by = innerHeight - bh - 16;
+      by = p.noTopo ? 12 : innerHeight - bh - 16;
     } else if (r) {
       Object.assign(foco.style, { left: r.left - folga + 'px', top: r.top - folga + 'px', width: r.width + folga * 2 + 'px', height: r.height + folga * 2 + 'px' });
       const rs = ra || r;
