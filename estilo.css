@@ -1219,7 +1219,7 @@ html.em-menu #mesa { background: none; }
 }
 
 /* Cartas das magias dos pares (tema roxo) */
-.arte-parouros, .arte-parpaus, .arte-parespadas, .arte-reflexo, .arte-cemiterio { --ca-cor: #7a0aa8; }
+.arte-parouros, .arte-parpaus, .arte-parespadas, .arte-reflexo, .arte-cemiterio, .arte-polimorfia, .arte-raiopar, .arte-namosca, .arte-vempraca { --ca-cor: #7a0aa8; }
 
 /* Par de Copas: escolher quem volta do cemitério (figura + número) */
 .grade-mortos { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; margin: 14px 0; }
@@ -2724,7 +2724,5 @@ html.celular .regras-teste { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @keyframes intro-pisca { 50% { opacity: .35; } }
 @media (prefers-reduced-motion: reduce) { .intro-comecar { animation: none; } }
 
-/* Trígica na colinha e os desenhos provisórios (Polimorfia, É meu!) */
+/* Trígica na colinha */
 .cola-tri { grid-area: tri; }
-.cola-dese { display: inline-grid; place-items: center; background: #fdfbf3; border: 2px solid #141414; border-radius: 4px; box-sizing: border-box; padding: 3px; }
-.cola-dese svg { display: block; width: 100%; height: 100%; }

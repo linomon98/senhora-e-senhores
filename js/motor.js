@@ -710,7 +710,7 @@ window.SS = window.SS || {};
   // Refletir só com pares baixos (Ás, 2 ou 3): incentiva a ter cartas baixas no deck.
   // Pargias (pares de números iguais): 2 a 4 = Refletir (na defesa), 5 a 7 = Sai daqui!, 8 a 10 = Polimorfia,
   // Ases = Raio. As três últimas são ações do seu turno (1 ação cada).
-  // Trígicas (trincas de números iguais, 1 ação): 2 a 4 = Na mosca!, 5 a 7 = É meu!, 8 a 10 = Meteoro!, Ases = Trovão.
+  // Trígicas (trincas de números iguais, 1 ação): 2 a 4 = Na mosca!, 5 a 7 = Vem pra cá!, 8 a 10 = Meteoro!, Ases = Trovão.
   const VALOR_MIN_REFLEXO = 2, VALOR_MAX_REFLEXO = 4;
   // O Meteoro derruba os Senhores(as) e os Ases da mesa; quem está em Berserk aguenta.
   const atingeMeteoro = u => !!u && (u.tipo === 'as' || (u.tipo === 'senhor' && !u.berserk));

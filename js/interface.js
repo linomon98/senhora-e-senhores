@@ -1857,7 +1857,7 @@ window.SS = window.SS || {};
     if (!jogo.eventos || MOVIMENTO_REDUZIDO) return;
     for (const ev of jogo.eventos) {
       if (ev.tipo !== 'fx') continue;
-      // (É meu!: a carta voa do lugar onde estava até o campo de quem tomou)
+      // (Vem pra cá!: a carta voa do lugar onde estava até o campo de quem tomou)
       if (ev.fx === 'dominio') {
         const de = document.querySelector(`[data-slot="${ev.de.p}:${ev.de.i}"]`);
         if (de) vemDeOutroLado.set(ev.alvo.uid, de.getBoundingClientRect());
@@ -2127,7 +2127,7 @@ window.SS = window.SS || {};
       setTimeout(() => textoSubindo(c, t(ev.virou ? 'fx.sapo' : 'fx.desfez'), 'bom'), 220);
       return 1000;
     },
-    // É meu!: onda dourada onde o Senhor(a) chegou, depois de voar do outro lado da mesa.
+    // Vem pra cá!: onda dourada onde o Senhor(a) chegou, depois de voar do outro lado da mesa.
     dominio(ev) {
       const s = slotDe(ev.alvo), c = centroDe(s);
       if (!c) return 0;
@@ -3484,16 +3484,12 @@ window.SS = window.SS || {};
   // O título vem do idioma (a arte não tem texto, por causa da versão em inglês).
   const ARTE_ACAO = { atacar: 'atacar', espadas: 'dano', paus: 'berserk', escudo: 'defesa', curar: 'cura', comprar: 'comprar', reviver: 'cemiterio', sumonar: 'sumonar', rainha: 'sumonar', as: 'sumonar',
     'par-copas': 'cemiterio', 'par-ouros': 'parouros', 'par-paus': 'parpaus', 'par-espadas': 'parespadas', reflexo: 'reflexo',
-    'pargia-saiDaqui': 'tchau', 'pargia-polimorfia': 'vazia', 'pargia-raio': 'raio',
-    'trigica-cheio': 'vazia', 'trigica-dominio': 'vazia', 'trigica-meteoro': 'meteoro', 'trigica-trovao': 'raio',
+    'pargia-saiDaqui': 'tchau', 'pargia-polimorfia': 'polimorfia', 'pargia-raio': 'raiopar',
+    'trigica-cheio': 'namosca', 'trigica-dominio': 'vempraca', 'trigica-meteoro': 'meteoro', 'trigica-trovao': 'raio',
     passar: 'passar', preparar: 'preparar', naoDefender: 'naodefender', naoRefletir: 'naodefender',
     comprarLetra: 'comprarletra', comprarNumero: 'comprarnumero', dado: 'dado' };
   // Cartas ainda sem arte própria (placeholder): moldura vazia + um desenho simples (SVG) no meio.
-  const DESENHO_PROVISORIO = {
-    'pargia-polimorfia': '<svg viewBox="0 0 64 64"><ellipse cx="32" cy="42" rx="22" ry="17" fill="#62b548" stroke="#141414" stroke-width="3"/><circle cx="20" cy="22" r="9" fill="#62b548" stroke="#141414" stroke-width="3"/><circle cx="44" cy="22" r="9" fill="#62b548" stroke="#141414" stroke-width="3"/><circle cx="20" cy="21" r="3.5" fill="#141414"/><circle cx="44" cy="21" r="3.5" fill="#141414"/><path d="M20 38q12 9 24 0" fill="none" stroke="#141414" stroke-width="3" stroke-linecap="round"/></svg>',
-    'trigica-cheio': '<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" fill="#fdfbf3" stroke="#141414" stroke-width="3"/><circle cx="32" cy="32" r="17" fill="#e5383b" stroke="#141414" stroke-width="3"/><circle cx="32" cy="32" r="8" fill="#fdfbf3" stroke="#141414" stroke-width="3"/><circle cx="32" cy="32" r="2.5" fill="#141414"/></svg>',
-    'trigica-dominio': '<svg viewBox="0 0 64 64"><path d="M10 48V20l12 12 10-18 10 18 12-12v28z" fill="#ffc531" stroke="#141414" stroke-width="3" stroke-linejoin="round"/><path d="M10 54h44" stroke="#141414" stroke-width="5" stroke-linecap="round"/></svg>',
-  };
+  const DESENHO_PROVISORIO = {};
   const btnGrande = (acao, rotulo, icone, extra) => {
     const arte = ARTE_ACAO[icone] || 'sumonar', titulo = t('carta.' + icone);
     const sub = rotulo.replace(/^[^\p{L}\p{N}+]+/u, '');
@@ -3717,7 +3713,6 @@ window.SS = window.SS || {};
     const en = SS.Idioma.atual() === 'en', x = (pt, ing) => (en ? ing : pt);
     const c = (r, n, cls) => `<span class="cola-c${cls ? ' ' + cls : ''}">${C.frente({ rank: r, naipe: n })}</span>`;
     const ic = arte => `<img class="cola-ic" src="arte/acoes/${arte}.webp" alt="" draggable="false">`;
-    const dese = icone => `<span class="cola-ic cola-dese">${DESENHO_PROVISORIO[icone]}</span>`;
     const np = n => `<img class="cola-n" src="arte/naipes/${n}.webp" alt="" draggable="false">`;
     const esc = (n, apagados) => `<span class="cola-esc">${Array.from({ length: n }, (_, k) => `<img class="${k >= n - (apagados || 0) ? 'apagado' : ''}" src="arte/icones/escudo.webp" alt="" draggable="false">`).join('')}</span>`;
     const dado = '<img class="cola-dado" src="arte/icones/dado.webp" alt="" draggable="false">';
@@ -3758,16 +3753,16 @@ window.SS = window.SS || {};
           linha(`${c('5', 'espadas')}${c('10', 'espadas')}${op('→')}${ic('parespadas')}`, `±1 ${atk}`),
         ])}
         ${bloco('tri', x('Trígica (trinca igual)', 'Trigic (equal trio)'), [
-          linha(`${c('3', 'copas')}${c('3', 'paus')}${c('3', 'espadas')}${op('→')}${dese('trigica-cheio')}`, `${x('Dano cheio', 'Full damage')} <small>(2–4)</small>`),
-          linha(`${c('6', 'ouros')}${c('6', 'espadas')}${c('6', 'paus')}${op('→')}${dese('trigica-dominio')}`, `${x('Toma o Senhor', 'Takes the Gentleman')} <small>(5–7)</small>`),
+          linha(`${c('3', 'copas')}${c('3', 'paus')}${c('3', 'espadas')}${op('→')}${ic('namosca')}`, `${x('Dano cheio', 'Full damage')} <small>(2–4)</small>`),
+          linha(`${c('6', 'ouros')}${c('6', 'espadas')}${c('6', 'paus')}${op('→')}${ic('vempraca')}`, `${x('Toma o Senhor', 'Takes the Gentleman')} <small>(5–7)</small>`),
           linha(`${c('9', 'copas')}${c('9', 'paus')}${c('9', 'ouros')}${op('→')}${ic('meteoro')}`, `${x('Limpa o tabuleiro', 'Clears the board')} <small>(8–10)</small>`),
           linha(`${c('A', 'espadas')}${c('A', 'ouros')}${c('A', 'copas')}${op('→')}${ic('raio')}`, `${x(`${M.HITS_TROVAO} hits ou ${M.DANO_TROVAO_PALHACO} PV`, `${M.HITS_TROVAO} hits or ${M.DANO_TROVAO_PALHACO} HP`)} <small>(${x('Ases', 'Aces')})</small>`),
         ])}
         ${bloco('pgi', x('Pargia (números iguais)', 'Pairgic (equal numbers)'), [
           linha(`${c('3', 'copas')}${c('3', 'paus')}${op('→')}${ic('reflexo')}`, `${x('Reflete o ataque', 'Reflects the attack')} <small>(${x('pares', 'pairs')} 2–4)</small>`),
           linha(`${c('6', 'ouros')}${c('6', 'espadas')}${op('→')}${ic('tchau')}`, `${x('Devolve o Senhor', 'Sends the Gentleman back')} <small>(5–7)</small>`),
-          linha(`${c('9', 'copas')}${c('9', 'paus')}${op('→')}${dese('pargia-polimorfia')}`, `${x('Vira sapo ou desfaz', 'Frog or undo')} <small>(8–10)</small>`),
-          linha(`${c('A', 'espadas')}${c('A', 'ouros')}${op('→')}${ic('raio')}`, `${x(`1 hit ou ${M.DANO_RAIO_PALHACO} PV`, `1 hit or ${M.DANO_RAIO_PALHACO} HP`)} <small>(${x('Ases', 'Aces')})</small>`),
+          linha(`${c('9', 'copas')}${c('9', 'paus')}${op('→')}${ic('polimorfia')}`, `${x('Vira sapo ou desfaz', 'Frog or undo')} <small>(8–10)</small>`),
+          linha(`${c('A', 'espadas')}${c('A', 'ouros')}${op('→')}${ic('raiopar')}`, `${x(`1 hit ou ${M.DANO_RAIO_PALHACO} PV`, `1 hit or ${M.DANO_RAIO_PALHACO} HP`)} <small>(${x('Ases', 'Aces')})</small>`),
         ])}
         ${bloco('dad', x('Dado de dano', 'Damage die'), [
           linha(`${dado}${op(M.DADO_ATAQUE_TOTAL + '–6')}`, atk + x(' cheio', ' full')),
@@ -5869,10 +5864,11 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 152, data: '02/11/2026',
+    n: 153, data: '02/11/2026',
     novidades: [
+      ['Artes novas: Polimorfia, Raio, Vem pra cá! (o antigo É meu!), Na mosca! e o sapo dos Senhores transformados', 'New art: Polymorph, Lightning, Come here! (formerly Mine!), Bullseye! and the frog for transformed Gentlemen'],
       ['Nova Trígica de 2 a 4, Na mosca!: garante o dano cheio do Senhor que atacar, seja qual for o dado', 'New Trigic of 2 to 4, Bullseye!: guarantees full damage for the attacking Gentleman, whatever the die shows'],
-      ['Trígicas, as magias de trinca: É meu! (5 a 7) toma um Senhor inimigo, Meteoro (8 a 10) e Trovão (Ases)', 'Trigics, the trio spells: Mine! (5 to 7) takes an enemy Gentleman, Meteor (8 to 10) and Thunder (Aces)'],
+      ['Trígicas, as magias de trinca: Vem pra cá! (5 a 7) toma um Senhor inimigo, Meteoro (8 a 10) e Trovão (Ases)', 'Trigics, the trio spells: Come here! (5 to 7) takes an enemy Gentleman, Meteor (8 to 10) and Thunder (Aces)'],
       ['Polimorfia, o novo par de 8 a 10: vira sapo com 1 de ataque, e também desfaz; o par de Ases agora se chama Raio', 'Polymorph, the new pair of 8 to 10: turns into a frog with 1 attack, and also undoes it; the pair of Aces is now called Lightning'],
       ['Reviver com o Par de Copas agora traz o Senhor com 1 escudo só', 'Reviving with the Pair of Hearts now brings the Gentleman back with just 1 shield'],
       ['Dado novo por padrão: gravidade 125% e altura 270%', 'New default die: 125% gravity and 270% height'],
