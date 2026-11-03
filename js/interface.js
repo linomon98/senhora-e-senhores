@@ -100,7 +100,7 @@ window.SS = window.SS || {};
 
   const cfg = { palhaco: 'lancalotte', rival: 'aleatorio', nivel: 'medio', modo: 'bot', deck: 'palhaco' };
   // Modificadores de regras (área de testes): valem contra o bot, no Bot × bot, na simulação, na mesa livre
-  // e no online (lá valem as regras do dono da sala); o tutorial tem regras próprias (veja iniciarTutorial).
+  // e no online (lá valem as regras do dono da sala); o tutorial usa sempre as oficiais (veja iniciarTutorial).
   const CHAVE_REGRAS = 'ss-regras';
   cfg.regras = (() => {
     try {
@@ -5128,7 +5128,7 @@ window.SS = window.SS || {};
         await esperar(500);
         if (id !== partida) return;
         // (no tutorial, o oponente só faz o que a aula manda: não defende nem reflete por conta própria)
-        const parado = oponenteParado(d) || cfg.modo === 'tutorial';
+        const parado = oponenteParado(d) || (cfg.modo === 'tutorial' && !SS.Tutorial.livre());
         if (!parado) for (const rf of Bot.refletir(jogo, d)) M.refletir(jogo, rf.n, rf.cartas);
         const mapa = parado ? {} : await pensar('bloquear', jogo, d, nivelDe(d));
         if (id !== partida) return;
@@ -5243,7 +5243,7 @@ window.SS = window.SS || {};
       if (cena.errou) await queVergonha();
       if (id !== partida) return;
       render();
-      await tutGancho('depoisGolpe', { at, p: jogo.vez, rolagens });
+      await tutGancho('depoisGolpe', { at, p: jogo.vez, rolagens, res: resGolpe });
       if (id !== partida) return;
       if (temDuelo) {
         mostrarDuelo(foto, total, linhas);
@@ -5252,7 +5252,7 @@ window.SS = window.SS || {};
         if (id !== partida) return;
         // O pop-up fica o tempo de sempre, mas o jogo não espera por ele: o próximo ataque (ou o próximo turno) já começa
         // enquanto ele está na tela.
-        if (jogo.vencedor == null && !opcoes.popupContinuar && cfg.modo !== 'tutorial') soltarDuelo(2800);
+        if (jogo.vencedor == null && !opcoes.popupContinuar && (cfg.modo !== 'tutorial' || SS.Tutorial.livre())) soltarDuelo(2800);
         else await esperarContinuar();
       } else await esperar(1200);
       if (id !== partida) return;
@@ -5297,7 +5297,7 @@ window.SS = window.SS || {};
     if (document.documentElement.classList.contains('em-menu')) transicaoComFoto();
     cfg.modo = 'tutorial';
     cfg.aula = n;
-    M.definirRegras({ todosCompram2: false, asOurosDado: false }); // (as aulas foram escritas para a compra de 1 carta)
+    M.definirRegras(); // (as regras oficiais)
     const id = ++partida;
     prepararMesa();
     Som.musica('partida');
@@ -5377,8 +5377,13 @@ window.SS = window.SS || {};
     if (id !== partida) return;
     await tutGancho('turnoOponente', { p: jogo.vez });
     if (id !== partida) return;
+    // Parte livre da aula: o Ourinhos se cura e joga na defensiva, só ataca se você não tiver ninguém para defender.
+    const livre = SS.Tutorial.livre();
+    if (livre) await SS.Tutorial.jogarLivre();
+    if (id !== partida) return;
     if (jogo.fase === 'principal') M.aplicarAcao(jogo, { tipo: 'atacar' });
-    const lista = M.atacantesAptos(jogo).map(uid => ({ atacante: uid, alvo: 'jogador' }));
+    const recua = livre && jogo.jogadores[1 - jogo.vez].campo.some(u => u && u.tipo === 'senhor' && u.ativo);
+    const lista = recua ? [] : M.atacantesAptos(jogo).map(uid => ({ atacante: uid, alvo: 'jogador' }));
     M.declararAtaques(jogo, lista);
     await mostrarDeclaracao(lista);
     if (id !== partida) return;
@@ -5394,17 +5399,18 @@ window.SS = window.SS || {};
     Som.musica(null);
     Som.tocar(venceu === false ? 'derrota' : 'vitoria');
     const titulo = cfg.modo === 'bots' ? t('faixa.venceu', { j: escapar(jogo.jogadores[v].nome) }) : t(venceu ? 'fim.vitoria' : 'fim.derrota');
-    const online = cfg.modo === 'online';
+    const online = cfg.modo === 'online', tutorial = cfg.modo === 'tutorial';
+    if (tutorial) SS.Tutorial.concluir(venceu); // o tutorial acaba no fim do duelo
     // Vitória: fogos de artifício; derrota: tomates na tela (só o visual: o som é o de vitória/derrota gravado).
     setTimeout(() => { if (venceu === false) festaTomates(); else festaFogos(); }, 60);
     modal(`<div class="tela-fim ${venceu === false ? 'derrota' : 'vitoria'}"><h2 class="titulo-fim-grande">${titulo}</h2>
       <p class="fim-turno">${t('fim.turno', { n: jogo.turno })}</p>
       ${online && revanche.dele ? `<p class="nota destaque">${t('on.amigoQuerRevanche', { j: escapar(jogo.jogadores[1 - eu].nome) })}</p>` : ''}
-      <div class="acoes-menu"><button class="btn principal" data-m="denovo">${t(online ? 'on.revanche' : 'fim.denovo')}</button><button class="btn" data-m="ver">${t('fim.ver')}</button><button class="btn" data-m="menu">${t('fim.menu')}</button></div></div>`,
+      <div class="acoes-menu">${tutorial && venceu ? '' : `<button class="btn principal" data-m="denovo">${t(online ? 'on.revanche' : 'fim.denovo')}</button>`}<button class="btn" data-m="ver">${t('fim.ver')}</button><button class="btn" data-m="menu">${t('fim.menu')}</button></div></div>`,
     ev => {
       const b = ev.target.closest('[data-m]');
       if (!b) return;
-      if (b.dataset.m === 'denovo') return online ? pedirRevanche() : iniciarPartida(cfg.modo);
+      if (b.dataset.m === 'denovo') return online ? pedirRevanche() : tutorial ? iniciarTutorial(cfg.aula) : iniciarPartida(cfg.modo);
       if (b.dataset.m === 'ver') return fecharModal();
       menu();
     });
@@ -5935,8 +5941,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 161, data: '03/11/2026',
+    n: 162, data: '03/11/2026',
     novidades: [
+      ['Tutorial novo: você enfrenta o Ourinhos com as regras oficiais e, no fim, termina o duelo sozinho; a colinha só aparece quando ele fala dela', 'New tutorial: you face Ourinhos with the official rules and, at the end, finish the duel on your own; the crib sheet only shows up once he mentions it'],
       ['Bots: o nível Médio ficou mais fraco, para o Difícil se destacar', 'Bots: Medium is now weaker, so that Hard stands out'],
       ['Bots recalibrados para as regras novas: aproveitam melhor o Ás de Ouros, as trincas e a compra de 2 cartas', 'Bots recalibrated for the new rules: they make better use of the Ace of Diamonds, trios and the 2-card draw'],
       ['Deckbuilder: caixa para copiar e colar o código de um baralho', 'Deckbuilder: a box to copy and paste a deck code'],
