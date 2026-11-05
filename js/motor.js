@@ -19,6 +19,8 @@ window.SS = window.SS || {};
   // O padrão é a regra oficial (a do tutorial também). Fora do tutorial, a interface pode trocar por outra combinação.
   //   casca: 'todos2' (Casca grossa: −2 em qualquer defensor do Paumol) | 'paus1' (−1, só nos Naipados de Paus)
   //   limiteDefesa: true (ninguém aguenta mais que RESISTENCIA_MAX hits) | false (sem limite)
+  //   invocacaoNumero: true (oficial desde 05/11/2026: o sacrifício depende do número equipado; 2 a 4 entra direto, 5 a 7 sacrifica
+  //     1 Senhor(a) de 2 a 4, 8 a 10 sacrifica 1 de 5 a 7 ou 2 de 2 a 4) | false (a regra antiga, pela letra: usa as duas opções abaixo)
   //   rainha: 'reiOuValetes' (sacrifica 1 Rei ou 2 Valetes) | 'doisSenhores' (2 Senhores quaisquer)
   //   reiSacrificaValete: o Rei só entra sacrificando 1 Valete (no lugar dele)
   //   asesRecurso: os Ases da mão valem como carta de recurso do naipe (cura, compra, +1, Berserk, pares)
@@ -35,7 +37,7 @@ window.SS = window.SS || {};
   //   invocacoes: 'umPorTurno' (1 Senhor(a) por turno) | 'umPorLetra' (1 Valete, 1 Rainha e 1 Rei por turno) | 'ilimitadas'
   // Regras oficiais (27/10/2026): Casca grossa −1 só nos Naipados de Paus, defesa sem limite, Rei sacrifica 1 Valete,
   // cura sem teto e 1 invocação de cada letra por turno.
-  const REGRAS_PADRAO = Object.freeze({ casca: 'paus1', limiteDefesa: false, rainha: 'reiOuValetes', reiSacrificaValete: true, asesRecurso: true, asesNasLetras: false, bonusNaipe: false, limitePV: false, pv: Object.freeze({}), faixa: Object.freeze({}), semPassiva: Object.freeze({}), invocacoes: 'umPorLetra', passivaOurinhos: 'dividendos', todosCompram2: true, asOurosDado: true });
+  const REGRAS_PADRAO = Object.freeze({ casca: 'paus1', limiteDefesa: false, rainha: 'reiOuValetes', reiSacrificaValete: true, asesRecurso: true, asesNasLetras: false, bonusNaipe: false, limitePV: false, pv: Object.freeze({}), faixa: Object.freeze({}), semPassiva: Object.freeze({}), invocacoes: 'umPorLetra', passivaOurinhos: 'dividendos', todosCompram2: true, asOurosDado: true, invocacaoNumero: true });
   let REGRAS = Object.assign({}, REGRAS_PADRAO);
   // Aceita só chaves e valores conhecidos (as regras do dono da sala chegam pela rede).
   function definirRegras(r) {
@@ -128,6 +130,18 @@ window.SS = window.SS || {};
     return e.sumonados < SENHORES_POR_TURNO;
   }
   const valor = c => (ehAs(c) ? 1 : parseInt(c.rank, 10));
+  // Sacrifício pelo número: os jeitos de pagar a entrada de um Senhor(a) com o número n (listas de uids; o último é onde ele entra).
+  // Só serve quem já estava em campo antes deste turno; sapo não serve.
+  function jeitosDeSacrificio(e, p, n) {
+    const v = valor(n);
+    if (v <= 4) return [[]];
+    const aptos = e.jogadores[p].campo.filter(u => u && u.tipo === 'senhor' && !u.sapo && u.entrou < e.turno);
+    const baixos = aptos.filter(u => valor(u.numero) <= 4), medios = aptos.filter(u => valor(u.numero) >= 5 && valor(u.numero) <= 7);
+    if (v <= 7) return baixos.map(u => [u.uid]);
+    const jeitos = medios.map(u => [u.uid]);
+    for (const a of baixos) for (const b of baixos) if (a !== b) jeitos.push([a.uid, b.uid]);
+    return jeitos;
+  }
   const nomeCarta = c => (['A', 'J', 'Q', 'K'].includes(c.rank) ? t('carta.' + c.rank) + ' ' : c.rank) + SIMBOLO[c.naipe];
   const nomeNaipe = n => t('naipe.' + n);
   const curaDe = c => (valor(c) <= 5 ? 3 : 4); // Copas sozinha: Ás a 5 cura 3, 6 a 10 cura 4
@@ -563,6 +577,13 @@ window.SS = window.SS || {};
       if (!podeInvocar(e, f.rank)) continue;
       for (const n of numeros) {
         if (foraDaFaixa(f.rank, n)) continue;
+        if (REGRAS.invocacaoNumero) {
+          for (const js of jeitosDeSacrificio(e, p, n)) {
+            if (!js.length) for (const slot of vazios) r.push({ tipo: 'sumonar', figura: f.id, numero: n.id, sacrificio: null, slot });
+            else r.push({ tipo: 'sumonar', figura: f.id, numero: n.id, sacrificio: js[0], sacrificio2: js[1] != null ? js[1] : null, slot: localizar(e, js[js.length - 1]).i });
+          }
+          continue;
+        }
         const aptos = senhores.filter(s => j.campo[s].entrou < e.turno);
         if (f.rank === 'Q') {
           // A Rainha sacrifica 1 Rei ou 2 Valetes seus que já estavam em campo antes deste turno,
@@ -803,7 +824,18 @@ window.SS = window.SS || {};
         e.sumonados++;
         e.sumonadosPor = e.sumonadosPor || {};
         e.sumonadosPor[f0.rank] = (e.sumonadosPor[f0.rank] || 0) + 1;
-        if (f0.rank === 'Q') {
+        const uidsNum = REGRAS.invocacaoNumero ? [a.sacrificio, a.sacrificio2].filter(uid => uid != null) : [];
+        if (REGRAS.invocacaoNumero) {
+          if (!jeitosDeSacrificio(e, p, n0).some(js => js.length === uidsNum.length && js.every((uid, k) => uid === uidsNum[k]))) throw new Error('Sacrifício inválido');
+          if (uidsNum.length) {
+            if (a.slot !== localizar(e, uidsNum[uidsNum.length - 1]).i) throw new Error('Ele entra no lugar do Senhor sacrificado');
+            registrar(e, t('log.sacrificaNumero', { j: j.nome, us: uidsNum.map(uid => nomeUnidade(localizar(e, uid).u)).join(` ${t('e')} `) }));
+            for (const uid of uidsNum) {
+              const s = localizar(e, uid);
+              if (s) morrer(e, s.p, s.i, 'sacrificio');
+            }
+          }
+        } else if (f0.rank === 'Q') {
           if (e.acoes < CUSTO_RAINHA) throw new Error(`A Rainha custa ${CUSTO_RAINHA} ação`);
           custo = CUSTO_RAINHA;
           const uids = [a.sacrificio, a.sacrificio2].filter(uid => uid != null);
@@ -829,7 +861,7 @@ window.SS = window.SS || {};
           }
         }
         // (modificador) Rei sacrificando 1 Valete: entra no lugar dele.
-        const reiComSacrificio = f0.rank === 'K' && REGRAS.reiSacrificaValete;
+        const reiComSacrificio = !REGRAS.invocacaoNumero && f0.rank === 'K' && REGRAS.reiSacrificaValete;
         if (reiComSacrificio) {
           const s = a.sacrificio != null && a.sacrificio2 == null ? localizar(e, a.sacrificio) : null;
           if (!s || s.p !== p || !eFigura(s.u, 'J')) throw new Error('O Rei exige o sacrifício de 1 Valete');
@@ -839,7 +871,7 @@ window.SS = window.SS || {};
           morrer(e, s.p, s.i, 'sacrificio');
         }
         // A Rainha (e o Rei com sacrifício) entra no lugar de quem foi sacrificado; os outros podem entrar num espaço ocupado (empurram as cartas).
-        const noLugar = f0.rank === 'Q' || reiComSacrificio;
+        const noLugar = REGRAS.invocacaoNumero ? uidsNum.length > 0 : f0.rank === 'Q' || reiComSacrificio;
         if (noLugar ? j.campo[a.slot] : !j.campo.includes(null)) throw new Error(noLugar ? 'Espaço ocupado' : 'Fileira cheia');
         const f = tirarDaMao(j, a.figura), n = tirarDaMao(j, a.numero);
         const u = {

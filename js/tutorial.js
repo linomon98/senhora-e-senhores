@@ -2,7 +2,7 @@
 // com o jogador e um foco que escurece o resto da mesa e só deixa clicar no que a aula pede. No fim do roteiro a mesa
 // fica livre e o jogador termina o duelo sozinho, contra um Ourinhos que se cura e joga na defensiva.
 // A aula só arruma a ordem das cartas nos baralhos, faz as jogadas do oponente e combina os dados dele; as regras
-// são as de sempre (ninguém ataca no 1º turno de quem começa, quem atacou fica virado, o Rei sacrifica um Valete...).
+// são as de sempre (ninguém ataca no 1º turno de quem começa, quem atacou fica virado, número alto pede sacrifício...).
 // A interface chama SS.Tutorial.gancho(nome) nos pontos em que a aula pode precisar parar o jogo
 // (antes e depois do sorteio, na abertura, antes e depois do dado, na defesa, no fim do turno, no turno do oponente).
 (function (SS) {
@@ -71,7 +71,7 @@
   let guardadas = [];
   const FIGURAS_ABERTURA = [['J', 'paus'], ['J', 'copas'], ['K', 'paus']];
   const AVISO_INVOCAR = ['NÃO DÁ PRA INVOCAR 2 CARTAS IGUAIS NO MESMO TURNO, NEM SACRIFICAR UMA CARTA QUE ACABOU DE SER INVOCADA!!!!', 'YOU CAN\'T SUMMON 2 OF THE SAME CARD IN THE SAME TURN, OR SACRIFICE A CARD THAT WAS JUST SUMMONED!!!!'];
-  const AVISO_RAINHA = ['AAAAH, esqueci: a <b>Rainha</b> só pode entrar em campo se você <b>sacrificar 1 Rei OUUU 2 Valetes</b> em campo, e ela pode ser combinada até com a carta de número <b>10</b>.', 'AAAAH I forgot, the <b>Queen</b> can only enter the field if you <b>sacrifice 1 King ORRR 2 Jacks</b> on the field, and she can be paired up to number card <b>10</b>.'];
+  const AVISO_RAINHA = ['AAAAH, esqueci: a <b>Rainha</b> pode ser combinada até com a carta de número <b>10</b>, mas de <b>8 a 10</b> você precisa <b>sacrificar 1 Senhor com número de 5 a 7 OUUU 2 com número de 2 a 4</b> em campo.', 'AAAAH I forgot, the <b>Queen</b> can be paired with cards up to number <b>10</b>, but from <b>8 to 10</b> you must <b>sacrifice 1 Gentleman with a number from 5 to 7 ORRR 2 with a number from 2 to 4</b> on the field.'];
 
   const AVISO_PARGIA = ['Opa! Você tem <b>2 cartas do mesmo naipe ou do mesmo número</b> na mão. Duas cartas assim formam uma <b>Pargia</b>, uma magia! Vou abrir a <b>colinha</b> pra você ver o que cada uma faz.', 'Hey! You have <b>2 cards of the same suit or the same number</b> in hand. Two cards like that make a <b>Pairgic</b>, a spell! I\'ll open the <b>crib sheet</b> so you can see what each one does.'];
 
@@ -225,7 +225,7 @@
         { acao: api => { const ui = api.ui(); ui.sel = []; ui.destino = null; api.render(); api.fixarDica(maoSel(0, 'J', 'copas')(api)); } },
         { foco: ['#dica', maoSel(0, 'J', 'copas')], circular: '#dica .dica-limite', fala: ['<b>SE VOCÊ TIVESSE LIDO</b>, ia ver que o Valete só pode ser combinado com cartas de <b>2 a 4</b>.', '<b>IF YOU HAD READ</b> you would have seen that the Jack can only be paired with cards from <b>2 to 4</b>.'] },
         { acao: api => api.fixarDica(maoSel(0, 'K', 'paus')(api)) },
-        { foco: ['#dica', maoSel(0, 'K', 'paus')], circular: '#dica .dica-limite', fala: ['Já o <b>Rei</b> pode ser combinado com cartas de <b>2 a 7</b>, maaas é necessário <b>SACRIFICAR UM VALETE EM CAMPO</b> para ele entrar.', 'The <b>King</b>, on the other hand, can be paired with cards from <b>2 to 7</b>, buuut you must <b>SACRIFICE A JACK ON THE FIELD</b> for him to enter.'] },
+        { foco: ['#dica', maoSel(0, 'K', 'paus')], circular: '#dica .dica-limite', fala: ['Já o <b>Rei</b> pode ser combinado com cartas de <b>2 a 7</b>, maaas de <b>5 a 7</b> é necessário <b>SACRIFICAR UM SENHOR COM NÚMERO DE 2 A 4 EM CAMPO</b> para ele entrar.', 'The <b>King</b>, on the other hand, can be paired with cards from <b>2 to 7</b>, buuut from <b>5 to 7</b> you must <b>SACRIFICE A GENTLEMAN WITH A NUMBER FROM 2 TO 4 ON THE FIELD</b> for him to enter.'] },
         { acao: api => api.soltarDica() },
         { foco: ['#campo-0', '#mao-0'], permitir: [maoSel(0, 'K', 'paus'), maoSel(0, '7', 'ouros'), '#campo-0', '[data-acao^="tipo:sumonar"]'],
           alvo: api => { const ui = api.ui(), j = api.jogo().jogadores[0]; return ui.pend ? slotFig(0, 'J', 'paus')(api) : !ui.sel.includes(idNaMao(j, 'K', 'paus')) ? maoSel(0, 'K', 'paus')(api) : !ui.sel.includes(idNaMao(j, '7', 'ouros')) ? maoSel(0, '7', 'ouros')(api) : slotFig(0, 'J', 'paus')(api); },
@@ -577,9 +577,9 @@
     }
     const fig = [...ui.sel, ui.arrasto && ui.arrasto.moveu && ui.arrasto.id].map(id => j.mao.find(c => c.id === id)).find(c => c && M.ehFigura(c));
     if (!fig) return;
-    const senhores = j.campo.filter(u => u && u.tipo === 'senhor' && !u.sapo);
-    const velhos = r => senhores.filter(u => u.figura.rank === r && u.entrou < e.turno).length, novos = senhores.some(u => u.entrou >= e.turno);
-    const semSacrificio = (fig.rank === 'K' && !velhos('J')) || (fig.rank === 'Q' && !velhos('K') && velhos('J') < 2);
+    const novos = j.campo.some(u => u && u.tipo === 'senhor' && u.entrou >= e.turno);
+    const [de, ate] = M.faixaFigura(fig.rank), cabem = j.mao.some(c => M.ehNumero(c) && M.valor(c) >= de && M.valor(c) <= ate);
+    const semSacrificio = cabem && !M.acoesLegais(e).some(a => a.tipo === 'sumonar' && a.figura === fig.id);
     if (M.podeInvocar(e, fig.rank) && !(semSacrificio && novos)) return;
     const chave = e.turno + fig.rank;
     if (T.marcas.invocar === chave) return;

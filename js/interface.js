@@ -354,8 +354,10 @@ window.SS = window.SS || {};
     if (fig && !M.podeInvocar(jogo, fig.rank)) return t('dica.umSenhor');
     if (as && jogo.asesTurno >= M.ASES_POR_TURNO) return t('dica.umAs');
     if (fig && num && (M.valor(num) < M.faixaFigura(fig.rank)[0] || M.valor(num) > M.faixaFigura(fig.rank)[1])) return t('dica.faixaFigura', { c: M.nomeCarta(fig), a: M.faixaFigura(fig.rank)[0], n: M.faixaFigura(fig.rank)[1] });
-    if (fig && num && fig.rank === 'Q') return t('dica.rainhaSacrificio');
-    if (cartas.length === 1 && fig && fig.rank === 'Q' && !candidatosParceiros().size) return t('dica.rainhaSemSenhores');
+    const porNumero = M.regras().invocacaoNumero;
+    if (porNumero && fig && num && M.valor(num) >= 5) return t(M.valor(num) <= 7 ? 'dica.sacrificioMedio' : 'dica.sacrificioAlto');
+    if (!porNumero && fig && num && fig.rank === 'Q') return t('dica.rainhaSacrificio');
+    if (!porNumero && cartas.length === 1 && fig && fig.rank === 'Q' && !candidatosParceiros().size) return t('dica.rainhaSemSenhores');
     if (fig && num && !j.campo.includes(null)) return t('dica.fileiraCheia');
     if (as && num && as.naipe !== num.naipe) return t('dica.asMesmoNaipe');
     if (cartas.length === 1 && fig) return t('dica.selecioneNumero');
@@ -368,7 +370,8 @@ window.SS = window.SS || {};
     if (passo === 'slot') return t(tipo === 'invocarAs' ? 'passo.slotAs' : 'passo.slot');
     if (passo === 'sacrificios') {
       const n = (ui.pend.esc.sacrificios || []).length;
-      const fig = cartaDaMao(ui.pend.cands[0].figura);
+      const fig = cartaDaMao(ui.pend.cands[0].figura), num = cartaDaMao(ui.pend.cands[0].numero);
+      if (M.regras().invocacaoNumero && num) return t(M.valor(num) <= 7 ? 'passo.sacrificioMedio' : 'passo.sacrificioAlto', { n });
       if (fig && fig.rank === 'K') return t('passo.sacrificioRei');
       if (M.regras().rainha === 'doisSenhores') return t('passo.sacrificiosDois', { n });
       return t('passo.sacrificios', { n });
@@ -994,9 +997,9 @@ window.SS = window.SS || {};
     }
     const i = dest.lugar;
     if (i == null || !legais.some(a => ehColocacao(a) && chaveCartas(a).includes(id))) return null;
-    // Rei/Rainha bem em cima de um Senhor(a) que pode ser sacrificado por ele(a): o Senhor(a) brilha como alvo.
+    // Figura bem em cima de um Senhor(a) que pode ser sacrificado por ela (com o número já selecionado, se houver): o Senhor(a) brilha como alvo.
     const s = dest.sobre;
-    if (s != null && legais.some(a => a.tipo === 'sumonar' && a.sacrificio != null && a.figura === id && a.slot === s)) return { campo: s, sacrificio: true };
+    if (s != null && legais.some(a => a.tipo === 'sumonar' && a.sacrificio != null && a.figura === id && a.slot === s && (ui.sel.length < 2 || ui.sel.includes(a.numero)))) return { campo: s, sacrificio: true };
     return { campo: i, vao: dest.vao };
   }
 
@@ -1434,7 +1437,7 @@ window.SS = window.SS || {};
     if (M.ehFigura(c)) {
       return {
         titulo: nome, sub: t('dc.figura'),
-        linhas: [t('dc.figuraComo'), `<span class="dica-limite">${t('figLim.' + c.rank)}</span>`, habFigura(c.rank), habNaipado(c.naipe, true)],
+        linhas: [t('dc.figuraComo'), `<span class="dica-limite">${t((M.regras().invocacaoNumero ? 'figLimN.' : 'figLim.') + c.rank)}</span>`, habFigura(c.rank), habNaipado(c.naipe, true)],
       };
     }
     if (M.ehAs(c)) {
@@ -3794,8 +3797,12 @@ window.SS = window.SS || {};
       <div class="cola-cols">
         ${bloco('sen', x('Senhores', 'Gentlemen'), [
           linha(`${c('J', 'espadas')}${op('+')}${c('3', 'copas')}`, `${faixa('J')} · ${x('ataca já', 'attacks now')}`),
-          linha(`${c('K', 'paus')}${op('+')}${c('7', 'copas')}${R.reiSacrificaValete ? op('✕') + c('J', 'ouros', 'cola-sac') : ''}`, `${faixa('K')} · ${x('ordem real', 'royal order')}`),
-          linha(`${c('Q', 'copas')}${op('+')}${c('10', 'ouros')}${op('✕')}${c('K', 'espadas', 'cola-sac')}${op(x('ou', 'or'))}${c('J', 'paus', 'cola-sac')}${c('J', 'copas', 'cola-sac')}`, `${faixa('Q')} · ${x('atropela', 'tramples')}`),
+          R.invocacaoNumero
+            ? linha(`${c('K', 'paus')}${op('+')}${c('7', 'copas')}${op('✕')}${c('3', 'ouros', 'cola-sac')}`, `${faixa('K')} · ${x('ordem real', 'royal order')}`)
+            : linha(`${c('K', 'paus')}${op('+')}${c('7', 'copas')}${R.reiSacrificaValete ? op('✕') + c('J', 'ouros', 'cola-sac') : ''}`, `${faixa('K')} · ${x('ordem real', 'royal order')}`),
+          R.invocacaoNumero
+            ? linha(`${c('Q', 'copas')}${op('+')}${c('10', 'ouros')}${op('✕')}${c('7', 'espadas', 'cola-sac')}${op(x('ou', 'or'))}${c('3', 'paus', 'cola-sac')}${c('4', 'copas', 'cola-sac')}`, `${faixa('Q')} · ${x('atropela', 'tramples')}`)
+            : linha(`${c('Q', 'copas')}${op('+')}${c('10', 'ouros')}${op('✕')}${c('K', 'espadas', 'cola-sac')}${op(x('ou', 'or'))}${c('J', 'paus', 'cola-sac')}${c('J', 'copas', 'cola-sac')}`, `${faixa('Q')} · ${x('atropela', 'tramples')}`),
         ])}
         ${bloco('nai', x('Naipado', 'Suited'), [
           linha(`${c('J', 'paus')}${c('4', 'paus')}`, esc(3)),
@@ -5942,8 +5949,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 166, data: '03/11/2026',
+    n: 167, data: '05/11/2026',
     novidades: [
+      ['Regra nova de invocação: o sacrifício depende do número (2 a 4 entra direto; 5 a 7 sacrifica 1 de 2 a 4; 8 a 10, 1 de 5 a 7 ou 2 de 2 a 4)', 'New summoning rule: the sacrifice depends on the number (2 to 4 enters directly; 5 to 7 sacrifices 1 with 2 to 4; 8 to 10, 1 with 5 to 7 or 2 with 2 to 4)'],
       ['Paumol agora começa com 26 PV (era 20)', 'Paumol now starts with 26 HP (was 20)'],
       ['Tutorial: o balão não cobre mais o botão do poder do Palhaço', 'Tutorial: the bubble no longer covers the Jester power button'],
       ['Tutorial: texto revisado, menos Rainhas seguidas, cartas de ação no quadro dos recursos e aviso das Pargias com a colinha', 'Tutorial: revised text, fewer Queens in a row, action cards in the resources chart and a Pairgics notice with the crib sheet'],
@@ -6110,6 +6118,7 @@ window.SS = window.SS || {};
     modal(`<div class="menu-tema regras-teste"><h2 class="titulo-etapa">⚖ ${t('rg.titulo')}</h2><p class="nota">${t('rg.nota')}</p>
       ${linha('casca', [['todos2', t('rg.casca2')], ['paus1', t('rg.casca1')]])}
       ${linha('limiteDefesa', [['true', t('rg.limiteSim', { n: M.RESISTENCIA_MAX })], ['false', t('rg.semLimite')]])}
+      ${linha('invocacaoNumero', [['true', t('rg.sacNumero')], ['false', t('rg.sacLetra')]])}
       ${linha('rainha', [['reiOuValetes', t('rg.rainhaRei')], ['doisSenhores', t('rg.rainhaDois')]])}
       ${linha('reiSacrificaValete', [['false', t('rg.reiDireto')], ['true', t('rg.reiValete')]])}
       ${linha('asesRecurso', [['true', t('rg.sim')], ['false', t('rg.nao')]])}
