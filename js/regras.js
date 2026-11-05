@@ -74,16 +74,16 @@ window.SS = window.SS || {};
           x(`Invocar gasta <b>1 ação</b>: junte uma figura e uma carta numérica da mão. O <b>número é o ataque</b>, e cada figura só aceita alguns números. Por turno, dá para invocar <b>1 Valete, 1 Rainha e 1 Rei</b>.`,
             `Summoning costs <b>1 action</b>: put a face card and a number card from your hand together. The <b>number is the attack</b>, and each face card only takes some numbers. Each turn you can summon <b>1 Jack, 1 Queen and 1 King</b>.`))}
         <h3>${x('As figuras e os sacrifícios', 'Face cards and sacrifices')}</h3>
-        <p>${x('Quem decide o sacrifício é o <b>número</b>: de 2 a 4 entra direto; de 5 a 7 sacrifica 1 Senhor(a) com número de 2 a 4; de 8 a 10 sacrifica 1 com número de 5 a 7 ou 2 com número de 2 a 4. Quem é sacrificado precisa já estar em campo antes deste turno, e o novo entra no lugar dele.', 'The <b>number</b> decides the sacrifice: 2 to 4 enters directly; 5 to 7 sacrifices 1 Gentleman with 2 to 4; 8 to 10 sacrifices 1 with 5 to 7 or 2 with 2 to 4. Whoever is sacrificed must already be on the field before this turn, and the new one takes its place.')}</p>
+        <p>${x('As figuras mais fortes entram no lugar de outras: o Valete vira Rei, e o Rei (ou dois Valetes) vira Rainha. Quem é sacrificado precisa já estar em campo antes deste turno.', 'Stronger face cards enter in place of others: a Jack becomes a King, and a King (or two Jacks) becomes a Queen. Whoever is sacrificed must already be on the field before this turn.')}</p>
         <div class="rg-escada">
           <div class="rg-degrau">${senhor(['J', 'espadas'], ['4', 'espadas'], 4)}<b>${x('Valete', 'Jack')}</b><em>2–4</em>
             <span><b>${x('Ímpeto', 'Haste')}:</b> ${x('ataca no mesmo turno em que entra.', 'attacks the same turn it enters.')}</span><small>${x('Entra direto.', 'Enters directly.')}</small></div>
           ${op('→')}
           <div class="rg-degrau">${senhor(['K', 'espadas'], ['7', 'espadas'], 7)}<b>${x('Rei', 'King')}</b><em>2–7</em>
-            <span><b>${x('Ordem real', 'Royal order')}:</b> ${x('pode atacar um Senhor(a) inimigo, que é obrigado a defender.', 'may attack an enemy Gentleman, who must defend.')}</span><small>${x('De 5 a 7, sacrifica 1 de 2 a 4.', '5 to 7 sacrifices 1 with 2 to 4.')}</small></div>
+            <span><b>${x('Ordem real', 'Royal order')}:</b> ${x('pode atacar um Senhor(a) inimigo, que é obrigado a defender.', 'may attack an enemy Gentleman, who must defend.')}</span><small>${x('Sacrifica 1 Valete e fica no lugar dele.', 'Sacrifices 1 Jack and takes its place.')}</small></div>
           ${op('→')}
           <div class="rg-degrau">${senhor(['Q', 'espadas'], ['10', 'espadas'], 10)}<b>${x('Rainha', 'Queen')}</b><em>2–10</em>
-            <span><b>${x('Atropelar', 'Trample')}:</b> ${x('se matar quem defendeu, o dano que sobra vai no Palhaço.', 'if she kills the defender, the leftover damage hits the Jester.')}</span><small>${x('De 8 a 10, sacrifica 1 de 5 a 7 ou 2 de 2 a 4.', '8 to 10 sacrifices 1 with 5 to 7 or 2 with 2 to 4.')}</small></div>
+            <span><b>${x('Atropelar', 'Trample')}:</b> ${x('se matar quem defendeu, o dano que sobra vai no Palhaço.', 'if she kills the defender, the leftover damage hits the Jester.')}</span><small>${x('Sacrifica 1 Rei ou 2 Valetes e fica no lugar.', 'Sacrifices 1 King or 2 Jacks and takes the place.')}</small></div>
         </div>
         ${bloco(x('Vida: os escudinhos', 'Life: the little shields'),
           `<div class="rg-linha"><span class="rg-coluna">${escudos(2)}<small>${x('saudável', 'healthy')}</small></span><span class="rg-coluna">${escudos(2, 1)}<small>${x('1 hit: deitado', '1 hit: lying down')}</small></span><span class="rg-coluna">${escudos(3)}<small>${x('Naipado de Paus', 'Clubs Suited')}</small></span></div>`,

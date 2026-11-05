@@ -107,6 +107,8 @@ window.SS = window.SS || {};
       const salvas = JSON.parse(localStorage.getItem(CHAVE_REGRAS));
       // (quem salvou antes da compra de 2 cartas virar oficial guardou "1 carta" sem escolher: passa a valer o padrão novo)
       if (salvas && !('asOurosDado' in salvas)) delete salvas.todosCompram2;
+      // (quem salvou enquanto o sacrifício pelo número era o padrão guardou essa regra sem escolher: volta uma vez para a oficial)
+      if (salvas && !localStorage.getItem('ss-sacrificio-letra')) { delete salvas.invocacaoNumero; localStorage.setItem(CHAVE_REGRAS, JSON.stringify(salvas)); localStorage.setItem('ss-sacrificio-letra', '1'); }
       return M.definirRegras(salvas);
     } catch (err) { return M.definirRegras(null); }
   })();
@@ -3569,7 +3571,7 @@ window.SS = window.SS || {};
     const classeTitulo = titulo.length > 10 && titulo.includes(' ') ? ' duas-linhas' : titulo.length > 7 ? ' longo' : '';
     // Efeito e custo (aparecem numa caixinha quando o mouse para meio segundo em cima da carta). A carta que não tem
     // efeito escrito (a cura, que depende do número) usa o próprio rótulo.
-    const chaveEf = 'ca.ef.' + (acao.startsWith('cancelar') ? 'cancelar' : icone), chaveCusto = 'ca.custo.' + icone;
+    const chaveEf = 'ca.ef.' + (acao.startsWith('cancelar') ? 'cancelar' : icone), chaveCusto = 'ca.custo.' + (M.regras().invocacaoNumero && (icone === 'sumonar' || icone === 'rainha') ? 'numero' : icone);
     const efeito = t(chaveEf) === chaveEf ? sub : t(chaveEf), custo = acao.startsWith('cancelar') || t(chaveCusto) === chaveCusto ? '' : t(chaveCusto);
     return `<button class="carta-acao arte-${arte} ${extra || ''}" data-acao="${acao}" data-efeito="${escapar(efeito)}"${custo ? ` data-custo="${escapar(custo)}"` : ''}>
       <img src="arte/acoes/${arte}.webp" alt="" draggable="false">${DESENHO_PROVISORIO[icone] ? `<span class="ca-desenho">${DESENHO_PROVISORIO[icone]}</span>` : ''}<b class="ca-titulo${classeTitulo}">${titulo}</b></button>`;
@@ -5949,8 +5951,9 @@ window.SS = window.SS || {};
 
   // Build e novidades (o que aparece no canto da tela inicial): atualize a cada versão publicada.
   const BUILD = {
-    n: 167, data: '05/11/2026',
+    n: 168, data: '05/11/2026',
     novidades: [
+      ['A invocação voltou a ser pela letra (Rei sacrifica 1 Valete; Rainha, 1 Rei ou 2 Valetes). O sacrifício pelo número ficou como opção nos modificadores de Testes', 'Summoning is back to the letter rule (King sacrifices 1 Jack; Queen, 1 King or 2 Jacks). The sacrifice by number is now an option in the Tests modifiers'],
       ['Regra nova de invocação: o sacrifício depende do número (2 a 4 entra direto; 5 a 7 sacrifica 1 de 2 a 4; 8 a 10, 1 de 5 a 7 ou 2 de 2 a 4)', 'New summoning rule: the sacrifice depends on the number (2 to 4 enters directly; 5 to 7 sacrifices 1 with 2 to 4; 8 to 10, 1 with 5 to 7 or 2 with 2 to 4)'],
       ['Paumol agora começa com 26 PV (era 20)', 'Paumol now starts with 26 HP (was 20)'],
       ['Tutorial: o balão não cobre mais o botão do poder do Palhaço', 'Tutorial: the bubble no longer covers the Jester power button'],
@@ -6118,7 +6121,7 @@ window.SS = window.SS || {};
     modal(`<div class="menu-tema regras-teste"><h2 class="titulo-etapa">⚖ ${t('rg.titulo')}</h2><p class="nota">${t('rg.nota')}</p>
       ${linha('casca', [['todos2', t('rg.casca2')], ['paus1', t('rg.casca1')]])}
       ${linha('limiteDefesa', [['true', t('rg.limiteSim', { n: M.RESISTENCIA_MAX })], ['false', t('rg.semLimite')]])}
-      ${linha('invocacaoNumero', [['true', t('rg.sacNumero')], ['false', t('rg.sacLetra')]])}
+      ${linha('invocacaoNumero', [['false', t('rg.sacLetra')], ['true', t('rg.sacNumero')]])}
       ${linha('rainha', [['reiOuValetes', t('rg.rainhaRei')], ['doisSenhores', t('rg.rainhaDois')]])}
       ${linha('reiSacrificaValete', [['false', t('rg.reiDireto')], ['true', t('rg.reiValete')]])}
       ${linha('asesRecurso', [['true', t('rg.sim')], ['false', t('rg.nao')]])}

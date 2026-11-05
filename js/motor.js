@@ -19,8 +19,8 @@ window.SS = window.SS || {};
   // O padrão é a regra oficial (a do tutorial também). Fora do tutorial, a interface pode trocar por outra combinação.
   //   casca: 'todos2' (Casca grossa: −2 em qualquer defensor do Paumol) | 'paus1' (−1, só nos Naipados de Paus)
   //   limiteDefesa: true (ninguém aguenta mais que RESISTENCIA_MAX hits) | false (sem limite)
-  //   invocacaoNumero: true (oficial desde 05/11/2026: o sacrifício depende do número equipado; 2 a 4 entra direto, 5 a 7 sacrifica
-  //     1 Senhor(a) de 2 a 4, 8 a 10 sacrifica 1 de 5 a 7 ou 2 de 2 a 4) | false (a regra antiga, pela letra: usa as duas opções abaixo)
+  //   invocacaoNumero: false (oficial: o sacrifício depende da letra, com as duas opções abaixo) | true (só nos testes: depende do número
+  //     equipado; 2 a 4 entra direto, 5 a 7 sacrifica 1 Senhor(a) de 2 a 4, 8 a 10 sacrifica 1 de 5 a 7 ou 2 de 2 a 4)
   //   rainha: 'reiOuValetes' (sacrifica 1 Rei ou 2 Valetes) | 'doisSenhores' (2 Senhores quaisquer)
   //   reiSacrificaValete: o Rei só entra sacrificando 1 Valete (no lugar dele)
   //   asesRecurso: os Ases da mão valem como carta de recurso do naipe (cura, compra, +1, Berserk, pares)
@@ -37,7 +37,7 @@ window.SS = window.SS || {};
   //   invocacoes: 'umPorTurno' (1 Senhor(a) por turno) | 'umPorLetra' (1 Valete, 1 Rainha e 1 Rei por turno) | 'ilimitadas'
   // Regras oficiais (27/10/2026): Casca grossa −1 só nos Naipados de Paus, defesa sem limite, Rei sacrifica 1 Valete,
   // cura sem teto e 1 invocação de cada letra por turno.
-  const REGRAS_PADRAO = Object.freeze({ casca: 'paus1', limiteDefesa: false, rainha: 'reiOuValetes', reiSacrificaValete: true, asesRecurso: true, asesNasLetras: false, bonusNaipe: false, limitePV: false, pv: Object.freeze({}), faixa: Object.freeze({}), semPassiva: Object.freeze({}), invocacoes: 'umPorLetra', passivaOurinhos: 'dividendos', todosCompram2: true, asOurosDado: true, invocacaoNumero: true });
+  const REGRAS_PADRAO = Object.freeze({ casca: 'paus1', limiteDefesa: false, rainha: 'reiOuValetes', reiSacrificaValete: true, asesRecurso: true, asesNasLetras: false, bonusNaipe: false, limitePV: false, pv: Object.freeze({}), faixa: Object.freeze({}), semPassiva: Object.freeze({}), invocacoes: 'umPorLetra', passivaOurinhos: 'dividendos', todosCompram2: true, asOurosDado: true, invocacaoNumero: false });
   let REGRAS = Object.assign({}, REGRAS_PADRAO);
   // Aceita só chaves e valores conhecidos (as regras do dono da sala chegam pela rede).
   function definirRegras(r) {
